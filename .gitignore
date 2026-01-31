@@ -1,0 +1,6 @@
+telegram-log/.env
+telegram-log/messages.json
+telegram-log/pending.json
+telegram-log/chat_config.json
+__pycache__/
+*.pyc
