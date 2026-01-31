@@ -41,6 +41,7 @@ AI Talent Camp -- хакатон/кэмп по AI. Команды получаю
 - Когда кто-то пишет `@ai_talent_camp_gorbunov_bot` -- сообщение попадает ещё и в `pending.json`
 - Дмитрий говорит мне "проверь чат" -- я читаю логи и отвечаю
 - Отправляю сообщения через `python send.py "текст"` или `python send.py "текст" --reply-to <ID>`
+- Удаляю сообщения бота через `python send.py --delete <ID>`
 - Все файлы бота: `demoday-tools/telegram-log/`
 
 ### Что я умею для команды
@@ -50,6 +51,12 @@ AI Talent Camp -- хакатон/кэмп по AI. Команды получаю
 - Работать с Terraform-инфраструктурой проекта
 - Отвечать на вопросы коллег в чате
 - Проводить code review
+
+## Управление задачами
+
+- **Доска проекта:** https://github.com/orgs/demoday-ai/projects/1
+- **Issues:** https://github.com/demoday-ai/demoday-core/issues
+- Создание/редактирование через `gh` CLI: `C:\Users\Admin\gh\bin\gh.exe`
 
 ## Репозитории
 
