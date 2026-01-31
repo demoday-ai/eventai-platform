@@ -1,5 +1,9 @@
 # AI Talent Camp 2026 -- Команда "ЯСНОПОНЯТНО"
 
+## О проекте
+
+AI Talent Camp -- хакатон/кэмп по AI. Команды получают выделенные VM в Yandex Cloud и строят AI-продукты. Каждая команда работает на своей VM (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04) с доменом `teamXX.camp.aitalenthub.ru`. Инфраструктура управляется через Terraform.
+
 ## Команда
 
 - **Дмитрий Горбунов** (@grbn_dima) -- хастлер/хипстер. Тимлид, бизнес, продукт, UX/UI
@@ -12,11 +16,11 @@
 
 ### Как я работаю с чатом
 
-- **Бот** (`demoday-core/telegram-log/bot.py`) работает в фоне и логирует все сообщения в `messages.json`
+- **Бот** (`demoday-tools/telegram-log/bot.py`) работает в фоне и логирует все сообщения в `messages.json`
 - Когда кто-то пишет `@ai_talent_camp_gorbunov_bot` -- сообщение попадает ещё и в `pending.json`
 - Дмитрий говорит мне "проверь чат" -- я читаю логи и отвечаю
 - Отправляю сообщения через `python send.py "текст"` или `python send.py "текст" --reply-to <ID>`
-- Все файлы бота: `demoday-core/telegram-log/`
+- Все файлы бота: `demoday-tools/telegram-log/`
 
 ### Что я умею для команды
 
@@ -26,11 +30,17 @@
 - Отвечать на вопросы коллег в чате
 - Проводить code review
 
-## Проект: AI Talent Camp Infrastructure
+## Репозитории
+
+| Репо | Назначение | URL |
+|------|-----------|-----|
+| **demoday-core** | Основной продукт для демо-дня | https://github.com/demoday-ai/demoday-core |
+| **demoday-tools** | Тулинг: телеграм-бот, скрипты, утилиты | https://github.com/demoday-ai/demoday-tools |
+| **ai-talent-camp-2026-infra** | Terraform-инфраструктура кэмпа (общая, не командная) | https://github.com/AI-Talent-Camp-2026/ai-talent-camp-2026-infra |
+
+## Инфраструктура кэмпа
 
 Terraform-инфраструктура для AI-хакатона на Yandex Cloud.
-
-**Репозиторий:** `ai-talent-camp-2026-infra/`
 
 ### Архитектура
 
@@ -60,7 +70,7 @@ Terraform-инфраструктура для AI-хакатона на Yandex Cl
 | `team-credentials` | SSH ключи |
 | `config-sync` | Синхронизация конфигов |
 
-### Стек
+### Стек инфраструктуры
 
 - Terraform + Yandex Cloud
 - Ubuntu 22.04 LTS
@@ -68,24 +78,19 @@ Terraform-инфраструктура для AI-хакатона на Yandex Cl
 - Xray (systemd, TPROXY)
 - cloud-init для автоматизации
 
-## Структура репозиториев
+## Структура на диске
 
 ```
 AI Talent Camp/
-├── ai-talent-camp-2026-infra/    # Terraform IaC (git)
-│   ├── modules/                  # 7 Terraform-модулей
-│   ├── environments/dev/         # Dev-окружение
-│   ├── templates/                # Traefik, Xray, SSH шаблоны
-│   ├── docs/                     # Документация
-│   └── secrets/                  # SSH ключи (gitignored)
-│
-└── demoday-core/                 # Основной проект команды (git)
-    └── telegram-log/             # Telegram-бот для связи с Claude
-        ├── bot.py                # Логирование сообщений
-        ├── send.py               # Отправка сообщений в чат
-        ├── messages.json         # Лог сообщений
-        ├── pending.json          # Вопросы с @mention
-        └── .env                  # BOT_TOKEN
+├── ai-talent-camp-2026-infra/    # Terraform IaC
+├── demoday-core/                 # Основной продукт
+└── demoday-tools/                # Тулинг
+    └── telegram-log/             # Telegram-бот
+        ├── bot.py
+        ├── send.py
+        ├── messages.json
+        ├── pending.json
+        └── .env
 ```
 
 ## Рабочие соглашения
