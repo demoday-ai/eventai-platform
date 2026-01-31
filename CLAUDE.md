@@ -2,7 +2,7 @@
 
 ## О кэмпе
 
-AI Talent Camp -- хакатон/кэмп по AI. Команды получают выделенные VM в Yandex Cloud и строят AI-продукты. Каждая команда работает на своей VM (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04) с доменом `teamXX.camp.aitalenthub.ru`. Инфраструктура управляется через Terraform.
+AI Talent Camp -- кэмп по AI, 33 идеи-проекта, над каждой работает команда. Команды получают выделенные VM в Yandex Cloud (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04) с доменом `teamXX.camp.aitalenthub.ru`. Наш проект -- #10 AI-агент-куратор DemoDay.
 
 ## Продукт: AI-агент-куратор DemoDay (AI-first Unconference Navigator)
 
