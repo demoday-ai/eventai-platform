@@ -4,4 +4,4 @@ telegram-log/
 __pycache__/
 *.pyc
 .env
-docs/interview-raw.json
+docs/01-discovery/interview-raw.json
