@@ -1,7 +1,10 @@
-# Leftover telegram-log data (bot moved to demoday-tools)
-telegram-log/
-
 __pycache__/
 *.pyc
 .env
+
+# Runtime data
+telegram-log/messages.json
+telegram-log/pending.json
+
+# Raw interview audio transcription
 docs/01-discovery/interview-raw.json

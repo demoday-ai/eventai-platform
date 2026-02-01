@@ -19,38 +19,21 @@ AI-платформа для автоматизации подготовки и 
 | Эксперты / менторы | ~50 | Основной |
 | Внешние гости | ~50 реальных | Вторичный |
 
-## Документация
+## Структура репозитория
 
 ```
-docs/
-├── 00-research/           # Исследования и аналитика прошлого DD
-│   ├── demoday-analytics.md
-│   ├── past-demoday-projects.md
-│   └── demo-hero-example.md
+├── docs/
+│   ├── 00-research/           # Исследования и аналитика прошлого DD
+│   ├── 01-discovery/          # Воркшоп 1: AI-First Customer Discovery
+│   └── 02-specification/      # Воркшоп 2: Specification-Driven Development
 │
-├── 01-discovery/          # Воркшоп 1: AI-First Customer Discovery
-│   ├── customer-discovery.md     # Опросник + заметки CustDev
-│   ├── interview-transcript.md   # Транскрипт интервью с организатором
-│   ├── lean-canvas.md            # Lean Canvas (пивот по итогам интервью)
-│   ├── rice-matrix.md            # RICE-матрица: 13 гипотез
-│   ├── customer-journeys.md      # AS-IS / TO-BE по 4 ролям
-│   ├── icp.md                    # Ideal Customer Profile
-│   ├── pain-map.md               # Карта болей по сегментам
-│   ├── jtbd.md                   # Jobs-To-Be-Done
-│   └── vpc.md                    # Value Proposition Canvas
+├── telegram-log/              # Telegram-бот для логирования чата команды
+│   ├── bot.py                 # Бот (python-telegram-bot, polling)
+│   ├── send.py                # Отправка сообщений в чат
+│   ├── chat_config.json       # Конфигурация чата
+│   └── requirements.txt       # Зависимости
 │
-└── 02-specification/      # Воркшоп 2: Specification-Driven Development
-    ├── 01-brief.md               # Бриф проекта
-    ├── 02-user-story-map.md      # User Story Map
-    ├── 03-user-journey-map.md    # User Journey Map (Mermaid)
-    ├── 04-nfr.md                 # Нефункциональные требования
-    ├── 07-c4-architecture.md     # C4-диаграмма архитектуры
-    ├── 08-er-diagram.md          # ER-диаграмма + Data Dictionary
-    ├── 09-sequence-diagrams.md   # Sequence-диаграммы
-    ├── 10-api-inventory.md       # API-эндпоинты
-    ├── 11-validation-report.md   # Кросс-валидация артефактов
-    ├── personas/                 # Персоны
-    └── wireframes/               # Вайрфреймы
+└── CLAUDE.md                  # Контекст для Claude Code
 ```
 
 ## Команда
@@ -59,10 +42,3 @@ docs/
 - **Анастасия Гапеева** -- UX/UI, фронтенд
 - **Иван Александров** -- разработка, бизнес-логика
 - **Claude** -- AI-ассистент команды
-
-## Связанные репозитории
-
-| Репо | Назначение |
-|------|-----------|
-| [demoday-core](https://github.com/demoday-ai/demoday-core) | Основной продукт (этот репо) |
-| [demoday-tools](https://github.com/demoday-ai/demoday-tools) | Тулинг: Telegram-бот для логирования чата, скрипты |
