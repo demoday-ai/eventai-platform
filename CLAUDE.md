@@ -126,7 +126,7 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 
 | Документ | Описание | Статус |
 |----------|----------|--------|
-| `01-brief.md` | Бриф проекта: проблема, цели, ограничения, контекст | TODO |
+| `01-brief.md` | Бриф проекта: проблема, цели, ограничения, контекст | DONE |
 | `02-user-story-map.md` | User Story Map: backbone → epics → stories | TODO |
 | `03-user-journey-map.md` | User Journey Map (Mermaid) | TODO |
 | `04-nfr.md` | Нефункциональные требования (Performance, Security, Scalability) | TODO |
