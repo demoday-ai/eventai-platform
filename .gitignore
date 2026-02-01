@@ -1,6 +1,6 @@
-telegram-log/.env
-telegram-log/messages.json
-telegram-log/pending.json
-telegram-log/chat_config.json
+# Leftover telegram-log data (bot moved to demoday-tools)
+telegram-log/
+
 __pycache__/
 *.pyc
+.env
