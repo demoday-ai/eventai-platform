@@ -1,0 +1,2953 @@
+[
+  {
+    "id": "EXP-001",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-002",
+    "position": "РСХБ, ALUMNI24",
+    "expertise_tags": [
+      "FinTech",
+      "RecSys"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Recsys, fintech могу взять"
+  },
+  {
+    "id": "EXP-003",
+    "position": "ALUMNI24, Кандинский",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-004",
+    "position": "X5, ALUMNI24",
+    "expertise_tags": [
+      "LLM",
+      "FinTech",
+      "StartUp"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-005",
+    "position": "PhD in CS, Head of Controllable GenAI at AIRI and BayesGroup at HSE.",
+    "expertise_tags": [
+      "CV",
+      "GAN"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "научные",
+    "involvement": "Уровень 0",
+    "dd_comments": "в отпуске"
+  },
+  {
+    "id": "EXP-006",
+    "position": "Основатель @Byndyusoft, автор книги «Антихрупкость в IT» и Карты гипотез @hypothesismap. Канал с мыслями @byndyufeed и шутками @alexbynfun",
+    "expertise_tags": [
+      "Самопрезентация"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-007",
+    "position": "Product manager at Lime (FinTech), ALUMNI 2025",
+    "expertise_tags": [
+      "FinTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-008",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-009",
+    "position": "Руководитель службы ML в Яндекс.Такси\nex. руководитель отдела ML и аналитики в VK\nex. руководитель направления ML в CБЕРе",
+    "expertise_tags": [
+      "ML"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "индустрия",
+    "involvement": "Уровень 1",
+    "dd_comments": "Будет в отпуске, другим коллегам закинул"
+  },
+  {
+    "id": "EXP-010",
+    "position": "CTO, World Chess Events",
+    "expertise_tags": [
+      "LLM"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "Я как CTO занимаюсь техническим управлением команд разработки нашего портала, в том числе интегрируем некоторые решения из ИИ - llm, собственные нейронки по оценке сложности и тд\nКак пользователи, а не разработчики инструментов, проводим сейчас с командой трансформацию в сторону AI-friendly разработки, внедляем specification driven development"
+  },
+  {
+    "id": "EXP-011",
+    "position": "руководитель по Науке Генотек, Генетика, персонализированная медицина",
+    "expertise_tags": [
+      "Геномика"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-012",
+    "position": "Авито, Kaggle чемпион",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-013",
+    "position": "Head of DA/DS @ X5 Group",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "индустрия",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-014",
+    "position": "Исполнительный директор АО «Новабиом», Founder технологичных стартапов, предприниматель, эксперт в области высокотехнологичного бизнеса на рынках: Медтех, Биотех, Гентех, Химтех, Фудтех",
+    "expertise_tags": [
+      "StartUp",
+      "Химия",
+      "Биология",
+      "MedTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-015",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "LLM",
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-016",
+    "position": "Ко-фанудер AI Agents, студия разработки виртуальных сотрудников",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "не актуальный контакт"
+  },
+  {
+    "id": "EXP-017",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-018",
+    "position": "CPO Yandex Cloud ML & AI",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "индустрия",
+    "involvement": "Уровень 0",
+    "dd_comments": "Новая компания, нельзя выступать публично"
+  },
+  {
+    "id": "EXP-019",
+    "position": "Основатель Emily AI, до этого делал ML в IBM Watson и продукты в Kaspersky lab и WB",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-020",
+    "position": "PhD-Senior Researcher-Teamlead Embodied Agents at AIRI",
+    "expertise_tags": [
+      "Embodied AI"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "научные",
+    "involvement": "Уровень 0",
+    "dd_comments": "Открытые лекции, Reading Club"
+  },
+  {
+    "id": "EXP-021",
+    "position": "МЛ инженер работа. ру",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-022",
+    "position": "",
+    "expertise_tags": [
+      "LLM",
+      "EdTech"
+    ],
+    "dd_status": "Ждем ответ",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-023",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-024",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-025",
+    "position": "Руководитель проекта ITMO.Collab, ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-026",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-027",
+    "position": "Создаю продукт POS-кредитование в Мексике с нуля в банке Plata, являюсь Risk-лидом по этому продукту, так же руковожу кредитным антифродом и веткой по тестированию новых вендоров",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-028",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "LLM",
+      "Автономные агенты"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "сейчас работаю с ллм, в чат ботах и аи агентах"
+  },
+  {
+    "id": "EXP-029",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-030",
+    "position": "Основатель Karpov courses",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-031",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "EdTech",
+      "BlockChain"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-032",
+    "position": "CTO Aliexpress.ru, ex-CTO Ozon.ru, ex-VP Yandex Search Development",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-033",
+    "position": "ML Engineer, преподаватель практики в ИТМО.",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-034",
+    "position": "ML Researcher в Центре \"Сильный ИИ в промышленности\", ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-035",
+    "position": "ведущий научный сотрудник Центра ИИ в химии, DR SC ETH Zurich",
+    "expertise_tags": [
+      "Химия",
+      "Биология"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-036",
+    "position": "Head of ML PT",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-037",
+    "position": "Руковожу научной группой FusionBrain в AIRI, к.т.н., занимаюсь популяризацией AI и веду канал @complete_ai о новых научных трендах",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": "командировка Сингапур"
+  },
+  {
+    "id": "EXP-038",
+    "position": "основатель A (https://t.me/andre_dataist)ndre AI Technologies (https://andre.technology/), ex-Chief Data Officer в Сбере и ex-CTO венчурной студии для ИИ-стартапов",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-039",
+    "position": "ALUMNI 2024, Machine Learning Engineer",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-040",
+    "position": "Lead software engineer, Samsung Research Russia",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-041",
+    "position": "Middle CV/MLops/NLP engineer",
+    "expertise_tags": [
+      "ML",
+      "RecSys"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-042",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-043",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-044",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-045",
+    "position": "VP of Engineering, Raft AI Labs",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "Его проще выцепить на официальные защиты"
+  },
+  {
+    "id": "EXP-046",
+    "position": "Основатель и CEO DEXART Metaverse",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-047",
+    "position": "VLMem Lead at Yandex",
+    "expertise_tags": [
+      "VLM",
+      "CV",
+      "NLP"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 1",
+    "dd_comments": "Интересен Ментор Кемп и вообще все активности Хаба. Антона лучше выцеплять на очные активности в Питере и в Мск, тк он занятой парень, а на очные меро охотнее соглашается. В основном занимаюсь CV/NLP. Может только 23. Позвала на 23 число на конфу"
+  },
+  {
+    "id": "EXP-048",
+    "position": "Директор Института прикладных компьютерных наук ИТМО\n\nРуководитель образовательных проектов Яндекс, VK",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-049",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-050",
+    "position": "Старший научный сотрудник ИБХ РАН и со-основатель \"Биомолекулы\"",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-051",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-052",
+    "position": "GenAI Engineer, Hackathon expert, ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-053",
+    "position": "Computer vision engineer, Everypixel Innovation Media Group",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-054",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-055",
+    "position": "Преподает UNIX/Linux системы",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-056",
+    "position": "CTO at ClearPic, Head of Technology at Urus Advisory",
+    "expertise_tags": [
+      "NLP",
+      "LLM",
+      "RL"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-057",
+    "position": "ex-Data Director [board member] @ Mercury Group / ex-Head of Data @ WB",
+    "expertise_tags": [
+      "NLP",
+      "RL"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-058",
+    "position": "CV-специалист из Napoleon IT, преподаватель в Хабе",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "преподаватели",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-059",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-060",
+    "position": "Основатель opensource платформы для построения мультиагентных сетей AgentArea\nОснователь AI лаборатории Jamakase Technologies\nМагистрант ОП ИИ 2024-2026",
+    "expertise_tags": [
+      "StartUp"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-061",
+    "position": "Wb Tech, Инженер компьютерного зрения",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-062",
+    "position": "Staff Machine Learning Engineer eBay, автор @boris_again",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "автор в тг",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-063",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-064",
+    "position": "product manager OneCell",
+    "expertise_tags": [
+      "Product",
+      "StartUp"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-065",
+    "position": "Руководитель направления NLP исследований, МТС ИИ",
+    "expertise_tags": [
+      "NLP",
+      "LLM"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 3",
+    "dd_comments": "добрый день, я мог бы послушать NLP и/или LLM, напо понять, сколько это по времени"
+  },
+  {
+    "id": "EXP-066",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-067",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-068",
+    "position": "Skyeng",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-069",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-070",
+    "position": "CV engineer",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-071",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-072",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-073",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-074",
+    "position": "Senior QA Engineer, Check Point Software. В сфере разработки ПО работаю с 2007 года. Как Lead/Senior QA работал на различные финтех компании (fxopen.com, СберТех). Так же есть опыт работы в стартапах Oomnitza.com и Perimeter 81. Последний при мне вырос в 10 раз, был куплен за 0,5 млрд $ и теперь я помогаю его успеху в составе корпорации Check Point.",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-075",
+    "position": "Билайн, DS, ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-076",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-077",
+    "position": "Руководитель группы «Адаптивные агенты» AIRI, RL",
+    "expertise_tags": [
+      "RL"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-078",
+    "position": "Курс компьютерное зрение для ресерчов (продвинутый уровень) (ШАД)",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-079",
+    "position": "Head of Product (Unit Lead), Avito",
+    "expertise_tags": [
+      "FinTech",
+      "Product",
+      "StartUp"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-080",
+    "position": "Раньше работал в Сбер в команде RnD, занимался разработкой LLM ассистента для аналитиков. Сейчас работаю в Гринатом, внедряю LLM в промышленную область",
+    "expertise_tags": [
+      "NLP",
+      "LLM"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-081",
+    "position": "PhD, Kazan Federal University, Russia, Associate Professor, Institute of Software Development and Engineering, Lab of Industrial Production of Software, Head, Lab of Natural Language Processing Methods in Software Engineering (Профессор из Иннополиса)",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "научные",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-082",
+    "position": "Distinguished PM в Спортмастере",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "было бы интересно в RecSys и LLM"
+  },
+  {
+    "id": "EXP-083",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-084",
+    "position": "Руководитель группы, OzonTech",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": "Сейчас в основном занимаюсь прогнозированием спроса, так что интереснее всего time series, что-нибудь про ритейл или маркетплейсы, плюс также интересует CV"
+  },
+  {
+    "id": "EXP-085",
+    "position": "Software Developer, 3DiVi Inc.",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-086",
+    "position": "Преподает Математика для машинного обучения и анализа данных / Math Refresher с Нейчавым",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-087",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-088",
+    "position": "Карьерный консультант, ментор продактов и проджектов. Ex-CPO Productstar и Lead Product Т-Банка.",
+    "expertise_tags": [
+      "Product"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-089",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-090",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "Product",
+      "EdTech"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": "на страт. сессии"
+  },
+  {
+    "id": "EXP-091",
+    "position": "руковожу внедрением LLM в Поиск Яндекса",
+    "expertise_tags": [
+      "LLM"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Я активно пропагандирую правильную работу с LLM.\nЕсли вам интересна такая лекция/выступление/мастер класс я буду рад!"
+  },
+  {
+    "id": "EXP-092",
+    "position": "ALUMNI25, Аспирант, ML Engineer @ Sber",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-093",
+    "position": "Head of Promo Analytics Magnit FoodTech",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-094",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-095",
+    "position": "",
+    "expertise_tags": [
+      "Биология"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-096",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-097",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-098",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-099",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-100",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-101",
+    "position": "Руководитель ИИ-проектов, Университет Иннополис (уже нет)",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-102",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "другой тип",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-103",
+    "position": "Senior Computational Biologist, Sanger Institute",
+    "expertise_tags": [
+      "Биология"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-104",
+    "position": "Преподает Математика для машинного обучения и анализа данных / Math Refresher с Нейчавым и Гончаровым",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-105",
+    "position": "Руководитель лаборатории ИИ РСХБ, преподаватель курсов \"Математическая статистика\", \"А/В тестирование\", \"Основы построения рекомендательных систем\"",
+    "expertise_tags": [
+      "B тестирование",
+      "RecSys"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "преподаватели",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-106",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "я продолжаю заниматься ресерчем в ML для физики частиц, так что вряд ли что-то прямо пересекающееся получится найти"
+  },
+  {
+    "id": "EXP-107",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-108",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-109",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-110",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "Product"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-111",
+    "position": "PhD student ITMO AI https://www.linkedin.com/in/daniil-storonkin-349311193\nALUMNI25",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-112",
+    "position": "CEO & Специалист в области международного бизнес-образования, компания Dasha Ald project",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-113",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-114",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-115",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-116",
+    "position": "ALUMNI25, Аспирант",
+    "expertise_tags": [
+      "NLP",
+      "LLM"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-117",
+    "position": "руководитель программы Бизнес-тезис (Стартап как диплом), \nИнвестиционный менеджер Стартап-студии, Университет ИТМО",
+    "expertise_tags": [
+      "StartUp"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "индустрия",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-118",
+    "position": "заместитель заведующего лаборатории нейронных систем и глубокого обучения МФТИ",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "научные",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-119",
+    "position": "X5",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-120",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-121",
+    "position": "DS в Циане (синьор), ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-122",
+    "position": "Преподает Прикладной анализ временных рядов",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-123",
+    "position": "Chief Data Scientist B2C, Сбер",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "научные",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-124",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-125",
+    "position": "Руководитель направления аналитики Ozon",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-126",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "LLM",
+      "Автономные агенты",
+      "NLP",
+      "Временные ряды",
+      "StartUp",
+      "ML"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-127",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-128",
+    "position": "Senior ML Engineer",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-129",
+    "position": "Senior Data Scientist, Rosbank, ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "выпускники",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-130",
+    "position": "ML Engineer at Sber Robotics Lab, ALUMNI24",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "выпускники",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-131",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "другой тип",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-132",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Я mlops/llmops/devops"
+  },
+  {
+    "id": "EXP-133",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-134",
+    "position": "Газпромнефть",
+    "expertise_tags": [
+      "ML в Промышленности"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "индустрия",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-135",
+    "position": "Преподает Эффективные модели глубокого обучения (из СКОЛТЕХа)",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-136",
+    "position": "Преподает Прикладной анализ временных рядов",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-137",
+    "position": "CEO Everypixel Labs\nоснователь ML Startup сообщества \"Корпус\"\nGenAI startups investor/advisor",
+    "expertise_tags": [
+      "StartUp"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-138",
+    "position": "ALUMNI24, Data Scientist, Озон Финтех",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-139",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "Автономные агенты",
+      "FinTech",
+      "BlockChain"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-140",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "StartUp"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-141",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-142",
+    "position": "Директор AI продуктов, компания Raft",
+    "expertise_tags": [
+      "LLM",
+      "Security"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-143",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-144",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-145",
+    "position": "Руководитель департамента больших данных и информационного поиска ВШЭ",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-146",
+    "position": "CEO и менеджер продуктов в AllSee.team",
+    "expertise_tags": [
+      "LLM"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-147",
+    "position": "Преподает Эффективные модели глубокого обучения (из СКОЛТЕХа)",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-148",
+    "position": "head of gigaschool.ru / lxd",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-149",
+    "position": "директор по разработке моделей в Газпромбанке, ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-150",
+    "position": "Преподает Введение в большие языковые модели (LLM) вместе с Иьей Макаровым",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-151",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "ML",
+      "FinTech",
+      "RecSys"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-152",
+    "position": "блогер, рассказывает про поиск карьеры в ИТ, ex-проджект менеджер(СберТех, Сбер, ВТБ, EPAM)",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-153",
+    "position": "Data Scientist @ SST, MyMind | CSO @ ipNOTE | R&D Engineer",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": "отпуск"
+  },
+  {
+    "id": "EXP-154",
+    "position": "Преподает Проектирование и разработка распределенных программных систем",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-155",
+    "position": "Tech lead at Ozon Tech",
+    "expertise_tags": [
+      "LLM",
+      "NLP",
+      "StartUp",
+      "RecSys",
+      "ML"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-156",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-157",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-158",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-159",
+    "position": "исследователь DeepPavlov, разработчик dresscode.ai",
+    "expertise_tags": [
+      "NLP",
+      "LLM"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-160",
+    "position": "@senior_augur",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-161",
+    "position": "руководитель группы «ИИ в промышленности» AIRI, Ph.D. in Computer Science",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 3",
+    "dd_comments": "Будет в +8, не факт, что сможет"
+  },
+  {
+    "id": "EXP-162",
+    "position": "ALUMNI24, MLE at Kamaz Digital",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-163",
+    "position": "AI Researcher & PhD Student| Brain Data, BCI, Multimodal AI, CV, AIRI",
+    "expertise_tags": [
+      "CV",
+      "Multimodal AI"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-164",
+    "position": "open-source",
+    "expertise_tags": [
+      "CV",
+      "Распознование речи",
+      "Синтез речи"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-165",
+    "position": "Senior ML Engineer, Kion BigData MTS",
+    "expertise_tags": [
+      "B тестирование",
+      "Uplift",
+      "RecSys"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": "в поездке"
+  },
+  {
+    "id": "EXP-166",
+    "position": "AI - инженер в Raft",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-167",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-168",
+    "position": "ALUMNI25, Аспирант, AI Agents Researcher @ Munich",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-169",
+    "position": "Магистрант ОП ИИ 2024-2026, Raft",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-170",
+    "position": "Ген дир ANTEI Limited",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-171",
+    "position": "Преподает Инженерные практики в ML и анализе данных",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-172",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-173",
+    "position": "Фаундер Нейрострим",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-174",
+    "position": "AIRI, команда Ильи Макарова",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "научные",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-175",
+    "position": "",
+    "expertise_tags": [
+      "StartUp"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-176",
+    "position": "Преподает Автоматическое машинное обучение",
+    "expertise_tags": [
+      "Автономные агенты"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Матчинг, агентные системы, mech. Interp"
+  },
+  {
+    "id": "EXP-177",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-178",
+    "position": "Head of experementation platform @ Okko",
+    "expertise_tags": [
+      "B тестирование",
+      "RecSys"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": "RecSys (Дима написал тоже)"
+  },
+  {
+    "id": "EXP-179",
+    "position": "e-commerce & marketing expert",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-180",
+    "position": "Преподает Технологии обработки естественного языка",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-181",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-182",
+    "position": "Предприниматель, эксперт по запуску и росту цифровых продуктов и команд",
+    "expertise_tags": [
+      "Самопрезентация"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-183",
+    "position": "Chief Data Scientist, Ozon Fintech",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-184",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "BlockChain"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": "Скорее как слушатель"
+  },
+  {
+    "id": "EXP-185",
+    "position": "мл науч сотрудник \"ИИ в Промышленности\", AIRI",
+    "expertise_tags": [
+      "LLM"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": "Да, действительно есть интересные для меня проекты, но они разбросаны"
+  },
+  {
+    "id": "EXP-186",
+    "position": "Директор по анализу данных Х5 Tech",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-187",
+    "position": "Senior python backend developer в Исходном коде",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Хочу заниматься научной деятельностью \nПреподавание и руководство проектами интересно, к тому же есть опыт в этом"
+  },
+  {
+    "id": "EXP-188",
+    "position": "заместитель директора департамента стратегического развития ИТМО",
+    "expertise_tags": [
+      "Product"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-189",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-190",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-191",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-192",
+    "position": "NLP RnD, Raft, ALUMNI24",
+    "expertise_tags": [
+      "NLP"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-193",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-194",
+    "position": "ALUMNI24, Average LLM enjoyer",
+    "expertise_tags": [
+      "LLM",
+      "Автономные агенты",
+      "Синтез речи",
+      "Распознование речи"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-195",
+    "position": "ALUMNI24, ML Engineer",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-196",
+    "position": "Senior DevOps @ VTB.Cloud",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-197",
+    "position": "Аспирант НИУ ВШЭ, исследователь в ИСП РАН, преподаватель в магистратурах МФТИ и ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": "Рабочее время"
+  },
+  {
+    "id": "EXP-198",
+    "position": "Руководитель направления инженерной продуктивности R&D-центра Т-Банка",
+    "expertise_tags": [
+      "NLP",
+      "LLM",
+      "ML в Промышленности"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-199",
+    "position": "Руководитель ITMO Open Source",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-200",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-201",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-202",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-203",
+    "position": "product manager AI Talent Hub, преподает Процессы и методологии разработки решений на основе ИИ, выпускник 2025",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-204",
+    "position": "Биоинформатик, Тим Лид в AIRI",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "научные",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-205",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-206",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-207",
+    "position": "https://glancing.io/",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-208",
+    "position": "Газпром-нефть Региональные продажи, Руководитель центра Операционализации машинного обучения и разработки",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "Могу все кроме recsys"
+  },
+  {
+    "id": "EXP-209",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-210",
+    "position": "Red Team Lead  ООО \"Совкомбанк Технологии\"",
+    "expertise_tags": [
+      "NLP",
+      "LLM",
+      "ML в Промышленности"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-211",
+    "position": "Директор по продуктам Скоринга и Антифрода в oneFactor (Мегафон) для финансового сектора. Руководитель криптоанклавной платформы защищённых вычислений.",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-212",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-213",
+    "position": "LXD and EdScience | ML in Chem",
+    "expertise_tags": [
+      "EdTech",
+      "Химия"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-214",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "CV"
+    ],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-215",
+    "position": "senior CDS в исследовательской лаборатории компании Солар,\nкомпания занимается разработкой систем безопасности\nи предоставляет услуги коммерческого SOC",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "внешние приглашения",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-216",
+    "position": "Зам АВ в ПИШе",
+    "expertise_tags": [
+      "Самопрезентация"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "22 числа может. Ни в одной из ваших тем я в любом случае не разбираюсь 😁 Так что если смогу дать обратку, то только по самому выступлению. Тут уже смотрите, где это важнее будет"
+  },
+  {
+    "id": "EXP-217",
+    "position": "Преподает Математика для машинного обучения и анализа данных / Math Refresher с Гончаровым",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-218",
+    "position": "ALUMNI25, Аспирант",
+    "expertise_tags": [
+      "MedTech",
+      "CV",
+      "StartUp"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-219",
+    "position": "CEO at Wonderslide - AI Presentation Designer",
+    "expertise_tags": [
+      "StartUp"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-220",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-221",
+    "position": "ALUMNI24",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-222",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-223",
+    "position": "ML Engineer @ Yandex, ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-224",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-225",
+    "position": "Технический директор и ИТ-архитектор в Бындюсофт\nАвтор и преподаватель курса по микросервисной архитектуре\nЧлен программных комитетов конференций CodeFest и TechLeadConf",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-226",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "StartUp",
+      "LLM",
+      "NLP",
+      "Автономные агенты",
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-227",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-228",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-229",
+    "position": "ALUMNI25",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-230",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-231",
+    "position": "Руководитель цифровизации образовательных процессов и цифровых продуктов ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": "Пингани после январских - смогу точно сказать"
+  },
+  {
+    "id": "EXP-232",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-233",
+    "position": "Principal Software Engineering Manager at Microsoft",
+    "expertise_tags": [
+      "NLP",
+      "LLM",
+      "RecSys"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-234",
+    "position": "ALUMNI24",
+    "expertise_tags": [
+      "CV",
+      "MLOps"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-235",
+    "position": "Админ канала Метаверсище и ИИще. Организатор IT-встреч на Кипре - THE HUB @hub_cy. Написал книгу \"Понимая Maya\".",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-236",
+    "position": "кандидат химических наук, инженер, ассистент, Химико-Биологический кластер ИТМО",
+    "expertise_tags": [
+      "Химия",
+      "Биология"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "научные",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-237",
+    "position": "ALUMNI25, Аспирант",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-238",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [
+      "LLM",
+      "Security",
+      "NLP",
+      "VLM"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 3",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-239",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-240",
+    "position": "Senior Backend Engineer at Bumble Inc.",
+    "expertise_tags": [
+      "ML в Промышленности",
+      "NLP",
+      "LLM",
+      "StartUp"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-241",
+    "position": "AIRI",
+    "expertise_tags": [
+      "NLP"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "научные",
+    "involvement": "",
+    "dd_comments": "в основном, занимаюсь NLP"
+  },
+  {
+    "id": "EXP-242",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-243",
+    "position": "ALUMNI25",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-244",
+    "position": "куратор ОП “ИИ в биотехнологических системах” в АГНИ, старший научный сотрудник Центра ИИ в Химии",
+    "expertise_tags": [
+      "Химия"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "научные",
+    "involvement": "Уровень 2",
+    "dd_comments": "Много созвонов - постараюсь в перерывах подключиться"
+  },
+  {
+    "id": "EXP-245",
+    "position": "",
+    "expertise_tags": [
+      "Биология"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-246",
+    "position": "ДПО Карпов",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-247",
+    "position": "к.т.н., МФТИ, старший научный сотрудник, старший преподаватель",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-248",
+    "position": "ML&DS Researcher, NSSlab@ITMO University",
+    "expertise_tags": [],
+    "dd_status": "Не указан",
+    "expert_type": "сообщество",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-249",
+    "position": "Магистрант ОП ИИ 2024-2026",
+    "expertise_tags": [
+      "NLP",
+      "LLM"
+    ],
+    "dd_status": "Не указан",
+    "expert_type": "",
+    "involvement": "Уровень 1",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-250",
+    "position": "Преподаватель ПИШ ИТМО и ментор AI Talent Hub\nCurriculum Lead DS/DS+, Yandex Practicum. \nHead of Software Development Department, Insit Telecom",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 2",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-251",
+    "position": "Директор по развитию технологий ИИ, ООО Цифра (GS Labs)",
+    "expertise_tags": [
+      "RecSys",
+      "ML в Промышленности",
+      "NLP",
+      "LLM",
+      "Автономные агенты",
+      "StartUp"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "внешние приглашения",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-252",
+    "position": "Senior ML Engineer at Refact.ai Senior ML Engineer at Refact.ai, builds IDE-integrated code agents and developer tooling. He co-designed Refact’s code-generation LLM and led AWS Inferentia2 and Marketplace integrations. Previously in real-time vision and model compression, he now focuses on secure, auditable agent workflows for enterprise engineering teams.",
+    "expertise_tags": [
+      "LLM",
+      "NLP",
+      "Автономные агенты",
+      "CV"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-253",
+    "position": "Team Lead / ML Engineer X5 Group",
+    "expertise_tags": [
+      "LLM",
+      "NLP",
+      "Автономные агенты",
+      "RL"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "Уровень 0",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-254",
+    "position": "AIRI IMak",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-255",
+    "position": "ПАО \"Горно-металлургическая компания \"Норильский никель\", руководитель отдела искусственного интеллекта и науки о данных",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Сам не смогу, но отправил коллегам"
+  },
+  {
+    "id": "EXP-256",
+    "position": "Data Eng",
+    "expertise_tags": [
+      "FinTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-257",
+    "position": "экс. продакт в Школе21, с недавних пор работает в Альфа Банке по развитию как раз AI EdTech продуктов",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "очень хотел бы посотрудничать, так как импонирует ваше сообщество"
+  },
+  {
+    "id": "EXP-258",
+    "position": "Head of Educational partnership for MAGNIT TECH",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-259",
+    "position": "CPO GoPractice Inc. куратор PM for EduTech, Universal University",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-260",
+    "position": "лидер направления обучения руководителей SMLT",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-261",
+    "position": "основатель School of Education",
+    "expertise_tags": [
+      "EdTech"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-262",
+    "position": "Data Scientist at eBay",
+    "expertise_tags": [
+      "NLP",
+      "CV",
+      "LLM"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-263",
+    "position": "CTO at ClearPic, Head of Technology at Urus Advisory",
+    "expertise_tags": [
+      "LLM",
+      "NLP",
+      "ML в Промышленности"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-264",
+    "position": "Head of Architecture, Dodo Brands",
+    "expertise_tags": [
+      "Back + analytics"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-265",
+    "position": "Software Engineer at J.P. Morgan",
+    "expertise_tags": [
+      "FinTech",
+      "Геномика",
+      "ML"
+    ],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-266",
+    "position": "AI director, BP",
+    "expertise_tags": [
+      "Прожарка"
+    ],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-267",
+    "position": "Директор по стратегическому маркетингу Яндекс",
+    "expertise_tags": [
+      "Прожарка"
+    ],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-268",
+    "position": "AI Code Gen в стартапе. ex Applied Scientist в FAANG. Веду: https://t.me/max_dot_sh про карьеру, AI технологии и образование",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-269",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-270",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-271",
+    "position": "Ex-ML Engineer в eBay\nАвтор Telegram-канала «Борис опять»",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "автор в тг",
+    "involvement": "Уровень 1",
+    "dd_comments": "Привет! Класс, могу 22 января начиная с 14:00 по Москве"
+  },
+  {
+    "id": "EXP-272",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "сообщество",
+    "involvement": "Уровень 1",
+    "dd_comments": "Не эксперт в AI"
+  },
+  {
+    "id": "EXP-273",
+    "position": "ИТ-предприниматель, Внедряю ИИ в банке. Основатель сообщества ИИ-экспертов \"Акулы\". Блог @korenev_ai",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-274",
+    "position": "marketing, branding, IT PR",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "22 на рилейл во 2 комнату, 23 на прожарку частично"
+  },
+  {
+    "id": "EXP-275",
+    "position": "главный эксперт по безопасной разработке в Альфа-Банке",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "зовут на секьюрити"
+  },
+  {
+    "id": "EXP-276",
+    "position": "эксперт по защите ИИ в Альфа-Банке",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "зовут на секьюрити"
+  },
+  {
+    "id": "EXP-277",
+    "position": "свой стартап HR",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": ""
+  },
+  {
+    "id": "EXP-278",
+    "position": "Тимлид команды разработки AI сервисов в Genotek",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Порекомендовал Александр Ракитько"
+  },
+  {
+    "id": "EXP-279",
+    "position": "ПАО \"Горно-металлургическая компания \"Норильский никель\"",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Порекомендовал А Абраров"
+  },
+  {
+    "id": "EXP-280",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-281",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-282",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-283",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-284",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-285",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-286",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-287",
+    "position": "физики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-288",
+    "position": "Химики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Не сможет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-289",
+    "position": "Химики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-290",
+    "position": "Химики ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Ждем ответ",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-291",
+    "position": "Биолог ИТМО",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "Дал контакт Пельтек"
+  },
+  {
+    "id": "EXP-292",
+    "position": "Заведующий рентгенологическим отделением клинической больницы Святителя Луки, врач-рентгенолог, К.М.Н.",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "медицина, комната 4, 22.01, с 16:00"
+  },
+  {
+    "id": "EXP-293",
+    "position": "",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "на прожарку 14-15:30"
+  },
+  {
+    "id": "EXP-294",
+    "position": "канд. техн. наук, АО «Северсталь менеджмент»",
+    "expertise_tags": [],
+    "dd_status": "Придет",
+    "expert_type": "",
+    "involvement": "",
+    "dd_comments": "AITC, 23.01, комната 3, с 12:15 - 13:15 на всю"
+  }
+]

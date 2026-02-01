@@ -8,3 +8,11 @@ telegram-log/pending.json
 
 # Raw interview audio transcription
 docs/01-discovery/interview-raw.json
+
+# Private data (PII: names, telegrams, contacts)
+data/expert-mapping.json
+
+# Temp analysis files
+expert_full_data.json
+expert_analysis.json
+expert_stats.txt
