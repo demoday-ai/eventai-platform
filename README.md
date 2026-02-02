@@ -55,10 +55,10 @@ AI-платформа для автоматизации подготовки и 
 │   │   ├── lean-canvas.md                  #   Lean Canvas (v2.0, 5 сегментов)
 │   │   ├── rice-matrix.md                  #   RICE-матрица v4.0: 17 гипотез
 │   │   ├── customer-journeys.md            #   AS-IS → TO-BE по 5 ролям
-│   │   ├── icp.md                          #   Ideal Customer Profile
-│   │   ├── pain-map.md                     #   Карта болей по сегментам
-│   │   ├── jtbd.md                         #   Jobs-To-Be-Done: 9 jobs
-│   │   ├── vpc.md                          #   Value Proposition Canvas
+│   │   ├── icp.md                          #   Ideal Customer Profile (5 сегментов)
+│   │   ├── pain-map.md                     #   Карта болей (13 болей, 5 сегментов)
+│   │   ├── jtbd.md                         #   Jobs-To-Be-Done: 10 jobs
+│   │   ├── vpc.md                          #   Value Proposition Canvas (5 сегментов)
 │   │   └── market-research.md              #   Исследование рынка event-tech
 │   │
 │   ├── 01-ai-unconference-navigator/       # Доки от Вани (первичные версии)
@@ -68,11 +68,11 @@ AI-платформа для автоматизации подготовки и 
 │       ├── 02-user-story-map.md            #   ✅ User Story Map (v2.1)
 │       ├── 03-user-journey-map.md          #   ✅ User Journey Map (v1.1, Mermaid)
 │       ├── 04-nfr.md                       #   ✅ Нефункциональные требования
-│       ├── 06-information-architecture.md  #   ✅ Информационная архитектура
-│       ├── 07-c4-architecture.md           #   ✅ C4-диаграмма (Context + Container)
-│       ├── 08-er-diagram.md                #   ✅ ER-диаграмма (22 сущности)
-│       ├── 09-sequence-diagrams.md         #   ✅ Sequence-диаграммы (6 сценариев)
-│       ├── 10-api-inventory.md             #   ✅ API-инвентаризация (62 endpoint)
+│       ├── 06-information-architecture.md  #   ✅ Информационная архитектура (v1.1, 5 ролей)
+│       ├── 07-c4-architecture.md           #   ✅ C4-диаграмма (v1.1, 5 persons)
+│       ├── 08-er-diagram.md                #   ✅ ER-диаграмма (v1.1, 24 сущности)
+│       ├── 09-sequence-diagrams.md         #   ✅ Sequence-диаграммы (v1.1, 8 сценариев)
+│       ├── 10-api-inventory.md             #   ✅ API-инвентаризация (v1.1, 72 endpoint)
 │       ├── personas/                       #   ✅ Персоны пользователей
 │       │   ├── 01-organizer.md
 │       │   ├── 02-student.md

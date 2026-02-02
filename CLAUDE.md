@@ -110,13 +110,13 @@ _Воркшоп: Андрей Кузьминых (Andre AI Technologies), Вад
 |----------|----------|
 | `customer-discovery.md` | Опросник для интервью с организаторами Demo Day + заметки по итогам |
 | `interview-transcript.md` | Транскрипт интервью #1 с организатором (ElevenLabs Scribe v2) |
-| `lean-canvas.md` | Lean Canvas продукта (обновлён по итогам CustDev) |
-| `rice-matrix.md` | RICE-матрица: приоритизация 13 гипотез и фич |
-| `customer-journeys.md` | Клиентские пути AS-IS → TO-BE по 4 ролям + таймлайн нового процесса |
-| `icp.md` | Ideal Customer Profile по 4 сегментам |
-| `pain-map.md` | Pain Map: 10 болей с evidence, severity/frequency/reach |
-| `jtbd.md` | Jobs-To-Be-Done: 9 jobs с forces-анализом и desired outcomes |
-| `vpc.md` | Value Proposition Canvas: customer profile + value map по 4 сегментам |
+| `lean-canvas.md` | Lean Canvas v2.0 (5 сегментов, все 4 интервью) |
+| `rice-matrix.md` | RICE-матрица v4.0: 17 гипотез, 4 интервью |
+| `customer-journeys.md` | Клиентские пути AS-IS → TO-BE по 5 ролям |
+| `icp.md` | Ideal Customer Profile по 5 сегментам |
+| `pain-map.md` | Pain Map: 13 болей по 5 сегментам |
+| `jtbd.md` | Jobs-To-Be-Done: 10 jobs с forces-анализом и desired outcomes |
+| `vpc.md` | Value Proposition Canvas по 5 сегментам |
 
 ### `docs/02-specification/` — Воркшоп 2: Specification-Driven Development
 
@@ -128,12 +128,12 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 | `02-user-story-map.md` | User Story Map v2.1: backbone → 15 epics → 21 stories | DONE |
 | `03-user-journey-map.md` | User Journey Map v1.1 (Mermaid) | DONE |
 | `04-nfr.md` | Нефункциональные требования (Performance, Security, Scalability) | DONE |
-| `06-information-architecture.md` | Информационная архитектура: sitemap, навигация, access control | DONE |
-| `07-c4-architecture.md` | C4-диаграмма: Context + Container (Mermaid) | DONE |
-| `08-er-diagram.md` | ER-диаграмма: 22 сущности + Data Dictionary | DONE |
-| `09-sequence-diagrams.md` | Sequence-диаграммы: 6 ключевых сценариев | DONE |
-| `10-api-inventory.md` | Инвентаризация API: 62 endpoint | DONE |
-| `personas/` | Персоны: 4 роли + anti-persona + early adopter | DONE |
+| `06-information-architecture.md` | Информационная архитектура v1.1: sitemap, навигация, 5 ролей, Q&A-helper | DONE |
+| `07-c4-architecture.md` | C4-диаграмма v1.1: Context + Container, 5 persons, Xray proxy | DONE |
+| `08-er-diagram.md` | ER-диаграмма v1.1: 24 сущности (+business_profiles, +qa_suggestions) | DONE |
+| `09-sequence-diagrams.md` | Sequence-диаграммы v1.1: 8 сценариев (+Q&A, +бизнес-профилирование) | DONE |
+| `10-api-inventory.md` | Инвентаризация API v1.1: 72 endpoint (+business, +Q&A, +guest-subtype) | DONE |
+| `personas/` | Персоны: 5 ролей + anti-persona + early adopter | DONE |
 | `wireframes/` | ASCII-вайрфреймы: 4 экрана бота | DONE |
 | `diagrams/` | Journey-диаграммы (PNG) | DONE |
 
