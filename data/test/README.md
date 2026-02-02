@@ -13,6 +13,18 @@
 | `checkpoint12_anon.xlsx` | Ответы из форм 1 и 2 контрольных рубежей | 13 листов, ~966 записей |
 | `_anonymization_mapping.json` | Маппинг анонимизации | **НЕ КОММИТИТЬ** — содержит реальные → анонимные соответствия |
 
+### Структурированные JSON-датасеты
+
+Извлечены из Excel скриптом `scripts/extract_test_data.py`:
+
+| Файл | Записей | Описание |
+|------|---------|----------|
+| `experts.json` | 319 (303 связаны с профилями) | Эксперты: anon_id (Эксперт_NNN), profile_id (EXP-NNN), position, expertise_tags, dd_status, expert_type |
+| `projects.json` | 333 (270 с оценками) | Проекты: title, rooms, days, formats, evaluations (per-expert scores), tags, avg_score |
+| `students.json` | 733 (466 с tech areas, 532 с треком) | Студенты: anon_id, track, course, project, tech_areas, mentor_involvement, goal_achievement |
+
+**Связи:** `experts.json` связывает анонимные ID из Excel (Эксперт_NNN) с профилями из `data/experts-public.json` (EXP-NNN) через приватный маппинг. `projects.json` содержит оценки с привязкой к expert_anon_id. `students.json` содержит проект и трек.
+
 ## Анонимизация
 
 Скрипт: `scripts/anonymize_excel.py`
