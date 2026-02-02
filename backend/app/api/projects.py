@@ -206,6 +206,9 @@ async def move_project(
         raise HTTPException(status_code=400, detail=str(e))
 
     run = await clustering_service.get_clustering_run(session, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Кластеризация не найдена")
+
     return _clustering_to_response(run)
 
 

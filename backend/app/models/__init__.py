@@ -6,8 +6,10 @@ from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_tag import ExpertTag
 from app.models.notification import Notification, NotificationStatus, NotificationType
+from app.models.guest_profile import GuestProfile
 from app.models.project import Project
 from app.models.project_tag import ProjectTag
+from app.models.recommendation import Recommendation
 from app.models.role import Role, RoleCode
 from app.models.room import Room
 from app.models.room_project import RoomProject
@@ -26,12 +28,14 @@ __all__ = [
     "Expert",
     "ExpertRoomAssignment",
     "ExpertTag",
+    "GuestProfile",
     "GuestSubtype",
     "Notification",
     "NotificationStatus",
     "NotificationType",
     "Project",
     "ProjectTag",
+    "Recommendation",
     "Role",
     "RoleCode",
     "Room",
