@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: DemoDay AI Navigator — Project Clustering API
+  version: 0.1.0
+  description: API endpoints for EPIC-002 (project upload, clustering, approval)
+
+paths:
+  /api/v1/projects/upload:
+    post:
+      summary: Upload projects from CSV/JSON file
+      description: |
+        Организатор загружает файл с проектами. Система валидирует и сохраняет.
+        Если проекты уже загружены — возвращает confirmation prompt.
+        FR-001, FR-002, FR-003, FR-013
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or JSON file
+                replace:
+                  type: boolean
+                  default: false
+                  description: If true, replace existing projects
+      responses:
+        "200":
+          description: Upload result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+        "400":
+          description: Invalid format or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadError"
+        "409":
+          description: Projects already exist, confirmation required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplaceConfirmation"
+
+  /api/v1/projects:
+    get:
+      summary: List projects for current event
+      description: Returns all projects with tags. FR-012 (seed data included)
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: room_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by room (after clustering)
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by title
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  source:
+                    type: string
+                    enum: [seed, upload]
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Project"
+
+  /api/v1/clustering/run:
+    post:
+      summary: Run AI clustering
+      description: |
+        Запуск кластеризации проектов по залам. FR-004, FR-005, FR-006, FR-007, FR-009.
+        Опциональный NL-фидбэк для перегенерации.
+      tags: [Clustering]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClusteringRequest"
+      responses:
+        "200":
+          description: Clustering result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusteringResult"
+        "400":
+          description: Not enough projects or invalid params
+
+  /api/v1/clustering/current:
+    get:
+      summary: Get current clustering result
+      description: Returns the latest clustering run (draft or approved) for current event
+      tags: [Clustering]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current clustering result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusteringResult"
+        "404":
+          description: No clustering run found
+
+  /api/v1/clustering/{run_id}/move:
+    post:
+      summary: Move project to another room
+      description: Manual correction by organizer. FR-008
+      tags: [Clustering]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveProjectRequest"
+      responses:
+        "200":
+          description: Project moved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusteringResult"
+
+  /api/v1/clustering/{run_id}/approve:
+    post:
+      summary: Approve clustering as schedule
+      description: |
+        Утверждение расписания. FR-010, FR-011.
+        If already approved — returns warning.
+      tags: [Clustering]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Schedule approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [approved]
+                  approved_at:
+                    type: string
+                    format: date-time
+        "409":
+          description: Already approved, confirmation needed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  current_status:
+                    type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        author:
+          type: string
+        telegram_contact:
+          type: string
+        source:
+          type: string
+          enum: [seed, upload]
+        room:
+          $ref: "#/components/schemas/RoomSummary"
+
+    RoomSummary:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    UploadResult:
+      type: object
+      properties:
+        loaded:
+          type: integer
+          description: Number of projects successfully loaded
+        errors:
+          type: integer
+          description: Number of rows with errors
+        duplicates:
+          type: integer
+          description: Number of duplicates found
+        error_details:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              field:
+                type: string
+              message:
+                type: string
+        duplicate_titles:
+          type: array
+          items:
+            type: string
+
+    UploadError:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: "Unsupported format or parse error"
+
+    ReplaceConfirmation:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Заменить предыдущие данные (215 проектов) новыми (305 проектов)?"
+        existing_count:
+          type: integer
+        new_count:
+          type: integer
+
+    ClusteringRequest:
+      type: object
+      properties:
+        num_rooms:
+          type: integer
+          default: 6
+          minimum: 2
+          maximum: 20
+        feedback:
+          type: string
+          nullable: true
+          description: NL feedback for re-clustering (optional)
+
+    ClusteringResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, approved, superseded]
+        num_rooms:
+          type: integer
+        feedback:
+          type: string
+          nullable: true
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Room"
+        created_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        theme_rationale:
+          type: string
+        project_count:
+          type: integer
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+
+    MoveProjectRequest:
+      type: object
+      required:
+        - project_id
+        - target_room_id
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        target_room_id:
+          type: string
+          format: uuid
