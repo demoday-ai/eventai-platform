@@ -120,6 +120,18 @@
 - **CoverageGap**: Тематический пробел — зал, непокрытый тег, список рекомендованных экспертов-кандидатов
 - **ExpertCandidate**: Свободный эксперт для закрытия пробела — имя, теги, текущие назначения
 
+## Clarifications
+
+### Session 2026-02-02
+
+No critical ambiguities detected. Structured scan across 11 taxonomy categories found all Clear:
+
+- Tag matching between experts and projects uses shared tag identifiers — exact match, no hierarchy needed
+- "Free expert" (FR-007) = expert with matching tag NOT assigned to the specific room in question
+- Coverage threshold ≥2 confirmed experts is explicit in FR-003
+- Scope is read-only dashboard — no reassignment actions included
+- Access control reuses existing organizer_ids pattern from EPIC-003
+
 ## Success Criteria
 
 ### Measurable Outcomes
