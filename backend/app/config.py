@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     organizer_telegram_ids: str = ""
     secret_key: str = "dev-secret-key"
     webhook_url: str = ""  # e.g. https://team10.camp.aitalenthub.ru
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_model: str = "openai/gpt-4.1"
 
     @property
     def organizer_ids(self) -> set[str]:

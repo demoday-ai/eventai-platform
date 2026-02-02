@@ -1,0 +1,239 @@
+openapi: "3.0.3"
+info:
+  title: "EPIC-003: Student Confirmation API"
+  version: "0.1.0"
+  description: "Endpoints for student participation confirmation"
+
+paths:
+  /api/v1/participation/broadcast:
+    post:
+      summary: "Запустить рассылку слотов студентам"
+      description: "Организатор запускает массовую рассылку. Создаёт ParticipationRequest для каждого проекта с залом и отправляет сообщения."
+      tags: [Participation]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BroadcastRequest"
+      responses:
+        "200":
+          description: "Рассылка запущена"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BroadcastResult"
+        "403":
+          description: "Только для организаторов"
+        "409":
+          description: "Рассылка уже запущена или нет утверждённой кластеризации"
+
+  /api/v1/participation/summary:
+    get:
+      summary: "Сводка подтверждений"
+      description: "Организатор видит: подтвердили / отказались / нет ответа, с разбивкой по залам."
+      tags: [Participation]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: room_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: "Фильтр по залу"
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [sent, confirmed, declined, reminded, escalated]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmationSummary"
+
+  /api/v1/participation/unconfirmed:
+    get:
+      summary: "Список неподтверждённых студентов"
+      description: "Имена, проекты, контакты кураторов для эскалации."
+      tags: [Participation]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UnconfirmedStudent"
+
+  /api/v1/participation/unreachable:
+    get:
+      summary: "Студенты без Telegram-контакта"
+      tags: [Participation]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UnreachableStudent"
+
+  /api/v1/participation/{request_id}:
+    patch:
+      summary: "Обновить статус подтверждения (внутренний, для бота)"
+      tags: [Participation]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConfirmation"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParticipationResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BroadcastRequest:
+      type: object
+      required: [clustering_run_id]
+      properties:
+        clustering_run_id:
+          type: string
+          format: uuid
+          description: "ID утверждённой кластеризации"
+
+    BroadcastResult:
+      type: object
+      properties:
+        total_projects:
+          type: integer
+          description: "Всего проектов в кластеризации"
+        sent:
+          type: integer
+          description: "Сообщений отправлено"
+        unreachable:
+          type: integer
+          description: "Без Telegram-контакта"
+        errors:
+          type: integer
+          description: "Ошибки доставки"
+
+    ConfirmationSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        confirmed:
+          type: integer
+        declined:
+          type: integer
+        no_response:
+          type: integer
+        unreachable:
+          type: integer
+        by_room:
+          type: array
+          items:
+            type: object
+            properties:
+              room_id:
+                type: string
+                format: uuid
+              room_name:
+                type: string
+              confirmed:
+                type: integer
+              declined:
+                type: integer
+              no_response:
+                type: integer
+
+    UnconfirmedStudent:
+      type: object
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        project_title:
+          type: string
+        author:
+          type: string
+        telegram_contact:
+          type: string
+        room_name:
+          type: string
+        status:
+          type: string
+        days_since_sent:
+          type: integer
+
+    UnreachableStudent:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        project_title:
+          type: string
+        author:
+          type: string
+
+    UpdateConfirmation:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [confirmed, declined]
+        decline_reason:
+          type: string
+          nullable: true
+
+    ParticipationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_title:
+          type: string
+        room_name:
+          type: string
+        status:
+          type: string
+        proposed_time:
+          type: string
+          format: date-time
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
