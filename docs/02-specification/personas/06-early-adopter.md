@@ -1,8 +1,8 @@
 # Persona: Павел Сорокин
 
 > **Тип:** Early Adopter  
-> **Версия:** 1.0  
-> **Источник:** Brief v1, USM v1, Lean Canvas v1
+> **Версия:** 1.1
+> **Источник:** Brief v3.0, USM v2.1, Lean Canvas v2.0
 
 ---
 

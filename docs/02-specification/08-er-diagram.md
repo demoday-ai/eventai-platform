@@ -1,18 +1,25 @@
 # Data Model: AI-first Unconference Navigator
 
-> Версия: 1.0  
-> Основано на: Brief v1, USM v1, NFR v1
+> Версия: 1.1
+> Дата: 2 февраля 2026
+> Основано на: Brief v3.0, USM v2.1, RICE v4.0, NFR v1
 
 ## 1. Обзор
 
-**Всего сущностей:** 22  
+**Всего сущностей:** 24 (+2 от v1.0)
 **Тип БД:** Relational DB (SQL)
 
 ### Группы
 - **Core:** users, roles, user_roles, events
-- **Business:** projects, sessions, participation_requests, project_reviews, contact_requests
+- **Business:** projects, sessions, participation_requests, project_reviews, contact_requests, qa_suggestions
 - **Reference:** tags, stages, tracks, sections
-- **Junction:** project_members, project_tags, user_interests, shortlists, project_sessions
+- **Junction:** project_members, project_tags, user_interests, user_interest_keywords, shortlists, project_sessions
+
+### Изменения v1.0 → v1.1
+- `users`: добавлено поле `guest_subtype` (H16)
+- Новая таблица `qa_suggestions` (H10, Q&A-помощник для гостей/бизнеса)
+- Новая таблица `business_profiles` (H14, бизнес-профилирование)
+- `contact_requests`: добавлено поле `message` для текста запроса
 
 ---
 
@@ -27,13 +34,14 @@ erDiagram
         string phone
         string telegram_user_id
         string organization
+        enum guest_subtype "applicant/ai_practitioner/other (nullable, H16)"
         timestamp created_at
         timestamp updated_at
     }
 
     roles {
         uuid id PK
-        string code UK
+        string code UK "organizer/student/expert/guest/business"
         string name
     }
 
@@ -156,6 +164,17 @@ erDiagram
         text keyword
     }
 
+    business_profiles {
+        uuid id PK
+        uuid user_id FK
+        uuid event_id FK
+        string industry "отрасль"
+        enum partnership_format "investment/hiring/partnership/mentoring"
+        enum preferred_stage "mvp/pilot/scale"
+        text description "свободное описание интересов"
+        timestamp created_at
+    }
+
     shortlists {
         uuid id PK
         uuid user_id FK
@@ -215,8 +234,18 @@ erDiagram
         uuid event_id FK
         uuid user_id FK
         uuid project_id FK
+        text message "текст запроса (опц.)"
         enum status
         timestamp created_at
+    }
+
+    qa_suggestions {
+        uuid id PK
+        uuid user_id FK
+        uuid project_id FK
+        text questions "JSON: список AI-подсказок вопросов"
+        text context "контекст генерации (профиль + проект)"
+        timestamp generated_at
     }
 
     notifications {
@@ -259,6 +288,9 @@ erDiagram
     tags ||--o{ user_interests : "tag"
     users ||--o{ user_interest_keywords : "keywords"
 
+    users ||--o{ business_profiles : "biz profile"
+    events ||--o{ business_profiles : "context"
+
     users ||--o{ shortlists : "saves"
     projects ||--o{ shortlists : "saved"
 
@@ -280,6 +312,9 @@ erDiagram
     users ||--o{ contact_requests : "requests"
     projects ||--o{ contact_requests : "for"
 
+    users ||--o{ qa_suggestions : "receives"
+    projects ||--o{ qa_suggestions : "about"
+
     events ||--o{ notifications : "sends"
     users ||--o{ notifications : "receives"
 ```
@@ -289,7 +324,7 @@ erDiagram
 ## 3. Описание сущностей
 
 ### users
-**Назначение:** все пользователи системы (организаторы, эксперты, участники, гости).  
+**Назначение:** все пользователи системы (организаторы, студенты, эксперты, гости, бизнес-партнёры).
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -299,14 +334,17 @@ erDiagram
 | phone | string | YES | — | Телефон (если есть) |
 | telegram_user_id | string | YES | — | ID пользователя в Telegram |
 | organization | string | YES | — | Компания/организация |
+| guest_subtype | enum | YES | NULL | Подтип гостя: applicant/ai_practitioner/other (H16) |
 | created_at | timestamp | NO | now | Создание |
 | updated_at | timestamp | NO | now | Обновление |
 
 **Бизнес-правила:**
 - Роль пользователя определяется через user_roles в контексте конкретного события.
+- `guest_subtype` заполняется только для роли «Гость» при онбординге.
+- Роли: organizer, student, expert, guest, business (5 ролей).
 
 ### events
-**Назначение:** отдельный Demo Day / мероприятие.  
+**Назначение:** отдельный Demo Day / мероприятие.
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -320,7 +358,7 @@ erDiagram
 | created_at | timestamp | NO | now | Создание |
 
 ### role_invites
-**Назначение:** приглашения на роль «Организатор» (код или назначение админом).  
+**Назначение:** приглашения на роль «Организатор» (код или назначение админом).
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -334,7 +372,7 @@ erDiagram
 | created_at | timestamp | NO | now | Создание |
 
 ### access_requests
-**Назначение:** запросы на назначение роли (например, организатор).  
+**Назначение:** запросы на назначение роли (например, организатор).
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -344,8 +382,43 @@ erDiagram
 | role_requested | enum | NO | organizer | Запрашиваемая роль |
 | status | enum | NO | pending | pending/approved/declined |
 | created_at | timestamp | NO | now | Создание |
+
+### business_profiles
+**Назначение:** расширенный профиль бизнес/партнёров (H14, RICE 23).
+**Data Dictionary:**
+| Поле | Тип | Null | Default | Описание |
+|---|---|---|---|---|
+| id | UUID | NO | gen | PK |
+| user_id | UUID | NO | — | FK → users |
+| event_id | UUID | NO | — | FK → events |
+| industry | string | YES | — | Отрасль (FinTech, EdTech, HealthTech...) |
+| partnership_format | enum | YES | — | investment/hiring/partnership/mentoring |
+| preferred_stage | enum | YES | — | mvp/pilot/scale |
+| description | text | YES | — | Свободное описание интересов |
+| created_at | timestamp | NO | now | Создание |
+
+**Бизнес-правила:**
+- Создаётся только для роли «Бизнес/партнёр» при профилировании.
+- Используется Matching-контейнером для бизнес-матчинга.
+
+### qa_suggestions
+**Назначение:** AI-подсказки вопросов для Q&A по проекту (H10, RICE 50).
+**Data Dictionary:**
+| Поле | Тип | Null | Default | Описание |
+|---|---|---|---|---|
+| id | UUID | NO | gen | PK |
+| user_id | UUID | NO | — | FK → users (гость или бизнес) |
+| project_id | UUID | NO | — | FK → projects |
+| questions | text | NO | — | JSON-массив подсказок вопросов |
+| context | text | YES | — | Контекст генерации (профиль + summary проекта) |
+| generated_at | timestamp | NO | now | Время генерации |
+
+**Бизнес-правила:**
+- Генерируется только для ролей «Гость» и «Бизнес/партнёр» (эксперты отказались — интервью #2).
+- Кэшируется: если профиль и проект не менялись, повторно не генерируется.
+
 ### projects
-**Назначение:** проекты/команды, выступающие на мероприятии.  
+**Назначение:** проекты/команды, выступающие на мероприятии.
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -358,7 +431,7 @@ erDiagram
 | created_at | timestamp | NO | now | Создание |
 
 ### participation_requests
-**Назначение:** заявки/подтверждения участия экспертов и участников.  
+**Назначение:** заявки/подтверждения участия экспертов и студентов.
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -367,14 +440,14 @@ erDiagram
 | user_id | UUID | NO | — | FK → users |
 | section_id | UUID | YES | — | FK → sections |
 | session_id | UUID | YES | — | FK → sessions |
-| role | enum | NO | — | participant/expert |
+| role | enum | NO | — | student/expert |
 | topic | string | YES | — | Тема выступления |
 | proposed_time | timestamp | YES | — | Предложенное время |
 | status | enum | NO | submitted | submitted/confirmed/declined |
 | confirmed_at | timestamp | YES | — | Время подтверждения |
 
 ### project_reviews
-**Назначение:** оценки экспертов по проектам.  
+**Назначение:** оценки экспертов по проектам.
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -388,7 +461,7 @@ erDiagram
 | created_at | timestamp | NO | now | Создание |
 
 ### event_feedback
-**Назначение:** обратная связь гостей по событию.  
+**Назначение:** обратная связь гостей и бизнес-партнёров по событию.
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -401,7 +474,7 @@ erDiagram
 | submitted_at | timestamp | NO | now | Отправка |
 
 ### contact_requests
-**Назначение:** запросы «хочу контакт» по проектам.  
+**Назначение:** запросы «хочу контакт» по проектам (НЕ 1:1 встречи).
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -409,11 +482,12 @@ erDiagram
 | event_id | UUID | NO | — | FK → events |
 | user_id | UUID | NO | — | FK → users |
 | project_id | UUID | NO | — | FK → projects |
+| message | text | YES | — | Текст запроса (опционально) |
 | status | enum | NO | requested | requested/approved/shared |
 | created_at | timestamp | NO | now | Создание |
 
 ### notifications
-**Назначение:** напоминания и follow‑up.  
+**Назначение:** напоминания и follow-up.
 **Data Dictionary:**
 | Поле | Тип | Null | Default | Описание |
 |---|---|---|---|---|
@@ -421,7 +495,7 @@ erDiagram
 | event_id | UUID | NO | — | FK → events |
 | user_id | UUID | NO | — | FK → users |
 | channel | enum | NO | telegram | telegram/email/sms |
-| notification_type | enum | NO | — | deadline/reminder/followup |
+| notification_type | enum | NO | — | deadline/reminder/followup/feedback_request/timing_shift |
 | scheduled_at | timestamp | NO | — | План отправки |
 | sent_at | timestamp | YES | — | Факт отправки |
 | status | enum | NO | pending | pending/sent/failed |
@@ -440,6 +514,9 @@ erDiagram
 | sections → sessions | 1:N | Сессии по расписанию | on delete cascade |
 | projects ↔ tags | N:M | Тематики/индустрии | on delete cascade |
 | users ↔ tags | N:M | Интересы пользователя | on delete cascade |
+| users → business_profiles | 1:N | Бизнес-профиль (по событиям) | on delete cascade |
+| users → qa_suggestions | 1:N | Q&A-подсказки | on delete cascade |
+| projects → qa_suggestions | 1:N | Подсказки по проекту | on delete cascade |
 | users → participation_requests | 1:N | Подтверждения участия | on delete cascade |
 | projects → project_reviews | 1:N | Оценки экспертов | on delete cascade |
 | users → contact_requests | 1:N | Запросы контакта | on delete cascade |
@@ -450,6 +527,6 @@ erDiagram
 
 1. Reference tables (roles, stages, tags)
 2. Core tables (users, events)
-3. Business tables (projects, tracks, sections, sessions)
+3. Business tables (projects, tracks, sections, sessions, business_profiles)
 4. Junction tables (user_roles, project_tags, user_interests, project_sessions)
-5. Feedback/requests (project_reviews, event_feedback, contact_requests, notifications)
+5. Feedback/requests (project_reviews, event_feedback, contact_requests, qa_suggestions, notifications)
