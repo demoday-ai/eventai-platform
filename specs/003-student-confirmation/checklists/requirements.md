@@ -1,7 +1,8 @@
-# Specification Quality Checklist: Подтверждение участия студентов
+# Specification Quality Checklist: Ознакомление студентов с расписанием
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-02-02
+**Updated**: 2026-02-02 (post-clarify)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,6 +32,7 @@
 
 ## Notes
 
-- All items pass validation. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
-- Assumptions section documents reasonable defaults (escalation timelines, team confirmation model, organizer interface via Telegram).
-- Dependencies on EPIC-001 (onboarding) and schedule data are documented.
+- All items pass validation. Spec is ready for `/speckit.plan`.
+- Clarify session resolved 3 questions: mandatory participation (no decline), DD-relative escalation timers, re-send behavior on schedule change.
+- Decline flow removed entirely. Single "Ознакомлен" button replaces "Подтверждаю" / "Не смогу".
+- Escalation timers now relative to DD date (5 days = reminder, 2 days = escalation).
