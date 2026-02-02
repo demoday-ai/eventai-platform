@@ -1,0 +1,241 @@
+openapi: 3.0.3
+info:
+  title: DemoDay AI Navigator — Onboarding API
+  version: 0.1.0
+  description: API-контракты для EPIC-001 Онбординг и выбор роли
+
+servers:
+  - url: /api/v1
+
+paths:
+  /auth/login:
+    post:
+      summary: Аутентификация через Telegram
+      description: |
+        Создаёт или обновляет пользователя по Telegram ID.
+        Возвращает JWT-токен для дальнейших запросов.
+        Upsert: обновляет full_name и username из Telegram-профиля.
+      operationId: authLogin
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramAuthRequest'
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/me:
+    get:
+      summary: Текущий пользователь
+      description: Возвращает профиль текущего пользователя с ролью в текущем событии
+      operationId: getMe
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Не авторизован
+
+  /users/me/role:
+    put:
+      summary: Выбрать или сменить роль
+      description: |
+        Назначает роль пользователю в текущем событии.
+        Если роль уже есть — заменяет.
+        Для роли organizer — проверяет whitelist.
+        Для роли guest — принимает guest_subtype.
+        При смене с guest на другую роль — сбрасывает guest_subtype.
+      operationId: setMyRole
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetRoleRequest'
+      responses:
+        '200':
+          description: Роль назначена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '403':
+          description: Роль организатора недоступна (не в whitelist)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/me/guest-subtype:
+    put:
+      summary: Выбрать подтип гостя
+      description: |
+        Устанавливает подтип гостя (applicant, ai_practitioner, other).
+        Доступно только пользователям с ролью guest.
+      operationId: setGuestSubtype
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetGuestSubtypeRequest'
+      responses:
+        '200':
+          description: Подтип установлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '403':
+          description: Пользователь не является гостем
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /events/current:
+    get:
+      summary: Текущее событие
+      description: Возвращает активное событие (для демо — единственное)
+      operationId: getCurrentEvent
+      tags: [Events]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Текущее событие
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Нет активного события
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TelegramAuthRequest:
+      type: object
+      required: [telegram_user_id, full_name]
+      properties:
+        telegram_user_id:
+          type: string
+          description: Telegram user ID
+          example: "123456789"
+        full_name:
+          type: string
+          description: first_name + last_name из Telegram
+          example: "Иван Петров"
+        username:
+          type: string
+          nullable: true
+          description: "@username из Telegram"
+          example: "ivanpetrov"
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    SetRoleRequest:
+      type: object
+      required: [role_code]
+      properties:
+        role_code:
+          type: string
+          enum: [organizer, student, expert, guest, business]
+          description: Код роли
+        guest_subtype:
+          type: string
+          enum: [applicant, ai_practitioner, other]
+          nullable: true
+          description: Подтип гостя (только для role_code=guest)
+
+    SetGuestSubtypeRequest:
+      type: object
+      required: [guest_subtype]
+      properties:
+        guest_subtype:
+          type: string
+          enum: [applicant, ai_practitioner, other]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        telegram_user_id:
+          type: string
+        full_name:
+          type: string
+        username:
+          type: string
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleInfo'
+          nullable: true
+        guest_subtype:
+          type: string
+          enum: [applicant, ai_practitioner, other]
+          nullable: true
+
+    RoleInfo:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: [organizer, student, expert, guest, business]
+        name:
+          type: string
+          example: "Студент"
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Demo Day 2026"
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Роль организатора доступна только по приглашению"
