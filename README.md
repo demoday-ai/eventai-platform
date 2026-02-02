@@ -2,11 +2,11 @@
 
 **AI Talent Camp 2026 | Команда "ЯСНОПОНЯТНО" | Проект #10**
 
-AI-платформа для автоматизации подготовки и проведения Demo Day: кластеризация проектов, распределение экспертов, подтверждение участия, напоминания, обратная связь. Единая точка входа для всех ролей в Telegram.
+AI-платформа для автоматизации подготовки и проведения Demo Day: кластеризация проектов, распределение экспертов, подтверждение участия, напоминания, персональная программа для гостей и бизнес-партнёров, обратная связь и follow-up. Единая точка входа для всех 5 ролей в Telegram.
 
 ## Проблема
 
-На Demo Day ~330 проектов в 6-10 параллельных залах. Расписание составляется вручную одним человеком + ChatGPT (кластеризует плохо, дубликаты). 80 студентов не попали в расписание за ночь до DD. Нужно 60-80 экспертов, активных ~30-40. Обратная связь не доходит до студентов. Demo-Hero -- "фигня".
+На Demo Day ~330 проектов в 6-10 параллельных залах. Расписание составляется вручную одним человеком + ChatGPT (кластеризует плохо, дубликаты). 80 студентов не попали в расписание за ночь до DD. Нужно 60-80 экспертов, активных ~30-40. Обратная связь не доходит до студентов. Бизнес-партнёры не находят релевантные проекты. Гости видят <20% проектов. Demo-Hero -- "фигня".
 
 > "Целевая аудитория демодня -- это не гости, это студенты, эксперты." -- организатор
 
@@ -17,48 +17,69 @@ AI-платформа для автоматизации подготовки и 
 | Организаторы | ~5 | Основной |
 | Студенты | ~330 проектов | Основной |
 | Эксперты / менторы | ~50 | Основной |
+| Бизнес/партнёры | ~15-20 | Вторичный |
 | Внешние гости | ~50 реальных | Вторичный |
+
+## Customer Discovery
+
+4 интервью, 4 сегмента, 17 гипотез, RICE-матрица v4.0:
+
+| # | Интервью | Сегмент | Ключевой инсайт |
+|---|----------|---------|-----------------|
+| 1 | Инна (организатор Хаба) | Организатор | "Это пипец! Если вы упростите этот ужас, я буду благодарна" |
+| 2 | Рустем Хакимуллин (ML-эксперт) | Эксперт | "Зачем я вообще пришёл, потратил своё время?" (о нерелевантной комнате) |
+| 3 | Олег Шатов (руководитель Хаба) | Бизнес/партнёр | "Сто процентов не в контексте, не могу ответить" (бутылочное горлышко) |
+| 4 | Анастасия Гапеева (гость-абитуриент) | Гость | "Введя свои интересы, мне предложил бот доклады -- было бы очень удобно" |
 
 ## Структура репозитория
 
 ```
 ├── docs/
-│   ├── 00-research/                    # Исследования и аналитика прошлого DD
-│   │   ├── demoday-analytics.md        #   Масштаб, конфликты, сценарии, гипотезы
-│   │   ├── past-demoday-projects.md    #   Каталог ~330 проектов по залам
-│   │   └── demo-hero-example.md        #   Лог Demo-Hero + анализ UX-проблем
+│   ├── 00-research/                        # Исследования и аналитика прошлого DD
+│   │   ├── demoday-analytics.md            #   Масштаб, конфликты, сценарии
+│   │   ├── past-demoday-projects.md        #   Каталог ~330 проектов по залам
+│   │   ├── demo-hero-example.md            #   Лог Demo-Hero + анализ UX-проблем
+│   │   └── expert-community-analysis.md    #   Анализ 294 экспертов, 31 тег
 │   │
-│   ├── 01-discovery/                   # Воркшоп 1: AI-First Customer Discovery
-│   │   ├── customer-discovery.md       #   Опросник CustDev (орги + эксперты)
-│   │   ├── interview-transcript.md     #   Транскрипт интервью с организатором
-│   │   ├── lean-canvas.md              #   Lean Canvas (пивот по итогам CustDev)
-│   │   ├── rice-matrix.md              #   RICE-матрица: 13 гипотез
-│   │   ├── customer-journeys.md        #   AS-IS → TO-BE по 4 ролям
-│   │   ├── icp.md                      #   Ideal Customer Profile
-│   │   ├── pain-map.md                 #   Карта болей: 10 болей по сегментам
-│   │   ├── jtbd.md                     #   Jobs-To-Be-Done: 9 jobs
-│   │   └── vpc.md                      #   Value Proposition Canvas
+│   ├── 01-discovery/                       # Воркшоп 1: AI-First Customer Discovery
+│   │   ├── customer-discovery.md           #   Опросник CustDev + заметки по 4 интервью
+│   │   ├── interview-transcript.md         #   Транскрипт #1: организатор Инна
+│   │   ├── interview-transcript-expert.md  #   Транскрипт #2: эксперт Рустем
+│   │   ├── interview-transcript-guest.md   #   Транскрипт #3: Олег Шатов (бизнес)
+│   │   ├── interview-transcript-4.md       #   Транскрипт #4: Настя Гапеева (гость)
+│   │   ├── interview-reports/              #   Отчёты по интервью (от Насти Г.)
+│   │   │   ├── 01-organizer-interview.md
+│   │   │   ├── 02-student-interview.md
+│   │   │   ├── 03-expert-interview.md
+│   │   │   └── 04-guest-interview.md
+│   │   ├── lean-canvas.md                  #   Lean Canvas (v2.0, 5 сегментов)
+│   │   ├── rice-matrix.md                  #   RICE-матрица v4.0: 17 гипотез
+│   │   ├── customer-journeys.md            #   AS-IS → TO-BE по 5 ролям
+│   │   ├── icp.md                          #   Ideal Customer Profile
+│   │   ├── pain-map.md                     #   Карта болей по сегментам
+│   │   ├── jtbd.md                         #   Jobs-To-Be-Done: 9 jobs
+│   │   ├── vpc.md                          #   Value Proposition Canvas
+│   │   └── market-research.md              #   Исследование рынка event-tech
 │   │
-│   └── 02-specification/               # Воркшоп 2: Specification-Driven Development
-│       ├── 01-brief.md                 #   ✅ Бриф проекта
-│       ├── 02-user-story-map.md        #   User Story Map
-│       ├── 03-user-journey-map.md      #   User Journey Map (Mermaid)
-│       ├── 04-nfr.md                   #   Нефункциональные требования
-│       ├── 07-c4-architecture.md       #   C4-диаграмма архитектуры
-│       ├── 08-er-diagram.md            #   ER-диаграмма + Data Dictionary
-│       ├── 09-sequence-diagrams.md     #   Sequence-диаграммы
-│       ├── 10-api-inventory.md         #   API-эндпоинты
-│       ├── 11-validation-report.md     #   Кросс-валидация артефактов
-│       ├── personas/                   #   Персоны пользователей
-│       └── wireframes/                 #   Вайрфреймы экранов бота
+│   └── 02-specification/                   # Воркшоп 2: Specification-Driven Development
+│       ├── 01-brief.md                     #   ✅ Бриф проекта (v3.0)
+│       ├── 02-user-story-map.md            #   ✅ User Story Map
+│       ├── 03-user-journey-map.md          #   ✅ User Journey Map (Mermaid)
+│       ├── 04-nfr.md                       #   ✅ Нефункциональные требования
+│       ├── personas/                       #   ✅ Персоны пользователей
+│       │   ├── 01-organizer.md
+│       │   ├── 02-student.md
+│       │   ├── 03-expert.md
+│       │   └── 04-guest.md
+│       └── diagrams/                       #   Journey-диаграммы (PNG)
 │
-├── telegram-log/                       # Telegram-бот для логирования чата
-│   ├── bot.py                          #   Бот (python-telegram-bot, polling)
-│   ├── send.py                         #   Отправка / удаление сообщений
-│   ├── chat_config.json                #   ID чата
-│   └── requirements.txt                #   Зависимости
+├── telegram-log/                           # Telegram-бот для логирования чата
+│   ├── bot.py                              #   Бот (python-telegram-bot, polling)
+│   ├── send.py                             #   Отправка / удаление сообщений
+│   ├── chat_config.json                    #   ID чата
+│   └── requirements.txt                    #   Зависимости
 │
-├── CLAUDE.md                           # Контекст для Claude Code
+├── CLAUDE.md                               # Контекст для Claude Code
 └── README.md
 ```
 
