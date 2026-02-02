@@ -25,6 +25,7 @@ docs/01-discovery/interview-raw.json
 docs/01-discovery/interview-raw-guest.json
 docs/01-discovery/interview-raw-guest2.json
 docs/01-discovery/interview-raw-4.json
+docs/01-discovery/interview-raw-botov.json
 
 # Private data (PII: names, telegrams, contacts)
 data/expert-mapping.json
