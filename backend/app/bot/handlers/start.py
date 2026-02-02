@@ -26,6 +26,11 @@ CHOOSE_ROLE, CHOOSE_SUBTYPE, CONFIRM_CHANGE = range(3)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    # Check if this is an expert deep link: /start expert
+    if context.args and context.args[0] == "expert":
+        from app.bot.handlers.expert_assignment import handle_expert_start
+        return await handle_expert_start(update, context)
+
     tg_user = update.effective_user
     telegram_user_id = str(tg_user.id)
     full_name = tg_user.full_name or tg_user.first_name
