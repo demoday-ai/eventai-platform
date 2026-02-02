@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.business_profile import BusinessObjective, BusinessProfile, OBJECTIVE_DISPLAY
 from app.models.clustering_run import ClusteringRun
 from app.models.escalation import Escalation
 from app.models.event import Event
@@ -8,6 +9,7 @@ from app.models.expert_tag import ExpertTag
 from app.models.notification import Notification, NotificationStatus, NotificationType
 from app.models.guest_profile import GuestProfile
 from app.models.project import Project
+from app.models.project_recommendation import ProjectRecommendation
 from app.models.project_tag import ProjectTag
 from app.models.recommendation import Recommendation
 from app.models.role import Role, RoleCode
@@ -21,6 +23,8 @@ from app.models.user_role import UserRole
 
 __all__ = [
     "Base",
+    "BusinessObjective",
+    "BusinessProfile",
     "ChangeType",
     "ClusteringRun",
     "Escalation",
@@ -30,10 +34,12 @@ __all__ = [
     "ExpertTag",
     "GuestProfile",
     "GuestSubtype",
+    "OBJECTIVE_DISPLAY",
     "Notification",
     "NotificationStatus",
     "NotificationType",
     "Project",
+    "ProjectRecommendation",
     "ProjectTag",
     "Recommendation",
     "Role",

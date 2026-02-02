@@ -1,5 +1,6 @@
 from telegram.ext import Application, CallbackQueryHandler
 
+from app.bot.handlers.business_profiling import get_business_profiling_handler
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.expert_assignment import (
     expert_invite_callback,
@@ -18,6 +19,7 @@ def create_bot_app() -> Application:
 
     application.add_handler(get_onboarding_handler())
     application.add_handler(get_clustering_handler())
+    application.add_handler(get_business_profiling_handler())
     application.add_handler(get_expert_assignment_handler())
     application.add_handler(get_schedule_handler())
     application.add_handler(get_profiling_handler())
