@@ -159,3 +159,10 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 
 - Основной язык общения: русский
 - Чат команды: Telegram, группа "ЯСНОПОНЯТНО"
+
+## Active Technologies
+- Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg (001-onboarding)
+- PostgreSQL 16 (001-onboarding)
+
+## Recent Changes
+- 001-onboarding: Added Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg

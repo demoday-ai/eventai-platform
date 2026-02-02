@@ -1,6 +1,20 @@
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+.venv/
+venv/
 .env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.tmp
+.DS_Store
 
 # Runtime data
 telegram-log/messages.json
