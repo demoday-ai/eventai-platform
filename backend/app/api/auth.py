@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import jwt
@@ -20,6 +22,48 @@ ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
 
+def _verify_telegram_login(body: TelegramAuthRequest) -> None:
+    if not settings.bot_token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Telegram bot token не настроен",
+        )
+
+    if not body.hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Не предоставлена подпись Telegram",
+        )
+
+    payload_fields = {
+        "auth_date": str(body.auth_date),
+        "id": body.telegram_user_id,
+    }
+    for key in ("first_name", "last_name", "username", "photo_url"):
+        value = getattr(body, key)
+        if value:
+            payload_fields[key] = value
+
+    data_check_string = "\n".join(
+        f"{key}={payload_fields[key]}" for key in sorted(payload_fields)
+    )
+    secret = hashlib.sha256(settings.bot_token.encode()).digest()
+    signature = hmac.new(secret, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(signature, body.hash.lower()):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверная подпись Telegram",
+        )
+
+    now_ts = datetime.now(timezone.utc).timestamp()
+    if abs(now_ts - body.auth_date) > timedelta(minutes=5).total_seconds():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Истёк срок действия данных Telegram",
+        )
+
+
 def create_access_token(telegram_user_id: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRE_HOURS)
     return jwt.encode(
@@ -39,10 +83,18 @@ def decode_token(token: str) -> str:
 
 @router.post("/login", response_model=AuthResponse)
 async def login(body: TelegramAuthRequest, session: AsyncSession = Depends(get_session)):
+    _verify_telegram_login(body)
+
+    full_name = (body.full_name or " ").strip()
+    if not full_name:
+        first = body.first_name or ""
+        last = body.last_name or ""
+        full_name = f"{first} {last}".strip() or body.username or body.telegram_user_id
+
     user = await user_service.upsert_user(
         session,
         telegram_user_id=body.telegram_user_id,
-        full_name=body.full_name,
+        full_name=full_name,
         username=body.username,
     )
 
