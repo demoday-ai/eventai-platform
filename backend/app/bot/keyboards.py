@@ -374,3 +374,33 @@ def back_to_program_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])
+
+
+# --- Student schedule acknowledgment keyboards (EPIC-003) ---
+
+
+def acknowledge_slot_keyboard(request_id: str) -> InlineKeyboardMarkup:
+    short_id = str(request_id)[:8]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ознакомлен", callback_data=f"ack:{short_id}")],
+    ])
+
+
+def broadcast_confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да, разослать", callback_data="bcast:yes")],
+        [InlineKeyboardButton("Отмена", callback_data="bcast:no")],
+    ])
+
+
+def participation_summary_rooms(rooms_data: list) -> InlineKeyboardMarkup:
+    buttons = []
+    for r in rooms_data:
+        ack = r["acknowledged"]
+        total = r["total"]
+        label = f"{r['room_name'][:20]} ({ack}/{total})"
+        buttons.append([InlineKeyboardButton(
+            label, callback_data=f"proom:{str(r['room_id'])[:8]}"
+        )])
+    buttons.append([InlineKeyboardButton("Обновить", callback_data="pstat:refresh")])
+    return InlineKeyboardMarkup(buttons)

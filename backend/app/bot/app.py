@@ -1,6 +1,7 @@
 from telegram.ext import Application, CallbackQueryHandler
 
 from app.bot.handlers.clustering import get_clustering_handler
+from app.bot.handlers.confirmation import get_confirmation_handlers
 from app.bot.handlers.expert_assignment import (
     expert_invite_callback,
     expert_room_choice_callback,
@@ -23,5 +24,9 @@ def create_bot_app() -> Application:
     # Standalone callbacks for expert invite responses (outside conversation)
     application.add_handler(CallbackQueryHandler(expert_invite_callback, pattern=r"^einv:"))
     application.add_handler(CallbackQueryHandler(expert_room_choice_callback, pattern=r"^eroom:"))
+
+    # EPIC-003: Student schedule acknowledgment handlers
+    for handler in get_confirmation_handlers():
+        application.add_handler(handler)
 
     return application

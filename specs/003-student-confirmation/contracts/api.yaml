@@ -1,26 +1,20 @@
 openapi: "3.0.3"
 info:
-  title: "EPIC-003: Student Confirmation API"
-  version: "0.1.0"
-  description: "Endpoints for student participation confirmation"
+  title: "EPIC-003: Student Schedule Acknowledgment API"
+  version: "0.2.0"
+  description: "Endpoints for student schedule acknowledgment (participation is mandatory)"
 
 paths:
   /api/v1/participation/broadcast:
     post:
       summary: "Запустить рассылку слотов студентам"
-      description: "Организатор запускает массовую рассылку. Создаёт ParticipationRequest для каждого проекта с залом и отправляет сообщения."
+      description: "Создаёт ParticipationRequest для каждого проекта в утверждённом расписании и рассылает сообщения через Telegram. Идемпотентна: при повторном вызове отправляет только новые/изменённые слоты."
       tags: [Participation]
       security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/BroadcastRequest"
+        - bearerAuth: []
       responses:
         "200":
-          description: "Рассылка запущена"
+          description: "Рассылка завершена"
           content:
             application/json:
               schema:
@@ -28,15 +22,15 @@ paths:
         "403":
           description: "Только для организаторов"
         "409":
-          description: "Рассылка уже запущена или нет утверждённой кластеризации"
+          description: "Нет утверждённого расписания"
 
   /api/v1/participation/summary:
     get:
-      summary: "Сводка подтверждений"
-      description: "Организатор видит: подтвердили / отказались / нет ответа, с разбивкой по залам."
+      summary: "Сводка ознакомлений"
+      description: "Возвращает количество ознакомившихся, неответивших, неподключённых с разбивкой по залам."
       tags: [Participation]
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: room_id
           in: query
@@ -45,56 +39,54 @@ paths:
             type: string
             format: uuid
           description: "Фильтр по залу"
-        - name: status
+      responses:
+        "200":
+          description: "Сводка"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParticipationSummary"
+        "403":
+          description: "Только для организаторов"
+
+  /api/v1/participation/unacknowledged:
+    get:
+      summary: "Список неознакомленных студентов"
+      description: "Возвращает список студентов, не нажавших 'Ознакомлен'."
+      tags: [Participation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: room_id
           in: query
           required: false
           schema:
             type: string
-            enum: [sent, confirmed, declined, reminded, escalated]
+            format: uuid
+          description: "Фильтр по залу"
       responses:
         "200":
+          description: "Список неознакомленных"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConfirmationSummary"
-
-  /api/v1/participation/unconfirmed:
-    get:
-      summary: "Список неподтверждённых студентов"
-      description: "Имена, проекты, контакты кураторов для эскалации."
-      tags: [Participation]
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/UnconfirmedStudent"
-
-  /api/v1/participation/unreachable:
-    get:
-      summary: "Студенты без Telegram-контакта"
-      tags: [Participation]
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/UnreachableStudent"
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UnacknowledgedStudent"
+                  total:
+                    type: integer
+        "403":
+          description: "Только для организаторов"
 
   /api/v1/participation/{request_id}:
-    patch:
-      summary: "Обновить статус подтверждения (внутренний, для бота)"
+    get:
+      summary: "Детали запроса на ознакомление"
       tags: [Participation]
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: request_id
           in: path
@@ -102,64 +94,66 @@ paths:
           schema:
             type: string
             format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateConfirmation"
       responses:
         "200":
+          description: "Детали"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ParticipationResponse"
+                $ref: "#/components/schemas/ParticipationRequestDetail"
+        "404":
+          description: "Запрос не найден"
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
 
   schemas:
-    BroadcastRequest:
-      type: object
-      required: [clustering_run_id]
-      properties:
-        clustering_run_id:
-          type: string
-          format: uuid
-          description: "ID утверждённой кластеризации"
-
     BroadcastResult:
       type: object
+      required: [sent, skipped, failed, unregistered]
       properties:
-        total_projects:
-          type: integer
-          description: "Всего проектов в кластеризации"
         sent:
           type: integer
-          description: "Сообщений отправлено"
-        unreachable:
+          description: "Количество отправленных сообщений"
+        skipped:
           type: integer
-          description: "Без Telegram-контакта"
-        errors:
+          description: "Пропущено (слот не изменился)"
+        failed:
           type: integer
-          description: "Ошибки доставки"
+          description: "Ошибки доставки (бот заблокирован и т.д.)"
+        unregistered:
+          type: integer
+          description: "Студенты без Telegram-контакта в системе"
+        unregistered_projects:
+          type: array
+          items:
+            type: object
+            properties:
+              project_title:
+                type: string
+              telegram_contact:
+                type: string
 
-    ConfirmationSummary:
+    ParticipationSummary:
       type: object
+      required: [total, acknowledged, pending, unregistered]
       properties:
         total:
           type: integer
-        confirmed:
+          description: "Всего проектов в расписании"
+        acknowledged:
           type: integer
-        declined:
+          description: "Нажали Ознакомлен"
+        pending:
           type: integer
-        no_response:
+          description: "Не ответили (сообщение отправлено)"
+        unregistered:
           type: integer
-        unreachable:
-          type: integer
+          description: "Не зарегистрированы в боте"
         by_room:
           type: array
           items:
@@ -170,14 +164,14 @@ components:
                 format: uuid
               room_name:
                 type: string
-              confirmed:
+              total:
                 type: integer
-              declined:
+              acknowledged:
                 type: integer
-              no_response:
+              pending:
                 type: integer
 
-    UnconfirmedStudent:
+    UnacknowledgedStudent:
       type: object
       properties:
         request_id:
@@ -185,7 +179,7 @@ components:
           format: uuid
         project_title:
           type: string
-        author:
+        author_name:
           type: string
         telegram_contact:
           type: string
@@ -193,31 +187,16 @@ components:
           type: string
         status:
           type: string
-        days_since_sent:
-          type: integer
+          enum: [pending, sent]
+        sent_at:
+          type: string
+          format: date-time
+        reminder_sent:
+          type: boolean
+        escalated:
+          type: boolean
 
-    UnreachableStudent:
-      type: object
-      properties:
-        project_id:
-          type: string
-          format: uuid
-        project_title:
-          type: string
-        author:
-          type: string
-
-    UpdateConfirmation:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [confirmed, declined]
-        decline_reason:
-          type: string
-          nullable: true
-
-    ParticipationResponse:
+    ParticipationRequestDetail:
       type: object
       properties:
         id:
@@ -225,15 +204,25 @@ components:
           format: uuid
         project_title:
           type: string
+        author_name:
+          type: string
         room_name:
           type: string
         status:
           type: string
-        proposed_time:
+          enum: [pending, sent, acknowledged]
+        acknowledged_at:
           type: string
           format: date-time
           nullable: true
-        confirmed_at:
+        reminder_sent_at:
           type: string
           format: date-time
           nullable: true
+        escalated_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time

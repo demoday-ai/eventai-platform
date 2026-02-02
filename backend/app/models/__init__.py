@@ -1,5 +1,6 @@
 from app.models.base import Base
 from app.models.clustering_run import ClusteringRun
+from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.escalation import Escalation
 from app.models.event import Event
 from app.models.expert import Expert
@@ -19,6 +20,8 @@ from app.models.user_role import UserRole
 __all__ = [
     "Base",
     "ClusteringRun",
+    "ParticipationRequest",
+    "ParticipationStatus",
     "Escalation",
     "Event",
     "Expert",

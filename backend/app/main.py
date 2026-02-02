@@ -7,6 +7,7 @@ from app.api.auth import router as auth_router
 from app.api.events import router as events_router
 from app.api.experts import router as experts_router
 from app.api.guests import router as guests_router
+from app.api.participation import router as participation_router
 from app.api.projects import router as projects_router
 from app.api.users import router as users_router
 from app.config import settings
@@ -111,11 +112,65 @@ async def lifespan(app: FastAPI):
                 except Exception:
                     logger.exception("Escalation job failed")
 
+            # EPIC-003: Participation acknowledgment periodic jobs
+            async def _participation_reminder_job():
+                try:
+                    from app.services import participation_service
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if event:
+                            sent = await participation_service.send_reminders(
+                                session, event, bot_instance,
+                            )
+                            if sent:
+                                logger.info("Participation reminders sent: %d", sent)
+                except Exception:
+                    logger.exception("Participation reminder job failed")
+
+            async def _participation_escalation_job():
+                try:
+                    from app.services import participation_service
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if event:
+                            count = await participation_service.escalate_to_organizers(
+                                session, event, bot_instance, settings.organizer_ids,
+                            )
+                            if count:
+                                logger.info("Participation escalations: %d", count)
+                except Exception:
+                    logger.exception("Participation escalation job failed")
+
+            async def _daily_summary_job():
+                try:
+                    from app.services import participation_service
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if event:
+                            await participation_service.send_daily_summary(
+                                session, event, bot_instance, settings.organizer_ids,
+                            )
+                            logger.info("Daily participation summary sent")
+                except Exception:
+                    logger.exception("Daily summary job failed")
+
             scheduler.add_job(_reminder_job, IntervalTrigger(hours=12), id="reminders")
             scheduler.add_job(_escalation_job, IntervalTrigger(hours=12), id="escalations")
+            scheduler.add_job(
+                _participation_reminder_job, IntervalTrigger(hours=1),
+                id="participation_reminders",
+            )
+            scheduler.add_job(
+                _participation_escalation_job, IntervalTrigger(hours=1),
+                id="participation_escalations",
+            )
+            scheduler.add_job(
+                _daily_summary_job, IntervalTrigger(hours=24),
+                id="participation_daily_summary",
+            )
             scheduler.start()
             app.state.scheduler = scheduler
-            logger.info("APScheduler started (reminders + escalations every 12h)")
+            logger.info("APScheduler started (reminders, escalations, participation jobs)")
         except Exception:
             logger.exception("Failed to start APScheduler (non-fatal)")
 
@@ -147,6 +202,7 @@ app.include_router(events_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")
 app.include_router(experts_router, prefix="/api/v1")
 app.include_router(guests_router, prefix="/api/v1")
+app.include_router(participation_router, prefix="/api/v1")
 
 
 @app.get("/health")
