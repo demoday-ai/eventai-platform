@@ -1,7 +1,15 @@
-from telegram.ext import Application, CallbackQueryHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
+from app.bot.handlers.coverage import (
+    coverage_back_callback,
+    coverage_command,
+    coverage_gaps_callback,
+    coverage_refresh_callback,
+    coverage_room_callback,
+    coverage_room_refresh_callback,
+)
 from app.bot.handlers.expert_assignment import (
     expert_invite_callback,
     expert_room_choice_callback,
@@ -28,5 +36,13 @@ def create_bot_app() -> Application:
     # EPIC-003: Student schedule acknowledgment handlers
     for handler in get_confirmation_handlers():
         application.add_handler(handler)
+
+    # EPIC-006: Organizer Coverage Dashboard handlers
+    application.add_handler(CommandHandler("coverage", coverage_command))
+    application.add_handler(CallbackQueryHandler(coverage_refresh_callback, pattern=r"^cov:refresh$"))
+    application.add_handler(CallbackQueryHandler(coverage_back_callback, pattern=r"^cov:back$"))
+    application.add_handler(CallbackQueryHandler(coverage_gaps_callback, pattern=r"^cov:gaps$"))
+    application.add_handler(CallbackQueryHandler(coverage_room_callback, pattern=r"^cov_room:"))
+    application.add_handler(CallbackQueryHandler(coverage_room_refresh_callback, pattern=r"^cov_rr:"))
 
     return application

@@ -17,7 +17,7 @@ from app.schemas.expert import (
     MatchingRequest,
     MoveExpertRequest,
 )
-from app.services import expert_service, invite_service, matching_service
+from app.services import coverage_service, expert_service, invite_service, matching_service
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +314,7 @@ async def invite_confirm_endpoint(
     return result
 
 
-# ========== Coverage endpoints (T026) ==========
+# ========== Coverage endpoints (EPIC-006: enriched) ==========
 
 
 @router.get("/coverage")
@@ -322,15 +322,35 @@ async def coverage_dashboard_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    _require_organizer(current_user)
+
     from app.services import user_service
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
 
-    dashboard = await invite_service.get_coverage_dashboard(session, event.id)
+    dashboard = await coverage_service.get_coverage_summary(session, event.id)
     if not dashboard:
-        raise HTTPException(status_code=404, detail="No matching data available")
+        raise HTTPException(status_code=404, detail="No approved clustering")
     return dashboard
+
+
+@router.get("/coverage/gaps")
+async def coverage_gaps_endpoint(
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    _require_organizer(current_user)
+
+    from app.services import user_service
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+
+    gaps = await coverage_service.get_coverage_gaps(session, event.id)
+    if not gaps:
+        raise HTTPException(status_code=404, detail="No approved clustering")
+    return gaps
 
 
 @router.get("/coverage/{room_id}")
@@ -339,12 +359,14 @@ async def coverage_room_detail_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    _require_organizer(current_user)
+
     from app.services import user_service
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
 
-    detail = await invite_service.get_room_coverage_detail(session, event.id, room_id)
+    detail = await coverage_service.get_room_detail(session, event.id, room_id)
     if not detail:
         raise HTTPException(status_code=404, detail="Room coverage data not found")
     return detail
