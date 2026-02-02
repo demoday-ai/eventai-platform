@@ -11,9 +11,9 @@
 
 **Purpose**: Create new files, Pydantic schemas for enriched coverage responses
 
-- [ ] T001 [P] Create coverage response schemas in `backend/app/schemas/coverage.py` — RoomCoverage, CoverageSummary, RoomExpert, ExpertCandidate, CoverageGap, RoomCoverageDetail, CoverageGapsList per contracts/api.yaml
-- [ ] T002 [P] Create empty `backend/app/services/coverage_service.py` with function stubs: `get_coverage_summary()`, `get_room_detail()`, `get_coverage_gaps()`, `find_expert_candidates()`
-- [ ] T003 [P] Create empty `backend/app/bot/handlers/coverage.py` with stub for `/coverage` command handler
+- [x] T001 [P] Create coverage response schemas in `backend/app/schemas/coverage.py` — RoomCoverage, CoverageSummary, RoomExpert, ExpertCandidate, CoverageGap, RoomCoverageDetail, CoverageGapsList per contracts/api.yaml
+- [x] T002 [P] Create empty `backend/app/services/coverage_service.py` with function stubs: `get_coverage_summary()`, `get_room_detail()`, `get_coverage_gaps()`, `find_expert_candidates()`
+- [x] T003 [P] Create empty `backend/app/bot/handlers/coverage.py` with stub for `/coverage` command handler
 
 **Checkpoint**: New files exist with stubs. No functionality yet.
 
@@ -25,10 +25,10 @@
 
 **⚠️ CRITICAL**: Bot handler and API enrichment depend on service being complete
 
-- [ ] T004 [US1] Implement `get_coverage_summary(session, event_id)` in `backend/app/services/coverage_service.py` — returns per-room project_count, top_tags (top 5 by frequency), confirmed/pending/declined expert counts, coverage_level. Uses rooms, room_projects, project_tags, expert_room_assignments tables. Gets approved clustering via `matching_service.get_approved_clustering()`
-- [ ] T005 [US2] Implement `get_room_detail(session, event_id, room_id)` in `backend/app/services/coverage_service.py` — returns expert list (id, name, status, match_score, tags, bot_started), all distinct project_tags in room, uncovered_tags (project tags minus confirmed expert tags), and candidate experts for gaps
-- [ ] T006 [US3] Implement `find_expert_candidates(session, tag_name, exclude_room_id, clustering_run_id)` in `backend/app/services/coverage_service.py` — finds experts with matching tag not assigned to target room, returns expert_id, name, matching_tags, current_rooms
-- [ ] T007 [US3] Implement `get_coverage_gaps(session, event_id)` in `backend/app/services/coverage_service.py` — iterates all rooms, collects uncovered tags per room with project count and candidate experts. Returns CoverageGapsList
+- [x] T004 [US1] Implement `get_coverage_summary(session, event_id)` in `backend/app/services/coverage_service.py` — returns per-room project_count, top_tags (top 5 by frequency), confirmed/pending/declined expert counts, coverage_level. Uses rooms, room_projects, project_tags, expert_room_assignments tables. Gets approved clustering via `matching_service.get_approved_clustering()`
+- [x] T005 [US2] Implement `get_room_detail(session, event_id, room_id)` in `backend/app/services/coverage_service.py` — returns expert list (id, name, status, match_score, tags, bot_started), all distinct project_tags in room, uncovered_tags (project tags minus confirmed expert tags), and candidate experts for gaps
+- [x] T006 [US3] Implement `find_expert_candidates(session, tag_name, exclude_room_id, clustering_run_id)` in `backend/app/services/coverage_service.py` — finds experts with matching tag not assigned to target room, returns expert_id, name, matching_tags, current_rooms
+- [x] T007 [US3] Implement `get_coverage_gaps(session, event_id)` in `backend/app/services/coverage_service.py` — iterates all rooms, collects uncovered tags per room with project count and candidate experts. Returns CoverageGapsList
 
 **Checkpoint**: Service layer complete. All 4 functions return correct data from DB.
 
@@ -42,9 +42,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Add coverage keyboard functions in `backend/app/bot/keyboards.py` — `coverage_summary_keyboard(rooms_data)` with room buttons (🟢/🟡/🔴 indicators + project count), callback pattern `cov_room:<room_id[:8]>`, and 🔄 refresh button with callback `cov:refresh`
-- [ ] T009 [US1] Implement `/coverage` command handler in `backend/app/bot/handlers/coverage.py` — check organizer access (organizer_ids from settings), call `coverage_service.get_coverage_summary()`, format Telegram message with emoji indicators (✅/⚠️/❌), project counts, expert counts, totals line. Use `coverage_summary_keyboard()`. Handle no-approved-clustering edge case
-- [ ] T010 [US1] Register coverage handler in `backend/app/bot/app.py` — import and add CommandHandler for `/coverage` + CallbackQueryHandler for `cov:refresh` pattern. Keep separate from existing expert_assignment coverage flow
+- [x] T008 [US1] Add coverage keyboard functions in `backend/app/bot/keyboards.py` — `coverage_summary_keyboard(rooms_data)` with room buttons (🟢/🟡/🔴 indicators + project count), callback pattern `cov_room:<room_id[:8]>`, and 🔄 refresh button with callback `cov:refresh`
+- [x] T009 [US1] Implement `/coverage` command handler in `backend/app/bot/handlers/coverage.py` — check organizer access (organizer_ids from settings), call `coverage_service.get_coverage_summary()`, format Telegram message with emoji indicators (✅/⚠️/❌), project counts, expert counts, totals line. Use `coverage_summary_keyboard()`. Handle no-approved-clustering edge case
+- [x] T010 [US1] Register coverage handler in `backend/app/bot/app.py` — import and add CommandHandler for `/coverage` + CallbackQueryHandler for `cov:refresh` pattern. Keep separate from existing expert_assignment coverage flow
 
 **Checkpoint**: `/coverage` command works for organizers. Shows all rooms with correct counts and status indicators.
 
@@ -58,9 +58,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Add room detail keyboard in `backend/app/bot/keyboards.py` — `coverage_room_detail_keyboard(room_id)` with ⬅️ back button (callback `cov:back`) and 🔄 refresh (callback `cov_room_refresh:<room_id[:8]>`)
-- [ ] T012 [US2] Implement room drill-down callback in `backend/app/bot/handlers/coverage.py` — handle `cov_room:<room_id_prefix>` callback, resolve full room_id from DB, call `coverage_service.get_room_detail()`, format message: expert list (✅/⏳/❌ + name + tags), project tag summary, uncovered tags section. Handle room-not-found edge case
-- [ ] T013 [US2] Wire drill-down callbacks in `backend/app/bot/app.py` — register CallbackQueryHandler for `cov_room:` pattern and `cov:back` pattern (returns to summary)
+- [x] T011 [US2] Add room detail keyboard in `backend/app/bot/keyboards.py` — `coverage_room_detail_keyboard(room_id)` with ⬅️ back button (callback `cov:back`) and 🔄 refresh (callback `cov_room_refresh:<room_id[:8]>`)
+- [x] T012 [US2] Implement room drill-down callback in `backend/app/bot/handlers/coverage.py` — handle `cov_room:<room_id_prefix>` callback, resolve full room_id from DB, call `coverage_service.get_room_detail()`, format message: expert list (✅/⏳/❌ + name + tags), project tag summary, uncovered tags section. Handle room-not-found edge case
+- [x] T013 [US2] Wire drill-down callbacks in `backend/app/bot/app.py` — register CallbackQueryHandler for `cov_room:` pattern and `cov:back` pattern (returns to summary)
 
 **Checkpoint**: Full flow works: `/coverage` → click room → see detail → back to summary.
 
@@ -74,9 +74,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Add gaps button to coverage summary keyboard in `backend/app/bot/keyboards.py` — add ⚠️ "Непокрытые тематики" button with callback `cov:gaps` to `coverage_summary_keyboard()`
-- [ ] T015 [US3] Implement gaps display in `backend/app/bot/handlers/coverage.py` — handle `cov:gaps` callback, call `coverage_service.get_coverage_gaps()`, format message: grouped by room, each gap shows tag + project count + candidate experts (name, current rooms). Handle "all covered" case. Add back button
-- [ ] T016 [US3] Register gaps callback in `backend/app/bot/app.py` — add CallbackQueryHandler for `cov:gaps` pattern
+- [x] T014 [US3] Add gaps button to coverage summary keyboard in `backend/app/bot/keyboards.py` — add ⚠️ "Непокрытые тематики" button with callback `cov:gaps` to `coverage_summary_keyboard()`
+- [x] T015 [US3] Implement gaps display in `backend/app/bot/handlers/coverage.py` — handle `cov:gaps` callback, call `coverage_service.get_coverage_gaps()`, format message: grouped by room, each gap shows tag + project count + candidate experts (name, current rooms). Handle "all covered" case. Add back button
+- [x] T016 [US3] Register gaps callback in `backend/app/bot/app.py` — add CallbackQueryHandler for `cov:gaps` pattern
 
 **Checkpoint**: Gap analysis works: shows uncovered tags per room with expert recommendations.
 
@@ -90,9 +90,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T017 [US4] Update `GET /api/v1/coverage` endpoint in `backend/app/api/experts.py` — replace call to `invite_service.get_coverage_dashboard()` with `coverage_service.get_coverage_summary()`, use CoverageSummary schema for response. Add organizer-only check (403 for non-organizers)
-- [ ] T018 [US4] Update `GET /api/v1/coverage/{room_id}` endpoint in `backend/app/api/experts.py` — replace call to `invite_service.get_room_coverage_detail()` with `coverage_service.get_room_detail()`, use RoomCoverageDetail schema for response. Add organizer-only check
-- [ ] T019 [US4] Add new `GET /api/v1/coverage/gaps` endpoint in `backend/app/api/experts.py` — call `coverage_service.get_coverage_gaps()`, return CoverageGapsList schema. Organizer-only. Handle no-approved-clustering (404)
+- [x] T017 [US4] Update `GET /api/v1/coverage` endpoint in `backend/app/api/experts.py` — replace call to `invite_service.get_coverage_dashboard()` with `coverage_service.get_coverage_summary()`, use CoverageSummary schema for response. Add organizer-only check (403 for non-organizers)
+- [x] T018 [US4] Update `GET /api/v1/coverage/{room_id}` endpoint in `backend/app/api/experts.py` — replace call to `invite_service.get_room_coverage_detail()` with `coverage_service.get_room_detail()`, use RoomCoverageDetail schema for response. Add organizer-only check
+- [x] T019 [US4] Add new `GET /api/v1/coverage/gaps` endpoint in `backend/app/api/experts.py` — call `coverage_service.get_coverage_gaps()`, return CoverageGapsList schema. Organizer-only. Handle no-approved-clustering (404)
 
 **Checkpoint**: All 3 REST endpoints return enriched coverage data per contracts/api.yaml.
 
@@ -102,9 +102,9 @@
 
 **Purpose**: Edge cases, cleanup, validation
 
-- [ ] T020 [P] Verify edge cases: no approved clustering returns graceful message (bot) / 404 (API), empty rooms shown with 0 projects, experts without tags shown without match info
-- [ ] T021 [P] Verify Telegram message stays within 4096 char limit for 10+ rooms — truncate if needed
-- [ ] T022 Run quickstart.md scenarios 1-6 end-to-end validation
+- [x] T020 [P] Verify edge cases: no approved clustering returns graceful message (bot) / 404 (API), empty rooms shown with 0 projects, experts without tags shown without match info
+- [x] T021 [P] Verify Telegram message stays within 4096 char limit for 10+ rooms — truncate if needed
+- [x] T022 Run quickstart.md scenarios 1-6 end-to-end validation
 
 ---
 

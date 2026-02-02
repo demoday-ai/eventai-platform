@@ -404,3 +404,38 @@ def participation_summary_rooms(rooms_data: list) -> InlineKeyboardMarkup:
         )])
     buttons.append([InlineKeyboardButton("Обновить", callback_data="pstat:refresh")])
     return InlineKeyboardMarkup(buttons)
+
+
+# --- EPIC-006: Organizer Coverage Dashboard keyboards ---
+
+
+def coverage_summary_keyboard(rooms_data: list) -> InlineKeyboardMarkup:
+    """Coverage summary with room buttons showing status indicators and project counts.
+
+    rooms_data: list of dicts with room_id, room_name, project_count, confirmed, coverage_level.
+    """
+    indicators = {"covered": "✅", "partial": "⚠️", "uncovered": "❌"}
+    buttons = []
+    for r in rooms_data:
+        ind = indicators.get(r.get("coverage_level", "uncovered"), "❌")
+        confirmed = r.get("confirmed", 0)
+        projects = r.get("project_count", 0)
+        label = f"{ind} {r['room_name'][:18]} — {confirmed} эксп. | {projects} пр."
+        buttons.append([InlineKeyboardButton(
+            label, callback_data=f"cov_room:{str(r['room_id'])[:8]}"
+        )])
+    buttons.append([
+        InlineKeyboardButton("⚠️ Непокрытые тематики", callback_data="cov:gaps"),
+        InlineKeyboardButton("🔄 Обновить", callback_data="cov:refresh"),
+    ])
+    return InlineKeyboardMarkup(buttons)
+
+
+def coverage_room_detail_kb(room_id: str) -> InlineKeyboardMarkup:
+    """Room detail keyboard with back and refresh buttons."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⬅️ Назад", callback_data="cov:back"),
+            InlineKeyboardButton("🔄 Обновить", callback_data=f"cov_rr:{str(room_id)[:8]}"),
+        ],
+    ])
