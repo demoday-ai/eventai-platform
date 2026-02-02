@@ -9,8 +9,13 @@ from app.models.user import GuestSubtype
 
 class TelegramAuthRequest(BaseModel):
     telegram_user_id: str
-    full_name: str
+    full_name: str | None = None
     username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    photo_url: str | None = None
+    auth_date: int
+    hash: str
 
 
 class SetRoleRequest(BaseModel):

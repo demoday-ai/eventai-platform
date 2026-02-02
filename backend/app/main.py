@@ -6,7 +6,10 @@ from fastapi import FastAPI
 from app.api.auth import router as auth_router
 from app.api.events import router as events_router
 from app.api.profiles import router as profiles_router
+from app.api.experts import router as experts_router
+from app.api.guests import router as guests_router
 from app.api.projects import router as projects_router
+from app.api.schedule import router as schedule_router
 from app.api.users import router as users_router
 from app.config import settings
 
@@ -24,7 +27,7 @@ async def lifespan(app: FastAPI):
     # Load seed data on startup
     try:
         from app.database import async_session
-        from app.services import seed_service, user_service
+        from app.services import expert_service, seed_service, user_service
 
         async with async_session() as session:
             event = await user_service.get_current_event(session)
@@ -32,6 +35,10 @@ async def lifespan(app: FastAPI):
                 loaded = await seed_service.load_seed_projects(session, event.id)
                 if loaded:
                     logger.info("Seed data loaded: %d projects", loaded)
+
+                expert_loaded = await expert_service.load_seed_experts(session, event.id)
+                if expert_loaded:
+                    logger.info("Expert seed loaded: %d experts", expert_loaded)
     except Exception:
         logger.exception("Failed to load seed data (non-fatal)")
 
@@ -68,7 +75,189 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("BOT_TOKEN not set — bot disabled")
 
+    # Setup APScheduler for reminders/escalations
+    scheduler = None
+    if settings.bot_token and hasattr(app.state, "bot_app"):
+        try:
+            from apscheduler.schedulers.asyncio import AsyncIOScheduler
+            from apscheduler.triggers.interval import IntervalTrigger
+            from apscheduler.triggers.cron import CronTrigger
+            from app.database import async_session as session_factory
+            from app.services import invite_service, user_service as us, notification_service
+            from datetime import datetime, timedelta
+            import pytz
+
+            scheduler = AsyncIOScheduler(timezone=pytz.timezone("Europe/Moscow"))
+            bot_instance = app.state.bot_app.bot
+            MSK = pytz.timezone("Europe/Moscow")
+
+            async def _reminder_job():
+                try:
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if event:
+                            sent = await invite_service.check_and_send_reminders(
+                                session, event.id, bot_instance,
+                            )
+                            if sent:
+                                logger.info("Reminders sent: %d", sent)
+                except Exception:
+                    logger.exception("Reminder job failed")
+
+            async def _escalation_job():
+                try:
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if event:
+                            created = await invite_service.check_and_escalate(
+                                session, event.id, bot_instance,
+                            )
+                            if created:
+                                logger.info("Escalations created: %d", created)
+                except Exception:
+                    logger.exception("Escalation job failed")
+
+            # T018: Eve-of-DD reminder jobs
+            async def _eve_reminder_preview_job():
+                """Send preview to organizers at 17:00 MSK day before DD."""
+                try:
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if not event:
+                            return
+
+                        # Check if tomorrow is an event day
+                        now = datetime.now(MSK)
+                        tomorrow = (now + timedelta(days=1)).date()
+                        if event.start_date and tomorrow >= event.start_date:
+                            if event.end_date is None or tomorrow <= event.end_date:
+                                preview = await notification_service.preview_reminders(
+                                    session, event.id, tomorrow
+                                )
+                                # Send to organizers via bot
+                                for org_id in settings.organizer_telegram_ids:
+                                    try:
+                                        msg = (
+                                            f"📋 Превью напоминаний на {tomorrow}\n\n"
+                                            f"Получателей: {preview.recipients.total}\n"
+                                            f"- Студенты: {preview.recipients.students}\n"
+                                            f"- Эксперты: {preview.recipients.experts}\n"
+                                            f"- Гости: {preview.recipients.guests}\n"
+                                            f"- Бизнес: {preview.recipients.business}\n\n"
+                                            f"Отправка в 18:00 MSK"
+                                        )
+                                        await bot_instance.send_message(chat_id=org_id, text=msg)
+                                    except Exception:
+                                        logger.exception("Failed to send preview to organizer %s", org_id)
+                except Exception:
+                    logger.exception("Eve reminder preview job failed")
+
+            async def _eve_reminder_send_job():
+                """Send eve-of-DD reminders at 18:00 MSK day before DD."""
+                try:
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if not event:
+                            return
+
+                        now = datetime.now(MSK)
+                        tomorrow = (now + timedelta(days=1)).date()
+                        if event.start_date and tomorrow >= event.start_date:
+                            if event.end_date is None or tomorrow <= event.end_date:
+                                from app.services import schedule_service
+                                if await schedule_service.is_schedule_approved(session, event.id):
+                                    result = await notification_service.send_eve_reminders(
+                                        session, event.id, tomorrow, bot_instance
+                                    )
+                                    logger.info(
+                                        "Eve-of-DD reminders sent: %d sent, %d failed, %d skipped",
+                                        result.sent, result.failed, result.skipped
+                                    )
+                except Exception:
+                    logger.exception("Eve reminder send job failed")
+
+            # T024: Pre-slot reminder job (every 5 min on DD day)
+            async def _pre_slot_reminder_job():
+                """Check for slots starting in ~1 hour and send pre-slot reminders."""
+                try:
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if not event:
+                            return
+
+                        now = datetime.now(MSK)
+                        today = now.date()
+
+                        # Check if today is an event day
+                        if event.start_date and today >= event.start_date:
+                            if event.end_date is None or today <= event.end_date:
+                                sent, failed = await notification_service.check_and_send_pre_slot_reminders(
+                                    session, event.id, bot_instance
+                                )
+                                if sent or failed:
+                                    logger.info("Pre-slot reminders: %d sent, %d failed", sent, failed)
+                except Exception:
+                    logger.exception("Pre-slot reminder job failed")
+
+            # T028: Notification batch processor (every 60 sec)
+            async def _batch_processor_job():
+                """Process pending timing shift notification batches."""
+                try:
+                    async with session_factory() as session:
+                        sent, failed = await notification_service.process_pending_batches(
+                            session, bot_instance
+                        )
+                        if sent or failed:
+                            logger.info("Batch processor: %d sent, %d failed", sent, failed)
+                except Exception:
+                    logger.exception("Batch processor job failed")
+
+            # Register jobs
+            scheduler.add_job(_reminder_job, IntervalTrigger(hours=12), id="expert_reminders")
+            scheduler.add_job(_escalation_job, IntervalTrigger(hours=12), id="escalations")
+
+            # Eve-of-DD: preview at 17:00, send at 18:00 Moscow time
+            scheduler.add_job(
+                _eve_reminder_preview_job,
+                CronTrigger(hour=17, minute=0, timezone=MSK),
+                id="eve_reminder_preview"
+            )
+            scheduler.add_job(
+                _eve_reminder_send_job,
+                CronTrigger(hour=18, minute=0, timezone=MSK),
+                id="eve_reminder_send"
+            )
+
+            # Pre-slot: every 5 minutes
+            scheduler.add_job(
+                _pre_slot_reminder_job,
+                IntervalTrigger(minutes=5),
+                id="pre_slot_reminders"
+            )
+
+            # Batch processor: every 60 seconds
+            scheduler.add_job(
+                _batch_processor_job,
+                IntervalTrigger(seconds=60),
+                id="batch_processor"
+            )
+
+            scheduler.start()
+            app.state.scheduler = scheduler
+            logger.info(
+                "APScheduler started: expert reminders (12h), escalations (12h), "
+                "eve-of-DD preview (17:00 MSK), eve-of-DD send (18:00 MSK), "
+                "pre-slot (5min), batch processor (60s)"
+            )
+        except Exception:
+            logger.exception("Failed to start APScheduler (non-fatal)")
+
     yield
+
+    # Shutdown scheduler
+    if hasattr(app.state, "scheduler") and app.state.scheduler:
+        app.state.scheduler.shutdown(wait=False)
+        logger.info("APScheduler stopped")
 
     if hasattr(app.state, "bot_app"):
         bot_app = app.state.bot_app
@@ -90,6 +279,9 @@ app.include_router(users_router, prefix="/api/v1")
 app.include_router(events_router, prefix="/api/v1")
 app.include_router(profiles_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")
+app.include_router(experts_router, prefix="/api/v1")
+app.include_router(schedule_router, prefix="/api/v1")
+app.include_router(guests_router, prefix="/api/v1")
 
 
 @app.get("/health")

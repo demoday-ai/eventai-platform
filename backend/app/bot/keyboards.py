@@ -201,6 +201,180 @@ def stages_keyboard(selected: list[str] | None = None) -> InlineKeyboardMarkup:
         ])
     buttons.append([
         InlineKeyboardButton("Готово →", callback_data="bp:stg:done"),
+# --- Expert assignment keyboards ---
+
+
+def expert_management_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Запустить матчинг", callback_data="exp:match")],
+        [InlineKeyboardButton("Загрузить экспертов", callback_data="exp:upload")],
+        [InlineKeyboardButton("Покрытие", callback_data="exp:coverage")],
+        [InlineKeyboardButton("Приглашения", callback_data="exp:invites")],
+        [InlineKeyboardButton("Эскалации", callback_data="exp:escalations")],
+    ])
+
+
+def matching_result_rooms(rooms_info: list) -> InlineKeyboardMarkup:
+    """rooms_info: list of dicts with room_id, room_name, expert_count."""
+    buttons = []
+    for i, r in enumerate(rooms_info):
+        label = f"Зал {i + 1}: {r['room_name'][:20]} ({r['expert_count']})"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"mroom:{r['room_id'][:8]}")])
+
+    buttons.append([
+        InlineKeyboardButton("Перезапустить", callback_data="exp:rematch"),
+        InlineKeyboardButton("Утвердить", callback_data="exp:approve_match"),
+    ])
+    return InlineKeyboardMarkup(buttons)
+
+
+def room_expert_detail_keyboard(
+    experts: list, room_id: str, page: int = 0, page_size: int = 8
+) -> InlineKeyboardMarkup:
+    """Show experts in a room with move buttons."""
+    start = page * page_size
+    page_experts = experts[start:start + page_size]
+    total_pages = max(1, (len(experts) + page_size - 1) // page_size)
+
+    buttons = []
+    for exp in page_experts:
+        score = exp.get("match_score", 0)
+        manual = " (ручн.)" if exp.get("is_manual") else ""
+        label = f"{exp['name'][:25]} [{score:.1f}]{manual}"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"mexp:{exp['expert_id'][:8]}")])
+
+    if total_pages > 1:
+        nav = []
+        if page > 0:
+            nav.append(InlineKeyboardButton("<<", callback_data=f"mpage:{room_id[:8]}:{page - 1}"))
+        nav.append(InlineKeyboardButton(f"{page + 1}/{total_pages}", callback_data="noop"))
+        if page < total_pages - 1:
+            nav.append(InlineKeyboardButton(">>", callback_data=f"mpage:{room_id[:8]}:{page + 1}"))
+        buttons.append(nav)
+
+    buttons.append([InlineKeyboardButton("Назад к залам", callback_data="exp:back_rooms")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def move_target_room_keyboard(rooms_info: list, current_room_id: str) -> InlineKeyboardMarkup:
+    """List rooms to move expert to (excluding current)."""
+    buttons = []
+    for i, r in enumerate(rooms_info):
+        if r["room_id"] == current_room_id:
+            continue
+        label = f"Зал {i + 1}: {r['room_name'][:25]} ({r['expert_count']})"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"mtarget:{r['room_id'][:8]}")])
+    buttons.append([InlineKeyboardButton("Отмена", callback_data="exp:back_detail")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def approve_matching_confirm() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да, утвердить", callback_data="exp:confirm_approve")],
+        [InlineKeyboardButton("Нет, назад", callback_data="exp:back_rooms")],
+    ])
+
+
+def invite_preview_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Подтвердить рассылку", callback_data="exp:confirm_invite")],
+        [InlineKeyboardButton("Отмена", callback_data="exp:menu")],
+    ])
+
+
+def expert_invite_actions() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Иду", callback_data="einv:confirm")],
+        [InlineKeyboardButton("Хочу другую комнату", callback_data="einv:reassign")],
+        [InlineKeyboardButton("Не смогу", callback_data="einv:decline")],
+    ])
+
+
+def alternative_rooms_keyboard(rooms: list) -> InlineKeyboardMarkup:
+    """rooms: list of (room_id, name, project_count)."""
+    buttons = []
+    for room_id, name, count in rooms:
+        label = f"{name[:25]} ({count} проектов)"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"eroom:{str(room_id)[:8]}")])
+    buttons.append([InlineKeyboardButton("Отмена", callback_data="einv:cancel_reassign")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def expert_confirmed_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Сменить комнату", callback_data="einv:change_room")],
+    ])
+
+
+def coverage_dashboard_rooms(rooms_data: list) -> InlineKeyboardMarkup:
+    """rooms_data: list of RoomCoverageSummary dicts."""
+    indicators = {"covered": "🟢", "partial": "🟡", "uncovered": "🔴"}
+    buttons = []
+    for r in rooms_data:
+        ind = indicators.get(r.get("coverage_level", "uncovered"), "🔴")
+        label = f"{ind} {r['room_name'][:20]} ({r['confirmed']}/{r['needed']})"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"croom:{str(r['room_id'])[:8]}")])
+    buttons.append([InlineKeyboardButton("Назад", callback_data="exp:menu")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def coverage_room_detail_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Назад к покрытию", callback_data="exp:coverage")],
+    ])
+
+
+def escalation_list_keyboard(escalations: list) -> InlineKeyboardMarkup:
+    """escalations: list of EscalationResponse-like dicts."""
+    buttons = []
+    for esc in escalations[:10]:
+        label = f"{esc['type'][:15]}: {esc['expert_name'][:20]}"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"esc:{str(esc['id'])[:8]}")])
+    buttons.append([InlineKeyboardButton("Назад", callback_data="exp:menu")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def escalation_detail_keyboard(escalation_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Разрешить", callback_data=f"escr:{escalation_id[:8]}")],
+        [InlineKeyboardButton("Назад", callback_data="exp:escalations")],
+    ])
+
+
+# --- Guest profiling keyboards (EPIC-005) ---
+
+
+def start_profiling_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Начать профилирование", callback_data="start_profiling")],
+    ])
+
+
+def tag_selection_keyboard(
+    tags: list[tuple[str, int]], selected: set[str]
+) -> InlineKeyboardMarkup:
+    """Inline keyboard with toggle buttons for tag selection (3-column grid).
+    tags: list of (tag_name, project_count). selected: set of currently selected tag names.
+    """
+    buttons = []
+    row = []
+    # Show top-15 tags by project count
+    for tag_name, count in tags[:15]:
+        prefix = "✓ " if tag_name in selected else ""
+        label = f"{prefix}{tag_name}"
+        # Truncate callback data to fit 64-byte limit
+        cb_data = f"ptag:{tag_name[:50]}"
+        row.append(InlineKeyboardButton(label, callback_data=cb_data))
+        if len(row) == 3:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+
+    # Action buttons
+    buttons.append([
+        InlineKeyboardButton("Написать текстом", callback_data="ptag:_text"),
+        InlineKeyboardButton("Готово", callback_data="ptag:_done"),
     ])
     return InlineKeyboardMarkup(buttons)
 
@@ -266,4 +440,55 @@ def project_card_keyboard(recommendation_id: str, is_bookmarked: bool) -> Inline
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(bookmark_text, callback_data=f"bp:bm:{rec_id_short}")],
         [InlineKeyboardButton("← К списку", callback_data="bp:proj:back")],
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да", callback_data="prof:yes")],
+        [InlineKeyboardButton("Нет, изменить", callback_data="prof:no")],
+    ])
+
+
+def generate_program_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Сгенерировать программу", callback_data="prof:generate")],
+        [InlineKeyboardButton("Позже", callback_data="prof:later")],
+    ])
+
+
+def update_profile_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да, обновить", callback_data="prof:update_yes")],
+        [InlineKeyboardButton("Нет", callback_data="prof:update_no")],
+    ])
+
+
+def program_recommendation_keyboard(
+    recommendations: list[dict], page: int = 0, page_size: int = 8
+) -> InlineKeyboardMarkup:
+    """Inline buttons for project details from recommendation list."""
+    start_idx = page * page_size
+    page_recs = recommendations[start_idx:start_idx + page_size]
+    total_pages = max(1, (len(recommendations) + page_size - 1) // page_size)
+
+    buttons = []
+    for rec in page_recs:
+        label = f"#{rec['rank']} {rec['title'][:35]}"
+        pid_short = rec["project_id"][:8]
+        buttons.append([InlineKeyboardButton(label, callback_data=f"pdetail:{pid_short}")])
+
+    # Pagination
+    if total_pages > 1:
+        nav = []
+        if page > 0:
+            nav.append(InlineKeyboardButton("◀", callback_data=f"recpage:{page - 1}"))
+        nav.append(InlineKeyboardButton(f"{page + 1}/{total_pages}", callback_data="noop"))
+        if page < total_pages - 1:
+            nav.append(InlineKeyboardButton("▶", callback_data=f"recpage:{page + 1}"))
+        buttons.append(nav)
+
+    buttons.append([InlineKeyboardButton("Обновить профиль", callback_data="profile:update")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def back_to_program_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])

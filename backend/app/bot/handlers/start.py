@@ -12,6 +12,7 @@ from app.bot.keyboards import (
     confirm_change_keyboard,
     guest_subtype_keyboard,
     role_keyboard,
+    start_profiling_keyboard,
 )
 from app.config import settings
 from app.database import async_session
@@ -26,6 +27,11 @@ CHOOSE_ROLE, CHOOSE_SUBTYPE, CONFIRM_CHANGE = range(3)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    # Check if this is an expert deep link: /start expert
+    if context.args and context.args[0] == "expert":
+        from app.bot.handlers.expert_assignment import handle_expert_start
+        return await handle_expert_start(update, context)
+
     tg_user = update.effective_user
     telegram_user_id = str(tg_user.id)
     full_name = tg_user.full_name or tg_user.first_name
@@ -106,6 +112,15 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     role_name = ROLE_DISPLAY_NAMES.get(role_code, role_code_str)
     logger.info("role_chosen: tg_id=%s role=%s", telegram_user_id, role_code.value)
     await query.edit_message_text(f"Отлично! Ваша роль: {role_name}\n\nДобро пожаловать!")
+
+    # Auto-trigger profiling for Business role (EPIC-005)
+    if role_code == RoleCode.BUSINESS:
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Укажите интересы для персональной программы Demo Day:",
+            reply_markup=start_profiling_keyboard(),
+        )
+
     return ConversationHandler.END
 
 
@@ -137,6 +152,14 @@ async def subtype_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await query.edit_message_text(
         f"Отлично! Ваша роль: Гость ({subtype_name})\n\nДобро пожаловать!"
     )
+
+    # Auto-trigger profiling after guest onboarding (EPIC-005)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text="Укажите интересы для персональной программы Demo Day:",
+        reply_markup=start_profiling_keyboard(),
+    )
+
     return ConversationHandler.END
 
 

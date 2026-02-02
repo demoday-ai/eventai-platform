@@ -1,0 +1,672 @@
+openapi: "3.0.3"
+info:
+  title: "EPIC-005: DD Reminders & Schedule API"
+  version: "1.0.0"
+  description: |
+    Endpoints for schedule management, reminders, timing shift notifications,
+    and organizer notification dashboard.
+    All endpoints require Bearer JWT authentication (from EPIC-001 auth).
+    Organizer-only endpoints check organizer_telegram_ids.
+
+servers:
+  - url: /api/v1
+    description: Backend API
+
+paths:
+  /schedule/generate:
+    post:
+      summary: Auto-generate schedule from approved clustering
+      description: |
+        Creates schedule slots for all projects in the approved clustering run.
+        Each project gets a 15-min slot, distributed equally across rooms.
+        Requires an approved clustering run to exist.
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clustering_run_id:
+                  type: string
+                  format: uuid
+                  description: Specific clustering run to use (defaults to latest approved)
+                day1_start:
+                  type: string
+                  format: date-time
+                  description: "Day 1 start time (default: event start_date 10:30 MSK)"
+                day1_end:
+                  type: string
+                  format: date-time
+                  description: "Day 1 end time (default: event start_date 19:30 MSK)"
+                day2_start:
+                  type: string
+                  format: date-time
+                  description: "Day 2 start time (default: event end_date 14:00 MSK)"
+                day2_end:
+                  type: string
+                  format: date-time
+                  description: "Day 2 end time (default: event end_date 19:30 MSK)"
+                slot_duration_minutes:
+                  type: integer
+                  default: 15
+                  description: Duration of each slot in minutes
+      responses:
+        "201":
+          description: Schedule generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleGenerateResult"
+        "400":
+          description: No approved clustering run found
+        "403":
+          description: Not an organizer
+        "409":
+          description: Schedule already exists for this clustering run
+
+  /schedule:
+    get:
+      summary: Get full schedule
+      description: Returns all schedule slots for current event, grouped by room and day.
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: room_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by room
+        - name: day
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, moved, cancelled]
+          description: Filter by status
+      responses:
+        "200":
+          description: Schedule slots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleResponse"
+
+  /schedule/slots/{slot_id}:
+    patch:
+      summary: Update a schedule slot
+      description: |
+        Organizer adjusts a slot (change time, room, or cancel).
+        Automatically creates a schedule_change_log entry and triggers
+        timing shift notifications to affected participants.
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slot_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlotUpdate"
+      responses:
+        "200":
+          description: Slot updated, notifications queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlotUpdateResult"
+        "404":
+          description: Slot not found
+        "403":
+          description: Not an organizer
+
+  /schedule/approve:
+    post:
+      summary: Approve the schedule
+      description: |
+        Marks the schedule as approved/finalized. This is a prerequisite for
+        sending reminders. Once approved, changes still possible but trigger
+        timing shift notifications.
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Schedule approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_slots:
+                    type: integer
+                  rooms:
+                    type: integer
+                  days:
+                    type: integer
+        "400":
+          description: No schedule to approve
+        "403":
+          description: Not an organizer
+
+  /reminders/preview:
+    get:
+      summary: Preview pending reminders
+      description: |
+        Shows what the eve-of-DD reminder will contain for each role.
+        Includes recipient counts and sample messages.
+      tags: [Reminders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: day
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Which event day to preview (defaults to next event day)
+      responses:
+        "200":
+          description: Reminder preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderPreview"
+        "400":
+          description: Schedule not approved yet
+        "403":
+          description: Not an organizer
+
+  /reminders/cancel:
+    post:
+      summary: Cancel pending eve-of-DD reminders
+      description: |
+        Cancels the scheduled eve-of-DD reminder send for a specific day.
+        Must be called before the scheduled send time.
+      tags: [Reminders]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [day]
+              properties:
+                day:
+                  type: string
+                  format: date
+                  description: Which event day's reminders to cancel
+      responses:
+        "200":
+          description: Reminders cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelled_count:
+                    type: integer
+                  day:
+                    type: string
+                    format: date
+        "400":
+          description: Send time already passed or no pending reminders
+        "403":
+          description: Not an organizer
+
+  /reminders/send:
+    post:
+      summary: Manually trigger reminder send
+      description: |
+        Manually triggers eve-of-DD reminders for a specific day.
+        Useful if the scheduled send was cancelled and needs to be re-sent,
+        or for testing purposes.
+      tags: [Reminders]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [day]
+              properties:
+                day:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Reminders sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderSendResult"
+        "400":
+          description: Schedule not approved or reminders already sent
+        "403":
+          description: Not an organizer
+
+  /notifications/dashboard:
+    get:
+      summary: Notification delivery dashboard
+      description: |
+        Returns notification delivery statistics broken down by role,
+        type, and status. Includes list of unreachable participants.
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [eve_of_dd, pre_slot, timing_shift]
+          description: Filter by notification type
+        - name: day
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by event day
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationDashboard"
+        "403":
+          description: Not an organizer
+
+  /notifications:
+    get:
+      summary: List notifications
+      description: Returns notifications with optional filters.
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, sent, failed, cancelled, batched]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+
+  /schedule/changes:
+    get:
+      summary: List schedule changes
+      description: Returns audit log of all schedule modifications.
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slot_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Change log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleChangeList"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ScheduleSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        room_name:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+        project_title:
+          type: string
+        project_author:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        display_order:
+          type: integer
+        status:
+          type: string
+          enum: [scheduled, moved, cancelled]
+
+    ScheduleGenerateResult:
+      type: object
+      properties:
+        total_slots:
+          type: integer
+        rooms:
+          type: array
+          items:
+            type: object
+            properties:
+              room_id:
+                type: string
+                format: uuid
+              room_name:
+                type: string
+              slot_count:
+                type: integer
+              first_slot:
+                type: string
+                format: date-time
+              last_slot:
+                type: string
+                format: date-time
+
+    ScheduleResponse:
+      type: object
+      properties:
+        event_name:
+          type: string
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              rooms:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    room_id:
+                      type: string
+                      format: uuid
+                    room_name:
+                      type: string
+                    slots:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/ScheduleSlot"
+
+    SlotUpdate:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+          description: New start time (null = unchanged)
+        end_time:
+          type: string
+          format: date-time
+          description: New end time (null = unchanged)
+        room_id:
+          type: string
+          format: uuid
+          description: New room (null = unchanged)
+        status:
+          type: string
+          enum: [scheduled, cancelled]
+          description: Change status (cancel or restore)
+
+    SlotUpdateResult:
+      type: object
+      properties:
+        slot:
+          $ref: "#/components/schemas/ScheduleSlot"
+        change_log_id:
+          type: string
+          format: uuid
+        notifications_queued:
+          type: integer
+          description: Number of timing shift notifications queued
+
+    ReminderPreview:
+      type: object
+      properties:
+        day:
+          type: string
+          format: date
+        scheduled_send_time:
+          type: string
+          format: date-time
+        can_cancel:
+          type: boolean
+          description: Whether cancellation is still possible
+        recipients:
+          type: object
+          properties:
+            students:
+              type: integer
+            experts:
+              type: integer
+            guests:
+              type: integer
+            business:
+              type: integer
+            total:
+              type: integer
+        sample_messages:
+          type: object
+          properties:
+            student:
+              type: string
+            expert:
+              type: string
+            guest:
+              type: string
+            business:
+              type: string
+        unreachable:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              role:
+                type: string
+              reason:
+                type: string
+
+    ReminderSendResult:
+      type: object
+      properties:
+        day:
+          type: string
+          format: date
+        sent:
+          type: integer
+        failed:
+          type: integer
+        skipped:
+          type: integer
+          description: Skipped (already sent or no schedule data)
+
+    NotificationDashboard:
+      type: object
+      properties:
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            sent:
+              type: integer
+            failed:
+              type: integer
+            pending:
+              type: integer
+        by_role:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+              sent:
+                type: integer
+              failed:
+                type: integer
+              pending:
+                type: integer
+        by_type:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              sent:
+                type: integer
+              failed:
+                type: integer
+              pending:
+                type: integer
+        unreachable:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              role:
+                type: string
+              reason:
+                type: string
+
+    NotificationList:
+      type: object
+      properties:
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              user_name:
+                type: string
+              type:
+                type: string
+              status:
+                type: string
+              scheduled_at:
+                type: string
+                format: date-time
+              sent_at:
+                type: string
+                format: date-time
+              error_message:
+                type: string
+              retry_count:
+                type: integer
+
+    ScheduleChangeList:
+      type: object
+      properties:
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              slot_id:
+                type: string
+                format: uuid
+              project_title:
+                type: string
+              change_type:
+                type: string
+              old_start_time:
+                type: string
+                format: date-time
+              new_start_time:
+                type: string
+                format: date-time
+              old_room_name:
+                type: string
+              new_room_name:
+                type: string
+              changed_by:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              notifications_sent:
+                type: boolean

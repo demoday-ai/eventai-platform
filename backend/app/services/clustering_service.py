@@ -246,6 +246,16 @@ async def move_project(
     target_room_id: uuid.UUID,
 ) -> None:
     """Move a project from its current room to a target room."""
+    # Validate target room belongs to the requested run
+    stmt = select(Room).where(
+        Room.id == target_room_id,
+        Room.clustering_run_id == run_id,
+    )
+    result = await session.execute(stmt)
+    target_room = result.scalar_one_or_none()
+    if not target_room:
+        raise ValueError("Целевой зал не найден в данной кластеризации")
+
     # Find current assignment
     stmt = (
         select(RoomProject)

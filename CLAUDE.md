@@ -164,7 +164,10 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 - Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg (001-onboarding)
 - PostgreSQL 16 (001-onboarding)
 - httpx, python-multipart, OpenRouter API (002-project-clustering)
+- Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, APScheduler 3.10+ (005-dd-reminders)
+- PostgreSQL 16 (asyncpg) (005-dd-reminders)
 
 ## Recent Changes
 - 001-onboarding: Added Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg
 - 002-project-clustering: Added httpx, python-multipart, OpenRouter API integration, 6 new DB tables (projects, tags, project_tags, clustering_runs, rooms, room_projects), LLM-based clustering, seed data (400 projects from checkpoint forms)
+- 005-dd-reminders: Added APScheduler 3.10+ (CronTrigger + IntervalTrigger), 3 new DB tables (schedule_slots, notifications, schedule_change_logs), schedule auto-generation from clustering, eve-of-DD and pre-slot reminders, timing shift notifications with batching
