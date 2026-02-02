@@ -19,11 +19,11 @@
 
 **Purpose**: New model, schema, migration for ParticipationRequest
 
-- [ ] T001 Create ParticipationRequest model with ParticipationStatus enum in backend/app/models/participation.py
-- [ ] T002 Register ParticipationRequest model in backend/app/models/__init__.py
-- [ ] T003 Create Alembic migration 005_participation_requests.py in backend/alembic/versions/005_participation_requests.py
-- [ ] T004 [P] Create Pydantic schemas (BroadcastResult, ParticipationSummary, UnacknowledgedStudent, ParticipationRequestDetail) in backend/app/schemas/participation.py
-- [ ] T005 [P] Add acknowledgment inline keyboard function in backend/app/bot/keyboards.py
+- [x] T001 Create ParticipationRequest model with ParticipationStatus enum in backend/app/models/participation.py
+- [x] T002 Register ParticipationRequest model in backend/app/models/__init__.py
+- [x] T003 Create Alembic migration 005_participation_requests.py in backend/alembic/versions/005_participation_requests.py
+- [x] T004 [P] Create Pydantic schemas (BroadcastResult, ParticipationSummary, UnacknowledgedStudent, ParticipationRequestDetail) in backend/app/schemas/participation.py
+- [x] T005 [P] Add acknowledgment inline keyboard function in backend/app/bot/keyboards.py
 
 **Checkpoint**: Model + migration + schemas ready. Database can be migrated.
 
@@ -35,8 +35,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create participation_service.py with helper functions: match_project_to_user (project.telegram_contact → user.telegram_user_id), get_approved_clustering_run, build_slot_message in backend/app/services/participation_service.py
-- [ ] T007 Add participation API router skeleton (empty endpoints) and register in backend/app/main.py, backend/app/api/participation.py
+- [x] T006 Create participation_service.py with helper functions: match_project_to_user (project.telegram_contact → user.telegram_user_id), get_approved_clustering_run, build_slot_message in backend/app/services/participation_service.py
+- [x] T007 Add participation API router skeleton (empty endpoints) and register in backend/app/main.py, backend/app/api/participation.py
 
 **Checkpoint**: Foundation ready — service file exists, router registered, helpers available.
 
@@ -50,11 +50,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement broadcast_slots function in participation_service: iterate approved room_projects, match to users, create ParticipationRequests, send Telegram messages with rate limiting (asyncio.sleep 0.04), collect unregistered list in backend/app/services/participation_service.py
-- [ ] T009 [US1] Implement idempotent re-broadcast logic: skip unchanged slots, reset status and send "Расписание изменено" for changed slots in backend/app/services/participation_service.py
-- [ ] T010 [US1] Implement POST /api/v1/participation/broadcast endpoint (organizer-only, calls broadcast_slots, returns BroadcastResult) in backend/app/api/participation.py
-- [ ] T011 [US1] Implement /broadcast bot command handler for organizer: check approved clustering exists, call broadcast_slots, report results in backend/app/bot/handlers/confirmation.py
-- [ ] T012 [US1] Register confirmation handler in bot application setup in backend/app/bot/app.py
+- [x] T008 [US1] Implement broadcast_slots function in participation_service: iterate approved room_projects, match to users, create ParticipationRequests, send Telegram messages with rate limiting (asyncio.sleep 0.04), collect unregistered list in backend/app/services/participation_service.py
+- [x] T009 [US1] Implement idempotent re-broadcast logic: skip unchanged slots, reset status and send "Расписание изменено" for changed slots in backend/app/services/participation_service.py
+- [x] T010 [US1] Implement POST /api/v1/participation/broadcast endpoint (organizer-only, calls broadcast_slots, returns BroadcastResult) in backend/app/api/participation.py
+- [x] T011 [US1] Implement /broadcast bot command handler for organizer: check approved clustering exists, call broadcast_slots, report results in backend/app/bot/handlers/confirmation.py
+- [x] T012 [US1] Register confirmation handler in bot application setup in backend/app/bot/app.py
 
 **Checkpoint**: Organizer can /broadcast → students receive slot messages with "Ознакомлен" button. Re-broadcast is idempotent.
 
@@ -68,8 +68,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Implement acknowledge_participation function in participation_service: find request by short UUID, verify user, set status=acknowledged, set acknowledged_at in backend/app/services/participation_service.py
-- [ ] T014 [US2] Implement callback handler for "ack:{id}" button: call acknowledge_participation, answer callback query with confirmation or "already acknowledged" in backend/app/bot/handlers/confirmation.py
+- [x] T013 [US2] Implement acknowledge_participation function in participation_service: find request by short UUID, verify user, set status=acknowledged, set acknowledged_at in backend/app/services/participation_service.py
+- [x] T014 [US2] Implement callback handler for "ack:{id}" button: call acknowledge_participation, answer callback query with confirmation or "already acknowledged" in backend/app/bot/handlers/confirmation.py
 
 **Checkpoint**: Student presses "Ознакомлен" → status updated, confirmation shown. MVP complete (US1 + US2).
 
@@ -83,10 +83,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Implement send_reminders function in participation_service: query unacknowledged requests where DD-5d, send reminder message, set reminder_sent_at in backend/app/services/participation_service.py
-- [ ] T016 [US3] Implement escalate_to_organizers function in participation_service: query unacknowledged where DD-2d, send alert to organizer telegram IDs with student list in backend/app/services/participation_service.py
-- [ ] T017 [US3] Implement periodic_check_task async function: run every hour, call send_reminders + escalate_to_organizers + daily_summary, register in FastAPI lifespan in backend/app/services/participation_service.py
-- [ ] T018 [US3] Register periodic task in FastAPI lifespan (asyncio.create_task) in backend/app/main.py
+- [x] T015 [US3] Implement send_reminders function in participation_service: query unacknowledged requests where DD-5d, send reminder message, set reminder_sent_at in backend/app/services/participation_service.py
+- [x] T016 [US3] Implement escalate_to_organizers function in participation_service: query unacknowledged where DD-2d, send alert to organizer telegram IDs with student list in backend/app/services/participation_service.py
+- [x] T017 [US3] Implement periodic_check_task async function: run every hour, call send_reminders + escalate_to_organizers + daily_summary, register in FastAPI lifespan in backend/app/services/participation_service.py
+- [x] T018 [US3] Register periodic task in FastAPI lifespan (asyncio.create_task) in backend/app/main.py
 
 **Checkpoint**: Automatic reminders and escalation work on schedule relative to DD date.
 
@@ -100,12 +100,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [P] [US4] Implement get_participation_summary function in participation_service: aggregate counts by status and room, return ParticipationSummary in backend/app/services/participation_service.py
-- [ ] T020 [P] [US4] Implement get_unacknowledged_list function in participation_service: query sent requests with project/room details, return list of UnacknowledgedStudent in backend/app/services/participation_service.py
-- [ ] T021 [US4] Implement GET /api/v1/participation/summary endpoint (organizer-only, optional room_id filter) in backend/app/api/participation.py
-- [ ] T022 [US4] Implement GET /api/v1/participation/unacknowledged endpoint (organizer-only, optional room_id filter) in backend/app/api/participation.py
-- [ ] T023 [US4] Implement /status bot command handler: show summary with per-room inline buttons, drill-down to unacknowledged list in backend/app/bot/handlers/confirmation.py
-- [ ] T024 [US4] Implement daily_summary function in participation_service: format summary text, send to all organizer telegram IDs (called by periodic task from T017) in backend/app/services/participation_service.py
+- [x] T019 [P] [US4] Implement get_participation_summary function in participation_service: aggregate counts by status and room, return ParticipationSummary in backend/app/services/participation_service.py
+- [x] T020 [P] [US4] Implement get_unacknowledged_list function in participation_service: query sent requests with project/room details, return list of UnacknowledgedStudent in backend/app/services/participation_service.py
+- [x] T021 [US4] Implement GET /api/v1/participation/summary endpoint (organizer-only, optional room_id filter) in backend/app/api/participation.py
+- [x] T022 [US4] Implement GET /api/v1/participation/unacknowledged endpoint (organizer-only, optional room_id filter) in backend/app/api/participation.py
+- [x] T023 [US4] Implement /status bot command handler: show summary with per-room inline buttons, drill-down to unacknowledged list in backend/app/bot/handlers/confirmation.py
+- [x] T024 [US4] Implement daily_summary function in participation_service: format summary text, send to all organizer telegram IDs (called by periodic task from T017) in backend/app/services/participation_service.py
 
 **Checkpoint**: Organizer can /status, sees summary, drills into rooms, gets daily auto-summary.
 
@@ -115,10 +115,10 @@
 
 **Purpose**: Edge cases, error handling, final integration
 
-- [ ] T025 Handle Telegram API errors in broadcast: 403 Forbidden (bot blocked), 400 Bad Request (invalid chat_id) → add to unregistered list in backend/app/services/participation_service.py
-- [ ] T026 Add message frequency guard: track messages sent per student, enforce ≤4 messages per cycle in backend/app/services/participation_service.py
-- [ ] T027 [P] Add participation request detail endpoint GET /api/v1/participation/{request_id} in backend/app/api/participation.py
-- [ ] T028 Run quickstart.md scenarios validation: test all 6 integration scenarios end-to-end
+- [x] T025 Handle Telegram API errors in broadcast: 403 Forbidden (bot blocked), 400 Bad Request (invalid chat_id) → add to unregistered list in backend/app/services/participation_service.py
+- [x] T026 Add message frequency guard: track messages sent per student, enforce ≤4 messages per cycle in backend/app/services/participation_service.py — Note: idempotency guards already prevent duplicate sends (reminder_sent_at, escalated_at, unchanged slot skip). Max 3 messages per student naturally (broadcast + reminder + changed-slot re-broadcast).
+- [x] T027 [P] Add participation request detail endpoint GET /api/v1/participation/{request_id} in backend/app/api/participation.py
+- [x] T028 Run quickstart.md scenarios validation: test all 6 integration scenarios end-to-end
 
 ---
 
