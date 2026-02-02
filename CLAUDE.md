@@ -124,19 +124,18 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 
 | Документ | Описание | Статус |
 |----------|----------|--------|
-| `01-brief.md` | Бриф проекта: проблема, цели, ограничения, контекст | DONE |
-| `02-user-story-map.md` | User Story Map: backbone → epics → stories | DONE |
-| `03-user-journey-map.md` | User Journey Map (Mermaid) | DONE |
-| `04-nfr.md` | Нефункциональные требования (Performance, Security, Scalability) | TODO |
-| `05-lean-canvas.md` | Lean Canvas (формат Discovery Kit) | TODO |
-| `06-information-architecture.md` | Информационная архитектура: sitemap, навигация | TODO |
-| `07-c4-architecture.md` | C4-диаграмма: Context + Container (Mermaid) | TODO |
-| `08-er-diagram.md` | ER-диаграмма + Data Dictionary | TODO |
-| `09-sequence-diagrams.md` | Sequence-диаграммы ключевых сценариев | TODO |
-| `10-api-inventory.md` | Инвентаризация API-эндпоинтов | TODO |
-| `11-validation-report.md` | Кросс-валидация всех артефактов | TODO |
-| `personas/` | Персоны пользователей (из ICP) | TODO |
-| `wireframes/` | Unicode-вайрфреймы экранов бота | TODO |
+| `01-brief.md` | Бриф проекта v3.0: проблема, цели, ограничения, контекст | DONE |
+| `02-user-story-map.md` | User Story Map v2.1: backbone → 15 epics → 21 stories | DONE |
+| `03-user-journey-map.md` | User Journey Map v1.1 (Mermaid) | DONE |
+| `04-nfr.md` | Нефункциональные требования (Performance, Security, Scalability) | DONE |
+| `06-information-architecture.md` | Информационная архитектура: sitemap, навигация, access control | DONE |
+| `07-c4-architecture.md` | C4-диаграмма: Context + Container (Mermaid) | DONE |
+| `08-er-diagram.md` | ER-диаграмма: 22 сущности + Data Dictionary | DONE |
+| `09-sequence-diagrams.md` | Sequence-диаграммы: 6 ключевых сценариев | DONE |
+| `10-api-inventory.md` | Инвентаризация API: 62 endpoint | DONE |
+| `personas/` | Персоны: 4 роли + anti-persona + early adopter | DONE |
+| `wireframes/` | ASCII-вайрфреймы: 4 экрана бота | DONE |
+| `diagrams/` | Journey-диаграммы (PNG) | DONE |
 
 ## Рабочие соглашения
 

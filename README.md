@@ -61,16 +61,26 @@ AI-платформа для автоматизации подготовки и 
 │   │   ├── vpc.md                          #   Value Proposition Canvas
 │   │   └── market-research.md              #   Исследование рынка event-tech
 │   │
+│   ├── 01-ai-unconference-navigator/       # Доки от Вани (первичные версии)
+│   │
 │   └── 02-specification/                   # Воркшоп 2: Specification-Driven Development
 │       ├── 01-brief.md                     #   ✅ Бриф проекта (v3.0)
-│       ├── 02-user-story-map.md            #   ✅ User Story Map
-│       ├── 03-user-journey-map.md          #   ✅ User Journey Map (Mermaid)
+│       ├── 02-user-story-map.md            #   ✅ User Story Map (v2.1)
+│       ├── 03-user-journey-map.md          #   ✅ User Journey Map (v1.1, Mermaid)
 │       ├── 04-nfr.md                       #   ✅ Нефункциональные требования
+│       ├── 06-information-architecture.md  #   ✅ Информационная архитектура
+│       ├── 07-c4-architecture.md           #   ✅ C4-диаграмма (Context + Container)
+│       ├── 08-er-diagram.md                #   ✅ ER-диаграмма (22 сущности)
+│       ├── 09-sequence-diagrams.md         #   ✅ Sequence-диаграммы (6 сценариев)
+│       ├── 10-api-inventory.md             #   ✅ API-инвентаризация (62 endpoint)
 │       ├── personas/                       #   ✅ Персоны пользователей
 │       │   ├── 01-organizer.md
 │       │   ├── 02-student.md
 │       │   ├── 03-expert.md
-│       │   └── 04-guest.md
+│       │   ├── 04-guest.md
+│       │   ├── 05-anti-persona.md
+│       │   └── 06-early-adopter.md
+│       ├── wireframes/                     #   ✅ ASCII-вайрфреймы (4 экрана)
 │       └── diagrams/                       #   Journey-диаграммы (PNG)
 │
 ├── telegram-log/                           # Telegram-бот для логирования чата
