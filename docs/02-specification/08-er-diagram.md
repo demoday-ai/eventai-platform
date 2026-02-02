@@ -125,7 +125,7 @@ erDiagram
         uuid stage_id FK
         string title
         text summary
-        enum track_type
+        enum track_type "startup/research/industry/education"
         timestamp created_at
     }
 
@@ -206,17 +206,18 @@ erDiagram
         uuid event_id FK
         uuid project_id FK
         uuid reviewer_id FK
-        int overall_score
+        decimal overall_score "взвешенный % (0-100)"
         text comment
-        enum track_type
+        enum track_type "startup/research/industry/education"
         timestamp created_at
     }
 
     project_review_items {
         uuid id PK
         uuid project_review_id FK
-        string criterion
-        int score
+        string criterion "название критерия"
+        int score "1-3 (1=низкий, 2=средний, 3=высокий)"
+        decimal weight "вес критерия (0.1 или 0.2)"
     }
 
     event_feedback {
@@ -427,7 +428,7 @@ erDiagram
 | stage_id | UUID | YES | — | FK → stages |
 | title | string | NO | — | Название проекта |
 | summary | text | YES | — | Краткий бриф |
-| track_type | enum | YES | — | startup/research/industry |
+| track_type | enum | YES | — | startup/research/industry/education |
 | created_at | timestamp | NO | now | Создание |
 
 ### participation_requests
@@ -455,10 +456,26 @@ erDiagram
 | event_id | UUID | NO | — | FK → events |
 | project_id | UUID | NO | — | FK → projects |
 | reviewer_id | UUID | NO | — | FK → users |
-| overall_score | int | NO | — | Общая оценка 1–5 |
-| comment | text | YES | — | Комментарий |
-| track_type | enum | YES | — | startup/research/industry |
+| overall_score | decimal | NO | — | Взвешенный итоговый % (0–100). Формула: `AVERAGEIF(scores,">0")/2.4*100` |
+| comment | text | YES | — | Свободный комментарий эксперта |
+| track_type | enum | YES | — | startup/research/industry/education |
 | created_at | timestamp | NO | now | Создание |
+
+**Критерии оценки (7 шт., различаются по формату):**
+| # | Критерий | Вес | Шкала |
+|---|----------|-----|-------|
+| 1 | Актуальность | 10% | 1–3 |
+| 2 | Практическая значимость и ценность | 10% | 1–3 |
+| 3 | Новизна | 10% | 1–3 |
+| 4 | Оценка импакта | 10% | 1–3 |
+| 5 | R&D: Технологическая сложность | 10% | 1–3 |
+| 6 | Потенциал масштабирования | 10% | 1–3 |
+| 7 | **Зависит от формата:** | **20%** | 1–3 |
+
+**Критерий 7 по форматам:**
+- Research (AITalConf): Публичность
+- Demo Day: Качество реализации (методологическая оценка)
+- Бизнес: Валидация и готовность к использованию
 
 ### event_feedback
 **Назначение:** обратная связь гостей и бизнес-партнёров по событию.
