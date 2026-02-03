@@ -15,7 +15,9 @@ from app.models.tag import Tag
 
 logger = logging.getLogger(__name__)
 
-SEED_FILE = Path(__file__).resolve().parent.parent.parent.parent / "data" / "seed" / "experts_seed.json"
+# In Docker: /app/data/seed/..., locally: relative to backend/
+_BASE = Path("/app") if Path("/app/data").exists() else Path(__file__).resolve().parent.parent.parent.parent
+SEED_FILE = _BASE / "data" / "seed" / "experts_seed.json"
 
 
 async def load_seed_experts(session: AsyncSession, event_id) -> int:
