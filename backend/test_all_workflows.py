@@ -1,7 +1,6 @@
 """Comprehensive test of all DemoDay workflows."""
 import asyncio
-from datetime import date, timedelta, datetime, time
-from uuid import UUID
+from datetime import date, timedelta
 
 
 async def test_organizer_workflow(session, event):
@@ -73,7 +72,6 @@ async def test_student_workflow(session, event, project):
     """Test: Student confirms participation."""
     from app.models import User, UserRole, Role
     from app.models.schedule_slot import ScheduleSlot
-    from app.services import user_service
     from sqlalchemy import select
 
     print("\n" + "=" * 60)
@@ -115,112 +113,24 @@ async def test_student_workflow(session, event, project):
         print(f"      Slot: {slot.start_time} - {slot.end_time}")
         print(f"      Room ID: {slot.room_id}")
     else:
-        print("      No slot assigned yet")
+        print("      No slot assigned (expected - project may not be in schedule)")
 
     print("\n[2.4] ✅ STUDENT WORKFLOW: PASSED")
-    return user
-
-
-async def test_expert_workflow(session, event, room):
-    """Test: Expert assignment and scoring."""
-    from app.models import User, UserRole, Role
-    from app.models.expert_profile import ExpertProfile
-    from app.models.room_expert import RoomExpert
-    from app.models.project_score import ProjectScore
-    from app.models.room_project import RoomProject
-    from sqlalchemy import select
-
-    print("\n" + "=" * 60)
-    print("3. EXPERT WORKFLOW")
-    print("=" * 60)
-
-    # Create expert user
-    print("\n[3.1] Creating expert user...")
-    user = User(
-        telegram_user_id="222222222",
-        username="test_expert",
-        full_name="Эксперт Тестович",
-    )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-
-    # Assign expert role
-    role_result = await session.execute(select(Role).where(Role.code == "expert"))
-    expert_role = role_result.scalars().first()
-    user_role = UserRole(user_id=user.id, role_id=expert_role.id, event_id=event.id)
-    session.add(user_role)
-    await session.commit()
-    print(f"      Created: {user.full_name}")
-
-    # Create expert profile
-    print("\n[3.2] Creating expert profile...")
-    profile = ExpertProfile(
-        user_id=user.id,
-        event_id=event.id,
-        expertise_tags=["NLP", "LLM", "ML"],
-        bio="ML эксперт с 10-летним опытом",
-    )
-    session.add(profile)
-    await session.commit()
-    print(f"      Tags: {profile.expertise_tags}")
-
-    # Assign to room
-    print("\n[3.3] Assigning expert to room...")
-    room_expert = RoomExpert(
-        room_id=room.id,
-        expert_id=user.id,
-        confirmed=True,
-    )
-    session.add(room_expert)
-    await session.commit()
-    print(f"      Assigned to: {room.name}")
-
-    # Score a project
-    print("\n[3.4] Scoring a project...")
-    rp_result = await session.execute(
-        select(RoomProject).where(RoomProject.room_id == room.id).limit(1)
-    )
-    room_project = rp_result.scalars().first()
-
-    if room_project:
-        score = ProjectScore(
-            project_id=room_project.project_id,
-            expert_id=user.id,
-            event_id=event.id,
-            criterion_1=3,
-            criterion_2=2,
-            criterion_3=3,
-            criterion_4=2,
-            criterion_5=3,
-            criterion_6=2,
-            criterion_7=3,
-            comment="Отличный проект с хорошим потенциалом",
-        )
-        session.add(score)
-        await session.commit()
-        print(f"      Scored project: {room_project.project_id}")
-        print(f"      Comment: {score.comment}")
-    else:
-        print("      No projects in room to score")
-
-    print("\n[3.5] ✅ EXPERT WORKFLOW: PASSED")
     return user
 
 
 async def test_guest_workflow(session, event):
     """Test: Guest profiling and recommendations."""
     from app.models import User, UserRole, Role
-    from app.models.guest_profile import GuestProfile
     from app.services import profiling_service
     from sqlalchemy import select
 
     print("\n" + "=" * 60)
-    print("4. GUEST WORKFLOW")
+    print("3. GUEST WORKFLOW")
     print("=" * 60)
 
     # Create guest user
-    print("\n[4.1] Creating guest user...")
+    print("\n[3.1] Creating guest user...")
     user = User(
         telegram_user_id="333333333",
         username="test_guest",
@@ -239,7 +149,7 @@ async def test_guest_workflow(session, event):
     print(f"      Created: {user.full_name}")
 
     # Create guest profile
-    print("\n[4.2] Creating guest profile...")
+    print("\n[3.2] Creating guest profile...")
     profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
     await profiling_service.save_profile(
         session, profile,
@@ -253,7 +163,7 @@ async def test_guest_workflow(session, event):
     print(f"      Keywords: {profile.keywords}")
 
     # Generate recommendations
-    print("\n[4.3] Generating recommendations...")
+    print("\n[3.3] Generating recommendations (may take ~30-60s)...")
     recommendations = await profiling_service.generate_recommendations(session, profile)
     print(f"      Total: {recommendations.get('total', 0)} projects")
     print(f"      Must visit: {len(recommendations.get('must_visit', []))}")
@@ -264,7 +174,7 @@ async def test_guest_workflow(session, event):
         for rec in recommendations['must_visit'][:3]:
             print(f"        - {rec['title'][:40]}...")
 
-    print("\n[4.4] ✅ GUEST WORKFLOW: PASSED")
+    print("\n[3.4] ✅ GUEST WORKFLOW: PASSED")
     return user
 
 
@@ -277,11 +187,11 @@ async def test_business_workflow(session, event):
     from sqlalchemy import select
 
     print("\n" + "=" * 60)
-    print("5. BUSINESS PARTNER WORKFLOW")
+    print("4. BUSINESS PARTNER WORKFLOW")
     print("=" * 60)
 
     # Create business user
-    print("\n[5.1] Creating business user...")
+    print("\n[4.1] Creating business user...")
     user = User(
         telegram_user_id="444444444",
         username="test_business",
@@ -300,7 +210,7 @@ async def test_business_workflow(session, event):
     print(f"      Created: {user.full_name}")
 
     # Create business profile
-    print("\n[5.2] Creating business profile...")
+    print("\n[4.2] Creating business profile...")
     profile = BusinessProfile(
         user_id=user.id,
         event_id=event.id,
@@ -318,7 +228,7 @@ async def test_business_workflow(session, event):
     print(f"      Industries: {profile.industries}")
 
     # Generate recommendations
-    print("\n[5.3] Generating recommendations...")
+    print("\n[4.3] Generating recommendations...")
     recommendations = await recommendation_service.generate_recommendations(
         session, profile, max_results=5
     )
@@ -332,8 +242,79 @@ async def test_business_workflow(session, event):
         project = proj_result.scalars().first()
         print(f"        {i}. {project.title[:35]}... (score: {rec.relevance_score})")
 
-    print("\n[5.4] ✅ BUSINESS WORKFLOW: PASSED")
+    print("\n[4.4] ✅ BUSINESS WORKFLOW: PASSED")
     return user
+
+
+async def test_expert_workflow(session, event, room):
+    """Test: Expert scoring (simplified - using existing expert model)."""
+    from app.models.expert import Expert
+    from app.models.expert_room_assignment import ExpertRoomAssignment
+    from app.models.expert_score import ExpertScore
+    from app.models.room_project import RoomProject
+    from sqlalchemy import select
+
+    print("\n" + "=" * 60)
+    print("5. EXPERT WORKFLOW")
+    print("=" * 60)
+
+    # Create expert
+    print("\n[5.1] Creating expert...")
+    expert = Expert(
+        seed_id="TEST001",
+        name="Эксперт Тестович",
+        telegram_username="test_expert",
+        position="ML Lead",
+        event_id=event.id,
+    )
+    session.add(expert)
+    await session.commit()
+    await session.refresh(expert)
+    print(f"      Created: {expert.name}")
+
+    # Assign to room
+    print("\n[5.2] Assigning expert to room...")
+    assignment = ExpertRoomAssignment(
+        expert_id=expert.id,
+        room_id=room.id,
+        status="confirmed",
+    )
+    session.add(assignment)
+    await session.commit()
+    print(f"      Assigned to: {room.name}")
+
+    # Score a project
+    print("\n[5.3] Scoring a project...")
+    rp_result = await session.execute(
+        select(RoomProject).where(RoomProject.room_id == room.id).limit(1)
+    )
+    room_project = rp_result.scalars().first()
+
+    if room_project:
+        score = ExpertScore(
+            expert_id=expert.id,
+            project_id=room_project.project_id,
+            event_id=event.id,
+            criterion_1=3,
+            criterion_2=2,
+            criterion_3=3,
+            criterion_4=2,
+            criterion_5=3,
+            criterion_6=2,
+            criterion_7=3,
+            total_score=18,
+            comment="Отличный проект с хорошим потенциалом",
+        )
+        session.add(score)
+        await session.commit()
+        print(f"      Scored project ID: {room_project.project_id}")
+        print(f"      Total score: {score.total_score}")
+        print(f"      Comment: {score.comment[:40]}...")
+    else:
+        print("      No projects in room to score")
+
+    print("\n[5.4] ✅ EXPERT WORKFLOW: PASSED")
+    return expert
 
 
 async def main():
@@ -351,12 +332,15 @@ async def main():
         print("\n[SETUP] Clearing database...")
         await session.execute(text("""
             TRUNCATE TABLE
-                project_scores, room_experts, expert_profiles,
+                expert_scores, expert_room_assignments, experts, expert_tags, expert_briefings,
                 schedule_slots, schedule_change_logs,
                 room_projects, rooms, clustering_runs,
                 project_tags, projects,
-                guest_profiles, business_profiles, project_recommendations,
-                notifications, user_roles, users,
+                guest_profiles, business_profiles, project_recommendations, recommendations,
+                qa_suggestions, business_followups, contact_requests, followup_packages,
+                notifications, reminder_notifications, reminder_batches, escalations,
+                participation_requests, feedback_comments,
+                user_roles, users,
                 events, roles, tags
             CASCADE
         """))
@@ -405,14 +389,14 @@ async def main():
             # 2. Student
             await test_student_workflow(session, event, project)
 
-            # 3. Expert
-            await test_expert_workflow(session, event, room)
-
-            # 4. Guest
+            # 3. Guest
             await test_guest_workflow(session, event)
 
-            # 5. Business Partner
+            # 4. Business Partner
             await test_business_workflow(session, event)
+
+            # 5. Expert
+            await test_expert_workflow(session, event, room)
 
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
