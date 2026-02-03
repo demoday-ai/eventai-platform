@@ -17,6 +17,7 @@ from app.bot.handlers.expert_assignment import (
     get_expert_assignment_handler,
 )
 from app.bot.handlers.guest_profiling import get_profiling_handler
+from app.bot.handlers.qa import get_qa_handlers
 from app.bot.handlers.reminder import get_reminder_handlers
 from app.bot.handlers.schedule import get_schedule_handler, get_schedule_preview_handlers
 from app.bot.handlers.start import get_onboarding_handler
@@ -56,6 +57,10 @@ def create_bot_app() -> Application:
 
     # EPIC-007: DD Reminders handlers
     for handler in get_reminder_handlers():
+        application.add_handler(handler)
+
+    # EPIC-009: Q&A Helper handlers
+    for handler in get_qa_handlers():
         application.add_handler(handler)
 
     return application

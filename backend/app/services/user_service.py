@@ -4,7 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.business_profile import BusinessProfile
 from app.models.event import Event
+from app.models.guest_profile import GuestProfile
 from app.models.role import Role, RoleCode
 from app.models.user import GuestSubtype, User
 from app.models.user_role import UserRole
@@ -109,3 +111,23 @@ async def set_guest_subtype(
     user = await session.get(User, user_id)
     user.guest_subtype = guest_subtype
     await session.commit()
+
+
+async def get_guest_profile(
+    session: AsyncSession, user_id: uuid.UUID
+) -> GuestProfile | None:
+    """Get guest profile for user."""
+    result = await session.execute(
+        select(GuestProfile).where(GuestProfile.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_business_profile(
+    session: AsyncSession, user_id: uuid.UUID
+) -> BusinessProfile | None:
+    """Get business profile for user."""
+    result = await session.execute(
+        select(BusinessProfile).where(BusinessProfile.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
