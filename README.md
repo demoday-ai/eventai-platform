@@ -194,6 +194,23 @@ SECRET_KEY=<random-secret-for-jwt>
 ORGANIZER_TELEGRAM_IDS=<comma-separated-telegram-ids>
 ```
 
+### Инициализация БД (после первого запуска)
+
+```bash
+# Создать роли и событие
+docker compose exec db psql -U demoday -d demoday -c "
+INSERT INTO roles (id, code, name) VALUES
+  (gen_random_uuid(), 'organizer', 'Организатор'),
+  (gen_random_uuid(), 'student', 'Студент'),
+  (gen_random_uuid(), 'expert', 'Эксперт'),
+  (gen_random_uuid(), 'guest', 'Гость'),
+  (gen_random_uuid(), 'business', 'Бизнес-партнёр');
+
+INSERT INTO events (id, name, start_date, end_date) VALUES
+  (gen_random_uuid(), 'Demo Day 2026', '2026-02-10', '2026-02-11');
+"
+```
+
 ### Полезные команды
 
 ```bash
