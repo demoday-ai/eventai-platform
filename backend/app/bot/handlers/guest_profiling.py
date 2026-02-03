@@ -68,6 +68,15 @@ async def _load_tags(event_id) -> list[tuple[str, int]]:
         return await profiling_service.get_available_tags(session, event_id)
 
 
+def _escape_markdown(text: str) -> str:
+    """Escape Markdown special characters."""
+    if not text:
+        return ""
+    for char in ['*', '_', '`', '[', ']', '(', ')']:
+        text = text.replace(char, '\\' + char)
+    return text
+
+
 def _format_interests(selected: list[str], extracted: list[str], keywords: list[str]) -> str:
     """Format interests for confirmation message."""
     all_tags = list(dict.fromkeys(selected + extracted))  # deduplicate, preserve order
@@ -86,7 +95,9 @@ def _format_recommendations(data: dict) -> list[str]:
     # Must visit
     must_text = "🎯 *Обязательно посетить:*\n\n"
     for rec in data.get("must_visit", []):
-        summary = rec["summary"][:200] if rec["summary"] else ""
+        title = _escape_markdown(rec["title"])
+        summary = _escape_markdown(rec["summary"][:200] if rec["summary"] else "")
+        author = _escape_markdown(rec.get("author", ""))
         room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
         tags_str = ", ".join(rec.get("tags", [])[:4])
         conflict = ""
@@ -94,21 +105,22 @@ def _format_recommendations(data: dict) -> list[str]:
             conflict = f" ⚠️ Параллельно с Зал {', '.join(str(r) for r in rec['conflict_rooms'][:3])}"
 
         entry = (
-            f"*{rec['rank']}. {rec['title']}*\n"
+            f"*{rec['rank']}. {title}*\n"
             f"{summary}\n"
-            f"📍 {room_info} · {tags_str} · {rec['author']}{conflict}\n\n"
+            f"📍 {room_info} · {tags_str} · {author}{conflict}\n\n"
         )
         must_text += entry
 
     # If time
     if_time_text = "⏰ *Если останется время:*\n\n"
     for rec in data.get("if_time", []):
-        summary = rec["summary"][:150] if rec["summary"] else ""
+        title = _escape_markdown(rec["title"])
+        summary = _escape_markdown(rec["summary"][:150] if rec["summary"] else "")
         room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
         tags_str = ", ".join(rec.get("tags", [])[:3])
 
         entry = (
-            f"*{rec['rank']}. {rec['title']}*\n"
+            f"*{rec['rank']}. {title}*\n"
             f"{summary}\n"
             f"📍 {room_info} · {tags_str}\n\n"
         )
@@ -551,22 +563,28 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("Проект не найден в подборке.")
         return VIEW_PROGRAM
 
-    room_info = f"Зал {detail['room_number']}: {detail['room_name']}" if detail.get("room_number") else "Зал: н/д"
+    room_info = f"Зал {detail['room_number']}: {_escape_markdown(detail['room_name'])}" if detail.get("room_number") else "Зал: н/д"
     tags_str = ", ".join(detail.get("tags", []))
     score_pct = int(detail["relevance_score"] * 100) if detail["relevance_score"] > 0 else 0
 
+    title = _escape_markdown(detail['title'])
+    description = _escape_markdown(detail['description'][:1500])
+    author = _escape_markdown(detail.get('author', ''))
+    telegram_contact = _escape_markdown(detail.get('telegram_contact', 'н/д'))
+
     text = (
-        f"📋 *{detail['title']}*\n\n"
-        f"{detail['description'][:1500]}\n\n"
+        f"📋 *{title}*\n\n"
+        f"{description}\n\n"
         f"🏷 Теги: {tags_str}\n"
-        f"👤 Автор: {detail['author']}\n"
+        f"👤 Автор: {author}\n"
         f"📍 {room_info}\n"
-        f"📱 Telegram: {detail.get('telegram_contact', 'н/д')}\n"
+        f"📱 Telegram: {telegram_contact}\n"
         f"📊 Релевантность: {score_pct}%"
     )
 
     if detail.get("llm_summary"):
-        text += f"\n\n💡 *Кратко:* {detail['llm_summary']}"
+        llm_summary = _escape_markdown(detail['llm_summary'])
+        text += f"\n\n💡 *Кратко:* {llm_summary}"
 
     await query.edit_message_text(
         text, parse_mode="Markdown",
