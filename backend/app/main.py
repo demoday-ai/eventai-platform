@@ -256,6 +256,31 @@ async def lifespan(app: FastAPI):
                 except Exception:
                     logger.exception("Batch processor job failed")
 
+            # EPIC-008: Expert briefing job (24h before DD)
+            async def _expert_briefing_job():
+                """Send expert briefings at 18:00 MSK day before DD."""
+                try:
+                    from app.services import briefing_service
+                    async with session_factory() as session:
+                        event = await us.get_current_event(session)
+                        if not event:
+                            return
+
+                        now = datetime.now(MSK)
+                        tomorrow = (now + timedelta(days=1)).date()
+
+                        # Check if tomorrow is the first day of the event
+                        if event.start_date and tomorrow == event.start_date:
+                            result = await briefing_service.send_all_briefings(
+                                session, event.id, bot_instance
+                            )
+                            logger.info(
+                                "Expert briefings sent: %d sent, %d failed, %d skipped",
+                                result["sent"], result["failed"], result["skipped"]
+                            )
+                except Exception:
+                    logger.exception("Expert briefing job failed")
+
             # Register all jobs
             scheduler.add_job(_reminder_job, IntervalTrigger(hours=12), id="expert_reminders")
             scheduler.add_job(_escalation_job, IntervalTrigger(hours=12), id="escalations")
@@ -300,12 +325,19 @@ async def lifespan(app: FastAPI):
                 id="batch_processor"
             )
 
+            # EPIC-008: Expert briefing at 18:00 MSK day before DD
+            scheduler.add_job(
+                _expert_briefing_job,
+                CronTrigger(hour=18, minute=0, timezone=MSK),
+                id="expert_briefing"
+            )
+
             scheduler.start()
             app.state.scheduler = scheduler
             logger.info(
                 "APScheduler started: expert reminders (12h), escalations (12h), "
                 "participation jobs (1h/24h), eve-of-DD (17:00/18:00 MSK), "
-                "pre-slot (5min), batch processor (60s)"
+                "pre-slot (5min), batch processor (60s), expert briefing (18:00 MSK)"
             )
         except Exception:
             logger.exception("Failed to start APScheduler (non-fatal)")

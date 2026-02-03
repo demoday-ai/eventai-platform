@@ -4,6 +4,7 @@ from app.models.clustering_run import ClusteringRun
 from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.escalation import Escalation
 from app.models.event import Event
+from app.models.expert_briefing import BriefingStatus, ExpertBriefing
 from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_tag import ExpertTag
@@ -32,6 +33,7 @@ from app.models.user_role import UserRole
 
 __all__ = [
     "Base",
+    "BriefingStatus",
     "BusinessObjective",
     "BusinessProfile",
     "ChangeType",
@@ -41,6 +43,7 @@ __all__ = [
     "Escalation",
     "Event",
     "Expert",
+    "ExpertBriefing",
     "ExpertRoomAssignment",
     "ExpertTag",
     "GuestProfile",

@@ -22,6 +22,12 @@ class Project(Base):
     telegram_contact: Mapped[str] = mapped_column(String(100), nullable=False)
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="upload")
 
+    # EPIC-008: Additional fields for expert briefing
+    github_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    tech_stack: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    presentation_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    demo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     tags = relationship("ProjectTag", back_populates="project", cascade="all, delete-orphan")
     room_assignments = relationship(
         "RoomProject", back_populates="project", cascade="all, delete-orphan"
