@@ -18,7 +18,7 @@ from telegram.ext import (
 
 from app.bot.keyboards import (
     back_to_program_keyboard,
-    confirm_profile_keyboard,
+    confirm_interests_keyboard,
     generate_program_keyboard,
     program_recommendation_keyboard,
     start_profiling_keyboard,
@@ -352,11 +352,11 @@ async def _process_and_confirm(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if is_message:
         await update.message.reply_text(
-            confirm_text, reply_markup=confirm_profile_keyboard()
+            confirm_text, reply_markup=confirm_interests_keyboard()
         )
     else:
         await update.callback_query.edit_message_text(
-            confirm_text, reply_markup=confirm_profile_keyboard()
+            confirm_text, reply_markup=confirm_interests_keyboard()
         )
 
     return CONFIRM_PROFILE
