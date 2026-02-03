@@ -201,6 +201,10 @@ def stages_keyboard(selected: list[str] | None = None) -> InlineKeyboardMarkup:
         ])
     buttons.append([
         InlineKeyboardButton("Готово →", callback_data="bp:stg:done"),
+    ])
+    return InlineKeyboardMarkup(buttons)
+
+
 # --- Expert assignment keyboards ---
 
 
@@ -440,6 +444,11 @@ def project_card_keyboard(recommendation_id: str, is_bookmarked: bool) -> Inline
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(bookmark_text, callback_data=f"bp:bm:{rec_id_short}")],
         [InlineKeyboardButton("← К списку", callback_data="bp:proj:back")],
+    ])
+
+
+def confirm_interests_keyboard() -> InlineKeyboardMarkup:
+    """Confirm extracted interests from free text."""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Да", callback_data="prof:yes")],
         [InlineKeyboardButton("Нет, изменить", callback_data="prof:no")],
@@ -586,4 +595,17 @@ def reminder_resend_keyboard(batch_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Да, отправить повторно", callback_data=f"rem:resend:{short_id}")],
         [InlineKeyboardButton("Отмена", callback_data="rem:cancel")],
+    ])
+
+
+def reminder_recovery_keyboard(batch_id: str) -> InlineKeyboardMarkup:
+    """Recovery options for interrupted batch (EPIC-007b).
+
+    Buttons: Resume / Start fresh / Cancel
+    """
+    short_id = str(batch_id)[:8]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("▶️ Возобновить", callback_data=f"rem:recover:resume:{short_id}")],
+        [InlineKeyboardButton("🔄 Начать заново", callback_data=f"rem:recover:fresh:{short_id}")],
+        [InlineKeyboardButton("❌ Отмена", callback_data="rem:cancel")],
     ])

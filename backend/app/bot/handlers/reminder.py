@@ -11,7 +11,7 @@ Callbacks:
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from telegram import Update
@@ -23,6 +23,7 @@ from telegram.ext import (
 
 from app.bot.keyboards import (
     reminder_preview_keyboard,
+    reminder_recovery_keyboard,
     reminder_resend_keyboard,
     reminder_type_keyboard,
 )
@@ -45,7 +46,7 @@ def _is_organizer(telegram_user_id: int | str) -> bool:
 
 
 async def remind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /remind command - show type selection."""
+    """Handle /remind command - check for interrupted batch, then show type selection."""
     # T022: Check organizer access
     if not _is_organizer(update.effective_user.id):
         await update.message.reply_text("Команда доступна только организаторам.")
@@ -63,6 +64,36 @@ async def remind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"Нет события в ближайшие 2 дня.\n"
                 f"Следующее событие: {event.start_date.strftime('%d.%m.%Y')} ({days_until} дней)"
+            )
+            return
+
+        # EPIC-007b: Check for interrupted batch (T011)
+        interrupted = await reminder_service.get_interrupted_batch(session, event.id)
+        if interrupted:
+            # Format time ago
+            minutes_ago = int(
+                (datetime.now(timezone.utc) - interrupted.started_at).total_seconds() / 60
+            )
+            if minutes_ago < 60:
+                time_ago = f"{minutes_ago} мин. назад"
+            else:
+                hours = minutes_ago // 60
+                time_ago = f"{hours} ч. назад"
+
+            # Calculate progress
+            sent = interrupted.sent_count or 0
+            total = interrupted.total_recipients or 0
+            reminder_type_label = (
+                "за день" if interrupted.reminder_type.value == "day_before" else "за час"
+            )
+
+            await update.message.reply_text(
+                f"⚠️ Обнаружена прерванная рассылка\n\n"
+                f"Тип: Напоминания {reminder_type_label}\n"
+                f"Начата: {time_ago}\n"
+                f"Прогресс: {sent}/{total} отправлено\n\n"
+                f"Что делать?",
+                reply_markup=reminder_recovery_keyboard(str(interrupted.id)),
             )
             return
 
@@ -295,16 +326,85 @@ async def resend_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ---------------------------------------------------------------------------
+# Recovery callback (EPIC-007b T013-T016)
+# ---------------------------------------------------------------------------
+
+
+async def recovery_choice_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle recovery choice: resume or start fresh."""
+    query = update.callback_query
+    await query.answer()
+
+    if not _is_organizer(query.from_user.id):
+        await query.edit_message_text("Команда доступна только организаторам.")
+        return
+
+    # Parse callback: rem:recover:resume:xxxxxxxx or rem:recover:fresh:xxxxxxxx
+    parts = query.data.split(":")
+    action = parts[2]  # resume or fresh
+    batch_id_prefix = parts[3]
+
+    async with async_session() as session:
+        from sqlalchemy import select
+        from app.models.reminder import ReminderBatch
+
+        # Find batch by prefix
+        result = await session.execute(
+            select(ReminderBatch).where(
+                ReminderBatch.id.cast(str).like(f"{batch_id_prefix}%")
+            )
+        )
+        batch = result.scalars().first()
+        if not batch:
+            await query.edit_message_text("❌ Рассылка не найдена.")
+            return
+
+        if action == "resume":
+            # T014: Resume the interrupted batch
+            await query.edit_message_text("⏳ Возобновление рассылки...")
+
+            import time
+            start_time = time.time()
+
+            batch = await reminder_service.resume_batch(session, batch, context.bot)
+
+            elapsed = time.time() - start_time
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            time_str = f"{minutes} мин {seconds} сек" if minutes else f"{seconds} сек"
+
+            text = (
+                f"✅ Рассылка возобновлена и завершена\n\n"
+                f"Отправлено: {batch.sent_count}\n"
+                f"Ошибки: {batch.failed_count}\n\n"
+                f"Время: {time_str}"
+            )
+            await query.edit_message_text(text)
+
+        elif action == "fresh":
+            # T016: Cancel old batch, show type selection
+            await reminder_service.cancel_batch(session, batch)
+
+            await query.edit_message_text(
+                "🔔 Предыдущая рассылка отменена.\n\n"
+                "Выберите тип напоминания:",
+                reply_markup=reminder_type_keyboard(),
+            )
+
+
+# ---------------------------------------------------------------------------
 # Handler registration (T020)
 # ---------------------------------------------------------------------------
 
 
 def get_reminder_handlers() -> list:
-    """Return list of handlers for EPIC-007."""
+    """Return list of handlers for EPIC-007 and EPIC-007b."""
     return [
         CommandHandler("remind", remind_command),
         CallbackQueryHandler(type_selection_callback, pattern=r"^rem:type:"),
         CallbackQueryHandler(send_callback, pattern=r"^rem:send:"),
         CallbackQueryHandler(cancel_callback, pattern=r"^rem:cancel$"),
         CallbackQueryHandler(resend_callback, pattern=r"^rem:resend:"),
+        # EPIC-007b: Batch recovery
+        CallbackQueryHandler(recovery_choice_callback, pattern=r"^rem:recover:"),
     ]
