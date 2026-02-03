@@ -177,9 +177,9 @@ async def main():
                     select(Project).where(Project.id == rec.project_id)
                 )
                 project = proj_result.scalars().first()
-                print(f"     {i}. {project.title[:40]}... (score: {rec.score})")
-                if rec.explanation:
-                    print(f"        -> {rec.explanation[:60]}...")
+                print(f"     {i}. {project.title[:40]}... (score: {rec.relevance_score})")
+                if rec.relevance_explanation:
+                    print(f"        -> {rec.relevance_explanation[:60]}...")
         except Exception as e:
             print(f"   ERROR: {e}")
             import traceback
