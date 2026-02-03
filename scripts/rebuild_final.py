@@ -300,12 +300,27 @@ def main():
     # Update seed
     seed_new = []
     for p in final:
+        # Parse tags: split by ; and , then truncate long ones
+        tags_raw = p['tags'] or ''
+        tags_clean = []
+        for t in tags_raw.replace(';', ',').split(','):
+            t = t.strip()
+            if not t:
+                continue
+            # Truncate long tags (DB limit is varchar(100))
+            if len(t) > 80:
+                t = t.split('(')[0].strip()
+            if len(t) > 80:
+                t = t[:80]
+            if t and t not in tags_clean:
+                tags_clean.append(t)
+
         seed_new.append({
             'title': p['title'],
             'description': p['description'] or f"Проект: {p['title']}",
             'author': p['author'] or p['team'].split(',')[0].strip() if p['team'] else 'Неизвестен',
             'telegram_contact': p['telegram'] or '@unknown',
-            'tags': [t.strip() for t in p['tags'].split(';') if t.strip()] if p['tags'] else []
+            'tags': tags_clean
         })
 
     with open(DATA_DIR / 'seed' / 'projects_seed.json', 'w', encoding='utf-8') as f:
