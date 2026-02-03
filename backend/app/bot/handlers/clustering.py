@@ -258,12 +258,10 @@ async def _run_clustering(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return CLUSTER_PARAMS
 
 
-async def view_room_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Show projects in a room."""
-    query = update.callback_query
-    await query.answer()
-
-    _, room_id_str = query.data.split(":", 1)
+async def _render_room_detail(
+    query, context: ContextTypes.DEFAULT_TYPE, room_id_str: str
+) -> int:
+    """Render room detail view (shared logic)."""
     room_id = uuid.UUID(room_id_str)
     page = context.user_data.get(f"room_page_{room_id_str}", 0)
 
@@ -303,6 +301,15 @@ async def view_room_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return ROOM_DETAIL
 
 
+async def view_room_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Show projects in a room."""
+    query = update.callback_query
+    await query.answer()
+
+    _, room_id_str = query.data.split(":", 1)
+    return await _render_room_detail(query, context, room_id_str)
+
+
 async def room_page_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle pagination in room detail."""
     query = update.callback_query
@@ -311,9 +318,7 @@ async def room_page_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     _, room_id_str, page_str = query.data.split(":", 2)
     context.user_data[f"room_page_{room_id_str}"] = int(page_str)
 
-    # Re-render room detail
-    query.data = f"room:{room_id_str}"
-    return await view_room_detail(update, context)
+    return await _render_room_detail(query, context, room_id_str)
 
 
 async def back_to_overview(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
