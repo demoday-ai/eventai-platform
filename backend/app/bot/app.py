@@ -1,5 +1,6 @@
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
+from app.bot.handlers.business_followup import get_business_followup_handlers
 from app.bot.handlers.business_profiling import get_business_profiling_handler
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
@@ -91,6 +92,10 @@ def create_bot_app() -> Application:
 
     # EPIC-014: Guest Follow-up handlers
     for handler in get_followup_handlers():
+        application.add_handler(handler)
+
+    # EPIC-015: Business Follow-up handlers
+    for handler in get_business_followup_handlers():
         application.add_handler(handler)
 
     return application
