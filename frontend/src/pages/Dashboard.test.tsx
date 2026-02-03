@@ -52,9 +52,12 @@ describe("Dashboard", () => {
 
     render(<Dashboard />, { wrapper: createWrapper() })
 
-    // Should have 5 loading elements (4 metric cards + 1 coverage table)
-    const loadingElements = screen.getAllByText("Загрузка...")
-    expect(loadingElements).toHaveLength(5)
+    // Should have skeleton loaders (4 metric cards with skeletons + 1 coverage table loading)
+    const skeletons = document.querySelectorAll('.animate-pulse')
+    expect(skeletons.length).toBeGreaterThan(0)
+
+    // Coverage table still shows "Загрузка..."
+    expect(screen.getByText("Загрузка...")).toBeInTheDocument()
   })
 
   it("renders dashboard data when loaded", async () => {

@@ -1,8 +1,10 @@
+import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useAuth } from "../hooks/useAuth"
 import { useNavigate } from "react-router-dom"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
+import { Skeleton } from "../components/ui/skeleton"
 import { APP_NAME } from "../lib/constants"
 import { getDashboard, getCoverage, type DashboardData, type Alert as AlertType } from "../lib/api-client"
 import { CoverageTable } from "../components/CoverageTable"
@@ -10,6 +12,11 @@ import { CoverageTable } from "../components/CoverageTable"
 export function Dashboard() {
   const { telegramId, logout } = useAuth()
   const navigate = useNavigate()
+
+  // Set page title
+  useEffect(() => {
+    document.title = `${APP_NAME} - Dashboard`
+  }, [])
 
   // Fetch dashboard data with auto-refresh every 60 seconds
   const {
@@ -190,15 +197,30 @@ function MetricCard({
   icon: string
   loading?: boolean
 }) {
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-16" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <p className="text-sm text-muted-foreground">{title}</p>
-            <p className={`text-3xl font-bold mt-1 ${loading ? "animate-pulse" : ""}`}>
-              {value}
-            </p>
+            <p className="text-3xl font-bold mt-1">{value}</p>
             <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
           </div>
           <span className="text-2xl">{icon}</span>
