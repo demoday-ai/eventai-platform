@@ -246,7 +246,7 @@ async def test_business_workflow(session, event):
     return user
 
 
-async def test_expert_workflow(session, event, room):
+async def test_expert_workflow(session, event, room, clustering_run_id):
     """Test: Expert scoring (simplified - using existing expert model)."""
     from app.models.expert import Expert
     from app.models.expert_room_assignment import ExpertRoomAssignment
@@ -277,6 +277,7 @@ async def test_expert_workflow(session, event, room):
     assignment = ExpertRoomAssignment(
         expert_id=expert.id,
         room_id=room.id,
+        clustering_run_id=clustering_run_id,
         status="confirmed",
     )
     session.add(assignment)
@@ -396,7 +397,7 @@ async def main():
             await test_business_workflow(session, event)
 
             # 5. Expert
-            await test_expert_workflow(session, event, room)
+            await test_expert_workflow(session, event, room, clustering_run.id)
 
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
