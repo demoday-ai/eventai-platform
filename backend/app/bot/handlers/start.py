@@ -49,8 +49,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
         role = await user_service.get_user_role_with_info(session, user.id, event.id)
 
-    is_organizer = telegram_user_id in settings.organizer_ids
-    logger.info("start: user=%s tg_id=%s has_role=%s", full_name, telegram_user_id, role is not None)
+    is_organizer = settings.is_organizer(telegram_user_id, username)
+    logger.info("start: user=%s tg_id=%s has_role=%s is_org=%s", full_name, telegram_user_id, role is not None, is_organizer)
 
     if role:
         role_name = ROLE_DISPLAY_NAMES.get(RoleCode(role.code), role.code)
@@ -82,7 +82,8 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     if role_code == RoleCode.ORGANIZER:
         telegram_user_id = str(query.from_user.id)
-        if telegram_user_id not in settings.organizer_ids:
+        username = query.from_user.username
+        if not settings.is_organizer(telegram_user_id, username):
             await query.edit_message_text("Роль организатора доступна только по приглашению.")
             return ConversationHandler.END
 
@@ -173,7 +174,7 @@ async def confirm_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text("Хорошо, роль не изменена.")
         return ConversationHandler.END
 
-    is_organizer = str(query.from_user.id) in settings.organizer_ids
+    is_organizer = settings.is_organizer(query.from_user.id, query.from_user.username)
     await query.edit_message_text(
         "Выберите новую роль:",
         reply_markup=role_keyboard(is_organizer),

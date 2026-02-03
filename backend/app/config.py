@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     bot_token: str = ""
     bot_mode: str = "polling"  # "polling" or "webhook"
     organizer_telegram_ids: str = ""
+    organizer_telegram_usernames: str = ""  # comma-separated usernames (without @)
     secret_key: str = "dev-secret-key"
     webhook_url: str = ""  # e.g. https://team10.camp.aitalenthub.ru
     openrouter_api_key: str = ""
@@ -17,6 +18,20 @@ class Settings(BaseSettings):
         if not self.organizer_telegram_ids:
             return set()
         return {tid.strip() for tid in self.organizer_telegram_ids.split(",")}
+
+    @property
+    def organizer_usernames(self) -> set[str]:
+        if not self.organizer_telegram_usernames:
+            return set()
+        return {u.strip().lower().lstrip("@") for u in self.organizer_telegram_usernames.split(",")}
+
+    def is_organizer(self, user_id: int | str, username: str | None = None) -> bool:
+        """Check if user is organizer by ID or username."""
+        if str(user_id) in self.organizer_ids:
+            return True
+        if username and username.lower().lstrip("@") in self.organizer_usernames:
+            return True
+        return False
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
