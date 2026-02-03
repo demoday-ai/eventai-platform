@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 import { getProjects, getCoverage, type ProjectListItem } from "../lib/api-client"
@@ -7,12 +7,18 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Label } from "../components/ui/label"
+import { APP_NAME } from "../lib/constants"
 
 export function ProjectsList() {
   const navigate = useNavigate()
   const [roomFilter, setRoomFilter] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
+
+  // Set page title
+  useEffect(() => {
+    document.title = `${APP_NAME} - Проекты`
+  }, [])
 
   // Build query params
   const params = {

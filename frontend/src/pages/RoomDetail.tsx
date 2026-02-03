@@ -1,8 +1,10 @@
+import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useParams, useNavigate } from "react-router-dom"
 import { getRoomDetail, type ExpertInfo, type ProjectInfo } from "../lib/api-client"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
+import { APP_NAME } from "../lib/constants"
 
 export function RoomDetail() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +15,15 @@ export function RoomDetail() {
     queryFn: () => getRoomDetail(id!),
     enabled: !!id,
   })
+
+  // Set page title
+  useEffect(() => {
+    if (data?.room.name) {
+      document.title = `${APP_NAME} - ${data.room.name}`
+    } else {
+      document.title = `${APP_NAME} - Зал`
+    }
+  }, [data?.room.name])
 
   if (isLoading) {
     return (
