@@ -48,14 +48,17 @@ async def main():
 
         # 2. Load projects from seed file
         print("\n[2] Loading projects from seed file...")
-        with open("data/seed/projects_seed.json", "r") as f:
-            projects_data = json.load(f)
+        with open("data/seed/projects_seed.json", "rb") as f:
+            content = f.read()
 
+        rows = project_service.parse_json(content)
         # Load first 50 projects for faster test
-        projects_data = projects_data[:50]
+        rows = rows[:50]
 
-        count = await project_service.load_from_json(session, event.id, projects_data)
-        await session.commit()
+        valid_rows, errors, duplicates = project_service.validate_rows(rows)
+        if errors:
+            print(f"   Validation errors: {len(errors)}")
+        count = await project_service.save_projects(session, event.id, valid_rows)
         print(f"   Loaded {count} projects")
 
         # 3. Run clustering (6 rooms)
