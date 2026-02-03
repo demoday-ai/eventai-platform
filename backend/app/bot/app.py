@@ -3,6 +3,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 from app.bot.handlers.business_profiling import get_business_profiling_handler
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
+from app.bot.handlers.dashboard import get_dashboard_handlers
 from app.bot.handlers.coverage import (
     coverage_back_callback,
     coverage_command,
@@ -56,6 +57,10 @@ def create_bot_app() -> Application:
 
     # EPIC-007: DD Reminders handlers
     for handler in get_reminder_handlers():
+        application.add_handler(handler)
+
+    # EPIC-011: Organizer Dashboard handlers
+    for handler in get_dashboard_handlers():
         application.add_handler(handler)
 
     return application
