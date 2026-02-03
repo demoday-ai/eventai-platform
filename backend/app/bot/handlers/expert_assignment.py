@@ -602,6 +602,7 @@ async def handle_expert_start(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Handle expert coming to bot via t.me/bot?start=expert link."""
     tg_user = update.effective_user
     username = tg_user.username
+    chat_id = str(update.effective_chat.id)
 
     if not username:
         await update.message.reply_text(
@@ -617,7 +618,7 @@ async def handle_expert_start(update: Update, context: ContextTypes.DEFAULT_TYPE
             return ConversationHandler.END
 
         from app.services import invite_service
-        result = await invite_service.handle_expert_start(session, event.id, username)
+        result = await invite_service.handle_expert_start(session, event.id, username, chat_id)
 
     if not result:
         await update.message.reply_text(

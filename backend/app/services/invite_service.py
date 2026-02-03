@@ -103,7 +103,7 @@ async def confirm_invites(session: AsyncSession, event_id) -> dict:
 
 
 async def handle_expert_start(
-    session: AsyncSession, event_id, telegram_username: str
+    session: AsyncSession, event_id, telegram_username: str, telegram_chat_id: str | None = None
 ) -> dict | None:
     """Find expert by username, mark bot_started, return expert + assignment info."""
     from app.services import expert_service
@@ -112,10 +112,14 @@ async def handle_expert_start(
     if not expert:
         return None
 
-    # Mark bot_started
+    # Mark bot_started and save chat_id for EPIC-007 reminders
     if not expert.bot_started:
         expert.bot_started = True
         expert.bot_started_at = datetime.now(timezone.utc)
+
+    # T051: Save telegram_chat_id for sending reminders
+    if telegram_chat_id and not expert.telegram_chat_id:
+        expert.telegram_chat_id = telegram_chat_id
 
     # Find latest assignment
     assignment = None

@@ -492,3 +492,98 @@ def back_to_program_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])
+
+
+# --- Student schedule acknowledgment keyboards (EPIC-003) ---
+
+
+def acknowledge_slot_keyboard(request_id: str) -> InlineKeyboardMarkup:
+    short_id = str(request_id)[:8]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ознакомлен", callback_data=f"ack:{short_id}")],
+    ])
+
+
+def broadcast_confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да, разослать", callback_data="bcast:yes")],
+        [InlineKeyboardButton("Отмена", callback_data="bcast:no")],
+    ])
+
+
+def participation_summary_rooms(rooms_data: list) -> InlineKeyboardMarkup:
+    buttons = []
+    for r in rooms_data:
+        ack = r["acknowledged"]
+        total = r["total"]
+        label = f"{r['room_name'][:20]} ({ack}/{total})"
+        buttons.append([InlineKeyboardButton(
+            label, callback_data=f"proom:{str(r['room_id'])[:8]}"
+        )])
+    buttons.append([InlineKeyboardButton("Обновить", callback_data="pstat:refresh")])
+    return InlineKeyboardMarkup(buttons)
+
+
+# --- EPIC-006: Organizer Coverage Dashboard keyboards ---
+
+
+def coverage_summary_keyboard(rooms_data: list) -> InlineKeyboardMarkup:
+    """Coverage summary with room buttons showing status indicators and project counts.
+
+    rooms_data: list of dicts with room_id, room_name, project_count, confirmed, coverage_level.
+    """
+    indicators = {"covered": "✅", "partial": "⚠️", "uncovered": "❌"}
+    buttons = []
+    for r in rooms_data:
+        ind = indicators.get(r.get("coverage_level", "uncovered"), "❌")
+        confirmed = r.get("confirmed", 0)
+        projects = r.get("project_count", 0)
+        label = f"{ind} {r['room_name'][:18]} — {confirmed} эксп. | {projects} пр."
+        buttons.append([InlineKeyboardButton(
+            label, callback_data=f"cov_room:{str(r['room_id'])[:8]}"
+        )])
+    buttons.append([
+        InlineKeyboardButton("⚠️ Непокрытые тематики", callback_data="cov:gaps"),
+        InlineKeyboardButton("🔄 Обновить", callback_data="cov:refresh"),
+    ])
+    return InlineKeyboardMarkup(buttons)
+
+
+def coverage_room_detail_kb(room_id: str) -> InlineKeyboardMarkup:
+    """Room detail keyboard with back and refresh buttons."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⬅️ Назад", callback_data="cov:back"),
+            InlineKeyboardButton("🔄 Обновить", callback_data=f"cov_rr:{str(room_id)[:8]}"),
+        ],
+    ])
+
+
+# --- EPIC-007: DD Reminders keyboards ---
+
+
+def reminder_type_keyboard() -> InlineKeyboardMarkup:
+    """Type selection: day-before or hour-before reminders."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📅 За день", callback_data="rem:type:day")],
+        [InlineKeyboardButton("⏰ За час", callback_data="rem:type:hour")],
+        [InlineKeyboardButton("Отмена", callback_data="rem:cancel")],
+    ])
+
+
+def reminder_preview_keyboard(batch_id: str) -> InlineKeyboardMarkup:
+    """Confirm send or cancel after preview."""
+    short_id = str(batch_id)[:8]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Отправить", callback_data=f"rem:send:{short_id}")],
+        [InlineKeyboardButton("❌ Отмена", callback_data="rem:cancel")],
+    ])
+
+
+def reminder_resend_keyboard(batch_id: str) -> InlineKeyboardMarkup:
+    """Confirm resend despite duplicate warning."""
+    short_id = str(batch_id)[:8]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да, отправить повторно", callback_data=f"rem:resend:{short_id}")],
+        [InlineKeyboardButton("Отмена", callback_data="rem:cancel")],
+    ])
