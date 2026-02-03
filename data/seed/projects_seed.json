@@ -14,7 +14,7 @@
     "author": "Ширяев Антон Дмитриевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "LLM и VLM"
+      "LLM"
     ]
   },
   {
@@ -41,10 +41,10 @@
     "author": "Студент_816",
     "telegram_contact": "@user_313",
     "tags": [
-      "ML в промышленности",
-      "RAG",
+      "Industrial",
+      "LLM",
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -53,7 +53,7 @@
     "author": "Студент_236",
     "telegram_contact": "@user_294",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -62,7 +62,7 @@
     "author": "Студент_202",
     "telegram_contact": "@user_182",
     "tags": [
-      "Recsys / предиктивная аналитика"
+      "RecSys"
     ]
   },
   {
@@ -72,7 +72,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -90,7 +90,7 @@
     "author": "Студент_228",
     "telegram_contact": "@user_247",
     "tags": [
-      "ML в промышленности",
+      "Industrial",
       "NLP"
     ]
   },
@@ -101,7 +101,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -129,7 +129,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты",
+      "Agents",
       "EdTech"
     ]
   },
@@ -139,7 +139,7 @@
     "author": "Устинов Кирилл Евгеньевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -158,7 +158,7 @@
     "author": "Аверченко Марк Алексеевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в промышленности",
+      "Industrial",
       "NLP"
     ]
   },
@@ -177,7 +177,7 @@
     "author": "Чернышев Алексей Андреевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -186,7 +186,7 @@
     "author": "Неизвестен",
     "telegram_contact": "@user_132",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -204,7 +204,7 @@
     "author": "Неизвестен",
     "telegram_contact": "@user_157",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -213,7 +213,7 @@
     "author": "Студент_349",
     "telegram_contact": "@user_364",
     "tags": [
-      "Recsys / предиктивная аналитика"
+      "RecSys"
     ]
   },
   {
@@ -222,7 +222,7 @@
     "author": "Резитдинов Азат Рамилевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -243,7 +243,7 @@
     "author": "Студент_242",
     "telegram_contact": "@user_176",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -290,9 +290,9 @@
     "author": "Студент_942",
     "telegram_contact": "@user_410",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "EdTech",
-      "Recsys",
+      "RecSys",
       "NLP"
     ]
   },
@@ -302,7 +302,7 @@
     "author": "Агентная система для кодогенерации",
     "telegram_contact": "@unknown",
     "tags": [
-      "NLP        Автономные агенты"
+      "NLP"
     ]
   },
   {
@@ -320,8 +320,8 @@
     "author": "Студент_233",
     "telegram_contact": "@user_458",
     "tags": [
-      "Recsys",
-      "ML в промышленности"
+      "RecSys",
+      "Industrial"
     ]
   },
   {
@@ -330,7 +330,7 @@
     "author": "Студент_1018",
     "telegram_contact": "@user_488",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -349,7 +349,7 @@
     "author": "Студент_686",
     "telegram_contact": "@user_217",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -372,7 +372,7 @@
     "tags": [
       "CV",
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -381,7 +381,7 @@
     "author": "Калинин Александр Сергеевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -391,7 +391,7 @@
     "author": "Студент_226",
     "telegram_contact": "@user_259",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -401,8 +401,8 @@
     "author": "Студент_582",
     "telegram_contact": "@user_134",
     "tags": [
-      "ML в промышленности",
-      "Автономные агенты"
+      "Industrial",
+      "Agents"
     ]
   },
   {
@@ -412,7 +412,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "CV",
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -422,9 +422,9 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные модели",
-      "Распознавание речи",
-      "Синтез речи"
+      "Agents",
+      "ASR",
+      "TTS"
     ]
   },
   {
@@ -433,8 +433,8 @@
     "author": "Студент_249",
     "telegram_contact": "@user_085",
     "tags": [
-      "Recsys / предиктивная аналитика",
-      "финтех"
+      "RecSys",
+      "FinTech"
     ]
   },
   {
@@ -443,7 +443,7 @@
     "author": "Студент_1987",
     "telegram_contact": "@user_680",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -452,9 +452,7 @@
     "author": "Юрин Евгений Станиславович",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML",
-      "MARL",
-      "мульти-агентные системы"
+      "Agents"
     ]
   },
   {
@@ -481,7 +479,7 @@
     "author": "Студент_597",
     "telegram_contact": "@user_151",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -493,7 +491,7 @@
     "tags": [
       "EdTech",
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -512,7 +510,6 @@
     "telegram_contact": "@unknown",
     "tags": [
       "LLM",
-      "Red Teaming",
       "Security"
     ]
   },
@@ -523,7 +520,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -534,7 +531,7 @@
     "tags": [
       "EdTech",
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -552,7 +549,7 @@
     "author": "Чангалиди Антон Ильич",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в Fintech",
+      "FinTech",
       "NLP"
     ]
   },
@@ -571,7 +568,7 @@
     "author": "Студент_280",
     "telegram_contact": "@user_391",
     "tags": [
-      "Computer Vision"
+      "CV"
     ]
   },
   {
@@ -590,7 +587,7 @@
     "author": "Смирнов Тимур Олегович",
     "telegram_contact": "@unknown",
     "tags": [
-      "MLSec",
+      "Security",
       "LLM"
     ]
   },
@@ -600,7 +597,7 @@
     "author": "Студент_290",
     "telegram_contact": "@user_484",
     "tags": [
-      "ML в Fintech",
+      "FinTech",
       "CV"
     ]
   },
@@ -610,7 +607,7 @@
     "author": "Орлова Ангелина Николаевна",
     "telegram_contact": "@unknown",
     "tags": [
-      "Computer Vision"
+      "CV"
     ]
   },
   {
@@ -619,7 +616,7 @@
     "author": "Неверов Захар Алексеевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "CV (Computer Vision)\t\tNLP\tАвтономные агенты"
+      "NLP"
     ]
   },
   {
@@ -629,7 +626,7 @@
     "telegram_contact": "@expert_193",
     "tags": [
       "EdTech",
-      "Recsys / предиктивная аналитика",
+      "RecSys",
       "NLP",
       "CV"
     ]
@@ -640,7 +637,7 @@
     "author": "Студент_411",
     "telegram_contact": "@user_455",
     "tags": [
-      "Recsys",
+      "RecSys",
       "CV",
       "NLP"
     ]
@@ -651,7 +648,7 @@
     "author": "Студент_872",
     "telegram_contact": "@user_348",
     "tags": [
-      "Естественные науки + ML"
+      "Science"
     ]
   },
   {
@@ -660,7 +657,7 @@
     "author": "Моисеенков Владислав Юрьевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Информационная безопасность (IAM) + LLM"
+      "Security"
     ]
   },
   {
@@ -670,7 +667,7 @@
     "telegram_contact": "@expert_024",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -679,8 +676,7 @@
     "author": "Студент_136",
     "telegram_contact": "@user_121",
     "tags": [
-      "ИИ в музыке (сепарация",
-      "транскрибация)"
+      "Audio"
     ]
   },
   {
@@ -689,7 +685,7 @@
     "author": "Студент_282",
     "telegram_contact": "@user_323",
     "tags": [
-      "Computer Vision"
+      "CV"
     ]
   },
   {
@@ -698,7 +694,7 @@
     "author": "Студент_292",
     "telegram_contact": "@user_658",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -707,7 +703,7 @@
     "author": "Студент_270",
     "telegram_contact": "@expert_029",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -717,7 +713,7 @@
     "author": "Набиуллин Иван Павлович",
     "telegram_contact": "@unknown",
     "tags": [
-      "Распознавание речи (Automated Speech Recognition (ASR) / speech-to-text (STT))"
+      "ASR"
     ]
   },
   {
@@ -726,7 +722,7 @@
     "author": "Студент_377",
     "telegram_contact": "@user_010",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -737,7 +733,7 @@
     "telegram_contact": "@user_080",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -746,9 +742,9 @@
     "author": "Студент_1004",
     "telegram_contact": "@user_463",
     "tags": [
-      "ML в промышленности",
+      "Industrial",
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -758,8 +754,8 @@
     "telegram_contact": "@user_585",
     "tags": [
       "NLP",
-      "Автономные агенты",
-      "Распознавание речи"
+      "Agents",
+      "ASR"
     ]
   },
   {
@@ -778,7 +774,7 @@
     "author": "Пчельникова Екатерина Семеновна",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -787,7 +783,7 @@
     "author": "Студент_293",
     "telegram_contact": "@user_660",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -805,7 +801,7 @@
     "author": "Ефименко Алексей Дмитриевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Computer Vision"
+      "CV"
     ]
   },
   {
@@ -814,11 +810,11 @@
     "author": "Студент_476",
     "telegram_contact": "@user_069",
     "tags": [
-      "Естественные науки + ML",
-      "Recsys",
+      "Science",
+      "RecSys",
       "NLP",
-      "Автономные агенты",
-      "агротех"
+      "Agents",
+      "Industrial"
     ]
   },
   {
@@ -827,7 +823,7 @@
     "author": "Студент_294",
     "telegram_contact": "@user_654",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -836,9 +832,8 @@
     "author": "Попов Игорь",
     "telegram_contact": "@unknown",
     "tags": [
-      "Computer Vision",
-      "MLOps",
-      "Процессы"
+      "CV",
+      "MLOps"
     ]
   },
   {
@@ -847,7 +842,7 @@
     "author": "Персонализированное ранжирование каталога для мобильного приложения доставки еды Много Лосося",
     "telegram_contact": "@unknown",
     "tags": [
-      "Recsys / предиктивная аналитика"
+      "RecSys"
     ]
   },
   {
@@ -866,7 +861,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -875,7 +870,7 @@
     "author": "Студент_261",
     "telegram_contact": "@user_656",
     "tags": [
-      "Computer Vision"
+      "CV"
     ]
   },
   {
@@ -885,7 +880,7 @@
     "telegram_contact": "@user_675",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -893,9 +888,7 @@
     "description": "1)  Погружение в данные, механику продукта, основными метриками\n2) Аналитика/построение моделей \n3) A/B тестирование\n4) Расчет LTV\n\nОжидаемый результат: Проведен пилот",
     "author": "Студент_966",
     "telegram_contact": "@user_437",
-    "tags": [
-      "Classic ML + AB-тесты"
-    ]
+    "tags": []
   },
   {
     "title": "Автоматическое селф-ревью студенческих проектов",
@@ -903,7 +896,7 @@
     "author": "Студент_829",
     "telegram_contact": "@user_319",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -912,7 +905,7 @@
     "author": "Студент_708",
     "telegram_contact": "@user_238",
     "tags": [
-      "OCR",
+      "CV",
       "LLM"
     ]
   },
@@ -931,7 +924,7 @@
     "author": "Данилаева Софья Дмитриевна",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -950,7 +943,7 @@
     "author": "Студент_174",
     "telegram_contact": "@expert_242",
     "tags": [
-      "Recsys / предиктивная аналитика"
+      "RecSys"
     ]
   },
   {
@@ -960,7 +953,7 @@
     "telegram_contact": "@user_097",
     "tags": [
       "NLP",
-      "Обучение с подкреплением"
+      "RL"
     ]
   },
   {
@@ -980,7 +973,7 @@
     "tags": [
       "CV",
       "NLP",
-      "RegTech"
+      "FinTech"
     ]
   },
   {
@@ -1027,7 +1020,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1036,7 +1029,7 @@
     "author": "MediAI - AI медиатор для пpredi",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1045,8 +1038,8 @@
     "author": "Киселев Георгий Александрович",
     "telegram_contact": "@unknown",
     "tags": [
-      "GeoML",
-      "Recsys"
+      "Science",
+      "RecSys"
     ]
   },
   {
@@ -1056,7 +1049,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1065,7 +1058,7 @@
     "author": "Автоматизация триажа уязвимостей с помощью LLM",
     "telegram_contact": "@unknown",
     "tags": [
-      "LLM-агенты в области информационной безопасности"
+      "LLM"
     ]
   },
   {
@@ -1074,9 +1067,9 @@
     "author": "Мурзаев Никита Игоревич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Recsys / предиктивная аналитика",
-      "Временные ряды",
-      "финтех"
+      "RecSys",
+      "TimeSeries",
+      "FinTech"
     ]
   },
   {
@@ -1084,10 +1077,7 @@
     "description": "Проект: DataHub AI-Gateway",
     "author": "Царева Екатерина Романовна",
     "telegram_contact": "@unknown",
-    "tags": [
-      "Data",
-      "AI-сервисы"
-    ]
+    "tags": []
   },
   {
     "title": "Expired Product Detector",
@@ -1095,8 +1085,8 @@
     "author": "Студент_1837",
     "telegram_contact": "@user_666",
     "tags": [
-      "Recsys",
-      "Временные ряды"
+      "RecSys",
+      "TimeSeries"
     ]
   },
   {
@@ -1105,10 +1095,10 @@
     "author": "Полежаев Федор Максимович",
     "telegram_contact": "@unknown",
     "tags": [
-      "Временные ряды",
-      "Обучение с подкреплением",
-      "Естественные науки + ML",
-      "ML в промышленности"
+      "TimeSeries",
+      "RL",
+      "Science",
+      "Industrial"
     ]
   },
   {
@@ -1117,7 +1107,7 @@
     "author": "Студент_706",
     "telegram_contact": "@user_236",
     "tags": [
-      "Естественные науки + ML"
+      "Science"
     ]
   },
   {
@@ -1135,7 +1125,7 @@
     "author": "Макаров Михаил Владимирович",
     "telegram_contact": "@unknown",
     "tags": [
-      "CV (Computer Vision)"
+      "CV"
     ]
   },
   {
@@ -1146,7 +1136,7 @@
     "tags": [
       "NLP",
       "LLM",
-      "Recsys"
+      "RecSys"
     ]
   },
   {
@@ -1174,7 +1164,7 @@
     "author": "Онбаев Бауржан",
     "telegram_contact": "@unknown",
     "tags": [
-      "Recsys / предиктивная аналитика"
+      "RecSys"
     ]
   },
   {
@@ -1184,7 +1174,7 @@
     "telegram_contact": "@user_353",
     "tags": [
       "NLP",
-      "Распознавание речи (Automated Speech Recognition (ASR) / speech-to-text (STT))"
+      "ASR"
     ]
   },
   {
@@ -1195,7 +1185,7 @@
     "tags": [
       "CV",
       "NLP",
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1213,7 +1203,7 @@
     "author": "Студент_539",
     "telegram_contact": "@user_116",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1232,8 +1222,7 @@
     "telegram_contact": "@user_634",
     "tags": [
       "NLP",
-      "Распознавание и синтез речи",
-      "ML"
+      "Audio"
     ]
   },
   {
@@ -1242,8 +1231,8 @@
     "author": "Дипнер Семён Павлович",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в промышленности",
-      "Временные ряды"
+      "Industrial",
+      "TimeSeries"
     ]
   },
   {
@@ -1252,7 +1241,7 @@
     "author": "Миллер Алина Игоревна",
     "telegram_contact": "@unknown",
     "tags": [
-      "Computer Vision"
+      "CV"
     ]
   },
   {
@@ -1262,7 +1251,7 @@
     "telegram_contact": "@user_059",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1271,7 +1260,7 @@
     "author": "Студент_212",
     "telegram_contact": "@user_091",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1281,7 +1270,7 @@
     "telegram_contact": "@user_197",
     "tags": [
       "CV",
-      "Recsys / предиктивная аналитика"
+      "RecSys"
     ]
   },
   {
@@ -1290,7 +1279,7 @@
     "author": "Савелко Дмитрий Александович",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1299,7 +1288,7 @@
     "author": "Студент_325",
     "telegram_contact": "@user_440",
     "tags": [
-      "Recsys / предиктивная аналитика",
+      "RecSys",
       "NLP"
     ]
   },
@@ -1309,7 +1298,7 @@
     "author": "Kuvio",
     "telegram_contact": "@unknown",
     "tags": [
-      "NLP\tАвтономные агенты"
+      "NLP"
     ]
   },
   {
@@ -1328,9 +1317,8 @@
     "author": "Студент_344",
     "telegram_contact": "@expert_169",
     "tags": [
-      "RAG",
-      "Агентные системы",
-      "MCP"
+      "LLM",
+      "Agents"
     ]
   },
   {
@@ -1339,8 +1327,7 @@
     "author": "Студент_149",
     "telegram_contact": "@user_478",
     "tags": [
-      "NLP",
-      "ML"
+      "NLP"
     ]
   },
   {
@@ -1358,7 +1345,7 @@
     "author": "Студент_345",
     "telegram_contact": "@user_633",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -1368,7 +1355,6 @@
     "author": "Студент_854",
     "telegram_contact": "@expert_051",
     "tags": [
-      "Backend",
       "NLP"
     ]
   },
@@ -1379,9 +1365,9 @@
     "telegram_contact": "@user_438",
     "tags": [
       "NLP",
-      "Автономные агенты",
-      "Распознавание речи",
-      "Синтез речи"
+      "Agents",
+      "ASR",
+      "TTS"
     ]
   },
   {
@@ -1399,7 +1385,7 @@
     "author": "Студент_841",
     "telegram_contact": "@user_329",
     "tags": [
-      "Автономные агенты",
+      "Agents",
       "NLP"
     ]
   },
@@ -1427,8 +1413,8 @@
     "author": "Аржа Антон Насерович",
     "telegram_contact": "@unknown",
     "tags": [
-      "Распознавание речи (Automated Speech Recognition (ASR) / speech-to-text (STT))",
-      "Синтез речи (Speech Synthesis / text-to-speech (TTS))"
+      "ASR",
+      "TTS"
     ]
   },
   {
@@ -1466,7 +1452,7 @@
     "author": "Кудрявцев Александр Андреевич",
     "telegram_contact": "@unknown",
     "tags": [
-      "Обучение с подкреплением"
+      "RL"
     ]
   },
   {
@@ -1476,7 +1462,7 @@
     "telegram_contact": "@user_443",
     "tags": [
       "ASR",
-      "RAG и LLM"
+      "LLM"
     ]
   },
   {
@@ -1485,7 +1471,7 @@
     "author": "Неизвестен",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -1503,7 +1489,7 @@
     "author": "Студент_213",
     "telegram_contact": "@user_388",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1514,7 +1500,7 @@
     "tags": [
       "CV",
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1524,7 +1510,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1552,9 +1538,9 @@
     "telegram_contact": "@user_278",
     "tags": [
       "NLP",
-      "Распознавание речи (Automated Speech Recognition (ASR) / speech-to-text (STT))",
-      "Синтез речи (Speech Synthesis / text-to-speech (TTS))",
-      "edtech"
+      "ASR",
+      "TTS",
+      "EdTech"
     ]
   },
   {
@@ -1563,7 +1549,7 @@
     "author": "Студент_184",
     "telegram_contact": "@user_423",
     "tags": [
-      "ML в Fintech"
+      "FinTech"
     ]
   },
   {
@@ -1599,7 +1585,7 @@
     "author": "Горохова Александра Сергеевна",
     "telegram_contact": "@unknown",
     "tags": [
-      "Сomputer vision"
+      "CV"
     ]
   },
   {
@@ -1608,7 +1594,7 @@
     "author": "Смекалова Анна Андреевна",
     "telegram_contact": "@unknown",
     "tags": [
-      "Edtech"
+      "EdTech"
     ]
   },
   {
@@ -1617,7 +1603,7 @@
     "author": "Студент_1910",
     "telegram_contact": "@user_494",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1635,8 +1621,8 @@
     "author": "Неизвестен",
     "telegram_contact": "@unknown",
     "tags": [
-      "Recsys / предиктивная аналитика",
-      "Обучение с подкреплением"
+      "RecSys",
+      "RL"
     ]
   },
   {
@@ -1645,9 +1631,8 @@
     "author": "Студент_1002",
     "telegram_contact": "@user_459",
     "tags": [
-      "ML",
       "LLM",
-      "Speech Recognition"
+      "ASR"
     ]
   },
   {
@@ -1656,8 +1641,7 @@
     "author": "Всеволод Богодист",
     "telegram_contact": "@unknown",
     "tags": [
-      "NLP",
-      "parsing"
+      "NLP"
     ]
   },
   {
@@ -1666,7 +1650,7 @@
     "author": "Студент_1624",
     "telegram_contact": "@user_460",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1684,7 +1668,7 @@
     "author": "Студент_168",
     "telegram_contact": "@user_593",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1694,7 +1678,7 @@
     "telegram_contact": "@unknown",
     "tags": [
       "NLP",
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1767,7 +1751,7 @@
     "author": "Сценарное моделирование для формирования персонального предложения корпоративным клиентам",
     "telegram_contact": "@unknown",
     "tags": [
-      "LLM/VLM"
+      "LLM"
     ]
   },
   {
@@ -1776,7 +1760,7 @@
     "author": "Выродов Михаил Владимирович",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1785,7 +1769,7 @@
     "author": "GigaStudio",
     "telegram_contact": "@unknown",
     "tags": [
-      "Автономные агенты"
+      "Agents"
     ]
   },
   {
@@ -1794,7 +1778,7 @@
     "author": "Студент_351",
     "telegram_contact": "@user_138",
     "tags": [
-      "DL в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1803,7 +1787,7 @@
     "author": "Решетников Роман",
     "telegram_contact": "@unknown",
     "tags": [
-      "LLM/VLM"
+      "LLM"
     ]
   },
   {
@@ -1840,7 +1824,7 @@
     "author": "Неизвестен",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1858,7 +1842,7 @@
     "author": "Сажин Борис Олегович",
     "telegram_contact": "@unknown",
     "tags": [
-      "ML в промышленности"
+      "Industrial"
     ]
   },
   {
@@ -1867,10 +1851,10 @@
     "author": "Студент_191",
     "telegram_contact": "@user_432",
     "tags": [
-      "Временные ряды",
-      "Обучение с подкреплением",
-      "Естественные науки + ML",
-      "ML в промышленности"
+      "TimeSeries",
+      "RL",
+      "Science",
+      "Industrial"
     ]
   },
   {
@@ -1897,9 +1881,7 @@
     "description": "Проект: проект + состав команды",
     "author": "Неизвестен",
     "telegram_contact": "@unknown",
-    "tags": [
-      "описание"
-    ]
+    "tags": []
   },
   {
     "title": "A Unified Framework for Evaluating LLM-based Agents Architectures in Financial Markets",
@@ -2941,8 +2923,6 @@
     "description": "Проект: проект + состав команды.",
     "author": "Неизвестен",
     "telegram_contact": "@unknown",
-    "tags": [
-      "описание проекта"
-    ]
+    "tags": []
   }
 ]
