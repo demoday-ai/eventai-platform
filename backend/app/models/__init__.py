@@ -8,6 +8,7 @@ from app.models.event import Event
 from app.models.expert_briefing import BriefingStatus, ExpertBriefing
 from app.models.expert import Expert
 from app.models.feedback_comment import FeedbackCategory, FeedbackComment, ModerationStatus
+from app.models.followup_package import FollowupPackage
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_score import ExpertScore
 from app.models.expert_tag import ExpertTag
@@ -55,6 +56,7 @@ __all__ = [
     "ExpertTag",
     "FeedbackCategory",
     "FeedbackComment",
+    "FollowupPackage",
     "GuestProfile",
     "GuestSubtype",
     "ModerationStatus",

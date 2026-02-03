@@ -6,6 +6,7 @@ from app.bot.handlers.confirmation import get_confirmation_handlers
 from app.bot.handlers.contact import get_contact_handlers
 from app.bot.handlers.dashboard import get_dashboard_handlers
 from app.bot.handlers.feedback import get_feedback_handlers
+from app.bot.handlers.followup import get_followup_handlers
 from app.bot.handlers.coverage import (
     coverage_back_callback,
     coverage_command,
@@ -86,6 +87,10 @@ def create_bot_app() -> Application:
 
     # EPIC-013: Expert Scoring handlers
     for handler in get_scoring_handlers():
+        application.add_handler(handler)
+
+    # EPIC-014: Guest Follow-up handlers
+    for handler in get_followup_handlers():
         application.add_handler(handler)
 
     return application
