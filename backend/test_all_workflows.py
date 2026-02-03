@@ -295,22 +295,19 @@ async def test_expert_workflow(session, event, room, clustering_run_id):
         score = ExpertScore(
             expert_id=expert.id,
             project_id=room_project.project_id,
-            event_id=event.id,
-            criterion_1=3,
-            criterion_2=2,
-            criterion_3=3,
-            criterion_4=2,
-            criterion_5=3,
-            criterion_6=2,
-            criterion_7=3,
-            total_score=18,
-            comment="Отличный проект с хорошим потенциалом",
+            relevance=3,
+            practical_value=2,
+            novelty=3,
+            implementation=2,
+            scalability=3,
+            research=2,
+            overall=4,
         )
         session.add(score)
         await session.commit()
         print(f"      Scored project ID: {room_project.project_id}")
-        print(f"      Total score: {score.total_score}")
-        print(f"      Comment: {score.comment[:40]}...")
+        print(f"      Total score: {score.total_score:.2f}")
+        print(f"      Overall: {score.overall}/5")
     else:
         print("      No projects in room to score")
 
