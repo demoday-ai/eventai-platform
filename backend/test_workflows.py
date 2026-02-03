@@ -37,15 +37,14 @@ async def main():
 
         # Create event
         event = Event(
-            title="Demo Day Test",
+            name="Demo Day Test",
             start_date=date.today() + timedelta(days=7),
             end_date=date.today() + timedelta(days=8),
-            is_current=True,
         )
         session.add(event)
         await session.commit()
         await session.refresh(event)
-        print(f"   Created event: {event.title} (ID: {event.id})")
+        print(f"   Created event: {event.name} (ID: {event.id})")
 
         # 2. Load projects from seed file
         print("\n[2] Loading projects from seed file...")
