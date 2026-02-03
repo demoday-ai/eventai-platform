@@ -23,6 +23,7 @@ from app.bot.handlers.guest_profiling import get_profiling_handler
 from app.bot.handlers.briefing import get_briefing_handlers
 from app.bot.handlers.qa import get_qa_handlers
 from app.bot.handlers.reminder import get_reminder_handlers
+from app.bot.handlers.scoring import get_scoring_handlers
 from app.bot.handlers.schedule import get_schedule_handler, get_schedule_preview_handlers
 from app.bot.handlers.start import get_onboarding_handler
 from app.config import settings
@@ -81,6 +82,10 @@ def create_bot_app() -> Application:
 
     # EPIC-012: Student Feedback handlers
     for handler in get_feedback_handlers():
+        application.add_handler(handler)
+
+    # EPIC-013: Expert Scoring handlers
+    for handler in get_scoring_handlers():
         application.add_handler(handler)
 
     return application
