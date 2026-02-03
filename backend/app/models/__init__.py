@@ -13,6 +13,7 @@ from app.models.guest_profile import GuestProfile
 from app.models.project import Project
 from app.models.project_recommendation import ProjectRecommendation
 from app.models.project_tag import ProjectTag
+from app.models.qa_suggestion import QASuggestion, QuestionType
 from app.models.recommendation import Recommendation
 from app.models.reminder import (
     Notification as ReminderNotification,
@@ -55,6 +56,8 @@ __all__ = [
     "Project",
     "ProjectRecommendation",
     "ProjectTag",
+    "QASuggestion",
+    "QuestionType",
     "RecipientType",
     "Recommendation",
     "ReminderBatch",
