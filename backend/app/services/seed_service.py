@@ -57,6 +57,7 @@ async def load_seed_projects(session: AsyncSession, event_id) -> int:
             source="seed",
         )
         session.add(project)
+        await session.flush()  # Get project.id before creating ProjectTags
 
         for tag_name in item.get("tags", []):
             tag_name = tag_name.strip()
