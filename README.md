@@ -130,6 +130,86 @@ Telegram-бот с 15 эпиками:
 - **Scheduler:** APScheduler 3.10 (напоминания, escalations)
 - **Deploy:** Docker Compose, Yandex Cloud VM
 
+## Развёртывание
+
+### Требования
+
+- Docker и Docker Compose
+- Telegram Bot Token (от @BotFather)
+- OpenRouter API Key (для AI-кластеризации и рекомендаций)
+
+### Локальный запуск
+
+```bash
+# 1. Клонировать репозиторий
+git clone git@github.com:demoday-ai/demoday-core.git
+cd demoday-core
+
+# 2. Создать .env файл
+cp backend/.env.example backend/.env
+# Отредактировать backend/.env:
+#   BOT_TOKEN=<токен от @BotFather>
+#   OPENROUTER_API_KEY=<ключ OpenRouter>
+#   ORGANIZER_TELEGRAM_IDS=<telegram_id организаторов через запятую>
+
+# 3. Запустить
+docker compose up -d --build
+
+# 4. Проверить логи
+docker compose logs -f backend
+```
+
+### Деплой на VM (Yandex Cloud)
+
+```bash
+# 1. Подключение через bastion (SSH ProxyJump)
+ssh -J user@bastion.camp.aitalenthub.ru user@<team-vm-ip>
+
+# 2. Клонировать репозиторий
+mkdir -p ~/workspace && cd ~/workspace
+git clone git@github.com:demoday-ai/demoday-core.git demoday-ai
+cd demoday-ai
+
+# 3. Настроить .env
+cp backend/.env.example backend/.env
+nano backend/.env  # заполнить токены
+
+# 4. Запустить
+docker compose up -d --build
+
+# 5. Проверить статус
+docker compose ps
+docker compose logs --tail 50 backend
+```
+
+### Конфигурация (.env)
+
+```env
+DATABASE_URL=postgresql+asyncpg://demoday:demoday@db:5432/demoday
+BOT_TOKEN=<telegram-bot-token>
+BOT_MODE=polling
+OPENROUTER_API_KEY=<openrouter-api-key>
+OPENROUTER_MODEL=anthropic/claude-sonnet-4
+SECRET_KEY=<random-secret-for-jwt>
+ORGANIZER_TELEGRAM_IDS=<comma-separated-telegram-ids>
+```
+
+### Полезные команды
+
+```bash
+# Перезапуск бота
+docker compose restart backend
+
+# Очистка БД
+docker compose exec db psql -U demoday -d demoday -c "TRUNCATE TABLE ... CASCADE;"
+
+# Обновление кода
+git pull && docker compose up -d --build
+
+# Логи в реальном времени
+docker compose logs -f backend
+```
+
 ## Команда
 
 - **Дмитрий Горбунов** (@grbn_dima) — тимлид, продукт, UX/UI
