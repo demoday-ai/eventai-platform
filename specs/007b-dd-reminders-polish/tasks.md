@@ -28,11 +28,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Implement `truncate_message(text, max_len=4000)` helper in `backend/app/services/reminder_service.py` — return text as-is if under limit
-- [ ] T005 [US1] Implement truncation logic in `truncate_message()` — find last complete project entry before limit, add "...и ещё N проектов" suffix
-- [ ] T006 [US1] Update `format_guest_day_before()` in `backend/app/services/reminder_service.py` — pass project list through truncation before formatting
-- [ ] T007 [US1] Update `format_business_day_before()` in `backend/app/services/reminder_service.py` — pass project list through truncation
-- [ ] T008 [US1] Add logging for truncation events in `backend/app/services/reminder_service.py` — log original vs truncated length
+- [x] T004 [US1] Implement `truncate_message(text, max_len=4000)` helper in `backend/app/services/reminder_service.py` — return text as-is if under limit
+- [x] T005 [US1] Implement truncation logic in `truncate_message()` — find last complete project entry before limit, add "...и ещё N проектов" suffix
+- [x] T006 [US1] Update `format_guest_day_before()` in `backend/app/services/reminder_service.py` — pass project list through truncation before formatting
+- [x] T007 [US1] Update `format_business_day_before()` in `backend/app/services/reminder_service.py` — pass project list through truncation
+- [x] T008 [US1] Add logging for truncation events in `backend/app/services/reminder_service.py` — log original vs truncated length
 
 **Checkpoint**: Messages with long project lists are truncated correctly, no Telegram API errors.
 
@@ -46,15 +46,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Implement `get_interrupted_batch(session, event_id)` in `backend/app/services/reminder_service.py` — query newest in_progress batch
-- [ ] T010 [US2] Add `reminder_recovery_keyboard(batch_id)` in `backend/app/bot/keyboards.py` — buttons: "Возобновить" / "Начать заново" / "Отмена"
-- [ ] T011 [US2] Update `remind_command()` in `backend/app/bot/handlers/reminder.py` — check for interrupted batch before showing type selection
-- [ ] T012 [US2] Format interrupted batch message in `remind_command()` — show: started_at, sent/total progress
-- [ ] T013 [US2] Add callback handler `recovery_choice_callback()` in `backend/app/bot/handlers/reminder.py` — pattern `rem:recover:`
-- [ ] T014 [US2] Implement resume logic in `recovery_choice_callback()` — call `resume_batch()` if "Возобновить"
-- [ ] T015 [US2] Implement `resume_batch(session, batch, bot)` in `backend/app/services/reminder_service.py` — query pending notifications, continue sending
-- [ ] T016 [US2] Implement fresh start logic in `recovery_choice_callback()` — set old batch to `cancelled`, show type selection
-- [ ] T017 [US2] Register `recovery_choice_callback` handler in `get_reminder_handlers()` in `backend/app/bot/handlers/reminder.py`
+- [x] T009 [US2] Implement `get_interrupted_batch(session, event_id)` in `backend/app/services/reminder_service.py` — query newest in_progress batch
+- [x] T010 [US2] Add `reminder_recovery_keyboard(batch_id)` in `backend/app/bot/keyboards.py` — buttons: "Возобновить" / "Начать заново" / "Отмена"
+- [x] T011 [US2] Update `remind_command()` in `backend/app/bot/handlers/reminder.py` — check for interrupted batch before showing type selection
+- [x] T012 [US2] Format interrupted batch message in `remind_command()` — show: started_at, sent/total progress
+- [x] T013 [US2] Add callback handler `recovery_choice_callback()` in `backend/app/bot/handlers/reminder.py` — pattern `rem:recover:`
+- [x] T014 [US2] Implement resume logic in `recovery_choice_callback()` — call `resume_batch()` if "Возобновить"
+- [x] T015 [US2] Implement `resume_batch(session, batch, bot)` in `backend/app/services/reminder_service.py` — query pending notifications, continue sending
+- [x] T016 [US2] Implement fresh start logic in `recovery_choice_callback()` — set old batch to `cancelled`, show type selection
+- [x] T017 [US2] Register `recovery_choice_callback` handler in `get_reminder_handlers()` in `backend/app/bot/handlers/reminder.py`
 
 **Checkpoint**: Interrupted batches are detected and can be resumed or cancelled.
 
@@ -87,10 +87,10 @@
 
 **Purpose**: Edge cases, logging, cleanup
 
-- [ ] T028 Handle empty message edge case in send functions — skip with status `skipped`
-- [ ] T029 Ensure UTF-8 safe truncation — don't break multi-byte characters
-- [ ] T030 Add comprehensive logging for recovery operations
-- [ ] T031 Update tasks.md marking all completed tasks
+- [x] T028 Handle empty message edge case in send functions — skip with status `skipped`
+- [x] T029 Ensure UTF-8 safe truncation — don't break multi-byte characters
+- [x] T030 Add comprehensive logging for recovery operations
+- [x] T031 Update tasks.md marking all completed tasks
 
 ---
 

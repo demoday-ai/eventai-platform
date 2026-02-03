@@ -39,6 +39,7 @@ class NotificationStatus(str, enum.Enum):
     PENDING = "pending"  # Created, not yet sent
     SENT = "sent"  # Successfully delivered
     FAILED = "failed"  # Delivery failed
+    SKIPPED = "skipped"  # Skipped (e.g., empty message)
 
 
 class RecipientType(str, enum.Enum):
