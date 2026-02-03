@@ -3,6 +3,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 from app.bot.handlers.business_profiling import get_business_profiling_handler
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
+from app.bot.handlers.contact import get_contact_handlers
 from app.bot.handlers.coverage import (
     coverage_back_callback,
     coverage_command,
@@ -66,6 +67,10 @@ def create_bot_app() -> Application:
 
     # EPIC-009: Q&A Helper handlers
     for handler in get_qa_handlers():
+        application.add_handler(handler)
+
+    # EPIC-010: Contact Request handlers
+    for handler in get_contact_handlers():
         application.add_handler(handler)
 
     return application

@@ -1,6 +1,7 @@
 from app.models.base import Base
 from app.models.business_profile import BusinessObjective, BusinessProfile, OBJECTIVE_DISPLAY
 from app.models.clustering_run import ClusteringRun
+from app.models.contact_request import ContactRequest, ContactRequestStatus
 from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.escalation import Escalation
 from app.models.event import Event
@@ -39,6 +40,8 @@ __all__ = [
     "BusinessProfile",
     "ChangeType",
     "ClusteringRun",
+    "ContactRequest",
+    "ContactRequestStatus",
     "ParticipationRequest",
     "ParticipationStatus",
     "Escalation",
