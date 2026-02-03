@@ -5,6 +5,7 @@ from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
 from app.bot.handlers.contact import get_contact_handlers
 from app.bot.handlers.dashboard import get_dashboard_handlers
+from app.bot.handlers.feedback import get_feedback_handlers
 from app.bot.handlers.coverage import (
     coverage_back_callback,
     coverage_command,
@@ -76,6 +77,10 @@ def create_bot_app() -> Application:
 
     # EPIC-011: Organizer Dashboard handlers
     for handler in get_dashboard_handlers():
+        application.add_handler(handler)
+
+    # EPIC-012: Student Feedback handlers
+    for handler in get_feedback_handlers():
         application.add_handler(handler)
 
     return application

@@ -7,6 +7,7 @@ from app.models.escalation import Escalation
 from app.models.event import Event
 from app.models.expert_briefing import BriefingStatus, ExpertBriefing
 from app.models.expert import Expert
+from app.models.feedback_comment import FeedbackCategory, FeedbackComment, ModerationStatus
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_tag import ExpertTag
 from app.models.notification import Notification, NotificationStatus, NotificationType
@@ -50,8 +51,11 @@ __all__ = [
     "ExpertBriefing",
     "ExpertRoomAssignment",
     "ExpertTag",
+    "FeedbackCategory",
+    "FeedbackComment",
     "GuestProfile",
     "GuestSubtype",
+    "ModerationStatus",
     "OBJECTIVE_DISPLAY",
     "Notification",
     "NotificationStatus",
