@@ -132,99 +132,50 @@ Telegram-бот с 15 эпиками:
 
 ## Развёртывание
 
-### Требования
+### Production Deploy (AI Talent Camp VM)
 
-- Docker и Docker Compose
-- Telegram Bot Token (от @BotFather)
-- OpenRouter API Key (для AI-кластеризации и рекомендаций)
+**📖 Полная документация:** [DEPLOY.md](./DEPLOY.md)
 
-### Локальный запуск
+```bash
+# На Team VM (через bastion)
+cd ~/demoday-ai
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+Доступ: `https://team10.camp.aitalenthub.ru`
+
+### Локальная разработка
 
 ```bash
 # 1. Клонировать репозиторий
-git clone git@github.com:demoday-ai/demoday-core.git
-cd demoday-core
-
-# 2. Создать .env файл
-cp backend/.env.example backend/.env
-# Отредактировать backend/.env:
-#   BOT_TOKEN=<токен от @BotFather>
-#   OPENROUTER_API_KEY=<ключ OpenRouter>
-#   ORGANIZER_TELEGRAM_IDS=<telegram_id организаторов через запятую>
-
-# 3. Запустить
-docker compose up -d --build
-
-# 4. Проверить логи
-docker compose logs -f backend
-```
-
-### Деплой на VM (Yandex Cloud)
-
-```bash
-# 1. Подключение через bastion (SSH ProxyJump)
-ssh -J user@bastion.camp.aitalenthub.ru user@<team-vm-ip>
-
-# 2. Клонировать репозиторий
-mkdir -p ~/workspace && cd ~/workspace
-git clone git@github.com:demoday-ai/demoday-core.git demoday-ai
+git clone https://github.com/AI-Talent-Camp-2026/demoday-ai.git
 cd demoday-ai
 
-# 3. Настроить .env
+# 2. Настроить .env файлы
 cp backend/.env.example backend/.env
-nano backend/.env  # заполнить токены
+# Заполнить: BOT_TOKEN, OPENROUTER_API_KEY, ORGANIZER_TELEGRAM_IDS
 
-# 4. Запустить
+# 3. Запустить локально
 docker compose up -d --build
 
-# 5. Проверить статус
-docker compose ps
-docker compose logs --tail 50 backend
+# 4. Фронтенд (разработка)
+cd frontend
+npm install
+npm run dev  # http://localhost:5173
+
+# 5. Проверить
+curl http://localhost:8000/health
+curl http://localhost:3000/health
 ```
 
-### Конфигурация (.env)
-
-```env
-DATABASE_URL=postgresql+asyncpg://demoday:demoday@db:5432/demoday
-BOT_TOKEN=<telegram-bot-token>
-BOT_MODE=polling
-OPENROUTER_API_KEY=<openrouter-api-key>
-OPENROUTER_MODEL=anthropic/claude-sonnet-4
-SECRET_KEY=<random-secret-for-jwt>
-ORGANIZER_TELEGRAM_IDS=<comma-separated-telegram-ids>
-```
-
-### Инициализация БД (после первого запуска)
+### Инициализация БД
 
 ```bash
-# Создать роли и событие
-docker compose exec db psql -U demoday -d demoday -c "
-INSERT INTO roles (id, code, name) VALUES
-  (gen_random_uuid(), 'organizer', 'Организатор'),
-  (gen_random_uuid(), 'student', 'Студент'),
-  (gen_random_uuid(), 'expert', 'Эксперт'),
-  (gen_random_uuid(), 'guest', 'Гость'),
-  (gen_random_uuid(), 'business', 'Бизнес-партнёр');
+# Миграции
+docker compose exec backend alembic upgrade head
 
-INSERT INTO events (id, name, start_date, end_date) VALUES
-  (gen_random_uuid(), 'Demo Day 2026', '2026-02-10', '2026-02-11');
-"
-```
-
-### Полезные команды
-
-```bash
-# Перезапуск бота
-docker compose restart backend
-
-# Очистка БД
-docker compose exec db psql -U demoday -d demoday -c "TRUNCATE TABLE ... CASCADE;"
-
-# Обновление кода
-git pull && docker compose up -d --build
-
-# Логи в реальном времени
-docker compose logs -f backend
+# Seed data (опционально, для тестирования)
+docker compose exec backend python -m app.scripts.seed
 ```
 
 ## Команда
