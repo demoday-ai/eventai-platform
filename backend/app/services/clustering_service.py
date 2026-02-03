@@ -151,6 +151,7 @@ async def run_clustering(
     session.add(run)
     await session.flush()
 
+    assigned_project_ids: set[uuid.UUID] = set()
     for i, room_data in enumerate(rooms_data):
         room = Room(
             clustering_run_id=run.id,
@@ -163,12 +164,15 @@ async def run_clustering(
 
         for pid in room_data.get("project_ids", []):
             if pid in project_map:
-                rp = RoomProject(
-                    room_id=room.id,
-                    project_id=project_map[pid].id,
-                    is_manual=False,
-                )
-                session.add(rp)
+                project_uuid = project_map[pid].id
+                if project_uuid not in assigned_project_ids:
+                    assigned_project_ids.add(project_uuid)
+                    rp = RoomProject(
+                        room_id=room.id,
+                        project_id=project_uuid,
+                        is_manual=False,
+                    )
+                    session.add(rp)
 
     await session.commit()
 

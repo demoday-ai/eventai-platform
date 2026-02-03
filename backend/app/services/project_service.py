@@ -73,10 +73,15 @@ def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowErr
             continue
 
         seen_titles.add(title)
+        raw_tags = row.get("tags") or ""
+        if isinstance(raw_tags, list):
+            tags_str = ", ".join(raw_tags)
+        else:
+            tags_str = raw_tags.strip()
         valid.append(ProjectUploadRow(
             title=title,
             description=description[:2000],
-            tags=(row.get("tags") or "").strip(),
+            tags=tags_str,
             author=author,
             telegram_contact=tg,
         ))
