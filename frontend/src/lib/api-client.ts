@@ -1,0 +1,95 @@
+import axios from "axios"
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+
+// Add auth token to requests
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("auth_token")
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Handle auth errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("auth_token")
+      window.location.href = "/login"
+    }
+    return Promise.reject(error)
+  }
+)
+
+// Types
+export interface StudentStats {
+  total: number
+  confirmed: number
+  pending: number
+  declined: number
+}
+
+export interface ExpertStats {
+  total: number
+  confirmed: number
+  pending: number
+  invited: number
+}
+
+export interface GuestSubtypeCount {
+  subtype: string
+  count: number
+}
+
+export interface GuestStats {
+  total: number
+  by_subtype: GuestSubtypeCount[]
+}
+
+export interface RoomStats {
+  total: number
+  with_experts: number
+  without_experts: number
+}
+
+export interface Alert {
+  severity: "critical" | "warning" | "info"
+  message: string
+  room_id?: string
+  room_name?: string
+}
+
+export interface DashboardData {
+  students: StudentStats
+  experts: ExpertStats
+  guests: GuestStats
+  rooms: RoomStats
+  alerts: Alert[]
+}
+
+export interface Event {
+  id: string
+  name: string
+  start_date: string
+  end_date: string | null
+}
+
+// API functions
+export const getDashboard = async (): Promise<DashboardData> => {
+  const { data } = await apiClient.get<DashboardData>("/admin/dashboard")
+  return data
+}
+
+export const getCurrentEvent = async (): Promise<Event> => {
+  const { data } = await apiClient.get<Event>("/events/current")
+  return data
+}
