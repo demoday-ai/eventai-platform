@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom"
-import { RoomCoverage } from "../lib/api-client"
+import type { RoomCoverage } from "../lib/api-client"
 import { Button } from "./ui/button"
 
 interface CoverageTableProps {
