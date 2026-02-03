@@ -19,10 +19,12 @@ from app.models import (
 )
 from app.schemas.admin import (
     Alert,
+    CoverageResponse,
     DashboardResponse,
     ExpertStats,
     GuestStats,
     GuestSubtypeCount,
+    RoomCoverage,
     RoomStats,
     StudentStats,
 )
@@ -217,3 +219,74 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     return DashboardResponse(
         students=students, experts=experts, guests=guests, rooms=rooms, alerts=alerts
     )
+
+
+async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCoverage]:
+    """Get room coverage statistics."""
+    # Get current clustering run
+    from app.models import ClusteringRun
+
+    current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
+
+    if not current_clustering:
+        return []
+
+    # Get all rooms for this event
+    rooms_result = await db.execute(select(Room).where(Room.event_id == event_id))
+    rooms = rooms_result.scalars().all()
+
+    coverage_list = []
+
+    for room in rooms:
+        # Count projects in this room
+        from app.models import RoomProject
+
+        projects_count = await db.scalar(
+            select(func.count(RoomProject.id)).where(
+                RoomProject.room_id == room.id,
+                RoomProject.clustering_run_id == current_clustering.id,
+            )
+        )
+
+        # Count total experts assigned to this room
+        total_experts = await db.scalar(
+            select(func.count(ExpertRoomAssignment.id)).where(
+                ExpertRoomAssignment.room_id == room.id,
+                ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+            )
+        )
+
+        # Count confirmed experts
+        confirmed_experts = await db.scalar(
+            select(func.count(ExpertRoomAssignment.id)).where(
+                ExpertRoomAssignment.room_id == room.id,
+                ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+                ExpertRoomAssignment.status == "confirmed",
+            )
+        )
+
+        # Determine coverage status
+        if total_experts == 0:
+            coverage_status = "none"
+        elif confirmed_experts == total_experts:
+            coverage_status = "full"
+        else:
+            coverage_status = "partial"
+
+        coverage_list.append(
+            RoomCoverage(
+                room_id=str(room.id),
+                room_name=room.name,
+                total_experts=total_experts or 0,
+                confirmed_experts=confirmed_experts or 0,
+                projects_count=projects_count or 0,
+                coverage_status=coverage_status,
+            )
+        )
+
+    return coverage_list

@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { APP_NAME } from "../lib/constants"
-import { getDashboard, type DashboardData, type Alert as AlertType } from "../lib/api-client"
+import { getDashboard, getCoverage, type DashboardData, type Alert as AlertType } from "../lib/api-client"
+import { CoverageTable } from "../components/CoverageTable"
 
 export function Dashboard() {
   const { telegramId, logout } = useAuth()
@@ -21,6 +22,16 @@ export function Dashboard() {
     queryKey: ["dashboard"],
     queryFn: getDashboard,
     refetchInterval: 60000, // 60 seconds
+  })
+
+  // Fetch coverage data
+  const {
+    data: coverageData,
+    isLoading: coverageLoading,
+  } = useQuery({
+    queryKey: ["coverage"],
+    queryFn: getCoverage,
+    refetchInterval: 60000,
   })
 
   const handleLogout = () => {
@@ -145,15 +156,19 @@ export function Dashboard() {
             <AlertsCard alerts={data.alerts} />
           )}
 
-          {/* Coverage table placeholder */}
+          {/* Coverage table */}
           <Card>
             <CardHeader>
               <CardTitle>Покрытие залов</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Таблица покрытия (Phase 2)
-              </div>
+              {coverageLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Загрузка...
+                </div>
+              ) : (
+                <CoverageTable data={coverageData || []} />
+              )}
             </CardContent>
           </Card>
         </div>

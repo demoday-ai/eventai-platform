@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.config import settings
 from app.database import get_session
 from app.models import User
-from app.schemas.admin import DashboardResponse
+from app.schemas.admin import DashboardResponse, RoomCoverage
 from app.services import admin_service, user_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -40,3 +40,20 @@ async def get_dashboard(
         )
 
     return await admin_service.get_dashboard_stats(db, event.id)
+
+
+@router.get("/coverage", response_model=list[RoomCoverage])
+async def get_coverage(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get room coverage statistics."""
+    _check_organizer(current_user)
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    return await admin_service.get_coverage_stats(db, event.id)

@@ -60,3 +60,20 @@ class DashboardResponse(BaseModel):
     guests: GuestStats
     rooms: RoomStats
     alerts: list[Alert]
+
+
+class RoomCoverage(BaseModel):
+    """Room coverage information."""
+
+    room_id: str
+    room_name: str
+    total_experts: int
+    confirmed_experts: int
+    projects_count: int
+    coverage_status: str  # "full", "partial", "none"
+
+
+class CoverageResponse(BaseModel):
+    """Coverage response."""
+
+    rooms: list[RoomCoverage]

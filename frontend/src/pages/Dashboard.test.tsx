@@ -16,6 +16,7 @@ vi.mock("../hooks/useAuth", () => ({
 // Mock API client
 vi.mock("../lib/api-client", () => ({
   getDashboard: vi.fn(),
+  getCoverage: vi.fn(),
 }))
 
 const createWrapper = () => {
@@ -37,18 +38,23 @@ const createWrapper = () => {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default mock for getCoverage
+    vi.mocked(apiClient.getCoverage).mockResolvedValue([])
   })
 
   it("renders loading state initially", () => {
     vi.mocked(apiClient.getDashboard).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     )
+    vi.mocked(apiClient.getCoverage).mockImplementation(
+      () => new Promise(() => {}) // Never resolves
+    )
 
     render(<Dashboard />, { wrapper: createWrapper() })
 
-    // Should have 4 loading cards (Students, Experts, Guests, Rooms)
+    // Should have 5 loading elements (4 metric cards + 1 coverage table)
     const loadingElements = screen.getAllByText("Загрузка...")
-    expect(loadingElements).toHaveLength(4)
+    expect(loadingElements).toHaveLength(5)
   })
 
   it("renders dashboard data when loaded", async () => {
