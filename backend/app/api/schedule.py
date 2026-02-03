@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user
+from app.database import get_session
 from app.config import settings
 from app.models import User
 from app.schemas.schedule import (
@@ -48,7 +49,7 @@ def _check_organizer(user: User) -> None:
 @router.post("/schedule/generate", response_model=ScheduleGenerateResult, status_code=201)
 async def generate_schedule(
     request: ScheduleGenerateRequest = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Auto-generate schedule from approved clustering."""
@@ -81,7 +82,7 @@ async def get_schedule(
     room_id: UUID | None = None,
     day: date | None = None,
     status: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Get full schedule."""
@@ -96,7 +97,7 @@ async def get_schedule(
 
 @router.post("/schedule/approve", response_model=ScheduleApproveResult)
 async def approve_schedule(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Approve the schedule."""
@@ -117,7 +118,7 @@ async def approve_schedule(
 async def update_slot(
     slot_id: UUID,
     request: SlotUpdateRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Update a schedule slot (T030)."""
@@ -171,7 +172,7 @@ async def update_slot(
 async def get_schedule_changes(
     slot_id: UUID | None = None,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """List schedule change logs (T034)."""
@@ -209,7 +210,7 @@ async def get_schedule_changes(
 @router.get("/reminders/preview", response_model=ReminderPreview)
 async def preview_reminders(
     day: date | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Preview pending reminders."""
@@ -230,7 +231,7 @@ async def preview_reminders(
 @router.post("/reminders/cancel", response_model=ReminderCancelResult)
 async def cancel_reminders(
     request: ReminderCancelRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Cancel pending eve-of-DD reminders."""
@@ -252,7 +253,7 @@ async def cancel_reminders(
 @router.post("/reminders/send", response_model=ReminderSendResult)
 async def send_reminders(
     request: ReminderSendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Manually trigger reminder send."""
@@ -289,7 +290,7 @@ async def send_reminders(
 async def get_notification_dashboard(
     type: str | None = None,
     day: date | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Notification delivery dashboard (T032)."""
@@ -311,7 +312,7 @@ async def list_notifications(
     status: str | None = None,
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """List notifications (T033)."""

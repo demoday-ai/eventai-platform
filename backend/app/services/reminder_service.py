@@ -17,7 +17,7 @@ from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.reminder import (
-    Notification,
+    ReminderNotification as Notification,
     NotificationStatus,
     RecipientType,
     ReminderBatch,

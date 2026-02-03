@@ -89,15 +89,15 @@ class ReminderBatch(Base):
 
     # Relationships
     event = relationship("Event")
-    notifications: Mapped[list["Notification"]] = relationship(
-        "Notification", back_populates="batch", cascade="all, delete-orphan"
+    notifications: Mapped[list["ReminderNotification"]] = relationship(
+        "ReminderNotification", back_populates="batch", cascade="all, delete-orphan"
     )
 
 
-class Notification(Base):
+class ReminderNotification(Base):
     """Individual reminder delivery record."""
 
-    __tablename__ = "notifications"
+    __tablename__ = "reminder_notifications"
 
     batch_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

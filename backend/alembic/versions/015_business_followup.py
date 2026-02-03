@@ -16,12 +16,21 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create enum type
-    pipeline_status = sa.Enum(
+    # Create enum type with DO block to handle duplicates
+    op.execute(sa.text(
+        "DO $$ BEGIN "
+        "CREATE TYPE pipelinestatus AS ENUM "
+        "('interested', 'contacted', 'negotiating', 'closed_won', 'closed_lost'); "
+        "EXCEPTION WHEN duplicate_object THEN NULL; "
+        "END $$"
+    ))
+
+    from sqlalchemy.dialects.postgresql import ENUM
+    pipeline_status = ENUM(
         "interested", "contacted", "negotiating", "closed_won", "closed_lost",
-        name="pipelinestatus"
+        name="pipelinestatus",
+        create_type=False,
     )
-    pipeline_status.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "business_followups",

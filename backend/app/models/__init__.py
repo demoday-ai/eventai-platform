@@ -21,7 +21,7 @@ from app.models.project_tag import ProjectTag
 from app.models.qa_suggestion import QASuggestion, QuestionType
 from app.models.recommendation import Recommendation
 from app.models.reminder import (
-    Notification as ReminderNotification,
+    ReminderNotification,
     NotificationStatus as ReminderNotificationStatus,
     RecipientType,
     ReminderBatch,

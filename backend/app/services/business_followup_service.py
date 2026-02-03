@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # LOI templates by objective
 LOI_TEMPLATES = {
-    BusinessObjective.investment: """
+    BusinessObjective.INVESTMENT: """
 Уважаемая команда проекта "{project_title}",
 
 Меня зовут {partner_name}, я представляю интересы инвестора.
@@ -35,7 +35,7 @@ LOI_TEMPLATES = {
 С уважением,
 {partner_name}
 """,
-    BusinessObjective.partnership: """
+    BusinessObjective.PARTNERSHIP: """
 Уважаемая команда проекта "{project_title}",
 
 Меня зовут {partner_name}.
@@ -47,19 +47,19 @@ LOI_TEMPLATES = {
 С уважением,
 {partner_name}
 """,
-    BusinessObjective.pilot: """
+    BusinessObjective.TECHNOLOGY: """
 Уважаемая команда проекта "{project_title}",
 
 Меня зовут {partner_name}.
-После Demo Day заинтересовались вашим решением для пилотного проекта.
+После Demo Day заинтересовались вашей технологией.
 
-Готовы рассмотреть запуск пилота в нашей компании.
-Давайте обсудим детали и сроки.
+Готовы рассмотреть возможности технологического партнёрства.
+Давайте обсудим детали.
 
 С уважением,
 {partner_name}
 """,
-    BusinessObjective.hiring: """
+    BusinessObjective.HIRING: """
 Уважаемая команда проекта "{project_title}",
 
 Меня зовут {partner_name}, я из HR-отдела.
@@ -191,7 +191,7 @@ async def generate_loi(
     # Get template
     template = LOI_TEMPLATES.get(
         profile.objective,
-        LOI_TEMPLATES[BusinessObjective.partnership]
+        LOI_TEMPLATES[BusinessObjective.PARTNERSHIP]
     )
 
     # Fill template
