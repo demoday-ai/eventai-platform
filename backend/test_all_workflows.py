@@ -68,11 +68,11 @@ async def test_organizer_workflow(session, event):
     return clustering_run, rooms
 
 
-async def test_student_workflow(session, event, project):
+async def test_student_workflow(session, event, project, room_project):
     """Test: Student registration and slot confirmation."""
     from app.models import User, UserRole, Role
     from app.models.schedule_slot import ScheduleSlot
-    from app.models.participation import ParticipationRequest
+    from app.models.participation import ParticipationRequest, ParticipationStatus
     from sqlalchemy import select
 
     print("\n" + "=" * 60)
@@ -98,11 +98,9 @@ async def test_student_workflow(session, event, project):
     await session.commit()
     print(f"      Created: {user.full_name}")
 
-    # Link to project
-    print("\n[2.2] Linking student to project...")
-    project.student_user_id = user.id
-    await session.commit()
-    print(f"      Linked to: {project.title[:40]}...")
+    # Note: Project doesn't have student_user_id - linking is done via ParticipationRequest
+    print("\n[2.2] Project to present...")
+    print(f"      Project: {project.title[:40]}...")
 
     # Check schedule slot
     print("\n[2.3] Checking schedule slot...")
@@ -114,19 +112,18 @@ async def test_student_workflow(session, event, project):
         print(f"      Slot: {slot.start_time} - {slot.end_time}")
         print(f"      Room ID: {slot.room_id}")
 
-        # Create participation request (confirmation)
-        print("\n[2.4] Creating participation confirmation...")
-        participation = ParticipationRequest(
-            user_id=user.id,
-            event_id=event.id,
-            slot_id=slot.id,
-            status="confirmed",
-        )
-        session.add(participation)
-        await session.commit()
-        print(f"      Status: confirmed")
-    else:
-        print("      No slot assigned")
+    # Create participation request (confirmation)
+    print("\n[2.4] Creating participation confirmation...")
+    participation = ParticipationRequest(
+        user_id=user.id,
+        event_id=event.id,
+        project_id=project.id,
+        room_project_id=room_project.id if room_project else None,
+        status=ParticipationStatus.ACKNOWLEDGED,
+    )
+    session.add(participation)
+    await session.commit()
+    print(f"      Status: acknowledged")
 
     print("\n[2.5] ✅ STUDENT WORKFLOW: PASSED")
     return user, slot
@@ -328,7 +325,7 @@ async def test_expert_workflow(session, event, room, clustering_run_id):
     return expert
 
 
-async def test_qa_helper_workflow(session, event, guest_profile, business_profile):
+async def test_qa_helper_workflow(session, event, guest_user, guest_profile, business_user, business_profile):
     """Test: Q&A question generation for guests and business."""
     from app.services import qa_service
     from app.models import Project
@@ -353,88 +350,87 @@ async def test_qa_helper_workflow(session, event, guest_profile, business_profil
     try:
         guest_questions = await qa_service.generate_questions(
             session,
-            project_id=project.id,
-            profile_id=guest_profile.id,
-            profile_type="guest",
-            max_questions=3
+            user=guest_user,
+            project=project,
+            guest_profile=guest_profile,
         )
         print(f"      Generated {len(guest_questions)} questions for guest:")
         for i, q in enumerate(guest_questions[:3], 1):
-            print(f"        {i}. {q.question[:50]}...")
+            print(f"        {i}. {q[:50]}...")
     except Exception as e:
-        print(f"      Guest Q&A: {e}")
+        print(f"      Guest Q&A error: {e}")
 
     # Generate questions for business
     print("\n[6.2] Generating questions for business...")
     try:
         business_questions = await qa_service.generate_questions(
             session,
-            project_id=project.id,
-            profile_id=business_profile.id,
-            profile_type="business",
-            max_questions=3
+            user=business_user,
+            project=project,
+            business_profile=business_profile,
         )
         print(f"      Generated {len(business_questions)} questions for business:")
         for i, q in enumerate(business_questions[:3], 1):
-            print(f"        {i}. {q.question[:50]}...")
+            print(f"        {i}. {q[:50]}...")
     except Exception as e:
-        print(f"      Business Q&A: {e}")
+        print(f"      Business Q&A error: {e}")
 
     print("\n[6.3] ✅ Q&A HELPER WORKFLOW: PASSED")
 
 
 async def test_notification_workflow(session, event, student_user, slot):
     """Test: Notification creation and batching."""
-    from app.models.notification import Notification
-    from app.models.reminder import ReminderNotification, ReminderBatch
+    from app.models.reminder import (
+        ReminderNotification, ReminderBatch, ReminderType,
+        ReminderBatchStatus, NotificationStatus, RecipientType
+    )
     from sqlalchemy import select
 
     print("\n" + "=" * 60)
     print("7. NOTIFICATION WORKFLOW")
     print("=" * 60)
 
-    # Create eve-of-DD notification
-    print("\n[7.1] Creating eve-of-DD notification...")
-    eve_notification = Notification(
-        user_id=student_user.id,
-        event_id=event.id,
-        type="eve_of_dd",
-        message="Напоминаем: завтра Demo Day! Ваше выступление в 10:00.",
-        status="pending",
-    )
-    session.add(eve_notification)
-    await session.commit()
-    print(f"      Created notification: {eve_notification.type}")
-    print(f"      Status: {eve_notification.status}")
-
-    # Create pre-slot reminder
-    print("\n[7.2] Creating pre-slot reminder...")
-    if slot:
-        reminder = ReminderNotification(
-            user_id=student_user.id,
-            slot_id=slot.id,
-            type="pre_slot",
-            scheduled_at=slot.start_time - timedelta(hours=1),
-            status="pending",
-        )
-        session.add(reminder)
-        await session.commit()
-        print(f"      Reminder for slot: {slot.start_time}")
-        print(f"      Scheduled at: {reminder.scheduled_at}")
-
-    # Create reminder batch
-    print("\n[7.3] Creating reminder batch...")
+    # Create reminder batch first (notifications belong to batches)
+    print("\n[7.1] Creating reminder batch...")
     batch = ReminderBatch(
         event_id=event.id,
-        type="eve_of_dd",
-        scheduled_for=datetime.now(timezone.utc) + timedelta(hours=1),
-        total_count=1,
-        status="pending",
+        reminder_type=ReminderType.DAY_BEFORE,
+        initiated_by="system",
+        initiated_by_name="Test Script",
+        total_recipients=1,
+        status=ReminderBatchStatus.PREVIEW,
     )
     session.add(batch)
     await session.commit()
-    print(f"      Batch type: {batch.type}")
-    print(f"      Total count: {batch.total_count}")
+    await session.refresh(batch)
+    print(f"      Batch type: {batch.reminder_type.value}")
+    print(f"      Status: {batch.status.value}")
+
+    # Create reminder notification
+    print("\n[7.2] Creating reminder notification...")
+    notification = ReminderNotification(
+        batch_id=batch.id,
+        recipient_type=RecipientType.STUDENT,
+        telegram_user_id=student_user.telegram_user_id,
+        user_id=student_user.id,
+        status=NotificationStatus.PENDING,
+        message_text="Напоминаем: завтра Demo Day! Ваше выступление в 10:00.",
+    )
+    session.add(notification)
+    await session.commit()
+    print(f"      Recipient type: {notification.recipient_type.value}")
+    print(f"      Status: {notification.status.value}")
+
+    # Simulate sending
+    print("\n[7.3] Simulating notification delivery...")
+    notification.status = NotificationStatus.SENT
+    notification.sent_at = datetime.now(timezone.utc)
+    batch.sent_count = 1
+    batch.status = ReminderBatchStatus.COMPLETED
+    batch.completed_at = datetime.now(timezone.utc)
+    await session.commit()
+    print(f"      Notification sent at: {notification.sent_at}")
+    print(f"      Batch status: {batch.status.value}")
 
     print("\n[7.4] ✅ NOTIFICATION WORKFLOW: PASSED")
 
@@ -476,9 +472,9 @@ async def test_room_management_workflow(session, rooms, clustering_run):
     try:
         await clustering_service.move_project(
             session,
+            run_id=clustering_run.id,
             project_id=project_id,
-            from_room_id=source_room.id,
-            to_room_id=target_room.id,
+            target_room_id=target_room.id,
         )
         await session.commit()
         print(f"      Moved to: {target_room.name}")
@@ -511,7 +507,7 @@ async def test_schedule_workflow(session, event, rooms):
     """Test: Schedule viewing and timing operations."""
     from app.services import schedule_service
     from app.models.schedule_slot import ScheduleSlot
-    from app.models.schedule_change_log import ScheduleChangeLog
+    from app.models.schedule_change_log import ScheduleChangeLog, ChangeType
     from sqlalchemy import select
 
     print("\n" + "=" * 60)
@@ -535,24 +531,34 @@ async def test_schedule_workflow(session, event, rooms):
     # Test timing shift (simulate)
     print("\n[9.2] Testing timing shift logging...")
     if slots:
+        slot = slots[0]
+        old_time = slot.start_time
+        new_time = slot.start_time + timedelta(minutes=15)
+
         change_log = ScheduleChangeLog(
+            schedule_slot_id=slot.id,
             event_id=event.id,
-            room_id=room.id,
-            change_type="timing_shift",
-            description="Сдвиг на 15 минут из-за технических проблем",
-            affected_slots_count=len(slots),
+            change_type=ChangeType.TIME_CHANGED.value,
+            old_start_time=old_time,
+            old_end_time=slot.end_time,
+            new_start_time=new_time,
+            new_end_time=slot.end_time + timedelta(minutes=15),
+            old_room_id=slot.room_id,
+            new_room_id=slot.room_id,
+            notifications_sent=False,
         )
         session.add(change_log)
         await session.commit()
         print(f"      Logged change: {change_log.change_type}")
-        print(f"      Affected slots: {change_log.affected_slots_count}")
+        print(f"      Old time: {change_log.old_start_time}")
+        print(f"      New time: {change_log.new_start_time}")
 
     print("\n[9.3] ✅ SCHEDULE WORKFLOW: PASSED")
 
 
-async def test_business_followup_workflow(session, event, business_user, business_profile):
+async def test_business_followup_workflow(session, event, business_user, business_profile, student_user):
     """Test: Business follow-up features."""
-    from app.models.business_followup import BusinessFollowup
+    from app.models.business_followup import BusinessFollowup, PipelineStatus
     from app.models.contact_request import ContactRequest
     from app.models import Project
     from sqlalchemy import select
@@ -574,37 +580,37 @@ async def test_business_followup_workflow(session, event, business_user, busines
     # Create follow-up notes
     print("\n[10.1] Creating follow-up notes...")
     followup = BusinessFollowup(
-        business_profile_id=business_profile.id,
+        user_id=business_user.id,
+        event_id=event.id,
         project_id=project.id,
+        status=PipelineStatus.interested,
         notes="Интересный проект, хороший потенциал для пилота",
-        interest_level=4,
-        next_steps="Запланировать встречу на следующей неделе",
     )
     session.add(followup)
     await session.commit()
     print(f"      Notes: {followup.notes[:40]}...")
-    print(f"      Interest level: {followup.interest_level}/5")
+    print(f"      Status: {followup.status.value}")
 
-    # Create contact request
+    # Create contact request (using the student_user from earlier test)
     print("\n[10.2] Creating contact request...")
     contact_request = ContactRequest(
         requester_id=business_user.id,
         project_id=project.id,
-        event_id=event.id,
-        message="Хотел бы обсудить возможности сотрудничества",
+        student_user_id=student_user.id,  # Student created in test_student_workflow
+        requester_message="Хотел бы обсудить возможности сотрудничества",
         status="pending",
     )
     session.add(contact_request)
     await session.commit()
     print(f"      Request status: {contact_request.status}")
-    print(f"      Message: {contact_request.message[:40]}...")
+    print(f"      Message: {contact_request.requester_message[:40]}...")
 
     print("\n[10.3] ✅ BUSINESS FOLLOW-UP WORKFLOW: PASSED")
 
 
 async def test_feedback_workflow(session, event, expert):
     """Test: Feedback and comments."""
-    from app.models.feedback_comment import FeedbackComment
+    from app.models.feedback_comment import FeedbackComment, FeedbackCategory, ModerationStatus
     from app.models import Project
     from sqlalchemy import select
 
@@ -627,13 +633,17 @@ async def test_feedback_workflow(session, event, expert):
     feedback = FeedbackComment(
         expert_id=expert.id,
         project_id=project.id,
-        comment="Отличная презентация! Рекомендую доработать UX.",
-        is_public=True,
+        original_text="Отличная презентация! Рекомендую доработать UX.",
+        processed_text="Отличная презентация! Рекомендую доработать UX.",
+        category=FeedbackCategory.PRESENTATION.value,
+        is_constructive=True,
+        moderation_status=ModerationStatus.APPROVED.value,
     )
     session.add(feedback)
     await session.commit()
-    print(f"      Comment: {feedback.comment[:40]}...")
-    print(f"      Is public: {feedback.is_public}")
+    print(f"      Comment: {feedback.original_text[:40]}...")
+    print(f"      Category: {feedback.category}")
+    print(f"      Constructive: {feedback.is_constructive}")
 
     print("\n[11.2] ✅ FEEDBACK WORKFLOW: PASSED")
 
@@ -696,7 +706,7 @@ async def main():
             # 1. Organizer
             clustering_run, rooms = await test_organizer_workflow(session, event)
 
-            # Get first room and project for other tests
+            # Get first room, project, and room_project for other tests
             room = rooms[0] if rooms else None
 
             proj_result = await session.execute(
@@ -704,8 +714,15 @@ async def main():
             )
             project = proj_result.scalars().first()
 
+            # Get room_project link
+            from app.models.room_project import RoomProject
+            rp_result = await session.execute(
+                select(RoomProject).where(RoomProject.project_id == project.id).limit(1)
+            )
+            room_project = rp_result.scalars().first()
+
             # 2. Student
-            student_user, slot = await test_student_workflow(session, event, project)
+            student_user, slot = await test_student_workflow(session, event, project, room_project)
 
             # 3. Guest
             guest_user, guest_profile = await test_guest_workflow(session, event)
@@ -717,7 +734,7 @@ async def main():
             expert = await test_expert_workflow(session, event, room, clustering_run.id)
 
             # 6. Q&A Helper
-            await test_qa_helper_workflow(session, event, guest_profile, business_profile)
+            await test_qa_helper_workflow(session, event, guest_user, guest_profile, business_user, business_profile)
 
             # 7. Notifications
             await test_notification_workflow(session, event, student_user, slot)
@@ -729,7 +746,7 @@ async def main():
             await test_schedule_workflow(session, event, rooms)
 
             # 10. Business Follow-up
-            await test_business_followup_workflow(session, event, business_user, business_profile)
+            await test_business_followup_workflow(session, event, business_user, business_profile, student_user)
 
             # 11. Feedback
             await test_feedback_workflow(session, event, expert)

@@ -62,8 +62,12 @@ def build_guest_prompt(
     subtype_desc = subtype_map.get(user.guest_subtype, "Гость")
 
     interests = ""
-    if guest_profile and guest_profile.interests:
-        interests = f"\nИнтересы: {guest_profile.interests}"
+    if guest_profile:
+        all_tags = (guest_profile.selected_tags or []) + (guest_profile.extracted_tags or [])
+        if all_tags:
+            interests = f"\nИнтересы: {', '.join(all_tags)}"
+        if guest_profile.keywords:
+            interests += f"\nКлючевые слова: {', '.join(guest_profile.keywords)}"
 
     system_prompt = """Ты — помощник для гостей Demo Day. Генерируй вопросы на русском языке.
 Вопросы должны быть конкретными, содержательными и учитывать профиль гостя.
@@ -106,12 +110,15 @@ def build_business_prompt(
 Вопросы должны быть бизнес-ориентированными и учитывать цель партнёра.
 Формат ответа: JSON объект с полем "questions" — массив строк."""
 
+    industries_str = ", ".join(business_profile.industries) if business_profile.industries else "Не указано"
+    tech_str = ", ".join(business_profile.tech_stack) if business_profile.tech_stack else "Не указано"
+
     user_prompt = f"""Сгенерируй 3-5 бизнес-вопросов для партнёра, оценивающего проект.
 
 Профиль партнёра:
 - Цель: {objective_desc}
-- Отрасль: {business_profile.industry or "Не указано"}
-- Фокус: {business_profile.focus_areas or "Не указано"}
+- Отрасли: {industries_str}
+- Технологический фокус: {tech_str}
 
 Проект:
 - Название: {project.title}
