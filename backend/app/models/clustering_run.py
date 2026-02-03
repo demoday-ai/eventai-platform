@@ -21,5 +21,8 @@ class ClusteringRun(Base):
     approved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    schedule_approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     rooms = relationship("Room", back_populates="clustering_run", cascade="all, delete-orphan")

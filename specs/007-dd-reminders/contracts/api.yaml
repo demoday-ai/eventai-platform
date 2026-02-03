@@ -1,0 +1,275 @@
+openapi: 3.0.3
+info:
+  title: EPIC-007 DD Reminders API
+  description: REST API for Demo Day reminder management
+  version: 1.0.0
+
+paths:
+  /api/v1/reminders/batches:
+    get:
+      summary: List reminder batches
+      description: Get all reminder batches for the current event
+      operationId: listReminderBatches
+      tags:
+        - Reminders
+      security:
+        - OrganizerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReminderBatchStatus'
+          description: Filter by batch status
+        - name: reminder_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReminderType'
+          description: Filter by reminder type
+      responses:
+        '200':
+          description: List of reminder batches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReminderBatchSummary'
+        '403':
+          description: Not an organizer
+        '404':
+          description: No current event
+
+  /api/v1/reminders/batches/{batch_id}:
+    get:
+      summary: Get batch details
+      description: Get detailed information about a specific reminder batch
+      operationId: getReminderBatch
+      tags:
+        - Reminders
+      security:
+        - OrganizerAuth: []
+      parameters:
+        - name: batch_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Batch details with notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderBatchDetail'
+        '403':
+          description: Not an organizer
+        '404':
+          description: Batch not found
+
+  /api/v1/reminders/preview:
+    post:
+      summary: Get reminder preview
+      description: Preview recipients and message counts before sending
+      operationId: previewReminders
+      tags:
+        - Reminders
+      security:
+        - OrganizerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reminder_type
+              properties:
+                reminder_type:
+                  $ref: '#/components/schemas/ReminderType'
+      responses:
+        '200':
+          description: Preview data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderPreview'
+        '403':
+          description: Not an organizer
+        '404':
+          description: No current event or no approved clustering
+
+components:
+  securitySchemes:
+    OrganizerAuth:
+      type: http
+      scheme: bearer
+      description: Organizer authentication via telegram_user_id
+
+  schemas:
+    ReminderType:
+      type: string
+      enum:
+        - day_before
+        - hour_before
+
+    ReminderBatchStatus:
+      type: string
+      enum:
+        - preview
+        - confirmed
+        - in_progress
+        - completed
+        - cancelled
+
+    NotificationStatus:
+      type: string
+      enum:
+        - pending
+        - sent
+        - failed
+
+    RecipientType:
+      type: string
+      enum:
+        - student
+        - expert
+        - guest
+        - business
+
+    ReminderBatchSummary:
+      type: object
+      required:
+        - id
+        - reminder_type
+        - status
+        - total_recipients
+        - sent_count
+        - failed_count
+        - started_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        reminder_type:
+          $ref: '#/components/schemas/ReminderType'
+        status:
+          $ref: '#/components/schemas/ReminderBatchStatus'
+        initiated_by_name:
+          type: string
+        total_recipients:
+          type: integer
+        sent_count:
+          type: integer
+        failed_count:
+          type: integer
+        skipped_count:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReminderBatchDetail:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/ReminderBatchSummary'
+        - type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationSummary'
+            by_recipient_type:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  sent:
+                    type: integer
+                  failed:
+                    type: integer
+
+    NotificationSummary:
+      type: object
+      required:
+        - id
+        - recipient_type
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipient_type:
+          $ref: '#/components/schemas/RecipientType'
+        recipient_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/NotificationStatus'
+        error_message:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReminderPreview:
+      type: object
+      required:
+        - reminder_type
+        - by_role
+        - total_recipients
+        - total_skipped
+      properties:
+        reminder_type:
+          $ref: '#/components/schemas/ReminderType'
+        by_role:
+          type: object
+          properties:
+            students:
+              $ref: '#/components/schemas/RolePreview'
+            experts:
+              $ref: '#/components/schemas/RolePreview'
+            guests:
+              $ref: '#/components/schemas/RolePreview'
+            business:
+              $ref: '#/components/schemas/RolePreview'
+        total_recipients:
+          type: integer
+        total_skipped:
+          type: integer
+          description: Recipients without Telegram
+        duplicate_warning:
+          type: object
+          nullable: true
+          properties:
+            last_batch_id:
+              type: string
+              format: uuid
+            minutes_ago:
+              type: integer
+
+    RolePreview:
+      type: object
+      required:
+        - count
+        - skipped
+      properties:
+        count:
+          type: integer
+          description: Recipients with Telegram
+        skipped:
+          type: integer
+          description: Recipients without Telegram
+        declined:
+          type: integer
+          description: Declined (experts only)
