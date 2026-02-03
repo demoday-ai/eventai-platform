@@ -26,6 +26,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting DemoDay AI Navigator")
 
+    # Create tables if they don't exist
+    try:
+        from app.database import engine
+        from app.models import Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables ensured")
+    except Exception:
+        logger.exception("Failed to create tables (non-fatal)")
+
     # Load seed data on startup
     try:
         from app.database import async_session
