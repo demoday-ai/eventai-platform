@@ -153,7 +153,7 @@ async def main():
             tech_stack=["NLP", "LLM", "RAG"],
             project_stages=["MVP", "Prototype"],
             collaboration_format="Partnership",
-            free_text="Ищем проекты в сфере образования с использованием LLM",
+            free_text_raw="Ищем проекты в сфере образования с использованием LLM",
         )
         session.add(profile)
         await session.commit()
