@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { Login } from "./pages/Login"
 import { Dashboard } from "./pages/Dashboard"
+import { RoomDetail } from "./pages/RoomDetail"
+import { ProjectsList } from "./pages/ProjectsList"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 
 function App() {
@@ -13,6 +15,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rooms/:id"
+          element={
+            <ProtectedRoute>
+              <RoomDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <ProjectsList />
             </ProtectedRoute>
           }
         />

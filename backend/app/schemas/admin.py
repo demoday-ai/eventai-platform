@@ -77,3 +77,54 @@ class CoverageResponse(BaseModel):
     """Coverage response."""
 
     rooms: list[RoomCoverage]
+
+
+class RoomInfo(BaseModel):
+    """Room information."""
+
+    id: str
+    name: str
+    description: str
+
+
+class ExpertInfo(BaseModel):
+    """Expert information."""
+
+    id: str
+    name: str
+    status: str  # "confirmed", "pending", "declined"
+    tags: list[str]
+
+
+class ProjectInfo(BaseModel):
+    """Project information."""
+
+    id: str
+    title: str
+    author: str
+    start_time: str
+    end_time: str
+    status: str  # "confirmed", "pending", "cancelled"
+
+
+class RoomDetailResponse(BaseModel):
+    """Room detail response."""
+
+    room: RoomInfo
+    experts: list[ExpertInfo]
+    projects: list[ProjectInfo]
+    uncovered_topics: list[str]
+
+
+class ProjectListItem(BaseModel):
+    """Project list item."""
+
+    id: str
+    title: str
+    author: str
+    room_id: str
+    room_name: str
+    start_time: str
+    end_time: str
+    status: str  # "confirmed", "pending", "cancelled"
+    tags: list[str]
