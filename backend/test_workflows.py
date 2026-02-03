@@ -105,9 +105,8 @@ async def main():
                 session, event.id, clustering_run.id
             )
             await session.commit()
-            print(f"   Created {result.slots_created} slots")
-            print(f"   Day 1: {result.day1_slots} slots")
-            print(f"   Day 2: {result.day2_slots} slots")
+            print(f"   Created {result.total_slots} slots")
+            print(f"   Rooms: {len(result.rooms)}")
         except Exception as e:
             print(f"   ERROR: {e}")
             import traceback
@@ -126,8 +125,8 @@ async def main():
         # 6. Create test business user
         print("\n[6] Creating test business user...")
         user = User(
-            telegram_id="123456789",
-            telegram_username="test_partner",
+            telegram_user_id="123456789",
+            username="test_partner",
             full_name="Test Partner",
         )
         session.add(user)
