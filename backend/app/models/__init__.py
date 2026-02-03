@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.business_followup import BusinessFollowup, PipelineStatus
 from app.models.business_profile import BusinessObjective, BusinessProfile, OBJECTIVE_DISPLAY
 from app.models.clustering_run import ClusteringRun
 from app.models.contact_request import ContactRequest, ContactRequestStatus
@@ -37,6 +38,7 @@ from app.models.user_role import UserRole
 __all__ = [
     "Base",
     "BriefingStatus",
+    "BusinessFollowup",
     "BusinessObjective",
     "BusinessProfile",
     "ChangeType",
@@ -60,6 +62,7 @@ __all__ = [
     "Notification",
     "NotificationStatus",
     "NotificationType",
+    "PipelineStatus",
     "Project",
     "ProjectRecommendation",
     "ProjectTag",
