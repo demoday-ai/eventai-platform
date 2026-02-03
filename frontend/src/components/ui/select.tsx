@@ -48,7 +48,7 @@ export function SelectTrigger({ id, children, className, ...props }: SelectTrigg
   )
 }
 
-export function SelectValue({ placeholder }: { placeholder?: string }) {
+export function SelectValue({ placeholder: _placeholder }: { placeholder?: string }) {
   return null
 }
 

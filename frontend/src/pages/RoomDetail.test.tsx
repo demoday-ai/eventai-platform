@@ -29,13 +29,13 @@ const mockRoomData = {
     {
       id: "expert-1",
       name: "Иван Иванов",
-      status: "confirmed",
+      status: "confirmed" as const,
       tags: ["NLP", "Transformers"],
     },
     {
       id: "expert-2",
       name: "Петр Петров",
-      status: "pending",
+      status: "pending" as const,
       tags: ["NLP", "LLM"],
     },
   ],
@@ -46,7 +46,7 @@ const mockRoomData = {
       author: "Команда А",
       start_time: "2026-02-06T10:00:00",
       end_time: "2026-02-06T10:15:00",
-      status: "confirmed",
+      status: "confirmed" as const,
     },
     {
       id: "project-2",
@@ -54,7 +54,7 @@ const mockRoomData = {
       author: "Команда Б",
       start_time: "2026-02-06T10:15:00",
       end_time: "2026-02-06T10:30:00",
-      status: "pending",
+      status: "pending" as const,
     },
   ],
   uncovered_topics: ["Speech Recognition", "Machine Translation"],
