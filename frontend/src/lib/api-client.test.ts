@@ -105,4 +105,114 @@ describe("apiClient", () => {
       await expect(getCoverage()).rejects.toThrow()
     })
   })
+
+  describe("getRoomDetail", () => {
+    it("fetches room detail successfully", async () => {
+      const mockRoomDetail = {
+        room: {
+          id: "room-1",
+          name: "Зал 1: NLP",
+          description: "NLP проекты",
+        },
+        experts: [
+          {
+            id: "expert-1",
+            name: "Иван Иванов",
+            status: "confirmed",
+            tags: ["NLP"],
+          },
+        ],
+        projects: [
+          {
+            id: "project-1",
+            title: "Чатбот",
+            author: "Команда А",
+            start_time: "2026-02-06T10:00:00",
+            end_time: "2026-02-06T10:15:00",
+            status: "confirmed",
+          },
+        ],
+        uncovered_topics: [],
+      }
+
+      mock.onGet("/admin/rooms/room-1").reply(200, mockRoomDetail)
+
+      const { getRoomDetail } = await import("./api-client")
+      const result = await getRoomDetail("room-1")
+      expect(result).toEqual(mockRoomDetail)
+    })
+
+    it("throws error when room detail API fails", async () => {
+      mock.onGet("/admin/rooms/room-1").reply(404)
+
+      const { getRoomDetail } = await import("./api-client")
+      await expect(getRoomDetail("room-1")).rejects.toThrow()
+    })
+  })
+
+  describe("getProjects", () => {
+    it("fetches all projects successfully", async () => {
+      const mockProjects = [
+        {
+          id: "project-1",
+          title: "Чатбот для поддержки",
+          author: "Команда А",
+          room_id: "room-1",
+          room_name: "Зал 1: NLP",
+          start_time: "2026-02-06T10:00:00",
+          end_time: "2026-02-06T10:15:00",
+          status: "confirmed",
+          tags: ["NLP", "Chatbot"],
+        },
+        {
+          id: "project-2",
+          title: "Анализ тональности",
+          author: "Команда Б",
+          room_id: "room-1",
+          room_name: "Зал 1: NLP",
+          start_time: "2026-02-06T10:15:00",
+          end_time: "2026-02-06T10:30:00",
+          status: "pending",
+          tags: ["NLP", "Sentiment"],
+        },
+      ]
+
+      mock.onGet("/admin/projects").reply(200, mockProjects)
+
+      const { getProjects } = await import("./api-client")
+      const result = await getProjects()
+      expect(result).toEqual(mockProjects)
+    })
+
+    it("fetches projects with filters", async () => {
+      const mockProjects = [
+        {
+          id: "project-1",
+          title: "Чатбот для поддержки",
+          author: "Команда А",
+          room_id: "room-1",
+          room_name: "Зал 1: NLP",
+          start_time: "2026-02-06T10:00:00",
+          end_time: "2026-02-06T10:15:00",
+          status: "confirmed",
+          tags: ["NLP"],
+        },
+      ]
+
+      mock
+        .onGet("/admin/projects", { params: { room_id: "room-1", status: "confirmed" } })
+        .reply(200, mockProjects)
+
+      const { getProjects } = await import("./api-client")
+      const result = await getProjects({ room_id: "room-1", status: "confirmed" })
+      expect(result).toEqual(mockProjects)
+    })
+
+    it("throws error when projects API fails", async () => {
+      mock.onGet("/admin/projects").reply(500)
+
+      const { getProjects } = await import("./api-client")
+      await expect(getProjects()).rejects.toThrow()
+    })
+  })
 })

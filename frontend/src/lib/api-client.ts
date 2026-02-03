@@ -92,6 +92,53 @@ export interface RoomCoverage {
   coverage_status: "full" | "partial" | "none"
 }
 
+export interface RoomInfo {
+  id: string
+  name: string
+  description: string
+}
+
+export interface ExpertInfo {
+  id: string
+  name: string
+  status: "confirmed" | "pending" | "declined"
+  tags: string[]
+}
+
+export interface ProjectInfo {
+  id: string
+  title: string
+  author: string
+  start_time: string
+  end_time: string
+  status: "confirmed" | "pending" | "cancelled"
+}
+
+export interface RoomDetailData {
+  room: RoomInfo
+  experts: ExpertInfo[]
+  projects: ProjectInfo[]
+  uncovered_topics: string[]
+}
+
+export interface ProjectListItem {
+  id: string
+  title: string
+  author: string
+  room_id: string
+  room_name: string
+  start_time: string
+  end_time: string
+  status: "confirmed" | "pending" | "cancelled"
+  tags: string[]
+}
+
+export interface ProjectsListParams {
+  room_id?: string
+  status?: string
+  search?: string
+}
+
 // API functions
 export const getDashboard = async (): Promise<DashboardData> => {
   const { data } = await apiClient.get<DashboardData>("/admin/dashboard")
@@ -105,5 +152,15 @@ export const getCurrentEvent = async (): Promise<Event> => {
 
 export const getCoverage = async (): Promise<RoomCoverage[]> => {
   const { data } = await apiClient.get<RoomCoverage[]>("/admin/coverage")
+  return data
+}
+
+export const getRoomDetail = async (roomId: string): Promise<RoomDetailData> => {
+  const { data } = await apiClient.get<RoomDetailData>(`/admin/rooms/${roomId}`)
+  return data
+}
+
+export const getProjects = async (params?: ProjectsListParams): Promise<ProjectListItem[]> => {
+  const { data } = await apiClient.get<ProjectListItem[]>("/admin/projects", { params })
   return data
 }
