@@ -69,4 +69,40 @@ describe("apiClient", () => {
       expect(result).toEqual(mockEvent)
     })
   })
+
+  describe("getCoverage", () => {
+    it("fetches coverage data successfully", async () => {
+      const mockCoverage = [
+        {
+          room_id: "room-1",
+          room_name: "Зал 1: NLP",
+          total_experts: 5,
+          confirmed_experts: 5,
+          projects_count: 20,
+          coverage_status: "full",
+        },
+        {
+          room_id: "room-2",
+          room_name: "Зал 2: CV",
+          total_experts: 4,
+          confirmed_experts: 2,
+          projects_count: 18,
+          coverage_status: "partial",
+        },
+      ]
+
+      mock.onGet("/admin/coverage").reply(200, mockCoverage)
+
+      const { getCoverage } = await import("./api-client")
+      const result = await getCoverage()
+      expect(result).toEqual(mockCoverage)
+    })
+
+    it("throws error when coverage API fails", async () => {
+      mock.onGet("/admin/coverage").reply(500)
+
+      const { getCoverage } = await import("./api-client")
+      await expect(getCoverage()).rejects.toThrow()
+    })
+  })
 })

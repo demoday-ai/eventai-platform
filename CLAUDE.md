@@ -160,14 +160,48 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 - Основной язык общения: русский
 - Чат команды: Telegram, группа "ЯСНОПОНЯТНО"
 
+### Разработка и тестирование
+
+**TDD-подход для новых фич:**
+1. Сначала пишем тесты (описываем ожидаемое поведение)
+2. Запускаем тесты — они падают (red)
+3. Пишем минимальный код для прохождения тестов (green)
+4. Рефакторим при необходимости (refactor)
+
+**Frontend (React + Vitest):**
+- Тесты для компонентов: `@testing-library/react`
+- Тесты для API: `axios-mock-adapter`
+- Запуск: `npm test`
+- Coverage: `npm run test:coverage`
+
+**Backend (Python + pytest):**
+- Тесты для API: `pytest` + `httpx.AsyncClient`
+- Моки: `pytest-mock`, `unittest.mock`
+- Запуск: `pytest`
+- Coverage: `pytest --cov`
+
+**Стандарт покрытия:**
+- Новые фичи: минимум 80% coverage
+- Критические пути: 100% coverage
+- Тесты коммитятся вместе с кодом
+
 ## Active Technologies
-- Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg (001-onboarding)
-- PostgreSQL 16 (001-onboarding)
-- httpx, python-multipart, OpenRouter API (002-project-clustering)
-- Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, APScheduler 3.10+ (005-dd-reminders)
-- PostgreSQL 16 (asyncpg) (005-dd-reminders)
+
+**Backend:**
+- Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg
+- PostgreSQL 16
+- httpx, python-multipart, OpenRouter API
+- APScheduler 3.10+ (CronTrigger + IntervalTrigger)
+
+**Frontend:**
+- React 19 + TypeScript + Vite
+- TanStack Query (react-query) для API
+- Tailwind CSS + shadcn/ui
+- React Router v7
+- Vitest + Testing Library для тестов
 
 ## Recent Changes
 - 001-onboarding: Added Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg
 - 002-project-clustering: Added httpx, python-multipart, OpenRouter API integration, 6 new DB tables (projects, tags, project_tags, clustering_runs, rooms, room_projects), LLM-based clustering, seed data (400 projects from checkpoint forms)
 - 005-dd-reminders: Added APScheduler 3.10+ (CronTrigger + IntervalTrigger), 3 new DB tables (schedule_slots, notifications, schedule_change_logs), schedule auto-generation from clustering, eve-of-DD and pre-slot reminders, timing shift notifications with batching
+- 016-organizer-web-admin: Added frontend (React + Vite + TypeScript + Tailwind + shadcn/ui), Phase 1 Dashboard with metrics API (GET /api/v1/admin/dashboard), TanStack Query, auto-refresh, alerts, 10 tests (Vitest + Testing Library)

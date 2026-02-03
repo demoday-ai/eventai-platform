@@ -83,6 +83,15 @@ export interface Event {
   end_date: string | null
 }
 
+export interface RoomCoverage {
+  room_id: string
+  room_name: string
+  total_experts: number
+  confirmed_experts: number
+  projects_count: number
+  coverage_status: "full" | "partial" | "none"
+}
+
 // API functions
 export const getDashboard = async (): Promise<DashboardData> => {
   const { data } = await apiClient.get<DashboardData>("/admin/dashboard")
@@ -91,5 +100,10 @@ export const getDashboard = async (): Promise<DashboardData> => {
 
 export const getCurrentEvent = async (): Promise<Event> => {
   const { data } = await apiClient.get<Event>("/events/current")
+  return data
+}
+
+export const getCoverage = async (): Promise<RoomCoverage[]> => {
+  const { data } = await apiClient.get<RoomCoverage[]>("/admin/coverage")
   return data
 }
