@@ -160,7 +160,9 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     logger.info("role_chosen: tg_id=%s role=%s", telegram_user_id, role_code.value)
 
     await query.edit_message_text(
-        "Расскажите, что вас интересует на Demo Day?\n\n"
+        "Отлично! Задам пару вопросов, чтобы подобрать проекты для вас — "
+        "это займёт буквально пару минут.\n\n"
+        "Расскажите, что вас интересует на Demo Day?\n"
         "Напишите свободным текстом или выберите темы кнопками:",
         reply_markup=nl_topic_buttons(),
     )
@@ -208,9 +210,10 @@ async def subtype_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.info("subtype_chosen: tg_id=%s subtype=%s", telegram_user_id, subtype_str)
 
     await query.edit_message_text(
-        f"Отлично, {subtype_name}!\n\n"
-        f"Расскажите, что вас интересует на Demo Day?\n"
-        f"Напишите свободным текстом или выберите темы кнопками:",
+        f"Отлично, {subtype_name}! Задам пару вопросов, чтобы подобрать "
+        f"проекты под тебя — это займёт буквально пару минут.\n\n"
+        f"Расскажи, что тебе интересно на Demo Day?\n"
+        f"Напиши свободным текстом или выбери темы кнопками:",
         reply_markup=nl_topic_buttons(),
     )
     return NL_PROFILE
@@ -243,7 +246,8 @@ async def enter_subtype_handler(update: Update, context: ContextTypes.DEFAULT_TY
     logger.info("enter_subtype: tg_id=%s custom=%s", telegram_user_id, custom_subtype)
 
     await update.message.reply_text(
-        f"Понятно, {custom_subtype}!\n\n"
+        f"Понятно, {custom_subtype}! Задам пару вопросов, чтобы подобрать "
+        f"проекты под вас — это займёт буквально пару минут.\n\n"
         f"Расскажите, что вас интересует на Demo Day?\n"
         f"Напишите свободным текстом или выберите темы кнопками:",
         reply_markup=nl_topic_buttons(),
@@ -365,10 +369,14 @@ async def _agent_turn(
     reply_text = result["message"]
     _add_to_conversation(context, "assistant", reply_text)
 
+    # Re-attach topic buttons so user can always pick tags
+    topics = context.user_data.get("nl_topics", set())
+    keyboard = _nl_topic_buttons_with_selection(topics)
+
     if is_message:
-        await update.message.reply_text(reply_text)
+        await update.message.reply_text(reply_text, reply_markup=keyboard)
     else:
-        await update.callback_query.edit_message_text(reply_text)
+        await update.callback_query.edit_message_text(reply_text, reply_markup=keyboard)
 
     return NL_PROFILE
 
@@ -457,6 +465,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
         context.user_data["nl_topics"] = set()
         context.user_data["nl_conversation"] = []
         await query.edit_message_text(
+            "Давайте попробуем заново.\n\n"
             "Расскажите, что вас интересует на Demo Day?\n"
             "Напишите свободным текстом или выберите темы кнопками:",
             reply_markup=nl_topic_buttons(),
@@ -512,8 +521,20 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
 
     logger.info("Profile confirmed via NL: tg_id=%s tags=%s", telegram_user_id, all_tags)
 
+    # Show saved profile summary
+    profile_parts = ["✅ Профиль сохранён!\n"]
+    summary = profile_data.get("summary", "")
+    if summary:
+        profile_parts.append(summary)
+    if all_tags:
+        profile_parts.append(f"Теги: {', '.join(all_tags)}")
+    goals = profile_data.get("goals", [])
+    if goals:
+        profile_parts.append(f"Цели: {', '.join(goals)}")
+    profile_parts.append("\nХотите получить персональную программу?")
+
     await query.edit_message_text(
-        "Профиль сохранён! Хотите получить персональную программу?",
+        "\n".join(profile_parts),
         reply_markup=start_profiling_keyboard(),
     )
     return ConversationHandler.END
