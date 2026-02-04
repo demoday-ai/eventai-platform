@@ -537,7 +537,7 @@ async def llm_rerank_projects(
         {
             "project_id": str(pid),
             "title": title,
-            "description": desc[:500],
+            "description": desc,
             "tags": tags,
         }
         for pid, _, title, desc, tags in candidates
@@ -614,7 +614,7 @@ async def generate_llm_summaries(
     guest_interests = json.dumps(interests_data, ensure_ascii=False)
 
     projects_text = "\n".join(
-        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc[:600]}"
+        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc}"
         for pid, title, desc, tags in projects
     )
 
