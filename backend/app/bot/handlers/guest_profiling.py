@@ -581,6 +581,20 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 chat_id=chat_id, text=msg, parse_mode="Markdown",
             )
 
+    # Agent capabilities hint
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=(
+            "💡 *Я могу помочь:*\n"
+            "— Подготовить вопросы к проекту: «вопросы к #3»\n"
+            "— Сравнить проекты: «сравни #1 и #5»\n"
+            "— Показать профиль: «мой профиль»\n"
+            "— Спланировать маршрут по залам\n\n"
+            "Просто напишите текстом."
+        ),
+        parse_mode="Markdown",
+    )
+
     return VIEW_PROGRAM
 
 
