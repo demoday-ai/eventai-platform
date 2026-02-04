@@ -38,11 +38,13 @@ SYNONYM_MAP: dict[str, str] = {
     # ASR
     "Распознавание речи": "ASR",
     "Распознавание речи (Automated...)": "ASR",
+    "Распознавание речи (Automated Speech Recognition (ASR) / speech-to-text (STT))": "ASR",
     "Speech Recognition": "ASR",
     "Распознавание и синтез речи": "ASR",
     # TTS / Audio
     "Синтез речи": "TTS",
     "Синтез речи (Speech Synthesis...)": "TTS",
+    "Синтез речи (Speech Synthesis / text-to-speech (TTS))": "TTS",
     "транскрибация)": "Audio",
     "ИИ в музыке (сепарация": "Audio",
     # EdTech
@@ -70,6 +72,7 @@ SYNONYM_MAP: dict[str, str] = {
     "MLSec": "Security",
     "Red Teaming": "Security",
     "LLM-агенты в области ИБ": "Security",
+    "LLM-агенты в области информационной безопасности": "Security",
     "Информационная безопасность (IAM) + LLM": "Security",
 }
 
