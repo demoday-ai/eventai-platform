@@ -1011,3 +1011,54 @@ export const sendBriefing = async (): Promise<BriefingSendResult> => {
   const { data } = await apiClient.post<BriefingSendResult>("/admin/briefing/send")
   return data
 }
+
+// --- Messaging types ---
+
+export interface RecipientPreviewItem {
+  user_id: string
+  full_name: string
+  role: string
+  guest_subtype: string | null
+}
+
+export interface MessagingPreviewRequest {
+  template: string
+  roles: string[]
+  guest_subtype?: string | null
+  room_id?: string | null
+}
+
+export interface MessagingPreviewResponse {
+  recipient_count: number
+  sample_message: string
+  recipients_preview: RecipientPreviewItem[]
+}
+
+export interface MessagingSendRequest {
+  template: string
+  roles: string[]
+  guest_subtype?: string | null
+  room_id?: string | null
+}
+
+export interface MessagingSendResult {
+  sent: number
+  failed: number
+  skipped: number
+}
+
+// --- Messaging ---
+
+export const previewMessaging = async (
+  body: MessagingPreviewRequest
+): Promise<MessagingPreviewResponse> => {
+  const { data } = await apiClient.post<MessagingPreviewResponse>("/admin/messaging/preview", body)
+  return data
+}
+
+export const sendMessaging = async (
+  body: MessagingSendRequest
+): Promise<MessagingSendResult> => {
+  const { data } = await apiClient.post<MessagingSendResult>("/admin/messaging/send", body)
+  return data
+}

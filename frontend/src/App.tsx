@@ -13,6 +13,7 @@ import { Schedule } from "./pages/Schedule"
 import { Coverage } from "./pages/Coverage"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
 import { Participation } from "./pages/Participation"
+import { Messaging } from "./pages/Messaging"
 import { Notifications } from "./pages/Notifications"
 import { Settings } from "./pages/Settings"
 import { ProtectedRoute } from "./components/ProtectedRoute"
@@ -42,6 +43,7 @@ function App() {
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/participation" element={<Participation />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/messaging" element={<Messaging />} />
           <Route path="/projects" element={<ProjectsList />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
           <Route path="/settings" element={<Settings />} />

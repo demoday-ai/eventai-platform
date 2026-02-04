@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   UserCheck,
   Bell,
+  MessageSquare,
   Settings,
   FileText,
 } from "lucide-react"
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/schedule", label: "Расписание", icon: Calendar },
   { to: "/participation", label: "Участие", icon: UserCheck },
   { to: "/notifications", label: "Уведомления", icon: Bell },
+  { to: "/messaging", label: "Рассылка", icon: MessageSquare },
   { to: "/projects", label: "Проекты", icon: FolderOpen },
   { to: "/settings", label: "Настройки", icon: Settings },
 ]

@@ -166,3 +166,46 @@ class BriefingSendResult(BaseModel):
     sent: int
     failed: int
     skipped: int
+
+
+class RecipientPreviewItem(BaseModel):
+    """Single recipient in messaging preview."""
+
+    user_id: str
+    full_name: str
+    role: str
+    guest_subtype: str | None = None
+
+
+class MessagingPreviewRequest(BaseModel):
+    """Request to preview messaging recipients."""
+
+    template: str
+    roles: list[str]
+    guest_subtype: str | None = None
+    room_id: str | None = None
+
+
+class MessagingPreviewResponse(BaseModel):
+    """Response with messaging preview."""
+
+    recipient_count: int
+    sample_message: str
+    recipients_preview: list[RecipientPreviewItem]
+
+
+class MessagingSendRequest(BaseModel):
+    """Request to send messages."""
+
+    template: str
+    roles: list[str]
+    guest_subtype: str | None = None
+    room_id: str | None = None
+
+
+class MessagingSendResult(BaseModel):
+    """Result of sending messages."""
+
+    sent: int
+    failed: int
+    skipped: int

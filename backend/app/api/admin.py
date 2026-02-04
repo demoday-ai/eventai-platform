@@ -17,10 +17,10 @@ from app.models import User
 from app.models.role import RoleCode
 from app.models.user import GuestSubtype
 from app.models.user_role import UserRole
-from app.schemas.admin import BriefingPreview, BriefingSendResult, DashboardResponse, EventUpdateRequest, GuestUploadResult, ProjectListItem, RoomCoverage, RoomDetailResponse
+from app.schemas.admin import BriefingPreview, BriefingSendResult, DashboardResponse, EventUpdateRequest, GuestUploadResult, MessagingPreviewRequest, MessagingPreviewResponse, MessagingSendRequest, MessagingSendResult, ProjectListItem, RoomCoverage, RoomDetailResponse
 from app.schemas.expert import RowError
 from app.schemas.user import EventResponse
-from app.services import admin_service, briefing_service, user_service
+from app.services import admin_service, briefing_service, messaging_service, user_service
 
 logger = logging.getLogger(__name__)
 
@@ -336,3 +336,91 @@ async def send_briefings(
     result = await briefing_service.send_all_briefings(db, event.id, bot)
 
     return BriefingSendResult(**result)
+
+
+VALID_MESSAGING_ROLES = {"student", "expert", "guest", "business"}
+
+
+@router.post("/messaging/preview", response_model=MessagingPreviewResponse)
+async def messaging_preview(
+    request: MessagingPreviewRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Preview messaging recipients before sending."""
+    _check_organizer(current_user)
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    if not request.roles:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one role must be selected",
+        )
+
+    invalid = set(request.roles) - VALID_MESSAGING_ROLES
+    if invalid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid roles: {invalid}. Valid: {VALID_MESSAGING_ROLES}",
+        )
+
+    if not request.template.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Template must not be empty",
+        )
+
+    result = await messaging_service.preview(
+        db, event.id, request.template, request.roles,
+        request.guest_subtype, request.room_id,
+    )
+    return MessagingPreviewResponse(**result)
+
+
+@router.post("/messaging/send", response_model=MessagingSendResult)
+async def messaging_send(
+    request: MessagingSendRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Send messages to selected audience."""
+    _check_organizer(current_user)
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    if not request.roles:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one role must be selected",
+        )
+
+    invalid = set(request.roles) - VALID_MESSAGING_ROLES
+    if invalid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid roles: {invalid}. Valid: {VALID_MESSAGING_ROLES}",
+        )
+
+    if not request.template.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Template must not be empty",
+        )
+
+    from telegram import Bot
+
+    bot = Bot(token=settings.bot_token)
+    result = await messaging_service.send_messages(
+        db, event.id, request.template, request.roles, bot,
+        request.guest_subtype, request.room_id,
+    )
+    return MessagingSendResult(**result)
