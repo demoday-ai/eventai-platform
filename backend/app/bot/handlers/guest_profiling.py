@@ -640,44 +640,86 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle text messages in VIEW_PROGRAM state — show profile info."""
-    import uuid as _uuid
+    """Handle text messages in VIEW_PROGRAM — LLM-powered Q&A about recommendations."""
+    import json as _json
+    from app.services import llm_client
 
+    user_message = update.message.text
+    recs_data = context.user_data.get("recommendations", {})
+
+    # Build context about profile and recommendations
+    profile_info = ""
     user_id = context.user_data.get("profile_user_id")
     event_id = context.user_data.get("profile_event_id")
+    if user_id and event_id:
+        import uuid as _uuid
+        async with async_session() as session:
+            profile = await profiling_service.get_or_create_profile(
+                session, _uuid.UUID(user_id), _uuid.UUID(event_id)
+            )
+            profile_info = (
+                f"Теги: {', '.join(profile.selected_tags) if profile.selected_tags else 'нет'}\n"
+                f"Ключевые слова: {', '.join(profile.keywords) if profile.keywords else 'нет'}"
+            )
+            if profile.extra_data:
+                ed = profile.extra_data
+                if ed.get("company"):
+                    profile_info += f"\nКомпания: {ed['company']}"
+                if ed.get("business_objectives"):
+                    profile_info += f"\nБизнес-цели: {', '.join(ed['business_objectives'])}"
 
-    if not user_id or not event_id:
-        await update.message.reply_text(
-            "Используйте кнопки выше или введите /profile для управления программой."
+    # Build recommendations summary for LLM context
+    recs_summary = ""
+    all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
+    for rec in all_recs:
+        category = "must_visit" if rec.get("relevance_score", 0) >= 80 else "if_time"
+        recs_summary += (
+            f"#{rec['rank']} [{category}, score={rec.get('relevance_score', 0)}%] "
+            f"{rec['title']} | tags={rec.get('tags', [])} | "
+            f"Зал {rec.get('room_number', '?')} | "
+            f"{(rec.get('summary') or '')[:200]}\n"
         )
-        return VIEW_PROGRAM
 
-    async with async_session() as session:
-        profile = await profiling_service.get_or_create_profile(
-            session, _uuid.UUID(user_id), _uuid.UUID(event_id)
-        )
-        tags = ", ".join(profile.selected_tags) if profile.selected_tags else "не выбраны"
-        keywords = ", ".join(profile.keywords) if profile.keywords else "нет"
-        extra = ""
-        if profile.extra_data:
-            ed = profile.extra_data
-            if ed.get("company"):
-                extra += f"\nКомпания: {ed['company']}"
-            if ed.get("business_objectives"):
-                extra += f"\nЦели: {', '.join(ed['business_objectives'])}"
-
-    recs_data = context.user_data.get("recommendations", {})
-    total = recs_data.get("total", 0)
-
-    text = (
-        f"Ваш профиль:\n"
-        f"Теги: {tags}\n"
-        f"Ключевые слова: {keywords}{extra}\n"
-        f"Рекомендаций: {total}\n\n"
-        f"Используйте кнопки выше для просмотра проектов "
-        f"или нажмите «Обновить профиль»."
+    system_prompt = (
+        "Ты — AI-куратор Demo Day. Пользователь уже получил персональную программу. "
+        "Отвечай кратко (2-4 предложения), по делу. Помогай с вопросами про рекомендации, "
+        "проекты, залы, маршрут. Если спрашивают про профиль — покажи. "
+        "Если просят что-то не связанное с Demo Day — мягко верни к теме.\n\n"
+        f"ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:\n{profile_info}\n\n"
+        f"РЕКОМЕНДАЦИИ ({len(all_recs)} проектов):\n{recs_summary}"
     )
-    await update.message.reply_text(text)
+
+    # Maintain conversation history in user_data
+    chat_history = context.user_data.get("program_chat", [])
+    chat_history.append({"role": "user", "content": user_message})
+    # Keep last 10 exchanges to fit context
+    if len(chat_history) > 20:
+        chat_history = chat_history[-20:]
+
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id, action=ChatAction.TYPING
+    )
+
+    try:
+        response = await llm_client.send_chat_completion(
+            system_prompt=system_prompt,
+            user_prompt="",
+            messages=chat_history,
+            json_mode=False,
+        )
+        reply = response if isinstance(response, str) else str(response)
+    except Exception:
+        logger.exception("LLM chat failed in VIEW_PROGRAM")
+        reply = (
+            f"Ваш профиль: {profile_info}\n"
+            f"Рекомендаций: {len(all_recs)}\n\n"
+            "Используйте кнопки выше для просмотра проектов."
+        )
+
+    chat_history.append({"role": "assistant", "content": reply})
+    context.user_data["program_chat"] = chat_history
+
+    await update.message.reply_text(reply)
     return VIEW_PROGRAM
 
 
