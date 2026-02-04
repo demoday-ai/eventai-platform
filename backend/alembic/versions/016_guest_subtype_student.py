@@ -14,8 +14,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add 'student' value to the existing enum type
-    op.execute("ALTER TYPE guest_subtype_enum ADD VALUE IF NOT EXISTS 'student'")
+    # Add 'STUDENT' value to the existing enum type (uppercase to match existing values)
+    op.execute("ALTER TYPE guest_subtype_enum ADD VALUE IF NOT EXISTS 'STUDENT'")
 
 
 def downgrade() -> None:
