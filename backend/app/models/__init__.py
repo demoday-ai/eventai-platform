@@ -1,3 +1,4 @@
+from app.models.audit_log import AdminAuditLog
 from app.models.base import Base
 from app.models.business_followup import BusinessFollowup, PipelineStatus
 from app.models.business_profile import BusinessObjective, BusinessProfile, OBJECTIVE_DISPLAY
@@ -14,6 +15,7 @@ from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_score import ExpertScore
 from app.models.expert_tag import ExpertTag
 from app.models.notification import Notification, NotificationStatus, NotificationType
+from app.models.organizer import Organizer
 from app.models.guest_profile import GuestProfile
 from app.models.project import Project
 from app.models.project_recommendation import ProjectRecommendation
@@ -38,6 +40,7 @@ from app.models.user import GuestSubtype, User
 from app.models.user_role import UserRole
 
 __all__ = [
+    "AdminAuditLog",
     "Base",
     "BriefingStatus",
     "BusinessFollowup",
@@ -66,6 +69,7 @@ __all__ = [
     "Notification",
     "NotificationStatus",
     "NotificationType",
+    "Organizer",
     "PipelineStatus",
     "Project",
     "ProjectRecommendation",

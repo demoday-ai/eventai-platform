@@ -26,6 +26,7 @@ class ExpertUploadResult(BaseModel):
     with_tags: int
     without_tags: int
     errors: list[RowError] = []
+    duplicate_warning: str | None = None
 
 
 class ReplaceConfirmation(BaseModel):

@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.config import settings
 from app.database import get_session
 from app.models.reminder import (
     ReminderNotification as Notification,
@@ -25,16 +24,19 @@ from app.schemas.reminder import (
     ReminderBatchSummary,
     ReminderPreview,
 )
-from app.services import reminder_service, user_service
+from app.services import organizer_service, reminder_service, user_service
 
 router = APIRouter(prefix="/reminders", tags=["Reminders"])
 
 
-def is_organizer(telegram_user_id: str | None) -> bool:
-    """Check if user is an organizer."""
+async def _is_organizer_query_param(
+    telegram_user_id: str | None,
+    session: AsyncSession,
+) -> bool:
+    """Check if user is an organizer (query-param auth)."""
     if not telegram_user_id:
         return False
-    return telegram_user_id in settings.organizer_ids
+    return await organizer_service.is_organizer(session, telegram_user_id)
 
 
 class PreviewRequest(BaseModel):
@@ -54,7 +56,7 @@ async def list_batches(
     session: AsyncSession = Depends(get_session),
 ):
     """List reminder batches for the current event."""
-    if not is_organizer(telegram_user_id):
+    if not await _is_organizer_query_param(telegram_user_id, session):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Доступ только для организаторов",
@@ -105,7 +107,7 @@ async def get_batch(
     session: AsyncSession = Depends(get_session),
 ):
     """Get detailed information about a specific reminder batch."""
-    if not is_organizer(telegram_user_id):
+    if not await _is_organizer_query_param(telegram_user_id, session):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Доступ только для организаторов",
@@ -158,7 +160,7 @@ async def preview_reminders(
     session: AsyncSession = Depends(get_session),
 ):
     """Preview recipients and message counts before sending."""
-    if not is_organizer(telegram_user_id):
+    if not await _is_organizer_query_param(telegram_user_id, session):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Доступ только для организаторов",

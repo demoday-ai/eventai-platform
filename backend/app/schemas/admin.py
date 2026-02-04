@@ -1,6 +1,6 @@
 """Admin dashboard schemas."""
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -150,6 +150,7 @@ class GuestUploadResult(BaseModel):
     imported: int
     duplicates: int
     errors: list[RowError] = []
+    duplicate_warning: str | None = None
 
 
 class BriefingPreview(BaseModel):
@@ -209,3 +210,41 @@ class MessagingSendResult(BaseModel):
     sent: int
     failed: int
     skipped: int
+
+
+class AuditLogItem(BaseModel):
+    """Single audit log entry."""
+
+    id: str
+    created_at: datetime
+    user_name: str | None = None
+    action: str
+    entity_type: str | None = None
+    entity_id: str | None = None
+    details: dict | None = None
+
+
+class AuditLogResponse(BaseModel):
+    """Paginated audit log response."""
+
+    total: int
+    items: list[AuditLogItem]
+
+
+class OrganizerItem(BaseModel):
+    """Organizer list item."""
+
+    id: str
+    telegram_id: str
+    telegram_username: str | None = None
+    name: str | None = None
+    added_by: str | None = None
+    created_at: datetime
+
+
+class OrganizerCreateRequest(BaseModel):
+    """Request to add a new organizer."""
+
+    telegram_id: str
+    telegram_username: str | None = None
+    name: str | None = None

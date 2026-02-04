@@ -188,6 +188,7 @@ export interface UploadResult {
   duplicates: number
   error_details: RowError[]
   duplicate_titles: string[]
+  duplicate_warning?: string | null
 }
 
 export interface UploadConflict {
@@ -202,6 +203,7 @@ export interface ExpertUploadResult {
   with_tags: number
   without_tags: number
   errors: RowError[]
+  duplicate_warning?: string | null
 }
 
 export interface ExpertUploadConflict {
@@ -216,6 +218,7 @@ export interface GuestUploadResult {
   imported: number
   duplicates: number
   errors: RowError[]
+  duplicate_warning?: string | null
 }
 
 export interface GuestUploadConflict {
@@ -1012,6 +1015,23 @@ export const sendBriefing = async (): Promise<BriefingSendResult> => {
   return data
 }
 
+// --- Audit log types ---
+
+export interface AuditLogItem {
+  id: string
+  created_at: string
+  user_name: string | null
+  action: string
+  entity_type: string | null
+  entity_id: string | null
+  details: Record<string, unknown> | null
+}
+
+export interface AuditLogResponse {
+  total: number
+  items: AuditLogItem[]
+}
+
 // --- Messaging types ---
 
 export interface RecipientPreviewItem {
@@ -1045,6 +1065,50 @@ export interface MessagingSendResult {
   sent: number
   failed: number
   skipped: number
+}
+
+// --- Audit log ---
+
+export const getAuditLog = async (params?: {
+  action?: string
+  limit?: number
+  offset?: number
+}): Promise<AuditLogResponse> => {
+  const { data } = await apiClient.get<AuditLogResponse>("/admin/audit-log", { params })
+  return data
+}
+
+// --- Organizer types ---
+
+export interface OrganizerItem {
+  id: string
+  telegram_id: string
+  telegram_username: string | null
+  name: string | null
+  added_by: string | null
+  created_at: string
+}
+
+export interface OrganizerCreateRequest {
+  telegram_id: string
+  telegram_username?: string | null
+  name?: string | null
+}
+
+// --- Organizer CRUD ---
+
+export const getOrganizers = async (): Promise<OrganizerItem[]> => {
+  const { data } = await apiClient.get<OrganizerItem[]>("/admin/organizers")
+  return data
+}
+
+export const addOrganizer = async (body: OrganizerCreateRequest): Promise<OrganizerItem> => {
+  const { data } = await apiClient.post<OrganizerItem>("/admin/organizers", body)
+  return data
+}
+
+export const removeOrganizer = async (id: string): Promise<void> => {
+  await apiClient.delete(`/admin/organizers/${id}`)
 }
 
 // --- Messaging ---

@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import check_organizer, get_current_user
 from app.database import get_session
 from app.models.user import User
 from app.schemas.participation import (
@@ -17,22 +17,11 @@ from app.services import participation_service, user_service
 router = APIRouter(prefix="/participation", tags=["Participation"])
 
 
-def _check_organizer(user: User, session=None):
-    from app.config import settings
-
-    if user.telegram_user_id not in settings.organizer_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только для организаторов",
-        )
-
-
 @router.post("/broadcast", response_model=BroadcastResult)
 async def broadcast_slots(
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_organizer),
     session: AsyncSession = Depends(get_session),
 ):
-    _check_organizer(user)
 
     event = await user_service.get_current_event(session)
     if not event:
@@ -55,10 +44,9 @@ async def broadcast_slots(
 @router.get("/summary", response_model=ParticipationSummary)
 async def get_summary(
     room_id: uuid.UUID | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_organizer),
     session: AsyncSession = Depends(get_session),
 ):
-    _check_organizer(user)
 
     event = await user_service.get_current_event(session)
     if not event:
@@ -73,10 +61,9 @@ async def get_summary(
 @router.get("/unacknowledged", response_model=UnacknowledgedList)
 async def get_unacknowledged(
     room_id: uuid.UUID | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_organizer),
     session: AsyncSession = Depends(get_session),
 ):
-    _check_organizer(user)
 
     event = await user_service.get_current_event(session)
     if not event:
@@ -91,10 +78,9 @@ async def get_unacknowledged(
 @router.get("/{request_id}", response_model=ParticipationRequestDetail)
 async def get_request_detail(
     request_id: uuid.UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_organizer),
     session: AsyncSession = Depends(get_session),
 ):
-    _check_organizer(user)
 
     from app.models.participation import ParticipationRequest
 

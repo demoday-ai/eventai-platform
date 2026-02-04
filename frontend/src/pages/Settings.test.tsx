@@ -16,6 +16,10 @@ vi.mock("../hooks/useAuth", () => ({
 vi.mock("../lib/api-client", () => ({
   getCurrentEvent: vi.fn(),
   updateCurrentEvent: vi.fn(),
+  getAuditLog: vi.fn(),
+  getOrganizers: vi.fn(),
+  addOrganizer: vi.fn(),
+  removeOrganizer: vi.fn(),
 }))
 
 const mockEvent: apiClient.Event = {
@@ -40,9 +44,54 @@ const createWrapper = () => {
   )
 }
 
+const mockAuditLog: apiClient.AuditLogResponse = {
+  total: 2,
+  items: [
+    {
+      id: "a1",
+      created_at: "2026-02-04T10:00:00Z",
+      user_name: "Admin User",
+      action: "upload_projects",
+      entity_type: "projects",
+      entity_id: null,
+      details: { loaded: 10 },
+    },
+    {
+      id: "a2",
+      created_at: "2026-02-04T11:00:00Z",
+      user_name: "Admin User",
+      action: "event_update",
+      entity_type: "event",
+      entity_id: "evt-123",
+      details: null,
+    },
+  ],
+}
+
+const mockOrganizers: apiClient.OrganizerItem[] = [
+  {
+    id: "org-1",
+    telegram_id: "111222",
+    telegram_username: "admin_user",
+    name: "Админ Иванов",
+    added_by: "env",
+    created_at: "2026-01-15T10:00:00Z",
+  },
+  {
+    id: "org-2",
+    telegram_id: "333444",
+    telegram_username: null,
+    name: "Петров Петр",
+    added_by: "Админ Иванов",
+    created_at: "2026-01-20T12:00:00Z",
+  },
+]
+
 describe("Settings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(apiClient.getAuditLog).mockResolvedValue(mockAuditLog)
+    vi.mocked(apiClient.getOrganizers).mockResolvedValue(mockOrganizers)
   })
 
   it("renders title and loading state", () => {
@@ -187,6 +236,98 @@ describe("Settings", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Сохранено")).toBeInTheDocument()
+    })
+  })
+
+  it("renders audit log section", async () => {
+    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
+
+    render(<Settings />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Журнал действий")).toBeInTheDocument()
+    })
+  })
+
+  it("loads and displays audit log entries", async () => {
+    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
+
+    render(<Settings />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(apiClient.getAuditLog).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Admin User").length).toBeGreaterThan(0)
+    })
+  })
+
+  it("renders organizers section", async () => {
+    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
+
+    render(<Settings />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Организаторы")).toBeInTheDocument()
+    })
+  })
+
+  it("loads and displays organizer list", async () => {
+    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
+
+    render(<Settings />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(apiClient.getOrganizers).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Админ Иванов")).toBeInTheDocument()
+    })
+
+    expect(screen.getByText("111222")).toBeInTheDocument()
+    expect(screen.getByText("admin_user")).toBeInTheDocument()
+    expect(screen.getByText("Петров Петр")).toBeInTheDocument()
+  })
+
+  it("shows add organizer form and submits", async () => {
+    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
+    vi.mocked(apiClient.addOrganizer).mockResolvedValue({
+      id: "org-3",
+      telegram_id: "555666",
+      telegram_username: "new_org",
+      name: "Новый Организатор",
+      added_by: null,
+      created_at: "2026-02-04T15:00:00Z",
+    })
+
+    render(<Settings />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Добавить организатора")).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByText("Добавить организатора"))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Telegram ID *")).toBeInTheDocument()
+    })
+
+    await userEvent.type(screen.getByLabelText("Telegram ID *"), "555666")
+    await userEvent.type(screen.getByLabelText("Username"), "new_org")
+    await userEvent.type(screen.getByLabelText("Имя"), "Новый Организатор")
+
+    await userEvent.click(screen.getByRole("button", { name: "Добавить" }))
+
+    await waitFor(() => {
+      expect(apiClient.addOrganizer).toHaveBeenCalled()
+    })
+
+    expect(vi.mocked(apiClient.addOrganizer).mock.calls[0][0]).toEqual({
+      telegram_id: "555666",
+      telegram_username: "new_org",
+      name: "Новый Организатор",
     })
   })
 })

@@ -23,6 +23,7 @@ class UploadResult(BaseModel):
     duplicates: int
     error_details: list[RowError] = []
     duplicate_titles: list[str] = []
+    duplicate_warning: str | None = None
 
 
 class ReplaceConfirmation(BaseModel):

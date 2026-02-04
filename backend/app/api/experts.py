@@ -6,8 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.config import settings
+from app.api.deps import check_organizer, get_current_user
 from app.database import get_session
 from app.models.user import User
 from app.schemas.expert import (
@@ -19,16 +18,11 @@ from app.schemas.expert import (
     MatchingRequest,
     MoveExpertRequest,
 )
-from app.services import coverage_service, expert_service, invite_service, matching_service
+from app.services import audit_service, coverage_service, dedup_service, expert_service, invite_service, matching_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["experts"])
-
-
-def _require_organizer(user: User):
-    if str(user.telegram_user_id) not in settings.organizer_ids:
-        raise HTTPException(status_code=403, detail="Organizer access required")
 
 
 def _expert_to_response(expert) -> ExpertResponse:
@@ -53,9 +47,9 @@ async def upload_experts(
     file: UploadFile = File(...),
     confirm_replace: bool = Query(False),
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -79,6 +73,10 @@ async def upload_experts(
     # Parse uploaded file
     import json
     content = await file.read()
+
+    file_hash = dedup_service.compute_file_hash(content)
+    dup_info = await dedup_service.check_recent_duplicate(session, file_hash, "upload_experts")
+
     try:
         data = json.loads(content.decode("utf-8"))
     except Exception:
@@ -144,6 +142,12 @@ async def upload_experts(
 
         imported += 1
 
+    await audit_service.log_action(
+        session, current_user, "upload_experts",
+        entity_type="experts",
+        details={"imported": imported, "with_tags": with_tags, "without_tags": without_tags, "file_hash": file_hash},
+    )
+
     await session.commit()
 
     return {
@@ -152,6 +156,7 @@ async def upload_experts(
         "with_tags": with_tags,
         "without_tags": without_tags,
         "errors": errors,
+        "duplicate_warning": dup_info["warning"] if dup_info else None,
     }
 
 
@@ -159,9 +164,9 @@ async def upload_experts(
 async def create_expert(
     body: ExpertCreateRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -199,9 +204,9 @@ async def update_expert(
     expert_id: uuid.UUID,
     body: ExpertUpdateRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     expert = await expert_service.get_expert_detail(session, expert_id)
     if not expert:
@@ -269,9 +274,9 @@ async def get_expert(
 async def run_matching_endpoint(
     body: MatchingRequest | None = None,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -309,9 +314,9 @@ async def move_expert_endpoint(
     assignment_id: uuid.UUID,
     body: MoveExpertRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     assignment = await matching_service.move_expert(session, assignment_id, body.target_room_id)
     if not assignment:
@@ -331,9 +336,9 @@ async def move_expert_endpoint(
 @router.post("/matching/approve")
 async def approve_matching_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -357,9 +362,9 @@ async def approve_matching_endpoint(
 @router.get("/invites/preview")
 async def invite_preview_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -375,9 +380,9 @@ async def invite_preview_endpoint(
 @router.post("/invites/confirm")
 async def invite_confirm_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -394,9 +399,9 @@ async def invite_confirm_endpoint(
 @router.get("/coverage")
 async def coverage_dashboard_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -412,9 +417,9 @@ async def coverage_dashboard_endpoint(
 @router.get("/coverage/gaps")
 async def coverage_gaps_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -431,9 +436,9 @@ async def coverage_gaps_endpoint(
 async def coverage_room_detail_endpoint(
     room_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     from app.services import user_service
     event = await user_service.get_current_event(session)
@@ -467,9 +472,9 @@ async def list_escalations_endpoint(
 async def resolve_escalation_endpoint(
     escalation_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
-    _require_organizer(current_user)
+
 
     await invite_service.resolve_escalation(session, escalation_id)
     return {"status": "resolved"}

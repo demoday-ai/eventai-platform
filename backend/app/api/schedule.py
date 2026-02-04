@@ -6,9 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import check_organizer, get_current_user
 from app.database import get_session
-from app.config import settings
 from app.models import User
 from app.schemas.schedule import (
     NotificationDashboard,
@@ -28,19 +27,11 @@ from app.schemas.schedule import (
     SlotUpdateRequest,
     SlotUpdateResult,
 )
-from app.services import notification_service, schedule_service
+from app.services import audit_service, notification_service, schedule_service
 from app.services.notification_service import CancellationWindowClosedError
 from app.services import user_service
 
 router = APIRouter(tags=["Schedule"])
-
-
-def _check_organizer(user: User) -> None:
-    """Check if user is an organizer."""
-    if not user.telegram_user_id:
-        raise HTTPException(status_code=403, detail="Not an organizer")
-    if user.telegram_user_id not in settings.organizer_telegram_ids:
-        raise HTTPException(status_code=403, detail="Not an organizer")
 
 
 # ========== Schedule Endpoints (T015) ==========
@@ -50,10 +41,10 @@ def _check_organizer(user: User) -> None:
 async def generate_schedule(
     request: ScheduleGenerateRequest = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Auto-generate schedule from approved clustering."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -70,6 +61,12 @@ async def generate_schedule(
             day2_end=request.day2_end if request else None,
             slot_duration_minutes=request.slot_duration_minutes if request else 15,
         )
+        await audit_service.log_action(
+            db, current_user, "schedule_generate",
+            entity_type="schedule",
+            details={"total_slots": result.total_slots},
+        )
+        await db.commit()
         return result
     except ValueError as e:
         if "already exists" in str(e):
@@ -98,10 +95,10 @@ async def get_schedule(
 @router.post("/schedule/approve", response_model=ScheduleApproveResult)
 async def approve_schedule(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Approve the schedule."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -109,6 +106,11 @@ async def approve_schedule(
 
     try:
         result = await schedule_service.approve_schedule(db, event.id)
+        await audit_service.log_action(
+            db, current_user, "schedule_approve",
+            entity_type="schedule",
+        )
+        await db.commit()
         return ScheduleApproveResult(**result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -119,10 +121,10 @@ async def update_slot(
     slot_id: UUID,
     request: SlotUpdateRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Update a schedule slot (T030)."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -147,6 +149,12 @@ async def update_slot(
             notifications_queued = await notification_service.queue_timing_shift_notifications(
                 db, change_log, event.id
             )
+
+        await audit_service.log_action(
+            db, current_user, "slot_update",
+            entity_type="schedule_slot", entity_id=str(slot_id),
+            details={"notifications_queued": notifications_queued},
+        )
 
         return SlotUpdateResult(
             slot=ScheduleSlotResponse(
@@ -211,10 +219,10 @@ async def get_schedule_changes(
 async def preview_reminders(
     day: date | None = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Preview pending reminders."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -232,10 +240,10 @@ async def preview_reminders(
 async def cancel_reminders(
     request: ReminderCancelRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Cancel pending eve-of-DD reminders."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -254,10 +262,10 @@ async def cancel_reminders(
 async def send_reminders(
     request: ReminderSendRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Manually trigger reminder send."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -291,10 +299,10 @@ async def get_notification_dashboard(
     type: str | None = None,
     day: date | None = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Notification delivery dashboard (T032)."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:

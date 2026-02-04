@@ -174,6 +174,14 @@ export function DataImport() {
             </p>
           )}
 
+          {projectResult?.duplicate_warning && (
+            <Card className="border-amber-400 bg-amber-50">
+              <CardContent className="pt-4">
+                <p className="text-sm text-amber-800">{projectResult.duplicate_warning}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {projectResult && <ImportSummary result={projectResult} type="projects" />}
         </CardContent>
       </Card>
@@ -224,6 +232,14 @@ export function DataImport() {
                 ? expertMutation.error.message
                 : "Неизвестная ошибка"}
             </p>
+          )}
+
+          {expertResult?.duplicate_warning && (
+            <Card className="border-amber-400 bg-amber-50">
+              <CardContent className="pt-4">
+                <p className="text-sm text-amber-800">{expertResult.duplicate_warning}</p>
+              </CardContent>
+            </Card>
           )}
 
           {expertResult && <ImportSummary result={expertResult} type="experts" />}
@@ -297,6 +313,14 @@ export function DataImport() {
                 ? guestMutation.error.message
                 : "Неизвестная ошибка"}
             </p>
+          )}
+
+          {guestResult?.duplicate_warning && (
+            <Card className="border-amber-400 bg-amber-50">
+              <CardContent className="pt-4">
+                <p className="text-sm text-amber-800">{guestResult.duplicate_warning}</p>
+              </CardContent>
+            </Card>
           )}
 
           {guestResult && <ImportSummary result={guestResult} type="guests" />}

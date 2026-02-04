@@ -10,42 +10,29 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import check_organizer, get_current_user
 from app.config import settings
 from app.database import get_session
 from app.models import User
 from app.models.role import RoleCode
 from app.models.user import GuestSubtype
 from app.models.user_role import UserRole
-from app.schemas.admin import BriefingPreview, BriefingSendResult, DashboardResponse, EventUpdateRequest, GuestUploadResult, MessagingPreviewRequest, MessagingPreviewResponse, MessagingSendRequest, MessagingSendResult, ProjectListItem, RoomCoverage, RoomDetailResponse
+from app.schemas.admin import AuditLogItem, AuditLogResponse, BriefingPreview, BriefingSendResult, DashboardResponse, EventUpdateRequest, GuestUploadResult, MessagingPreviewRequest, MessagingPreviewResponse, MessagingSendRequest, MessagingSendResult, OrganizerCreateRequest, OrganizerItem, ProjectListItem, RoomCoverage, RoomDetailResponse
 from app.schemas.expert import RowError
 from app.schemas.user import EventResponse
-from app.services import admin_service, briefing_service, messaging_service, user_service
+from app.services import admin_service, audit_service, briefing_service, dedup_service, messaging_service, organizer_service, user_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
-def _check_organizer(user: User) -> None:
-    """Check if user is an organizer."""
-    if not user.telegram_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not an organizer"
-        )
-    if user.telegram_user_id not in settings.organizer_telegram_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not an organizer"
-        )
-
-
 @router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get dashboard statistics for organizer."""
-    _check_organizer(current_user)
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -59,10 +46,10 @@ async def get_dashboard(
 @router.get("/coverage", response_model=list[RoomCoverage])
 async def get_coverage(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get room coverage statistics."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -77,10 +64,10 @@ async def get_coverage(
 async def get_room_detail(
     room_id: UUID,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get detailed information about a specific room."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -100,10 +87,10 @@ async def get_projects(
     status: str | None = None,
     search: str | None = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get list of all projects with optional filters."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -118,10 +105,10 @@ async def get_projects(
 async def update_current_event(
     request: EventUpdateRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Update current event details (name, dates, description)."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -139,10 +126,18 @@ async def update_current_event(
         )
 
     # Apply non-None fields
+    changes = {}
     for field in ("name", "start_date", "end_date", "description"):
         value = getattr(request, field)
         if value is not None:
+            changes[field] = str(value)
             setattr(event, field, value)
+
+    await audit_service.log_action(
+        db, current_user, "event_update",
+        entity_type="event", entity_id=str(event.id),
+        details=changes,
+    )
 
     await db.commit()
     await db.refresh(event)
@@ -155,10 +150,10 @@ async def upload_guests(
     default_subtype: str = Query(...),
     confirm_replace: bool = Query(False),
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Bulk import guests from CSV or JSON file."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -222,6 +217,8 @@ async def upload_guests(
 
     # Parse file
     content = await file.read()
+    file_hash = dedup_service.compute_file_hash(content)
+    dup_info = await dedup_service.check_recent_duplicate(db, file_hash, "upload_guests")
     filename = file.filename or ""
     rows: list[dict] = []
 
@@ -285,21 +282,28 @@ async def upload_guests(
 
         imported += 1
 
+    await audit_service.log_action(
+        db, current_user, "upload_guests",
+        entity_type="guests",
+        details={"imported": imported, "duplicates": duplicates, "errors": len(errors), "file_hash": file_hash},
+    )
+
     return GuestUploadResult(
         total_parsed=len(rows),
         imported=imported,
         duplicates=duplicates,
         errors=errors,
+        duplicate_warning=dup_info["warning"] if dup_info else None,
     )
 
 
 @router.get("/briefing/preview", response_model=BriefingPreview)
 async def get_briefing_preview(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get briefing preview: how many experts will receive briefings."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -319,10 +323,10 @@ async def get_briefing_preview(
 @router.post("/briefing/send", response_model=BriefingSendResult)
 async def send_briefings(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Send briefings to all confirmed experts."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -335,6 +339,13 @@ async def send_briefings(
     bot = Bot(token=settings.bot_token)
     result = await briefing_service.send_all_briefings(db, event.id, bot)
 
+    await audit_service.log_action(
+        db, current_user, "send_briefing",
+        entity_type="briefing",
+        details={"sent": result["sent"], "failed": result["failed"], "skipped": result["skipped"]},
+    )
+    await db.commit()
+
     return BriefingSendResult(**result)
 
 
@@ -345,10 +356,10 @@ VALID_MESSAGING_ROLES = {"student", "expert", "guest", "business"}
 async def messaging_preview(
     request: MessagingPreviewRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Preview messaging recipients before sending."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -386,10 +397,10 @@ async def messaging_preview(
 async def messaging_send(
     request: MessagingSendRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Send messages to selected audience."""
-    _check_organizer(current_user)
+
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -423,4 +434,103 @@ async def messaging_send(
         db, event.id, request.template, request.roles, bot,
         request.guest_subtype, request.room_id,
     )
+
+    await audit_service.log_action(
+        db, current_user, "send_messaging",
+        entity_type="messaging",
+        details={"roles": request.roles, "sent": result["sent"], "failed": result["failed"]},
+    )
+    await db.commit()
+
     return MessagingSendResult(**result)
+
+
+@router.get("/audit-log", response_model=AuditLogResponse)
+async def get_audit_log(
+    action: str | None = None,
+    limit: int = Query(default=50, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(check_organizer),
+):
+    """Get paginated admin audit log."""
+
+
+    entries, total = await audit_service.get_audit_log(db, action=action, limit=limit, offset=offset)
+
+    return AuditLogResponse(
+        total=total,
+        items=[
+            AuditLogItem(
+                id=str(e.id),
+                created_at=e.created_at,
+                user_name=e.user_name,
+                action=e.action,
+                entity_type=e.entity_type,
+                entity_id=e.entity_id,
+                details=e.details,
+            )
+            for e in entries
+        ],
+    )
+
+
+# ========== Organizer CRUD ==========
+
+
+@router.get("/organizers", response_model=list[OrganizerItem])
+async def list_organizers(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(check_organizer),
+):
+    """List all organizers."""
+    organizers = await organizer_service.list_organizers(db)
+    return [
+        OrganizerItem(
+            id=str(o.id),
+            telegram_id=o.telegram_id,
+            telegram_username=o.telegram_username,
+            name=o.name,
+            added_by=o.added_by,
+            created_at=o.created_at,
+        )
+        for o in organizers
+    ]
+
+
+@router.post("/organizers", response_model=OrganizerItem, status_code=201)
+async def add_organizer(
+    request: OrganizerCreateRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(check_organizer),
+):
+    """Add a new organizer."""
+    organizer = await organizer_service.add_organizer(
+        db,
+        telegram_id=request.telegram_id,
+        telegram_username=request.telegram_username,
+        name=request.name,
+        added_by=current_user.full_name,
+    )
+    await db.commit()
+    return OrganizerItem(
+        id=str(organizer.id),
+        telegram_id=organizer.telegram_id,
+        telegram_username=organizer.telegram_username,
+        name=organizer.name,
+        added_by=organizer.added_by,
+        created_at=organizer.created_at,
+    )
+
+
+@router.delete("/organizers/{organizer_id}", status_code=204)
+async def delete_organizer(
+    organizer_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(check_organizer),
+):
+    """Remove an organizer."""
+    deleted = await organizer_service.remove_organizer(db, organizer_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Organizer not found")
+    await db.commit()

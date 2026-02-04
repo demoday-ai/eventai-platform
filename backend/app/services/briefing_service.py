@@ -19,6 +19,7 @@ from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.project import Project
 from app.models.room_project import RoomProject
 from app.services import github_service, matching_service
+from app.services.send_retry import send_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -180,24 +181,22 @@ async def send_briefing(
         logger.warning("Expert %s has no telegram_chat_id", expert.name)
         return briefing
 
-    try:
-        for msg in messages:
-            await bot.send_message(
-                chat_id=int(tg_id),
-                text=msg,
-                parse_mode="Markdown",
-                disable_web_page_preview=True,
-            )
-            await asyncio.sleep(SEND_DELAY)
+    for msg in messages:
+        success, error = await send_with_retry(
+            bot, int(tg_id), msg,
+            parse_mode="Markdown",
+            disable_web_page_preview=True,
+        )
+        if not success:
+            briefing.status = BriefingStatus.FAILED
+            briefing.error_message = error
+            logger.error("Failed to send briefing to %s: %s", expert.name, error)
+            return briefing
+        await asyncio.sleep(SEND_DELAY)
 
-        briefing.status = BriefingStatus.SENT
-        briefing.sent_at = datetime.now(timezone.utc)
-        logger.info("Briefing sent to expert %s (%d projects)", expert.name, len(projects))
-
-    except Exception as e:
-        briefing.status = BriefingStatus.FAILED
-        briefing.error_message = str(e)[:500]
-        logger.error("Failed to send briefing to %s: %s", expert.name, e)
+    briefing.status = BriefingStatus.SENT
+    briefing.sent_at = datetime.now(timezone.utc)
+    logger.info("Briefing sent to expert %s (%d projects)", expert.name, len(projects))
 
     return briefing
 

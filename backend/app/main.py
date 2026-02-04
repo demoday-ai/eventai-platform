@@ -51,6 +51,11 @@ async def lifespan(app: FastAPI):
                 expert_loaded = await expert_service.load_seed_experts(session, event.id)
                 if expert_loaded:
                     logger.info("Expert seed loaded: %d experts", expert_loaded)
+
+                from app.services import organizer_service
+                org_seeded = await organizer_service.seed_from_env(session)
+                if org_seeded:
+                    logger.info("Organizer seed loaded: %d organizers", org_seeded)
     except Exception:
         logger.exception("Failed to load seed data (non-fatal)")
 

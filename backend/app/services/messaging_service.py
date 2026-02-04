@@ -18,6 +18,7 @@ from app.models.role import Role
 from app.models.user import User
 from app.models.user_role import UserRole
 from app.services import matching_service
+from app.services.send_retry import send_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -160,14 +161,13 @@ async def send_messages(
 
         text = render_template(template, user)
 
-        try:
-            await bot.send_message(
-                chat_id=int(user.telegram_user_id),
-                text=text,
-            )
+        success, error = await send_with_retry(
+            bot, int(user.telegram_user_id), text,
+        )
+        if success:
             sent += 1
-        except Exception as e:
-            logger.error("Failed to send message to %s: %s", user.full_name, e)
+        else:
+            logger.error("Failed to send message to %s: %s", user.full_name, error)
             failed += 1
 
         await asyncio.sleep(SEND_DELAY)

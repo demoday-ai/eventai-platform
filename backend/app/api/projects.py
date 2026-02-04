@@ -18,7 +18,7 @@ from app.schemas.project import (
     RoomSummary,
     UploadResult,
 )
-from app.services import clustering_service, project_service, user_service
+from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,9 @@ async def upload_projects(
     if not content:
         raise HTTPException(status_code=400, detail="Файл пуст")
 
+    file_hash = dedup_service.compute_file_hash(content)
+    dup_info = await dedup_service.check_recent_duplicate(session, file_hash, "upload_projects")
+
     # Parse
     try:
         if filename.endswith(".csv"):
@@ -111,12 +114,19 @@ async def upload_projects(
 
     logger.info("Upload: %d loaded, %d errors, %d duplicates", loaded, len(errors), len(duplicate_titles))
 
+    await audit_service.log_action(
+        session, user, "upload_projects",
+        entity_type="projects",
+        details={"loaded": loaded, "errors": len(errors), "duplicates": len(duplicate_titles), "file_hash": file_hash},
+    )
+
     return UploadResult(
         loaded=loaded,
         errors=len(errors),
         duplicates=len(duplicate_titles),
         error_details=errors[:50],
         duplicate_titles=duplicate_titles[:20],
+        duplicate_warning=dup_info["warning"] if dup_info else None,
     )
 
 
