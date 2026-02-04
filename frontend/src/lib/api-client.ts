@@ -985,3 +985,29 @@ export const getScheduleChanges = async (params?: {
   const { data } = await apiClient.get<ScheduleChangeListResponse>("/schedule/changes", { params })
   return data
 }
+
+// --- Briefing types ---
+
+export interface BriefingPreview {
+  expert_count: number
+  with_telegram: number
+  without_telegram: number
+}
+
+export interface BriefingSendResult {
+  sent: number
+  failed: number
+  skipped: number
+}
+
+// --- Briefing ---
+
+export const getBriefingPreview = async (): Promise<BriefingPreview> => {
+  const { data } = await apiClient.get<BriefingPreview>("/admin/briefing/preview")
+  return data
+}
+
+export const sendBriefing = async (): Promise<BriefingSendResult> => {
+  const { data } = await apiClient.post<BriefingSendResult>("/admin/briefing/send")
+  return data
+}

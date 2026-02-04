@@ -10,6 +10,7 @@ import {
   UserCheck,
   Bell,
   Settings,
+  FileText,
 } from "lucide-react"
 import { cn } from "../../lib/utils"
 
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/import", label: "Импорт данных", icon: Upload },
   { to: "/clustering", label: "Кластеризация", icon: Layers },
   { to: "/experts", label: "Эксперты", icon: Users },
+  { to: "/briefing", label: "Брифинг", icon: FileText },
   { to: "/coverage", label: "Покрытие", icon: ShieldCheck },
   { to: "/schedule", label: "Расписание", icon: Calendar },
   { to: "/participation", label: "Участие", icon: UserCheck },

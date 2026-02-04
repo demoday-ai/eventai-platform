@@ -17,10 +17,10 @@ from app.models import User
 from app.models.role import RoleCode
 from app.models.user import GuestSubtype
 from app.models.user_role import UserRole
-from app.schemas.admin import DashboardResponse, EventUpdateRequest, GuestUploadResult, ProjectListItem, RoomCoverage, RoomDetailResponse
+from app.schemas.admin import BriefingPreview, BriefingSendResult, DashboardResponse, EventUpdateRequest, GuestUploadResult, ProjectListItem, RoomCoverage, RoomDetailResponse
 from app.schemas.expert import RowError
 from app.schemas.user import EventResponse
-from app.services import admin_service, user_service
+from app.services import admin_service, briefing_service, user_service
 
 logger = logging.getLogger(__name__)
 
@@ -291,3 +291,48 @@ async def upload_guests(
         duplicates=duplicates,
         errors=errors,
     )
+
+
+@router.get("/briefing/preview", response_model=BriefingPreview)
+async def get_briefing_preview(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get briefing preview: how many experts will receive briefings."""
+    _check_organizer(current_user)
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    result = await briefing_service.get_briefing_preview(db, event.id)
+    if "error" in result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=result["error"]
+        )
+
+    return BriefingPreview(**result)
+
+
+@router.post("/briefing/send", response_model=BriefingSendResult)
+async def send_briefings(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Send briefings to all confirmed experts."""
+    _check_organizer(current_user)
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    from telegram import Bot
+
+    bot = Bot(token=settings.bot_token)
+    result = await briefing_service.send_all_briefings(db, event.id, bot)
+
+    return BriefingSendResult(**result)

@@ -150,3 +150,19 @@ class GuestUploadResult(BaseModel):
     imported: int
     duplicates: int
     errors: list[RowError] = []
+
+
+class BriefingPreview(BaseModel):
+    """Briefing preview for organizer."""
+
+    expert_count: int
+    with_telegram: int
+    without_telegram: int
+
+
+class BriefingSendResult(BaseModel):
+    """Result of sending briefings."""
+
+    sent: int
+    failed: int
+    skipped: int
