@@ -68,6 +68,23 @@ async def _load_tags(event_id) -> list[tuple[str, int]]:
         return await profiling_service.get_available_tags(session, event_id)
 
 
+def _truncate(text: str, limit: int) -> str:
+    """Truncate text at sentence boundary, fallback to word boundary."""
+    if not text or len(text) <= limit:
+        return text
+    # Try to cut at last sentence end within limit
+    chunk = text[:limit]
+    for sep in (". ", "! ", "? ", ".\n"):
+        pos = chunk.rfind(sep)
+        if pos > limit // 3:
+            return chunk[: pos + 1]
+    # Fallback: cut at last space
+    pos = chunk.rfind(" ")
+    if pos > limit // 3:
+        return chunk[:pos] + "..."
+    return chunk + "..."
+
+
 def _escape_markdown(text: str) -> str:
     """Escape Markdown special characters."""
     if not text:
@@ -95,7 +112,7 @@ def _format_recommendations(data: dict) -> list[str]:
     must_text = "🎯 *Обязательно посетить:*\n\n"
     for rec in data.get("must_visit", []):
         title = _escape_markdown(rec["title"])
-        summary = _escape_markdown(rec["summary"][:200] if rec["summary"] else "")
+        summary = _escape_markdown(_truncate(rec["summary"], 200) if rec["summary"] else "")
         author = _escape_markdown(rec.get("author", ""))
         room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
         tags_str = ", ".join(rec.get("tags", [])[:4])
@@ -120,7 +137,7 @@ def _format_recommendations(data: dict) -> list[str]:
         part2 = ""
         for i, rec in enumerate(must_recs):
             title = _escape_markdown(rec["title"])
-            summary = _escape_markdown(rec["summary"][:200] if rec["summary"] else "")
+            summary = _escape_markdown(_truncate(rec["summary"], 200) if rec["summary"] else "")
             author = _escape_markdown(rec.get("author", ""))
             room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
             tags_str = ", ".join(rec.get("tags", [])[:4])
@@ -151,7 +168,7 @@ def _format_if_time(data: dict) -> list[str]:
     if_time_text = "⏰ *Если останется время:*\n\n"
     for rec in data.get("if_time", []):
         title = _escape_markdown(rec["title"])
-        summary = _escape_markdown(rec["summary"][:150] if rec["summary"] else "")
+        summary = _escape_markdown(_truncate(rec["summary"], 180) if rec["summary"] else "")
         room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
         tags_str = ", ".join(rec.get("tags", [])[:3])
 
@@ -170,7 +187,7 @@ def _format_if_time(data: dict) -> list[str]:
         part2 = ""
         for i, rec in enumerate(if_recs):
             title = _escape_markdown(rec["title"])
-            summary = _escape_markdown(rec["summary"][:150] if rec["summary"] else "")
+            summary = _escape_markdown(_truncate(rec["summary"], 180) if rec["summary"] else "")
             room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
             tags_str = ", ".join(rec.get("tags", [])[:3])
             entry = (
@@ -699,7 +716,7 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
     title = _escape_markdown(detail['title'])
-    description = _escape_markdown(detail['description'][:1500])
+    description = _escape_markdown(_truncate(detail['description'], 1500))
     author = _escape_markdown(detail.get('author', ''))
     telegram_contact = _escape_markdown(detail.get('telegram_contact', 'н/д'))
 
