@@ -724,12 +724,24 @@ async def generate_recommendations(
 
     summaries = await generate_llm_summaries(profile, summary_input)
 
-    # 8. Delete old recommendations
+    # 8. Normalize final scores to 0-100
+    raw_scores = [s for _, s in top15]
+    max_final = max(raw_scores) if raw_scores else 1.0
+    if max_final <= 0:
+        max_final = 1.0
+    # If scores are already 0-100 scale (from score_projects), keep them;
+    # if they're 0-1 scale (from LLM rerank), scale up.
+    if max_final <= 1.0:
+        top15 = [(pid, round(s * 100, 1)) for pid, s in top15]
+    elif max_final > 100:
+        top15 = [(pid, round(s / max_final * 100, 1)) for pid, s in top15]
+
+    # 9. Delete old recommendations
     await session.execute(
         delete(Recommendation).where(Recommendation.guest_profile_id == profile.id)
     )
 
-    # 9. Save new recommendations
+    # 10. Save new recommendations
     recs = []
     for rank_idx, (pid, score) in enumerate(top15):
         category = "must_visit" if rank_idx < 5 else "if_time"
