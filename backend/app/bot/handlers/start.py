@@ -397,6 +397,8 @@ async def _show_profile_confirmation(
             reply_markup=confirm_nl_profile_keyboard(),
         )
 
+    return CONFIRM_PROFILE
+
 
 # --- CONFIRM_PROFILE state ---
 
