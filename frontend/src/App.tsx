@@ -7,6 +7,7 @@ import { ProjectsList } from "./pages/ProjectsList"
 import { DataImport } from "./pages/DataImport"
 import { Clustering } from "./pages/Clustering"
 import { ExpertMatching } from "./pages/ExpertMatching"
+import { ExpertList } from "./pages/ExpertList"
 import { Schedule } from "./pages/Schedule"
 import { Coverage } from "./pages/Coverage"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
@@ -33,6 +34,7 @@ function App() {
           <Route path="/import" element={<DataImport />} />
           <Route path="/clustering" element={<Clustering />} />
           <Route path="/experts" element={<ExpertMatching />} />
+          <Route path="/experts/list" element={<ExpertList />} />
           <Route path="/coverage" element={<Coverage />} />
           <Route path="/coverage/rooms/:roomId" element={<CoverageRoomDetail />} />
           <Route path="/schedule" element={<Schedule />} />

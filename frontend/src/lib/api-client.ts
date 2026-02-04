@@ -147,6 +147,33 @@ export interface ProjectsListParams {
   search?: string
 }
 
+// --- Expert list types ---
+
+export interface ExpertListItem {
+  id: string
+  seed_id: string
+  name: string
+  telegram_username: string | null
+  position: string | null
+  tags: string[]
+  bot_started: boolean
+  assignment_status: string | null
+}
+
+export interface ExpertCreateRequest {
+  name: string
+  telegram_username?: string | null
+  position?: string | null
+  tags?: string[]
+}
+
+export interface ExpertUpdateRequest {
+  name?: string | null
+  telegram_username?: string | null
+  position?: string | null
+  tags?: string[] | null
+}
+
 // --- Upload / Import types ---
 
 export interface RowError {
@@ -705,6 +732,23 @@ export const uploadExperts = async (
     headers: { "Content-Type": "multipart/form-data" },
     params: { confirm_replace: confirmReplace },
   })
+  return data
+}
+
+// --- Expert CRUD ---
+
+export const getExperts = async (params?: { search?: string }): Promise<ExpertListItem[]> => {
+  const { data } = await apiClient.get<ExpertListItem[]>("/experts", { params })
+  return data
+}
+
+export const createExpert = async (body: ExpertCreateRequest): Promise<ExpertListItem> => {
+  const { data } = await apiClient.post<ExpertListItem>("/experts", body)
+  return data
+}
+
+export const updateExpert = async (id: string, body: ExpertUpdateRequest): Promise<ExpertListItem> => {
+  const { data } = await apiClient.patch<ExpertListItem>(`/experts/${id}`, body)
   return data
 }
 

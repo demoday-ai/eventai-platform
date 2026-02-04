@@ -159,6 +159,37 @@ async def get_expert_detail(session: AsyncSession, expert_id) -> Expert | None:
     return result.scalars().first()
 
 
+async def sync_expert_tags(session: AsyncSession, expert: Expert, tag_names: list[str]) -> None:
+    """Delete existing tags for expert and set new ones."""
+    # Delete existing ExpertTag rows
+    existing = await session.execute(
+        select(ExpertTag).where(ExpertTag.expert_id == expert.id)
+    )
+    for et in existing.scalars().all():
+        await session.delete(et)
+    await session.flush()
+
+    # Build tag cache and create new ExpertTag rows
+    tag_cache: dict[str, Tag] = {}
+    for tag_name in tag_names:
+        tag_name = tag_name.strip()
+        if not tag_name:
+            continue
+        if tag_name not in tag_cache:
+            existing_tag = await session.scalar(
+                select(Tag).where(Tag.name == tag_name)
+            )
+            if existing_tag:
+                tag_cache[tag_name] = existing_tag
+            else:
+                tag = Tag(name=tag_name)
+                session.add(tag)
+                await session.flush()
+                tag_cache[tag_name] = tag
+        et = ExpertTag(expert_id=expert.id, tag_id=tag_cache[tag_name].id)
+        session.add(et)
+
+
 async def delete_all_experts(session: AsyncSession, event_id) -> int:
     """Delete all experts for an event (for replace flow)."""
     result = await session.execute(

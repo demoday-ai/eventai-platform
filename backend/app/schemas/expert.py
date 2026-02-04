@@ -159,6 +159,20 @@ class RoomCoverageDetail(BaseModel):
     suggested_adjacent: list[AdjacentExpert] = []
 
 
+class ExpertCreateRequest(BaseModel):
+    name: str
+    telegram_username: str | None = None
+    position: str | None = None
+    tags: list[str] = []
+
+
+class ExpertUpdateRequest(BaseModel):
+    name: str | None = None
+    telegram_username: str | None = None
+    position: str | None = None
+    tags: list[str] | None = None
+
+
 class EscalationResponse(BaseModel):
     id: uuid.UUID
     type: str

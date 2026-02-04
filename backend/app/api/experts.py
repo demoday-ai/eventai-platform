@@ -12,8 +12,10 @@ from app.database import get_session
 from app.models.user import User
 from app.schemas.expert import (
     ApproveResult,
+    ExpertCreateRequest,
     ExpertDetailResponse,
     ExpertResponse,
+    ExpertUpdateRequest,
     MatchingRequest,
     MoveExpertRequest,
 )
@@ -151,6 +153,78 @@ async def upload_experts(
         "without_tags": without_tags,
         "errors": errors,
     }
+
+
+@router.post("/experts")
+async def create_expert(
+    body: ExpertCreateRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    _require_organizer(current_user)
+
+    from app.services import user_service
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+
+    from app.models.expert import Expert
+
+    telegram = body.telegram_username
+    if telegram and telegram.startswith("@"):
+        telegram = telegram[1:]
+
+    expert = Expert(
+        seed_id=f"manual-{uuid.uuid4().hex[:8]}",
+        name=body.name,
+        telegram_username=telegram or None,
+        position=body.position or None,
+        event_id=event.id,
+    )
+    session.add(expert)
+    await session.flush()
+
+    if body.tags:
+        await expert_service.sync_expert_tags(session, expert, body.tags)
+
+    await session.commit()
+
+    # Reload with tags
+    expert = await expert_service.get_expert_detail(session, expert.id)
+    return _expert_to_response(expert)
+
+
+@router.patch("/experts/{expert_id}")
+async def update_expert(
+    expert_id: uuid.UUID,
+    body: ExpertUpdateRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    _require_organizer(current_user)
+
+    expert = await expert_service.get_expert_detail(session, expert_id)
+    if not expert:
+        raise HTTPException(status_code=404, detail="Expert not found")
+
+    if body.name is not None:
+        expert.name = body.name
+    if body.telegram_username is not None:
+        telegram = body.telegram_username
+        if telegram.startswith("@"):
+            telegram = telegram[1:]
+        expert.telegram_username = telegram or None
+    if body.position is not None:
+        expert.position = body.position or None
+
+    if body.tags is not None:
+        await expert_service.sync_expert_tags(session, expert, body.tags)
+
+    await session.commit()
+
+    # Reload with tags
+    expert = await expert_service.get_expert_detail(session, expert_id)
+    return _expert_to_response(expert)
 
 
 @router.get("/experts")

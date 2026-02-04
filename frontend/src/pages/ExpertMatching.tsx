@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
@@ -108,7 +109,12 @@ export function ExpertMatching() {
 
   return (
     <div className="grid gap-6">
-      <h2 className="text-2xl font-bold">Эксперты</h2>
+      <div className="flex items-center gap-4">
+        <h2 className="text-2xl font-bold">Эксперты</h2>
+        <Link to="/experts/list">
+          <Button variant="outline" size="sm">Список экспертов</Button>
+        </Link>
+      </div>
 
       <Stepper steps={STEPS} currentStep={currentStep} />
 
