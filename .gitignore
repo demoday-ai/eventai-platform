@@ -36,3 +36,8 @@ data/test/_anonymization_mapping.json
 expert_full_data.json
 expert_analysis.json
 expert_stats.txt
+
+# Local planning artifacts
+task_plan.md
+findings.md
+progress.md
