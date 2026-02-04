@@ -1,7 +1,5 @@
 import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useAuth } from "../hooks/useAuth"
-import { useNavigate } from "react-router-dom"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Skeleton } from "../components/ui/skeleton"
@@ -10,9 +8,6 @@ import { getDashboard, getCoverage, type DashboardData, type Alert as AlertType 
 import { CoverageTable } from "../components/CoverageTable"
 
 export function Dashboard() {
-  const { telegramId, logout } = useAuth()
-  const navigate = useNavigate()
-
   // Set page title
   useEffect(() => {
     document.title = `${APP_NAME} - Dashboard`
@@ -41,11 +36,6 @@ export function Dashboard() {
     refetchInterval: 60000,
   })
 
-  const handleLogout = () => {
-    logout()
-    navigate("/login")
-  }
-
   const handleRefresh = () => {
     refetch()
   }
@@ -60,33 +50,21 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="border-b bg-background">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">{APP_NAME}</h1>
-          <div className="flex items-center gap-4">
-            {dataUpdatedAt && (
-              <span className="text-xs text-muted-foreground">
-                Обновлено: {formatLastUpdate(dataUpdatedAt)}
-              </span>
-            )}
-            <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              🔄
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              ID: {telegramId}
+    <div className="grid gap-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Dashboard</h2>
+        <div className="flex items-center gap-3">
+          {dataUpdatedAt && (
+            <span className="text-xs text-muted-foreground">
+              Обновлено: {formatLastUpdate(dataUpdatedAt)}
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              Выйти
-            </Button>
-          </div>
+          )}
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
+            🔄
+          </Button>
         </div>
-      </header>
+      </div>
 
-      {/* Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-6">
           {/* Welcome card */}
           <Card>
             <CardHeader>
@@ -178,8 +156,6 @@ export function Dashboard() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </main>
     </div>
   )
 }

@@ -129,13 +129,13 @@ describe("Dashboard", () => {
     })
   })
 
-  it("displays user telegram ID", () => {
+  it("displays dashboard title", () => {
     vi.mocked(apiClient.getDashboard).mockImplementation(
       () => new Promise(() => {})
     )
 
     render(<Dashboard />, { wrapper: createWrapper() })
 
-    expect(screen.getByText("ID: 123456")).toBeInTheDocument()
+    expect(screen.getByText("Dashboard")).toBeInTheDocument()
   })
 })

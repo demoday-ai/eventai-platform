@@ -10,6 +10,7 @@ export function RoomDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["roomDetail", id],
     queryFn: () => getRoomDetail(id!),
@@ -27,7 +28,7 @@ export function RoomDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <p className="text-muted-foreground">Загрузка...</p>
       </div>
     )
@@ -35,7 +36,7 @@ export function RoomDetail() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <Card className="border-red-500">
           <CardContent className="pt-6">
             <p className="text-red-500">
@@ -52,19 +53,12 @@ export function RoomDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="border-b bg-background">
-        <div className="container mx-auto px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            ← Назад
-          </Button>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-6">
+    <div className="grid gap-6">
+      <div>
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          ← Назад
+        </Button>
+      </div>
           {/* Room info */}
           <Card>
             <CardHeader>
@@ -115,8 +109,6 @@ export function RoomDetail() {
               </CardContent>
             </Card>
           )}
-        </div>
-      </main>
     </div>
   )
 }

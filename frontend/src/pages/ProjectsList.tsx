@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useNavigate } from "react-router-dom"
 import { getProjects, getCoverage, type ProjectListItem } from "../lib/api-client"
-import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
@@ -10,7 +8,6 @@ import { Label } from "../components/ui/label"
 import { APP_NAME } from "../lib/constants"
 
 export function ProjectsList() {
-  const navigate = useNavigate()
   const [roomFilter, setRoomFilter] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
@@ -41,7 +38,7 @@ export function ProjectsList() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <p className="text-muted-foreground">Загрузка...</p>
       </div>
     )
@@ -49,7 +46,7 @@ export function ProjectsList() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <Card className="border-red-500">
           <CardContent className="pt-6">
             <p className="text-red-500">
@@ -98,19 +95,7 @@ export function ProjectsList() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="border-b bg-background">
-        <div className="container mx-auto px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            ← Назад
-          </Button>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-6">
+    <div className="grid gap-6">
           {/* Filters */}
           <Card>
             <CardHeader>
@@ -211,8 +196,6 @@ export function ProjectsList() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </main>
     </div>
   )
 }
