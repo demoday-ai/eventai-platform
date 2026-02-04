@@ -373,11 +373,16 @@ async def _show_profile_confirmation(
     interests = profile_data.get("interests", [])
     goals = profile_data.get("goals", [])
 
+    # Merge button-picked topics + LLM-extracted interests for display
+    topics = context.user_data.get("nl_topics", set())
+    topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
+    all_tags = list(dict.fromkeys(topic_labels + interests))
+
     confirm_parts = []
     if summary:
         confirm_parts.append(summary)
-    if interests:
-        confirm_parts.append(f"Интересы: {', '.join(interests)}")
+    if all_tags:
+        confirm_parts.append(f"Теги: {', '.join(all_tags)}")
     if goals:
         confirm_parts.append(f"Цели: {', '.join(goals)}")
 
