@@ -369,14 +369,10 @@ async def _agent_turn(
     reply_text = result["message"]
     _add_to_conversation(context, "assistant", reply_text)
 
-    # Re-attach topic buttons so user can always pick tags
-    topics = context.user_data.get("nl_topics", set())
-    keyboard = _nl_topic_buttons_with_selection(topics)
-
     if is_message:
-        await update.message.reply_text(reply_text, reply_markup=keyboard)
+        await update.message.reply_text(reply_text)
     else:
-        await update.callback_query.edit_message_text(reply_text, reply_markup=keyboard)
+        await update.callback_query.edit_message_text(reply_text)
 
     return NL_PROFILE
 
@@ -498,14 +494,16 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             await query.edit_message_text("Ошибка. Попробуйте /start заново.")
             return ConversationHandler.END
 
-        # Extract partner extra data if present (business role)
-        extra_data = None
-        if any(k in profile_data for k in ("company", "position", "partner_status", "business_objectives")):
-            extra_data = {
-                k: profile_data[k]
-                for k in ("company", "position", "partner_status", "business_objectives")
-                if k in profile_data
-            }
+        # Build extra_data: always include nl_summary, plus business fields if present
+        extra_data = {}
+        summary = profile_data.get("summary")
+        if summary:
+            extra_data["nl_summary"] = summary
+        for k in ("company", "position", "partner_status", "business_objectives"):
+            if k in profile_data:
+                extra_data[k] = profile_data[k]
+        if not extra_data:
+            extra_data = None
 
         profile = await profiling_service.get_or_create_profile(
             session, user.id, event.id
@@ -531,7 +529,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
     goals = profile_data.get("goals", [])
     if goals:
         profile_parts.append(f"Цели: {', '.join(goals)}")
-    profile_parts.append("\nХотите получить персональную программу?")
+    profile_parts.append("\nНажмите кнопку, чтобы получить персональную программу:")
 
     await query.edit_message_text(
         "\n".join(profile_parts),

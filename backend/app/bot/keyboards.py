@@ -392,7 +392,7 @@ def escalation_detail_keyboard(escalation_id: str) -> InlineKeyboardMarkup:
 
 def start_profiling_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Начать профилирование", callback_data="start_profiling")],
+        [InlineKeyboardButton("🚀 Получить программу", callback_data="start_profiling")],
     ])
 
 

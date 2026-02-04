@@ -16,6 +16,7 @@ from telegram.ext import (
     filters,
 )
 
+from app.bot.handlers.contact import contact_button, contact_request_callback
 from app.bot.keyboards import (
     back_to_program_keyboard,
     confirm_interests_keyboard,
@@ -237,8 +238,12 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         interests = _format_interests(
             profile.selected_tags, profile.extracted_tags, profile.keywords
         )
+        profile_text = f"Ваш текущий профиль: {interests}"
+        if profile.extra_data and profile.extra_data.get("nl_summary"):
+            profile_text += f"\n\n{profile.extra_data['nl_summary']}"
+        profile_text += "\n\nОбновить?"
         await update.message.reply_text(
-            f"Ваш текущий профиль: {interests}\n\nОбновить?",
+            profile_text,
             reply_markup=update_profile_keyboard(),
         )
         return CHOOSE_TAGS  # Will be handled by update_yes/no callbacks
@@ -264,16 +269,12 @@ async def start_profiling_callback(update: Update, context: ContextTypes.DEFAULT
     context.user_data["profile_user_id"] = str(user.id)
     context.user_data["profile_event_id"] = str(event.id)
 
-    # Check if NL profiler already filled the profile — skip tag selection
+    # Check if NL profiler already filled the profile — skip straight to generation
     async with async_session() as session:
         profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
         if profile.selected_tags:
             context.user_data["profile_id"] = str(profile.id)
-            await query.edit_message_text(
-                "Сгенерировать персональную программу?",
-                reply_markup=generate_program_keyboard(),
-            )
-            return GENERATE_PROGRAM
+            return await _do_generate(update, context)
 
     # No tags yet — standard path via tag selection
     context.user_data["selected_tags"] = set()
@@ -649,6 +650,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     # Build context about profile and recommendations
     profile_info = ""
+    nl_summary = ""
     user_id = context.user_data.get("profile_user_id")
     event_id = context.user_data.get("profile_event_id")
     if user_id and event_id:
@@ -663,10 +665,13 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             )
             if profile.extra_data:
                 ed = profile.extra_data
+                nl_summary = ed.get("nl_summary", "")
                 if ed.get("company"):
                     profile_info += f"\nКомпания: {ed['company']}"
                 if ed.get("business_objectives"):
                     profile_info += f"\nБизнес-цели: {', '.join(ed['business_objectives'])}"
+            if nl_summary:
+                profile_info += f"\nО пользователе: {nl_summary}"
 
     # Build recommendations summary for LLM context
     recs_summary = ""
@@ -681,9 +686,22 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         )
 
     system_prompt = (
-        "Ты — AI-куратор Demo Day. Пользователь уже получил персональную программу. "
-        "Отвечай кратко (2-4 предложения), по делу. Помогай с вопросами про рекомендации, "
-        "проекты, залы, маршрут. Если спрашивают про профиль — покажи. "
+        "Ты — AI-куратор Demo Day. Пользователь уже получил персональную программу.\n"
+        "Отвечай кратко (2-5 предложений), по делу, на русском языке.\n\n"
+        "ТВОИ ВОЗМОЖНОСТИ:\n"
+        "1. ПРОФИЛЬ — Покажи профиль пользователя по запросу (теги, ключевые слова, описание).\n"
+        "2. Q&A-ПОМОЩНИК — Подготовь 3-5 умных вопросов к конкретному проекту из рекомендаций. "
+        "Учитывай профиль пользователя и описание проекта. Вопросы должны быть конкретными, "
+        "не общими.\n"
+        "3. МАТРИЦА СРАВНЕНИЯ — Сравни 2-5 проектов в виде текстовой таблицы по критериям: "
+        "тема, зал, релевантность, ключевые особенности. Используй простой текстовый формат.\n"
+        "4. КОНТАКТ С АВТОРОМ — Объясни, что можно нажать кнопку «📞 Связаться с автором» "
+        "в карточке проекта, автор получит запрос и решит, делиться ли контактом.\n"
+        "5. МАРШРУТ — Помоги спланировать переходы между залами. "
+        "Учитывай, что параллельные проекты в разных залах нельзя посетить одновременно.\n"
+        "6. НАВИГАЦИЯ — Объясни, как пользоваться кнопками: "
+        "номера проектов → детали, «Ещё рекомендации» → дополнительные, "
+        "«Обновить профиль» → изменить интересы и пересгенерировать.\n\n"
         "Если просят что-то не связанное с Demo Day — мягко верни к теме.\n\n"
         f"ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:\n{profile_info}\n\n"
         f"РЕКОМЕНДАЦИИ ({len(all_recs)} проектов):\n{recs_summary}"
@@ -776,9 +794,15 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
         llm_summary = _escape_markdown(detail['llm_summary'])
         text += f"\n\n💡 *Кратко:* {llm_summary}"
 
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup([
+        [contact_button(project_id)],
+        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+    ])
+
     await query.edit_message_text(
         text, parse_mode="Markdown",
-        reply_markup=back_to_program_keyboard(),
+        reply_markup=keyboard,
     )
     return VIEW_DETAIL
 
@@ -829,6 +853,7 @@ def get_profiling_handler() -> ConversationHandler:
             ],
             VIEW_DETAIL: [
                 CallbackQueryHandler(back_to_program_callback, pattern=r"^prof:back_program$"),
+                CallbackQueryHandler(contact_request_callback, pattern=r"^contact:req:"),
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
