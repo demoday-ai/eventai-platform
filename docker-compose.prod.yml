@@ -50,7 +50,7 @@ services:
       - "traefik.docker.network=traefik-public"
 
       # HTTP router
-      - "traefik.http.routers.demoday-frontend.rule=Host(`${DOMAIN:-team10.camp.aitalenthub.ru}`)"
+      - "traefik.http.routers.demoday-frontend.rule=Host(`${DOMAIN:-team12.camp.aitalenthub.ru}`)"
       - "traefik.http.routers.demoday-frontend.entrypoints=websecure"
       - "traefik.http.routers.demoday-frontend.tls=true"
       - "traefik.http.routers.demoday-frontend.tls.certresolver=letsencrypt"
