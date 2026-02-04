@@ -32,7 +32,7 @@ interface SelectTriggerProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   children?: React.ReactNode
 }
 
-export function SelectTrigger({ id, children, className, ...props }: SelectTriggerProps) {
+export function SelectTrigger({ id, children: _children, className, ...props }: SelectTriggerProps) {
   const { value, onValueChange, items } = React.useContext(SelectContext)
 
   return (
