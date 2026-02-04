@@ -435,10 +435,8 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
         for m in conversation
     )
 
-    # selected_tags = what user clicked (buttons)
-    # extracted_tags = what LLM extracted from the interview
-    selected_tags = list(dict.fromkeys(topic_labels))
-    extracted_tags = list(dict.fromkeys(interests))
+    # All confirmed tags: button picks + LLM-extracted interests (deduplicated)
+    all_tags = list(dict.fromkeys(topic_labels + interests))
 
     async with async_session() as session:
         user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
@@ -448,23 +446,18 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             await query.edit_message_text("Ошибка. Попробуйте /start заново.")
             return ConversationHandler.END
 
-        # Save guest profile with extracted data
         profile = await profiling_service.get_or_create_profile(
             session, user.id, event.id
         )
         await profiling_service.save_profile(
             session,
             profile,
-            selected_tags=selected_tags,
-            extracted_tags=extracted_tags,
+            selected_tags=all_tags,
             keywords=profile_data.get("goals", []),
             raw_text=raw_text or None,
         )
 
-    logger.info(
-        "Profile confirmed via NL: tg_id=%s selected=%s extracted=%s",
-        telegram_user_id, selected_tags, extracted_tags,
-    )
+    logger.info("Profile confirmed via NL: tg_id=%s tags=%s", telegram_user_id, all_tags)
 
     await query.edit_message_text(
         "Профиль сохранён! Хотите получить персональную программу?",

@@ -163,13 +163,12 @@ async def test_guest_workflow(session, event):
     profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
     await profiling_service.save_profile(
         session, profile,
-        selected_tags=["NLP", "CV", "LLM"],
-        extracted_tags=["ML в промышленности"],
+        selected_tags=["NLP", "CV", "LLM", "ML в промышленности"],
         keywords=["computer vision", "нейросети"],
         raw_text="Интересуюсь компьютерным зрением и NLP"
     )
     await session.commit()
-    print(f"      Tags: {profile.selected_tags + profile.extracted_tags}")
+    print(f"      Tags: {profile.selected_tags}")
     print(f"      Keywords: {profile.keywords}")
 
     # Generate recommendations

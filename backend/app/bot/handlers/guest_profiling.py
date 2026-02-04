@@ -394,13 +394,14 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
     event_id = _uuid.UUID(context.user_data["profile_event_id"])
     selected = list(context.user_data.get("selected_tags", set()))
     extracted = context.user_data.get("extracted_tags", [])
+    all_tags = list(dict.fromkeys(selected + extracted))
     keywords = context.user_data.get("keywords", [])
     raw_text = context.user_data.get("raw_text")
 
     async with async_session() as session:
         profile = await profiling_service.get_or_create_profile(session, user_id, event_id)
         await profiling_service.save_profile(
-            session, profile, selected, extracted, keywords, raw_text
+            session, profile, all_tags, keywords, raw_text
         )
         context.user_data["profile_id"] = str(profile.id)
 

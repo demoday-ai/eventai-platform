@@ -152,13 +152,12 @@ async def save_profile(
     session: AsyncSession,
     profile: GuestProfile,
     selected_tags: list[str],
-    extracted_tags: list[str],
     keywords: list[str],
     raw_text: str | None,
 ) -> GuestProfile:
     """Save/update profile fields. Deletes old recommendations on update."""
     profile.selected_tags = selected_tags
-    profile.extracted_tags = extracted_tags
+    profile.extracted_tags = []
     profile.keywords = keywords
     profile.raw_text = raw_text
 
@@ -168,7 +167,7 @@ async def save_profile(
     )
 
     await session.commit()
-    logger.info("Profile saved: user=%s tags=%s keywords=%s", profile.user_id, selected_tags + extracted_tags, keywords)
+    logger.info("Profile saved: user=%s tags=%s keywords=%s", profile.user_id, selected_tags, keywords)
     return profile
 
 
@@ -242,7 +241,7 @@ async def score_projects(
     idf = await compute_project_idf(session, event_id)
 
     # All guest interest tags (deduplicated)
-    all_tags = list(set(profile.selected_tags + profile.extracted_tags))
+    all_tags = list(set(profile.selected_tags))
     if not all_tags:
         return []
 
@@ -279,7 +278,7 @@ async def llm_rerank_projects(
     if not candidates:
         return []
 
-    all_tags = list(set(profile.selected_tags + profile.extracted_tags))
+    all_tags = list(set(profile.selected_tags))
     projects_json = [
         {
             "project_id": str(pid),
@@ -341,7 +340,7 @@ async def generate_llm_summaries(
     if not projects:
         return {}
 
-    all_tags = list(set(profile.selected_tags + profile.extracted_tags))
+    all_tags = list(set(profile.selected_tags))
     guest_interests = json.dumps(
         {"tags": all_tags, "keywords": profile.keywords},
         ensure_ascii=False,
