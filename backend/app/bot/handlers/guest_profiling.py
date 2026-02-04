@@ -191,6 +191,19 @@ async def start_profiling_callback(update: Update, context: ContextTypes.DEFAULT
     user, event, _ = auth
     context.user_data["profile_user_id"] = str(user.id)
     context.user_data["profile_event_id"] = str(event.id)
+
+    # Check if NL profiler already filled the profile — skip tag selection
+    async with async_session() as session:
+        profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
+        if profile.selected_tags:
+            context.user_data["profile_id"] = str(profile.id)
+            await query.edit_message_text(
+                "Сгенерировать персональную программу?",
+                reply_markup=generate_program_keyboard(),
+            )
+            return GENERATE_PROGRAM
+
+    # No tags yet — standard path via tag selection
     context.user_data["selected_tags"] = set()
     context.user_data["raw_text"] = None
 
@@ -566,7 +579,7 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
 
     room_info = f"Зал {detail['room_number']}: {_escape_markdown(detail['room_name'])}" if detail.get("room_number") else "Зал: н/д"
     tags_str = ", ".join(detail.get("tags", []))
-    score_pct = int(detail["relevance_score"] * 100) if detail["relevance_score"] > 0 else 0
+    score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
     title = _escape_markdown(detail['title'])
     description = _escape_markdown(detail['description'][:1500])

@@ -5,7 +5,8 @@ import logging
 import math
 import uuid
 
-from sqlalchemy import delete, func, select
+import sqlalchemy as sa
+from sqlalchemy import delete, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -306,11 +307,6 @@ async def save_profile(
     profile.raw_text = raw_text
     profile.extra_data = extra_data
 
-    # Delete old recommendations when profile is updated (T033)
-    await session.execute(
-        delete(Recommendation).where(Recommendation.guest_profile_id == profile.id)
-    )
-
     await session.commit()
     logger.info("Profile saved: user=%s tags=%s keywords=%s extra_data=%s", profile.user_id, selected_tags, keywords, extra_data)
     return profile
@@ -378,16 +374,112 @@ async def compute_project_idf(
 
 # --- T008: Score projects ---
 
+# Russian stop-words for text search filtering
+_STOP_WORDS = frozenset({
+    "это", "как", "для", "что", "при", "все", "его", "она", "они", "так",
+    "уже", "или", "если", "есть", "был", "они", "мне", "мой", "моя", "наш",
+    "ваш", "где", "кто", "чем", "без", "под", "над", "про", "еще", "тоже",
+    "очень", "будет", "можно", "нужно", "этот", "этом", "того", "тому",
+    "the", "and", "for", "with", "that", "this", "from", "are", "was", "not",
+})
+
+
+async def _text_search_scores(
+    session: AsyncSession, event_id: uuid.UUID, profile: GuestProfile,
+) -> dict[uuid.UUID, float]:
+    """Score projects via PostgreSQL full-text search on keywords and raw_text.
+
+    Returns {project_id: text_score} where score is a relative relevance value.
+    """
+    # Collect search terms from keywords + meaningful words from raw_text
+    terms: list[str] = []
+    if profile.keywords:
+        terms.extend(profile.keywords)
+
+    if profile.raw_text:
+        words = profile.raw_text.split()
+        for w in words:
+            cleaned = w.strip(".,;:!?\"'()[]{}").lower()
+            if len(cleaned) > 3 and cleaned not in _STOP_WORDS and cleaned not in terms:
+                terms.append(cleaned)
+
+    # Add business context terms
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            terms.append(ed["company"])
+        for obj in ed.get("business_objectives", []):
+            if obj not in terms:
+                terms.append(obj)
+
+    # Limit to 20 terms
+    terms = terms[:20]
+    if not terms:
+        return {}
+
+    # Try PostgreSQL full-text search first
+    query_parts = [t.replace("'", "''") for t in terms if t.strip()]
+    if not query_parts:
+        return {}
+
+    tsquery_str = " | ".join(query_parts)
+    scores: dict[uuid.UUID, float] = {}
+
+    try:
+        result = await session.execute(
+            sa.text(
+                "SELECT p.id, ts_rank("
+                "  to_tsvector('russian', coalesce(p.title, '') || ' ' || coalesce(p.description, '')), "
+                "  plainto_tsquery('russian', :query)"
+                ") AS rank "
+                "FROM projects p "
+                "WHERE p.event_id = :eid "
+                "AND to_tsvector('russian', coalesce(p.title, '') || ' ' || coalesce(p.description, '')) "
+                "   @@ plainto_tsquery('russian', :query) "
+                "ORDER BY rank DESC"
+            ),
+            {"query": " ".join(query_parts), "eid": event_id},
+        )
+        for row in result.all():
+            scores[row[0]] = float(row[1])
+    except Exception:
+        logger.warning("FTS search failed, trying ILIKE fallback")
+
+    # Fallback: if FTS gave no results, try ILIKE on keywords
+    if not scores:
+        try:
+            for term in terms[:5]:
+                pattern = f"%{term}%"
+                result = await session.execute(
+                    sa.text(
+                        "SELECT id FROM projects "
+                        "WHERE event_id = :eid "
+                        "AND (title ILIKE :pat OR description ILIKE :pat)"
+                    ),
+                    {"eid": event_id, "pat": pattern},
+                )
+                for row in result.all():
+                    scores[row[0]] = scores.get(row[0], 0.0) + 1.0
+        except Exception:
+            logger.warning("ILIKE fallback also failed")
+
+    return scores
+
 
 async def score_projects(
     session: AsyncSession, event_id: uuid.UUID, profile: GuestProfile
 ) -> list[tuple[uuid.UUID, float]]:
-    """Score all projects by IDF tag overlap with guest profile."""
+    """Score all projects by IDF tag overlap + text search, normalized to 0-100."""
     idf = await compute_project_idf(session, event_id)
 
     # All guest interest tags (deduplicated)
     all_tags = list(set(profile.selected_tags))
-    if not all_tags:
+
+    # Text search scores
+    text_scores = await _text_search_scores(session, event_id, profile)
+
+    # If no tags AND no text matches, return empty
+    if not all_tags and not text_scores:
         return []
 
     # Load all projects with their tags
@@ -398,15 +490,31 @@ async def score_projects(
     )
     projects = result.scalars().all()
 
-    scored: list[tuple[uuid.UUID, float]] = []
+    # Determine max IDF for scaling text boost
+    max_idf = max(idf.values()) if idf else 1.0
+
+    combined: dict[uuid.UUID, float] = {}
     for project in projects:
         project_tag_names = {pt.tag.name for pt in project.tags}
-        score = 0.0
+        idf_score = 0.0
         for tag in all_tags:
             if tag in project_tag_names:
-                score += idf.get(tag, 1.0)
-        scored.append((project.id, score))
+                idf_score += idf.get(tag, 1.0)
 
+        # Text boost scaled to IDF magnitude
+        text_boost = text_scores.get(project.id, 0.0) * max_idf
+        combined[project.id] = idf_score + text_boost
+
+    # Normalize to 0-100
+    max_score = max(combined.values()) if combined else 1.0
+    if max_score == 0:
+        max_score = 1.0
+
+    scored: list[tuple[uuid.UUID, float]] = [
+        (pid, round(score / max_score * 100, 1))
+        for pid, score in combined.items()
+        if score > 0
+    ]
     scored.sort(key=lambda x: x[1], reverse=True)
     return scored
 
@@ -428,16 +536,24 @@ async def llm_rerank_projects(
         {
             "project_id": str(pid),
             "title": title,
-            "description": desc[:300],
+            "description": desc[:500],
             "tags": tags,
         }
         for pid, _, title, desc, tags in candidates
     ]
 
+    extra_context = ""
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            extra_context += f', компания="{ed["company"]}"'
+        if ed.get("business_objectives"):
+            extra_context += f", бизнес-цели={json.dumps(ed['business_objectives'], ensure_ascii=False)}"
+
     user_prompt = (
         f"Профиль: теги={json.dumps(all_tags, ensure_ascii=False)}, "
         f"ключевые слова={json.dumps(profile.keywords, ensure_ascii=False)}, "
-        f'текст="{profile.raw_text or ""}"\n'
+        f'текст="{profile.raw_text or ""}"{extra_context}\n'
         f"Проекты: {json.dumps(projects_json, ensure_ascii=False)}"
     )
 
@@ -486,13 +602,18 @@ async def generate_llm_summaries(
         return {}
 
     all_tags = list(set(profile.selected_tags))
-    guest_interests = json.dumps(
-        {"tags": all_tags, "keywords": profile.keywords},
-        ensure_ascii=False,
-    )
+    interests_data: dict = {"tags": all_tags, "keywords": profile.keywords}
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            interests_data["company"] = ed["company"]
+        if ed.get("business_objectives"):
+            interests_data["business_objectives"] = ed["business_objectives"]
+
+    guest_interests = json.dumps(interests_data, ensure_ascii=False)
 
     projects_text = "\n".join(
-        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc[:400]}"
+        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc[:600]}"
         for pid, title, desc, tags in projects
     )
 
@@ -573,7 +694,7 @@ async def generate_recommendations(
         popular_result = await session.execute(
             select(Project.id)
             .where(Project.event_id == event_id)
-            .where(Project.id.notin_(existing_ids) if existing_ids else True)
+            .where(Project.id.notin_(existing_ids) if existing_ids else true())
             .order_by(Project.created_at)
             .limit(10 - len(top15))
         )
