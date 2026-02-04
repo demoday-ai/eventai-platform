@@ -40,7 +40,7 @@ SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерир
 {{"summaries": [{{"project_id": "...", "summary": "..."}}, ...]}}"""
 
 
-PROFILE_AGENT_SYSTEM = """Ты — дружелюбный AI-куратор Demo Day. Твоя задача — в диалоге выяснить интересы гостя.
+PROFILE_AGENT_SYSTEM = """Ты — AI-куратор Demo Day. Твоя задача — в диалоге выяснить интересы посетителя.
 
 На Demo Day ~330 студенческих AI-проектов в нескольких залах. Стандартные теги проектов:
 NLP, CV, LLM, Agents, EdTech, FinTech, MedTech, Security, ASR, TTS, Audio, Industrial, MLOps, RL, RecSys, Science, TimeSeries.
@@ -64,40 +64,156 @@ NLP, CV, LLM, Agents, EdTech, FinTech, MedTech, Security, ASR, TTS, Audio, Indus
 
 {selected_tags_block}
 
-Правила:
-1. Отвечай коротко (2-4 предложения), по-русски, дружелюбно но без лишней воды
-2. Если гость уже выбрал теги — учитывай их, уточняй детали по выбранным темам
-3. Задавай уточняющие вопросы: какая сфера, какие задачи, что ищет (идеи, найм, технологии, инвестиции)
-4. Когда собрал достаточно информации (хотя бы 2-3 интереса) — предложи подвести итог
+{role_context_block}
 
 Формат ответа — СТРОГО JSON:
 - Если нужно продолжить диалог:
-  {{"action": "reply", "message": "твой ответ гостю"}}
+  {{"action": "reply", "message": "твой ответ"}}
 - Если информации достаточно и пора фиксировать профиль:
-  {{"action": "profile", "interests": ["тег1", "тег2"], "goals": ["цель1"], "summary": "Краткое описание профиля"}}
+  {{"action": "profile", "interests": ["тег1", "тег2"], "goals": ["цель1"], "summary": "Краткое описание профиля"{partner_profile_fields}}}
 
 interests должны содержать стандартные теги из списка выше + при необходимости уточняющие подтеги.
 
 ВАЖНО: не торопись с action=profile. Сначала поговори, задай 1-2 вопроса. Переходи к profile только когда чётко понятны интересы."""
 
 
+# --- Role-dependent context blocks ---
+
+ROLE_CONTEXTS: dict[tuple[str, str | None], str] = {
+    ("guest", "student"): (
+        "Стиль общения: неформальный, на «ты», дружелюбный.\n"
+        "Собеседник — студент. Выясни:\n"
+        "- Какие технологии изучает или использует\n"
+        "- Какие проекты хочет увидеть, что вдохновляет\n"
+        "- Интересуют ли стажировки или карьерные возможности\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, неформально\n"
+        "2. Если уже выбраны теги — уточняй детали по ним\n"
+        "3. Задавай вопросы про стек, проекты, что хочет увидеть\n"
+        "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+    ),
+    ("guest", "applicant"): (
+        "Стиль общения: мотивирующий, на «ты», вдохновляющий.\n"
+        "Собеседник — абитуриент, который только присматривается к AI. Выясни:\n"
+        "- Какие области AI интересны (может не знать точных названий)\n"
+        "- Какое карьерное направление привлекает\n"
+        "- Уровень подготовки (школьник, первокурсник, самоучка)\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, мотивирующе\n"
+        "2. Если уже выбраны теги — объясни их простым языком\n"
+        "3. Помоги сориентироваться в направлениях AI\n"
+        "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+    ),
+    ("guest", "other"): (
+        "Стиль общения: профессиональный, на «вы», уважительный.\n"
+        "Собеседник указал свою роль как: «{custom_subtype_text}». Адаптируй диалог под эту роль.\n"
+        "Выясни:\n"
+        "- Профессиональные интересы, связанные с AI\n"
+        "- Что хочет найти на Demo Day\n"
+        "- Какие проекты будут наиболее полезны\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, на «вы»\n"
+        "2. Если уже выбраны теги — уточняй детали по ним\n"
+        "3. Задавай вопросы исходя из роли собеседника\n"
+        "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+    ),
+    ("business", None): (
+        "Стиль общения: деловой, на «вы», профессиональный.\n"
+        "Собеседник — бизнес-партнёр или потенциальный партнёр. Выясни:\n"
+        "- Компанию и должность\n"
+        "- Текущий или потенциальный партнёр (уже работает с Хабом или впервые)\n"
+        "- Бизнес-цели визита: инвестиции, найм, технологическое партнёрство, поиск решений\n"
+        "- Индустрию и какие AI-технологии интересны\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, на «вы», деловым тоном\n"
+        "2. Если уже выбраны теги — уточняй бизнес-контекст по ним\n"
+        "3. Обязательно спроси компанию и должность, если не указаны\n"
+        "4. Когда собрал достаточно (компания + цели + интересы) — предложи подвести итог\n\n"
+        "ВАЖНО: при action=profile добавь дополнительные поля:\n"
+        '  "company": "название компании",\n'
+        '  "position": "должность",\n'
+        '  "partner_status": "current" или "potential",\n'
+        '  "business_objectives": ["technology", "hiring", "investment", "partnership"]'
+    ),
+}
+
+# Default fallback context (generic guest)
+_DEFAULT_ROLE_CONTEXT = (
+    "Стиль общения: дружелюбный, по-русски.\n"
+    "Правила:\n"
+    "1. Отвечай коротко (2-4 предложения), дружелюбно но без лишней воды\n"
+    "2. Если уже выбраны теги — учитывай их, уточняй детали\n"
+    "3. Задавай уточняющие вопросы: какая сфера, какие задачи, что ищет\n"
+    "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+)
+
+
+def _build_role_context(
+    role_code: str | None,
+    guest_subtype: str | None,
+    custom_subtype: str | None,
+) -> tuple[str, str]:
+    """Build role context block and partner profile fields hint.
+
+    Returns (role_context_block, partner_profile_fields).
+    partner_profile_fields is a string to inject into JSON format hint for business role.
+    """
+    is_business = role_code == "business"
+    partner_profile_fields = ""
+    if is_business:
+        partner_profile_fields = (
+            ', "company": "...", "position": "...", '
+            '"partner_status": "current|potential", '
+            '"business_objectives": ["technology", "hiring", "investment", "partnership"]'
+        )
+
+    # Lookup context: business uses (business, None), guests use (guest, subtype)
+    if is_business:
+        ctx = ROLE_CONTEXTS.get(("business", None), _DEFAULT_ROLE_CONTEXT)
+    else:
+        ctx = ROLE_CONTEXTS.get(("guest", guest_subtype), _DEFAULT_ROLE_CONTEXT)
+
+    # Substitute custom_subtype_text for "other" subtype
+    if guest_subtype == "other" and custom_subtype:
+        ctx = ctx.replace("{custom_subtype_text}", custom_subtype)
+    else:
+        ctx = ctx.replace("{custom_subtype_text}", "гость")
+
+    return ctx, partner_profile_fields
+
+
 async def chat_for_profile(
-    conversation: list[dict], selected_tags: list[str] | None = None,
+    conversation: list[dict],
+    selected_tags: list[str] | None = None,
+    role_code: str | None = None,
+    guest_subtype: str | None = None,
+    custom_subtype: str | None = None,
 ) -> dict:
     """Multi-turn conversational profile discovery.
 
     conversation: list of {"role": "user"|"assistant", "content": "..."} messages.
     selected_tags: tags user already picked via buttons (may be empty).
+    role_code: "guest" or "business".
+    guest_subtype: "student", "applicant", "other" (for guests).
+    custom_subtype: free-text subtype when guest_subtype is "other".
     Returns dict with either:
       {"action": "reply", "message": "..."} — continue conversation
-      {"action": "profile", "interests": [...], "goals": [...], "summary": "..."} — done
+      {"action": "profile", "interests": [...], "goals": [...], "summary": "...", ...} — done
     """
     if selected_tags:
-        tags_block = f"Гость уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
+        tags_block = f"Посетитель уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
     else:
-        tags_block = "Гость пока не выбрал теги. Помоги ему определиться."
+        tags_block = "Посетитель пока не выбрал теги. Помоги определиться."
 
-    system_prompt = PROFILE_AGENT_SYSTEM.format(selected_tags_block=tags_block)
+    role_context_block, partner_profile_fields = _build_role_context(
+        role_code, guest_subtype, custom_subtype,
+    )
+
+    system_prompt = PROFILE_AGENT_SYSTEM.format(
+        selected_tags_block=tags_block,
+        role_context_block=role_context_block,
+        partner_profile_fields=partner_profile_fields,
+    )
 
     try:
         response = await llm_client.send_chat_completion(
@@ -110,12 +226,18 @@ async def chat_for_profile(
         action = response.get("action", "reply")
         if action == "profile":
             logger.info("Profile agent: extracted profile interests=%s", response.get("interests"))
-            return {
+            result = {
                 "action": "profile",
                 "interests": response.get("interests", []),
                 "goals": response.get("goals", []),
                 "summary": response.get("summary", ""),
             }
+            # Extract partner-specific fields for business role
+            if role_code == "business":
+                for key in ("company", "position", "partner_status", "business_objectives"):
+                    if key in response:
+                        result[key] = response[key]
+            return result
         else:
             message = response.get("message", "Расскажите подробнее о ваших интересах.")
             logger.info("Profile agent: continuing conversation")
@@ -175,12 +297,14 @@ async def save_profile(
     selected_tags: list[str],
     keywords: list[str],
     raw_text: str | None,
+    metadata: dict | None = None,
 ) -> GuestProfile:
     """Save/update profile fields. Deletes old recommendations on update."""
     profile.selected_tags = selected_tags
     profile.extracted_tags = []
     profile.keywords = keywords
     profile.raw_text = raw_text
+    profile.metadata = metadata
 
     # Delete old recommendations when profile is updated (T033)
     await session.execute(
@@ -188,7 +312,7 @@ async def save_profile(
     )
 
     await session.commit()
-    logger.info("Profile saved: user=%s tags=%s keywords=%s", profile.user_id, selected_tags, keywords)
+    logger.info("Profile saved: user=%s tags=%s keywords=%s metadata=%s", profile.user_id, selected_tags, keywords, metadata)
     return profile
 
 

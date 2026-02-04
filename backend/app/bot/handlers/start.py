@@ -181,6 +181,8 @@ async def subtype_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     tg_user = query.from_user
     telegram_user_id = str(tg_user.id)
 
+    context.user_data["guest_subtype"] = guest_subtype.value
+
     if guest_subtype == GuestSubtype.OTHER:
         # "Другое" → ask for free text subtype
         await query.edit_message_text(
@@ -344,7 +346,15 @@ async def _agent_turn(
 ) -> int:
     """Send conversation to LLM agent, handle reply or profile extraction."""
     selected_tags = list(context.user_data.get("nl_topics", set()))
-    result = await profiling_service.chat_for_profile(conversation, selected_tags)
+    role_code = context.user_data.get("pending_role_code")
+    guest_subtype = context.user_data.get("guest_subtype")
+    custom_subtype = context.user_data.get("custom_subtype")
+    result = await profiling_service.chat_for_profile(
+        conversation, selected_tags,
+        role_code=role_code,
+        guest_subtype=guest_subtype,
+        custom_subtype=custom_subtype,
+    )
 
     if result["action"] == "profile":
         # Agent decided we have enough info — show confirmation
@@ -379,6 +389,34 @@ async def _show_profile_confirmation(
     all_tags = list(dict.fromkeys(button_tags + interests))
 
     confirm_parts = []
+
+    # Partner-specific fields
+    company = profile_data.get("company")
+    position = profile_data.get("position")
+    if company or position:
+        biz_line = []
+        if company:
+            biz_line.append(f"Компания: {company}")
+        if position:
+            biz_line.append(f"Должность: {position}")
+        confirm_parts.append("\n".join(biz_line))
+
+    partner_status = profile_data.get("partner_status")
+    if partner_status:
+        status_label = "текущий партнёр" if partner_status == "current" else "потенциальный партнёр"
+        confirm_parts.append(f"Статус: {status_label}")
+
+    business_objectives = profile_data.get("business_objectives")
+    if business_objectives:
+        obj_labels = {
+            "technology": "технологии",
+            "hiring": "найм",
+            "investment": "инвестиции",
+            "partnership": "партнёрство",
+        }
+        obj_display = [obj_labels.get(o, o) for o in business_objectives]
+        confirm_parts.append(f"Бизнес-цели: {', '.join(obj_display)}")
+
     if summary:
         confirm_parts.append(summary)
     if all_tags:
@@ -451,6 +489,15 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             await query.edit_message_text("Ошибка. Попробуйте /start заново.")
             return ConversationHandler.END
 
+        # Extract partner metadata if present (business role)
+        metadata = None
+        if any(k in profile_data for k in ("company", "position", "partner_status", "business_objectives")):
+            metadata = {
+                k: profile_data[k]
+                for k in ("company", "position", "partner_status", "business_objectives")
+                if k in profile_data
+            }
+
         profile = await profiling_service.get_or_create_profile(
             session, user.id, event.id
         )
@@ -460,6 +507,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             selected_tags=all_tags,
             keywords=profile_data.get("goals", []),
             raw_text=raw_text or None,
+            metadata=metadata,
         )
 
     logger.info("Profile confirmed via NL: tg_id=%s tags=%s", telegram_user_id, all_tags)

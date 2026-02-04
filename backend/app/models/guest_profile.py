@@ -27,6 +27,7 @@ class GuestProfile(Base):
     extracted_tags: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     keywords: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
