@@ -18,8 +18,8 @@ ROLE_DISPLAY_NAMES = {
     RoleCode.ORGANIZER: "Организатор",
     RoleCode.STUDENT: "Студент",
     RoleCode.EXPERT: "Эксперт",
-    RoleCode.GUEST: "Гость",
-    RoleCode.BUSINESS: "Бизнес-партнёр",
+    RoleCode.GUEST: "🎓 Гость",
+    RoleCode.BUSINESS: "💼 Партнёр",
 }
 
 

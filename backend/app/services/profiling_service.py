@@ -5,7 +5,8 @@ import logging
 import math
 import uuid
 
-from sqlalchemy import delete, func, select
+import sqlalchemy as sa
+from sqlalchemy import delete, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -38,6 +39,214 @@ RERANK_SYSTEM = """Ты AI-ассистент для Demo Day. Перед тоб
 SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерируй краткое описание (2-3 предложения) каждого проекта, адаптированное под интересы гостя. Подчеркни аспекты релевантные для гостя.
 Верни JSON строго в формате:
 {{"summaries": [{{"project_id": "...", "summary": "..."}}, ...]}}"""
+
+
+PROFILE_AGENT_SYSTEM = """Ты — AI-куратор Demo Day. Твоя задача — в диалоге выяснить интересы посетителя.
+
+На Demo Day ~330 студенческих AI-проектов в нескольких залах. Стандартные теги проектов:
+NLP, CV, LLM, Agents, EdTech, FinTech, MedTech, Security, ASR, TTS, Audio, Industrial, MLOps, RL, RecSys, Science, TimeSeries.
+
+Расшифровка тегов:
+- NLP (чат-боты, генерация текста, RAG, суммаризация)
+- CV (детекция, сегментация, генерация изображений)
+- LLM (большие языковые модели, файн-тюнинг, инференс)
+- Agents (автономные агенты, мультиагентные системы, автоматизация)
+- EdTech (образовательные платформы, адаптивное обучение)
+- FinTech (антифрод, скоринг, трейдинг)
+- MedTech (диагностика, анализ снимков, drug discovery)
+- Security (детекция угроз, анализ вредоносного ПО)
+- ASR (распознавание речи), TTS (синтез речи), Audio (обработка аудио)
+- Industrial (предиктивное обслуживание, контроль качества)
+- MLOps (деплой, мониторинг, пайплайны)
+- RL (обучение с подкреплением)
+- RecSys (рекомендательные системы, персонализация)
+- Science (BioTech, natural sciences + ML)
+- TimeSeries (прогнозирование временных рядов)
+
+{selected_tags_block}
+
+{role_context_block}
+
+Формат ответа — СТРОГО JSON:
+- Если нужно продолжить диалог:
+  {{"action": "reply", "message": "твой ответ"}}
+- Если информации достаточно и пора фиксировать профиль:
+  {{"action": "profile", "interests": ["тег1", "тег2"], "goals": ["цель1"], "summary": "Краткое описание профиля"{partner_profile_fields}}}
+
+interests должны содержать стандартные теги из списка выше + при необходимости уточняющие подтеги.
+
+ВАЖНО: не торопись с action=profile. Сначала поговори, задай 1-2 вопроса. Переходи к profile только когда чётко понятны интересы."""
+
+
+# --- Role-dependent context blocks ---
+
+ROLE_CONTEXTS: dict[tuple[str, str | None], str] = {
+    ("guest", "student"): (
+        "Стиль общения: неформальный, на «ты», дружелюбный.\n"
+        "Собеседник — студент. Выясни:\n"
+        "- Какие технологии изучает или использует\n"
+        "- Какие проекты хочет увидеть, что вдохновляет\n"
+        "- Интересуют ли стажировки или карьерные возможности\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, неформально\n"
+        "2. Если уже выбраны теги — уточняй детали по ним\n"
+        "3. Задавай вопросы про стек, проекты, что хочет увидеть\n"
+        "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+    ),
+    ("guest", "applicant"): (
+        "Стиль общения: мотивирующий, на «ты», вдохновляющий.\n"
+        "Собеседник — абитуриент, который только присматривается к AI. Выясни:\n"
+        "- Какие области AI интересны (может не знать точных названий)\n"
+        "- Какое карьерное направление привлекает\n"
+        "- Уровень подготовки (школьник, первокурсник, самоучка)\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, мотивирующе\n"
+        "2. Если уже выбраны теги — объясни их простым языком\n"
+        "3. Помоги сориентироваться в направлениях AI\n"
+        "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+    ),
+    ("guest", "other"): (
+        "Стиль общения: профессиональный, на «вы», уважительный.\n"
+        "Собеседник указал свою роль как: «{custom_subtype_text}». Адаптируй диалог под эту роль.\n"
+        "Выясни:\n"
+        "- Профессиональные интересы, связанные с AI\n"
+        "- Что хочет найти на Demo Day\n"
+        "- Какие проекты будут наиболее полезны\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, на «вы»\n"
+        "2. Если уже выбраны теги — уточняй детали по ним\n"
+        "3. Задавай вопросы исходя из роли собеседника\n"
+        "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+    ),
+    ("business", None): (
+        "Стиль общения: деловой, на «вы», профессиональный.\n"
+        "Собеседник — бизнес-партнёр или потенциальный партнёр. Выясни:\n"
+        "- Компанию и должность\n"
+        "- Текущий или потенциальный партнёр (уже работает с Хабом или впервые)\n"
+        "- Бизнес-цели визита: инвестиции, найм, технологическое партнёрство, поиск решений\n"
+        "- Индустрию и какие AI-технологии интересны\n"
+        "Правила:\n"
+        "1. Отвечай коротко (2-4 предложения), по-русски, на «вы», деловым тоном\n"
+        "2. Если уже выбраны теги — уточняй бизнес-контекст по ним\n"
+        "3. Обязательно спроси компанию и должность, если не указаны\n"
+        "4. Когда собрал достаточно (компания + цели + интересы) — предложи подвести итог\n\n"
+        "ВАЖНО: при action=profile добавь дополнительные поля:\n"
+        '  "company": "название компании",\n'
+        '  "position": "должность",\n'
+        '  "partner_status": "current" или "potential",\n'
+        '  "business_objectives": ["technology", "hiring", "investment", "partnership"]'
+    ),
+}
+
+# Default fallback context (generic guest)
+_DEFAULT_ROLE_CONTEXT = (
+    "Стиль общения: дружелюбный, по-русски.\n"
+    "Правила:\n"
+    "1. Отвечай коротко (2-4 предложения), дружелюбно но без лишней воды\n"
+    "2. Если уже выбраны теги — учитывай их, уточняй детали\n"
+    "3. Задавай уточняющие вопросы: какая сфера, какие задачи, что ищет\n"
+    "4. Когда собрал достаточно (2-3 интереса) — предложи подвести итог"
+)
+
+
+def _build_role_context(
+    role_code: str | None,
+    guest_subtype: str | None,
+    custom_subtype: str | None,
+) -> tuple[str, str]:
+    """Build role context block and partner profile fields hint.
+
+    Returns (role_context_block, partner_profile_fields).
+    partner_profile_fields is a string to inject into JSON format hint for business role.
+    """
+    is_business = role_code == "business"
+    partner_profile_fields = ""
+    if is_business:
+        partner_profile_fields = (
+            ', "company": "...", "position": "...", '
+            '"partner_status": "current|potential", '
+            '"business_objectives": ["technology", "hiring", "investment", "partnership"]'
+        )
+
+    # Lookup context: business uses (business, None), guests use (guest, subtype)
+    if is_business:
+        ctx = ROLE_CONTEXTS.get(("business", None), _DEFAULT_ROLE_CONTEXT)
+    else:
+        ctx = ROLE_CONTEXTS.get(("guest", guest_subtype), _DEFAULT_ROLE_CONTEXT)
+
+    # Substitute custom_subtype_text for "other" subtype
+    if guest_subtype == "other" and custom_subtype:
+        ctx = ctx.replace("{custom_subtype_text}", custom_subtype)
+    else:
+        ctx = ctx.replace("{custom_subtype_text}", "гость")
+
+    return ctx, partner_profile_fields
+
+
+async def chat_for_profile(
+    conversation: list[dict],
+    selected_tags: list[str] | None = None,
+    role_code: str | None = None,
+    guest_subtype: str | None = None,
+    custom_subtype: str | None = None,
+) -> dict:
+    """Multi-turn conversational profile discovery.
+
+    conversation: list of {"role": "user"|"assistant", "content": "..."} messages.
+    selected_tags: tags user already picked via buttons (may be empty).
+    role_code: "guest" or "business".
+    guest_subtype: "student", "applicant", "other" (for guests).
+    custom_subtype: free-text subtype when guest_subtype is "other".
+    Returns dict with either:
+      {"action": "reply", "message": "..."} — continue conversation
+      {"action": "profile", "interests": [...], "goals": [...], "summary": "...", ...} — done
+    """
+    if selected_tags:
+        tags_block = f"Посетитель уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
+    else:
+        tags_block = "Посетитель пока не выбрал теги. Помоги определиться."
+
+    role_context_block, partner_profile_fields = _build_role_context(
+        role_code, guest_subtype, custom_subtype,
+    )
+
+    system_prompt = PROFILE_AGENT_SYSTEM.format(
+        selected_tags_block=tags_block,
+        role_context_block=role_context_block,
+        partner_profile_fields=partner_profile_fields,
+    )
+
+    try:
+        response = await llm_client.send_chat_completion(
+            system_prompt=system_prompt,
+            user_prompt="",
+            messages=conversation,
+            json_mode=True,
+        )
+
+        action = response.get("action", "reply")
+        if action == "profile":
+            logger.info("Profile agent: extracted profile interests=%s", response.get("interests"))
+            result = {
+                "action": "profile",
+                "interests": response.get("interests", []),
+                "goals": response.get("goals", []),
+                "summary": response.get("summary", ""),
+            }
+            # Extract partner-specific fields for business role
+            if role_code == "business":
+                for key in ("company", "position", "partner_status", "business_objectives"):
+                    if key in response:
+                        result[key] = response[key]
+            return result
+        else:
+            message = response.get("message", "Расскажите подробнее о ваших интересах.")
+            logger.info("Profile agent: continuing conversation")
+            return {"action": "reply", "message": message}
+
+    except Exception:
+        logger.warning("Profile agent LLM failed (graceful degradation)")
+        return {"action": "reply", "message": "Расскажите, какие технологии или области AI вам интересны?"}
 
 
 # --- T005: Helper functions ---
@@ -87,23 +296,19 @@ async def save_profile(
     session: AsyncSession,
     profile: GuestProfile,
     selected_tags: list[str],
-    extracted_tags: list[str],
     keywords: list[str],
     raw_text: str | None,
+    extra_data: dict | None = None,
 ) -> GuestProfile:
     """Save/update profile fields. Deletes old recommendations on update."""
     profile.selected_tags = selected_tags
-    profile.extracted_tags = extracted_tags
+    profile.extracted_tags = []
     profile.keywords = keywords
     profile.raw_text = raw_text
-
-    # Delete old recommendations when profile is updated (T033)
-    await session.execute(
-        delete(Recommendation).where(Recommendation.guest_profile_id == profile.id)
-    )
+    profile.extra_data = extra_data
 
     await session.commit()
-    logger.info("Profile saved: user=%s tags=%s keywords=%s", profile.user_id, selected_tags + extracted_tags, keywords)
+    logger.info("Profile saved: user=%s tags=%s keywords=%s extra_data=%s", profile.user_id, selected_tags, keywords, extra_data)
     return profile
 
 
@@ -169,16 +374,112 @@ async def compute_project_idf(
 
 # --- T008: Score projects ---
 
+# Russian stop-words for text search filtering
+_STOP_WORDS = frozenset({
+    "это", "как", "для", "что", "при", "все", "его", "она", "они", "так",
+    "уже", "или", "если", "есть", "был", "они", "мне", "мой", "моя", "наш",
+    "ваш", "где", "кто", "чем", "без", "под", "над", "про", "еще", "тоже",
+    "очень", "будет", "можно", "нужно", "этот", "этом", "того", "тому",
+    "the", "and", "for", "with", "that", "this", "from", "are", "was", "not",
+})
+
+
+async def _text_search_scores(
+    session: AsyncSession, event_id: uuid.UUID, profile: GuestProfile,
+) -> dict[uuid.UUID, float]:
+    """Score projects via PostgreSQL full-text search on keywords and raw_text.
+
+    Returns {project_id: text_score} where score is a relative relevance value.
+    """
+    # Collect search terms from keywords + meaningful words from raw_text
+    terms: list[str] = []
+    if profile.keywords:
+        terms.extend(profile.keywords)
+
+    if profile.raw_text:
+        words = profile.raw_text.split()
+        for w in words:
+            cleaned = w.strip(".,;:!?\"'()[]{}").lower()
+            if len(cleaned) > 3 and cleaned not in _STOP_WORDS and cleaned not in terms:
+                terms.append(cleaned)
+
+    # Add business context terms
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            terms.append(ed["company"])
+        for obj in ed.get("business_objectives", []):
+            if obj not in terms:
+                terms.append(obj)
+
+    # Limit to 20 terms
+    terms = terms[:20]
+    if not terms:
+        return {}
+
+    # Try PostgreSQL full-text search first
+    query_parts = [t.replace("'", "''") for t in terms if t.strip()]
+    if not query_parts:
+        return {}
+
+    tsquery_str = " | ".join(query_parts)
+    scores: dict[uuid.UUID, float] = {}
+
+    try:
+        result = await session.execute(
+            sa.text(
+                "SELECT p.id, ts_rank("
+                "  to_tsvector('russian', coalesce(p.title, '') || ' ' || coalesce(p.description, '')), "
+                "  plainto_tsquery('russian', :query)"
+                ") AS rank "
+                "FROM projects p "
+                "WHERE p.event_id = :eid "
+                "AND to_tsvector('russian', coalesce(p.title, '') || ' ' || coalesce(p.description, '')) "
+                "   @@ plainto_tsquery('russian', :query) "
+                "ORDER BY rank DESC"
+            ),
+            {"query": " ".join(query_parts), "eid": event_id},
+        )
+        for row in result.all():
+            scores[row[0]] = float(row[1])
+    except Exception:
+        logger.warning("FTS search failed, trying ILIKE fallback")
+
+    # Fallback: if FTS gave no results, try ILIKE on keywords
+    if not scores:
+        try:
+            for term in terms[:5]:
+                pattern = f"%{term}%"
+                result = await session.execute(
+                    sa.text(
+                        "SELECT id FROM projects "
+                        "WHERE event_id = :eid "
+                        "AND (title ILIKE :pat OR description ILIKE :pat)"
+                    ),
+                    {"eid": event_id, "pat": pattern},
+                )
+                for row in result.all():
+                    scores[row[0]] = scores.get(row[0], 0.0) + 1.0
+        except Exception:
+            logger.warning("ILIKE fallback also failed")
+
+    return scores
+
 
 async def score_projects(
     session: AsyncSession, event_id: uuid.UUID, profile: GuestProfile
 ) -> list[tuple[uuid.UUID, float]]:
-    """Score all projects by IDF tag overlap with guest profile."""
+    """Score all projects by IDF tag overlap + text search, normalized to 0-100."""
     idf = await compute_project_idf(session, event_id)
 
     # All guest interest tags (deduplicated)
-    all_tags = list(set(profile.selected_tags + profile.extracted_tags))
-    if not all_tags:
+    all_tags = list(set(profile.selected_tags))
+
+    # Text search scores
+    text_scores = await _text_search_scores(session, event_id, profile)
+
+    # If no tags AND no text matches, return empty
+    if not all_tags and not text_scores:
         return []
 
     # Load all projects with their tags
@@ -189,15 +490,31 @@ async def score_projects(
     )
     projects = result.scalars().all()
 
-    scored: list[tuple[uuid.UUID, float]] = []
+    # Determine max IDF for scaling text boost
+    max_idf = max(idf.values()) if idf else 1.0
+
+    combined: dict[uuid.UUID, float] = {}
     for project in projects:
         project_tag_names = {pt.tag.name for pt in project.tags}
-        score = 0.0
+        idf_score = 0.0
         for tag in all_tags:
             if tag in project_tag_names:
-                score += idf.get(tag, 1.0)
-        scored.append((project.id, score))
+                idf_score += idf.get(tag, 1.0)
 
+        # Text boost scaled to IDF magnitude
+        text_boost = text_scores.get(project.id, 0.0) * max_idf
+        combined[project.id] = idf_score + text_boost
+
+    # Normalize to 0-100
+    max_score = max(combined.values()) if combined else 1.0
+    if max_score == 0:
+        max_score = 1.0
+
+    scored: list[tuple[uuid.UUID, float]] = [
+        (pid, round(score / max_score * 100, 1))
+        for pid, score in combined.items()
+        if score > 0
+    ]
     scored.sort(key=lambda x: x[1], reverse=True)
     return scored
 
@@ -214,21 +531,29 @@ async def llm_rerank_projects(
     if not candidates:
         return []
 
-    all_tags = list(set(profile.selected_tags + profile.extracted_tags))
+    all_tags = list(set(profile.selected_tags))
     projects_json = [
         {
             "project_id": str(pid),
             "title": title,
-            "description": desc[:300],
+            "description": desc[:500],
             "tags": tags,
         }
         for pid, _, title, desc, tags in candidates
     ]
 
+    extra_context = ""
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            extra_context += f', компания="{ed["company"]}"'
+        if ed.get("business_objectives"):
+            extra_context += f", бизнес-цели={json.dumps(ed['business_objectives'], ensure_ascii=False)}"
+
     user_prompt = (
         f"Профиль: теги={json.dumps(all_tags, ensure_ascii=False)}, "
         f"ключевые слова={json.dumps(profile.keywords, ensure_ascii=False)}, "
-        f'текст="{profile.raw_text or ""}"\n'
+        f'текст="{profile.raw_text or ""}"{extra_context}\n'
         f"Проекты: {json.dumps(projects_json, ensure_ascii=False)}"
     )
 
@@ -276,14 +601,19 @@ async def generate_llm_summaries(
     if not projects:
         return {}
 
-    all_tags = list(set(profile.selected_tags + profile.extracted_tags))
-    guest_interests = json.dumps(
-        {"tags": all_tags, "keywords": profile.keywords},
-        ensure_ascii=False,
-    )
+    all_tags = list(set(profile.selected_tags))
+    interests_data: dict = {"tags": all_tags, "keywords": profile.keywords}
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            interests_data["company"] = ed["company"]
+        if ed.get("business_objectives"):
+            interests_data["business_objectives"] = ed["business_objectives"]
+
+    guest_interests = json.dumps(interests_data, ensure_ascii=False)
 
     projects_text = "\n".join(
-        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc[:400]}"
+        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc[:600]}"
         for pid, title, desc, tags in projects
     )
 
@@ -364,7 +694,7 @@ async def generate_recommendations(
         popular_result = await session.execute(
             select(Project.id)
             .where(Project.event_id == event_id)
-            .where(Project.id.notin_(existing_ids) if existing_ids else True)
+            .where(Project.id.notin_(existing_ids) if existing_ids else true())
             .order_by(Project.created_at)
             .limit(10 - len(top15))
         )
@@ -394,12 +724,24 @@ async def generate_recommendations(
 
     summaries = await generate_llm_summaries(profile, summary_input)
 
-    # 8. Delete old recommendations
+    # 8. Normalize final scores to 0-100
+    raw_scores = [s for _, s in top15]
+    max_final = max(raw_scores) if raw_scores else 1.0
+    if max_final <= 0:
+        max_final = 1.0
+    # If scores are already 0-100 scale (from score_projects), keep them;
+    # if they're 0-1 scale (from LLM rerank), scale up.
+    if max_final <= 1.0:
+        top15 = [(pid, round(s * 100, 1)) for pid, s in top15]
+    elif max_final > 100:
+        top15 = [(pid, round(s / max_final * 100, 1)) for pid, s in top15]
+
+    # 9. Delete old recommendations
     await session.execute(
         delete(Recommendation).where(Recommendation.guest_profile_id == profile.id)
     )
 
-    # 9. Save new recommendations
+    # 10. Save new recommendations
     recs = []
     for rank_idx, (pid, score) in enumerate(top15):
         category = "must_visit" if rank_idx < 5 else "if_time"

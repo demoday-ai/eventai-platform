@@ -19,6 +19,7 @@ class QuestionType(str, enum.Enum):
 
     GUEST_GENERAL = "guest_general"
     GUEST_APPLICANT = "guest_applicant"
+    GUEST_STUDENT = "guest_student"
     GUEST_PRACTITIONER = "guest_practitioner"
     BUSINESS_INVESTOR = "business_investor"
     BUSINESS_HR = "business_hr"

@@ -42,8 +42,8 @@ def get_question_type(user: User, business_profile: BusinessProfile | None = Non
     # Guest
     if user.guest_subtype == GuestSubtype.APPLICANT:
         return QuestionType.GUEST_APPLICANT
-    elif user.guest_subtype == GuestSubtype.AI_PRACTITIONER:
-        return QuestionType.GUEST_PRACTITIONER
+    elif user.guest_subtype == GuestSubtype.STUDENT:
+        return QuestionType.GUEST_STUDENT
     else:
         return QuestionType.GUEST_GENERAL
 
@@ -56,7 +56,7 @@ def build_guest_prompt(
     """Build LLM prompt for guest questions."""
     subtype_map = {
         GuestSubtype.APPLICANT: "Абитуриент (интересуется обучением)",
-        GuestSubtype.AI_PRACTITIONER: "AI-практик (интересуется технологиями)",
+        GuestSubtype.STUDENT: "Студент (интересуется обучением и технологиями)",
         GuestSubtype.OTHER: "Гость (общий интерес)",
     }
     subtype_desc = subtype_map.get(user.guest_subtype, "Гость")
@@ -232,6 +232,11 @@ def get_fallback_questions(question_type: QuestionType) -> list[str]:
             "Каковы планы развития проекта?",
         ],
         QuestionType.GUEST_APPLICANT: [
+            "Какие технологии вы использовали и почему?",
+            "Что было самым сложным в проекте?",
+            "Какие навыки вы приобрели?",
+        ],
+        QuestionType.GUEST_STUDENT: [
             "Какие технологии вы использовали и почему?",
             "Что было самым сложным в проекте?",
             "Какие навыки вы приобрели?",

@@ -217,8 +217,8 @@ async def guests_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Visual breakdown
             text += "📊 *Распределение:*\n"
-            text += f"├ 🎓 Абитуриенты: {stats.applicants} ({pct(stats.applicants)})\n"
-            text += f"├ 💻 AI-практики: {stats.practitioners} ({pct(stats.practitioners)})\n"
+            text += f"├ 🎓 Студенты: {stats.students} ({pct(stats.students)})\n"
+            text += f"├ 📚 Абитуриенты: {stats.applicants} ({pct(stats.applicants)})\n"
             text += f"├ 💼 Бизнес: {stats.business} ({pct(stats.business)})\n"
             text += f"└ 🔹 Другое: {stats.other} ({pct(stats.other)})\n"
 
@@ -226,8 +226,8 @@ async def guests_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             total = stats.total
             text += "\n📈 *Диаграмма:*\n"
             for name, count in [
+                ("Студенты", stats.students),
                 ("Абитуриенты", stats.applicants),
-                ("AI-практики", stats.practitioners),
                 ("Бизнес", stats.business),
                 ("Другое", stats.other),
             ]:

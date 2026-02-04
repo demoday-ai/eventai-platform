@@ -4,21 +4,20 @@ from app.models.role import ROLE_DISPLAY_NAMES, RoleCode
 from app.models.user import GUEST_SUBTYPE_DISPLAY, GuestSubtype
 
 
-def role_keyboard(is_organizer: bool = False) -> InlineKeyboardMarkup:
-    roles = [
-        (RoleCode.STUDENT, ROLE_DISPLAY_NAMES[RoleCode.STUDENT]),
-        (RoleCode.EXPERT, ROLE_DISPLAY_NAMES[RoleCode.EXPERT]),
-        (RoleCode.GUEST, ROLE_DISPLAY_NAMES[RoleCode.GUEST]),
-        (RoleCode.BUSINESS, ROLE_DISPLAY_NAMES[RoleCode.BUSINESS]),
-    ]
-    if is_organizer:
-        roles.insert(0, (RoleCode.ORGANIZER, ROLE_DISPLAY_NAMES[RoleCode.ORGANIZER]))
-
-    buttons = [
-        [InlineKeyboardButton(name, callback_data=f"role:{code.value}")]
-        for code, name in roles
-    ]
-    return InlineKeyboardMarkup(buttons)
+def role_keyboard() -> InlineKeyboardMarkup:
+    """Two-button role selection: Guest or Partner."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                ROLE_DISPLAY_NAMES[RoleCode.GUEST],
+                callback_data=f"role:{RoleCode.GUEST.value}",
+            ),
+            InlineKeyboardButton(
+                ROLE_DISPLAY_NAMES[RoleCode.BUSINESS],
+                callback_data=f"role:{RoleCode.BUSINESS.value}",
+            ),
+        ],
+    ])
 
 
 def guest_subtype_keyboard() -> InlineKeyboardMarkup:
@@ -36,6 +35,49 @@ def confirm_change_keyboard() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("Нет, оставить", callback_data="change:no")],
         ]
     )
+
+
+def nl_topic_buttons() -> InlineKeyboardMarkup:
+    """Quick-pick topic buttons for NL profiling — all seed tags."""
+    # (DB tag name, display label) — keys match tags table
+    topics = [
+        ("NLP", "NLP"),
+        ("CV", "CV"),
+        ("LLM", "LLM"),
+        ("Agents", "Агенты"),
+        ("EdTech", "EdTech"),
+        ("FinTech", "FinTech"),
+        ("MedTech", "MedTech"),
+        ("Security", "Security"),
+        ("ASR", "ASR"),
+        ("TTS", "TTS"),
+        ("Audio", "Audio"),
+        ("Industrial", "Industrial"),
+        ("MLOps", "MLOps"),
+        ("RL", "RL"),
+        ("RecSys", "RecSys"),
+        ("Science", "Science"),
+        ("TimeSeries", "TimeSeries"),
+    ]
+    buttons = []
+    row = []
+    for tag_key, label in topics:
+        row.append(InlineKeyboardButton(label, callback_data=f"nl:topic:{tag_key}"))
+        if len(row) == 3:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+    buttons.append([InlineKeyboardButton("Готово →", callback_data="nl:done")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def confirm_nl_profile_keyboard() -> InlineKeyboardMarkup:
+    """Confirm or re-enter NL profile."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✓ Всё верно", callback_data="nlconf:yes")],
+        [InlineKeyboardButton("✎ Ввести заново", callback_data="nlconf:retry")],
+    ])
 
 
 # --- Clustering keyboards ---

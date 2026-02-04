@@ -70,11 +70,10 @@ async def get_profile(
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    all_interests = list(dict.fromkeys(profile.selected_tags + profile.extracted_tags))
+    all_interests = list(dict.fromkeys(profile.selected_tags))
     return {
         "id": str(profile.id),
         "selected_tags": profile.selected_tags,
-        "extracted_tags": profile.extracted_tags,
         "keywords": profile.keywords,
         "raw_text": profile.raw_text,
         "all_interests": all_interests,
@@ -105,11 +104,12 @@ async def create_or_update_profile(
         extracted_tags = result.get("tags", [])
         keywords = result.get("keywords", [])
 
+    all_tags = list(dict.fromkeys(req.selected_tags + extracted_tags))
     profile = await profiling_service.save_profile(
-        session, profile, req.selected_tags, extracted_tags, keywords, req.raw_text
+        session, profile, all_tags, keywords, req.raw_text
     )
 
-    all_interests = list(dict.fromkeys(profile.selected_tags + profile.extracted_tags))
+    all_interests = list(dict.fromkeys(profile.selected_tags))
     return {
         "id": str(profile.id),
         "selected_tags": profile.selected_tags,

@@ -65,7 +65,7 @@ class GuestStats:
     """Statistics about guest registration."""
     total: int
     applicants: int
-    practitioners: int
+    students: int
     business: int
     other: int
 
@@ -182,7 +182,7 @@ async def get_guest_stats(session: AsyncSession, event_id: UUID) -> GuestStats:
     stats_by_subtype = {row[0]: row[1] for row in stats_result.all()}
 
     applicants = stats_by_subtype.get(GuestSubtype.APPLICANT, 0)
-    practitioners = stats_by_subtype.get(GuestSubtype.AI_PRACTITIONER, 0)
+    students = stats_by_subtype.get(GuestSubtype.STUDENT, 0)
     other = stats_by_subtype.get(GuestSubtype.OTHER, 0)
     none_subtype = stats_by_subtype.get(None, 0)
 
@@ -194,12 +194,12 @@ async def get_guest_stats(session: AsyncSession, event_id: UUID) -> GuestStats:
     )
     business = business_result.scalar() or 0
 
-    total = applicants + practitioners + other + none_subtype + business
+    total = applicants + students + other + none_subtype + business
 
     return GuestStats(
         total=total,
         applicants=applicants,
-        practitioners=practitioners,
+        students=students,
         business=business,
         other=other + none_subtype,
     )
@@ -361,8 +361,8 @@ def format_dashboard(
     lines.extend([
         "👥 *Гости:*",
         f"├ Зарегистрировано: {guest_stats.total}",
+        f"├ Студенты: {guest_stats.students}",
         f"├ Абитуриенты: {guest_stats.applicants}",
-        f"├ AI-практики: {guest_stats.practitioners}",
         f"├ Бизнес: {guest_stats.business}",
         f"└ Другое: {guest_stats.other}",
     ])
