@@ -1,7 +1,7 @@
-"""Test guest profiling flow on live data (non-destructive).
+"""Test guest + business partner profiling flow on live data (non-destructive).
 
-Creates temporary test user → profile → recommendations → cleanup.
-Tests both tag-based and text-search scoring paths.
+Creates temporary test users → profiles → recommendations → cleanup.
+Tests: tag-based scoring, text-search scoring, skip-profiling, business partner with extra_data.
 """
 import asyncio
 import uuid
@@ -17,10 +17,11 @@ async def main():
 
     TEST_TG_ID = "999999901"
     TEST_TG_ID_2 = "999999902"
+    TEST_TG_ID_3 = "999999903"
     created_user_ids = []
 
     print("=" * 60)
-    print("GUEST FLOW TEST (non-destructive, live data)")
+    print("GUEST + BUSINESS FLOW TEST (non-destructive, live data)")
     print("=" * 60)
 
     async with async_session() as session:
@@ -196,6 +197,97 @@ async def main():
                 print(f"  FAIL: Profile has no tags, would not skip")
 
         # ============================================================
+        # TEST 4: Business partner with extra_data (company + objectives)
+        # ============================================================
+        print("\n" + "=" * 60)
+        print("TEST 4: Business partner with extra_data")
+        print("=" * 60)
+
+        biz_role_result = await session.execute(select(Role).where(Role.code == "business"))
+        biz_role = biz_role_result.scalars().first()
+        if not biz_role:
+            print("  SKIP: No business role in DB")
+        else:
+            user3 = User(
+                telegram_user_id=TEST_TG_ID_3,
+                username="test_biz_partner_1",
+                full_name="Тест Партнёр 1",
+            )
+            session.add(user3)
+            await session.commit()
+            await session.refresh(user3)
+            created_user_ids.append(user3.id)
+
+            ur3 = UserRole(user_id=user3.id, role_id=biz_role.id, event_id=event.id)
+            session.add(ur3)
+            await session.commit()
+
+            profile3 = await profiling_service.get_or_create_profile(session, user3.id, event.id)
+            await profiling_service.save_profile(
+                session, profile3,
+                selected_tags=["EdTech", "LLM"],
+                keywords=["обучение", "адаптивные тесты", "LLM в образовании"],
+                raw_text="Ищем AI-решения для корпоративного обучения, адаптивное тестирование",
+                extra_data={
+                    "company": "EduCorp",
+                    "position": "CTO",
+                    "partner_status": "Технологический партнёр",
+                    "business_objectives": ["Найти технологического партнёра", "Интеграция AI в LMS"],
+                },
+            )
+            await session.commit()
+            print(f"  Profile: tags={profile3.selected_tags}, keywords={profile3.keywords}")
+            print(f"  Extra: company={profile3.extra_data.get('company')}, "
+                  f"objectives={profile3.extra_data.get('business_objectives')}")
+
+            print("  Generating recommendations (with business context)...")
+            recs3 = await profiling_service.generate_recommendations(session, profile3)
+
+            if not recs3:
+                print("  FAIL: No recommendations for business partner!")
+            else:
+                print(f"  Total: {recs3['total']} recommendations")
+                print(f"  Must visit: {len(recs3.get('must_visit', []))}")
+                print(f"  If time: {len(recs3.get('if_time', []))}")
+
+                print("\n  Must-visit projects:")
+                for rec in recs3.get("must_visit", []):
+                    score = rec["relevance_score"]
+                    score_ok = "OK" if 0 <= score <= 100 else f"BAD ({score})"
+                    print(f"    #{rec['rank']} [{score_ok} score={score}] {rec['title'][:50]}")
+                    print(f"       tags={rec['tags']}")
+
+                all_scores = [r["relevance_score"] for r in
+                              recs3.get("must_visit", []) + recs3.get("if_time", [])]
+                bad_scores = [s for s in all_scores if s < 0 or s > 100]
+                if bad_scores:
+                    print(f"\n  FAIL: Scores out of 0-100 range: {bad_scores}")
+                else:
+                    print(f"\n  PASS: All {len(all_scores)} scores in 0-100 range")
+
+                # Check that LLM summary mentions business context
+                if recs3.get("must_visit"):
+                    first_rec = recs3["must_visit"][0]
+                    detail = await profiling_service.get_project_detail(
+                        session, profile3.id, uuid.UUID(first_rec["project_id"])
+                    )
+                    if detail:
+                        summary = detail.get("llm_summary") or ""
+                        print(f"\n  Detail card for #{first_rec['rank']}:")
+                        print(f"    Title: {detail['title'][:50]}")
+                        print(f"    Score: {min(int(detail['relevance_score']), 100)}%")
+                        print(f"    Summary: {summary[:150]}...")
+                        # Check if business context influenced the summary
+                        biz_keywords = ["educorp", "обучен", "lms", "корпоратив", "партнёр",
+                                        "образован", "edtech", "адаптив"]
+                        found_biz = [k for k in biz_keywords if k.lower() in summary.lower()]
+                        if found_biz:
+                            print(f"    PASS: Summary references business context: {found_biz}")
+                        else:
+                            print(f"    INFO: Summary doesn't explicitly mention business keywords "
+                                  f"(may still be contextually relevant)")
+
+        # ============================================================
         # Cleanup
         # ============================================================
         print("\n" + "=" * 60)
@@ -215,7 +307,7 @@ async def main():
         print(f"  Cleaned up {len(created_user_ids)} test users")
 
         print("\n" + "=" * 60)
-        print("ALL GUEST FLOW TESTS COMPLETE")
+        print("ALL FLOW TESTS COMPLETE")
         print("=" * 60)
         return 0
 
