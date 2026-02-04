@@ -5,8 +5,8 @@ Tracks business partner interactions with projects after Demo Day.
 
 import enum
 import uuid
-from datetime import datetime
-from sqlalchemy import Boolean, Enum, ForeignKey, Text, func
+
+from sqlalchemy import Boolean, Enum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

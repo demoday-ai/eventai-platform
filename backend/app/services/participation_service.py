@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -455,12 +455,12 @@ async def build_daily_summary_text(
 ) -> str:
     summary = await get_participation_summary(session, event_id)
     lines = [
-        f"📊 Сводка ознакомлений\n",
+        "📊 Сводка ознакомлений\n",
         f"Всего: {summary['total']}",
         f"Ознакомились: {summary['acknowledged']}",
         f"Не ответили: {summary['pending']}",
         f"Неподключённые: {summary['unregistered']}",
-        f"\nПо залам:",
+        "\nПо залам:",
     ]
     for r in summary["by_room"]:
         lines.append(f"  {r['room_name']}: {r['acknowledged']}/{r['total']}")

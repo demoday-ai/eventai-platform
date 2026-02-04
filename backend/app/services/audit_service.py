@@ -1,7 +1,6 @@
 """Audit logging service for admin actions."""
 
 import logging
-from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from telegram import Bot
 
-from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.role import Role
 from app.models.user import User

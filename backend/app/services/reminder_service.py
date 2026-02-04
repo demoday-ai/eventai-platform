@@ -13,18 +13,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from telegram import Bot
 
-from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.reminder import (
-    ReminderNotification as Notification,
     NotificationStatus,
     RecipientType,
     ReminderBatch,
     ReminderBatchStatus,
     ReminderType,
 )
-from app.models.room import Room
+from app.models.reminder import (
+    ReminderNotification as Notification,
+)
 from app.models.room_project import RoomProject
 from app.models.user import User
 from app.services import matching_service
@@ -439,8 +439,8 @@ def format_guest_day_before(
     """
     if not has_program or not projects:
         return (
-            f"📅 Завтра Demo Day!\n\n"
-            f"Пройдите профилирование, чтобы получить персональную программу."
+            "📅 Завтра Demo Day!\n\n"
+            "Пройдите профилирование, чтобы получить персональную программу."
         )
 
     # Build message with project list
@@ -478,8 +478,8 @@ def format_business_day_before(
     """
     if not has_program or not projects:
         return (
-            f"📅 Завтра Demo Day!\n\n"
-            f"Пройдите профилирование, чтобы получить персональную подборку проектов."
+            "📅 Завтра Demo Day!\n\n"
+            "Пройдите профилирование, чтобы получить персональную подборку проектов."
         )
 
     # Build message with project list
@@ -524,8 +524,8 @@ def format_expert_hour_before(room_name: str, first_project: str | None) -> str:
 def format_guest_hour_before(full_name: str) -> str:
     """Format hour-before message for guest."""
     return (
-        f"⏰ DD начинается через час!\n\n"
-        f"Ждём вас!"
+        "⏰ DD начинается через час!\n\n"
+        "Ждём вас!"
     )
 
 

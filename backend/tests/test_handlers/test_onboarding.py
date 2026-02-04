@@ -77,7 +77,7 @@ async def test_start_command_new_user(mock_event, mock_user):
         mock_user_svc.get_current_event = AsyncMock(return_value=mock_event)
         mock_user_svc.get_user_role_with_info = AsyncMock(return_value=None)
 
-        result = await start_command(mock_update, mock_context)
+        await start_command(mock_update, mock_context)
 
         # Should call reply_text with welcome message
         mock_update.message.reply_text.assert_called_once()
@@ -93,7 +93,7 @@ async def test_start_command_new_user(mock_event, mock_user):
 @pytest.mark.asyncio
 async def test_start_command_existing_user(mock_event, mock_user, mock_role):
     """T014: /start for existing user with role shows change prompt."""
-    from app.bot.handlers.start import start_command, CONFIRM_CHANGE
+    from app.bot.handlers.start import CONFIRM_CHANGE, start_command
 
     @asynccontextmanager
     async def mock_session():
@@ -136,8 +136,9 @@ async def test_start_command_existing_user(mock_event, mock_user, mock_role):
 @pytest.mark.asyncio
 async def test_invalid_role_callback(mock_event, mock_user):
     """T015: Invalid role callback is handled gracefully."""
-    from app.bot.handlers.start import role_chosen
     from telegram.ext import ConversationHandler
+
+    from app.bot.handlers.start import role_chosen
 
     @asynccontextmanager
     async def mock_session():
@@ -156,7 +157,7 @@ async def test_invalid_role_callback(mock_event, mock_user):
     mock_context.user_data = {}
 
     with patch("app.bot.handlers.start.async_session", mock_session), \
-         patch("app.bot.handlers.start.user_service") as mock_user_svc, \
+         patch("app.bot.handlers.start.user_service"), \
          patch("app.bot.handlers.start.settings") as mock_settings:
 
         mock_settings.organizer_ids = []

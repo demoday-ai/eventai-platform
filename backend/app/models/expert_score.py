@@ -4,6 +4,7 @@ Stores structured project scores from experts.
 """
 
 import uuid
+
 from sqlalchemy import Boolean, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship

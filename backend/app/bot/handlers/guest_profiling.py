@@ -18,7 +18,6 @@ from telegram.ext import (
 
 from app.bot.handlers.contact import contact_button, contact_request_callback
 from app.bot.keyboards import (
-    back_to_program_keyboard,
     confirm_interests_keyboard,
     generate_program_keyboard,
     program_recommendation_keyboard,
@@ -660,7 +659,6 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle text messages in VIEW_PROGRAM — LLM-powered Q&A about recommendations."""
-    import json as _json
     from app.services import llm_client
 
     user_message = update.message.text
@@ -789,7 +787,10 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("Проект не найден в подборке.")
         return VIEW_PROGRAM
 
-    room_info = f"Зал {detail['room_number']}: {_escape_markdown(detail['room_name'])}" if detail.get("room_number") else "Зал: н/д"
+    if detail.get("room_number"):
+        room_info = f"Зал {detail['room_number']}: {_escape_markdown(detail['room_name'])}"
+    else:
+        room_info = "Зал: н/д"
     tags_str = ", ".join(detail.get("tags", []))
     score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
@@ -812,7 +813,7 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
         llm_summary = _escape_markdown(detail['llm_summary'])
         text += f"\n\n💡 *Кратко:* {llm_summary}"
 
-    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     keyboard = InlineKeyboardMarkup([
         [contact_button(project_id)],
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
@@ -866,7 +867,10 @@ def get_profiling_handler() -> ConversationHandler:
                 CallbackQueryHandler(generate_program_callback, pattern=r"^prof:(generate|later)$"),
             ],
             VIEW_PROGRAM: [
-                CallbackQueryHandler(view_program_callback, pattern=r"^(pdetail:|recpage:|profile:update|prof:show_if_time|noop)"),
+                CallbackQueryHandler(
+                    view_program_callback,
+                    pattern=r"^(pdetail:|recpage:|profile:update|prof:show_if_time|noop)",
+                ),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, view_program_text),
             ],
             VIEW_DETAIL: [

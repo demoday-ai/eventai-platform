@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.models.role import ROLE_DISPLAY_NAMES, RoleCode
-from app.models.user import GUEST_SUBTYPE_DISPLAY, GuestSubtype
+from app.models.user import GUEST_SUBTYPE_DISPLAY
 
 
 def role_keyboard() -> InlineKeyboardMarkup:
@@ -190,7 +190,7 @@ def approve_keyboard() -> InlineKeyboardMarkup:
 
 def objective_keyboard() -> InlineKeyboardMarkup:
     """Business objective selection: Investment, Hiring, Technology, Partnership."""
-    from app.models.business_profile import BusinessObjective, OBJECTIVE_DISPLAY
+    from app.models.business_profile import OBJECTIVE_DISPLAY
 
     buttons = [
         [InlineKeyboardButton(display, callback_data=f"bp:obj:{obj.value}")]

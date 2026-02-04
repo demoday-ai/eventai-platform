@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.feedback_comment import FeedbackCategory, FeedbackComment, ModerationStatus
+from app.models.feedback_comment import FeedbackComment, ModerationStatus
 from app.models.project import Project
 from app.services import llm_client
 
@@ -238,7 +238,6 @@ async def send_feedback_to_student(
         return 0
 
     # Find student user by telegram_contact
-    from app.services import user_service
     contact = project.telegram_contact
     if contact.startswith("@"):
         contact = contact[1:]
@@ -281,7 +280,7 @@ async def send_feedback_to_student(
 def format_feedback_message(project_title: str, feedbacks: list[FeedbackComment]) -> str:
     """Format feedback for student message."""
     lines = [
-        f"📝 *Обратная связь по проекту*",
+        "📝 *Обратная связь по проекту*",
         f"_{project_title}_",
         "",
         f"Вы получили {len(feedbacks)} отзывов от экспертов:",

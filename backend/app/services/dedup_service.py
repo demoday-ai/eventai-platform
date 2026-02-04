@@ -42,7 +42,10 @@ async def check_recent_duplicate(
 
     if prev:
         return {
-            "warning": f"Этот файл уже был загружен {prev.created_at.strftime('%H:%M:%S')} пользователем {prev.user_name or 'неизвестно'}",
+            "warning": (
+                f"Этот файл уже был загружен {prev.created_at.strftime('%H:%M:%S')}"
+                f" пользователем {prev.user_name or 'неизвестно'}"
+            ),
             "previous_upload_at": prev.created_at.isoformat(),
             "user_name": prev.user_name,
         }

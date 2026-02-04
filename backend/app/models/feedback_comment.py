@@ -5,7 +5,7 @@ Stores expert feedback on student projects with AI processing.
 
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID

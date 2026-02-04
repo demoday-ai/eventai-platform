@@ -237,7 +237,7 @@ async def _run_clustering(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             )
 
             # Build overview
-            text = f"Кластеризация завершена!\n\n"
+            text = "Кластеризация завершена!\n\n"
             text += f"Статус: {run.status}\n"
             text += f"Залов: {len(run.rooms)}\n\n"
 

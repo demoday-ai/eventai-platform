@@ -13,11 +13,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from telegram import Bot, Update
+from telegram import Bot
 from telegram.ext import ApplicationBuilder
 
 from app.models.role import RoleCode
-
 
 # =============================================================================
 # Mock Update Factories (T004, T005)
@@ -116,9 +115,9 @@ async def app():
         application = ApplicationBuilder().token("0:TEST_TOKEN_FOR_TESTING").build()
 
         # Import and register handlers
-        from app.bot.handlers.start import get_onboarding_handler
         from app.bot.handlers.guest_profiling import get_profiling_handler
         from app.bot.handlers.qa import get_qa_handlers
+        from app.bot.handlers.start import get_onboarding_handler
 
         application.add_handler(get_onboarding_handler())
         application.add_handler(get_profiling_handler())

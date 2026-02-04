@@ -1,6 +1,5 @@
 """Tests for dedup_service."""
 
-import pytest
 
 from app.services.dedup_service import compute_file_hash
 

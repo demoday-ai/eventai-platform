@@ -2,23 +2,21 @@
 
 import uuid
 from datetime import date
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.api.deps import check_organizer, get_current_user
 from app.database import get_session
+from app.main import app
 from app.models.audit_log import AdminAuditLog
 from app.models.base import Base
 from app.models.event import Event
 from app.models.organizer import Organizer
 from app.models.user import User
 from app.services import audit_service
-
 
 # --- Fixtures ---
 

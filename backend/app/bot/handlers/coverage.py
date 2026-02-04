@@ -276,7 +276,7 @@ async def coverage_gaps_callback(update: Update, context: ContextTypes.DEFAULT_T
 
             lines.append(f"  • {gap['uncovered_tag']} — {gap['project_count_with_tag']} проектов")
             if gap["candidates"]:
-                names = [c["name"] for c in gap["candidates"][:3]]
+                [c["name"] for c in gap["candidates"][:3]]
                 rooms_info = []
                 for c in gap["candidates"][:3]:
                     r_str = f" ({', '.join(c['current_rooms'][:1])})" if c["current_rooms"] else ""

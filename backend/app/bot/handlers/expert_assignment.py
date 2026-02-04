@@ -11,19 +11,19 @@ from telegram.ext import (
 )
 
 from app.bot.keyboards import (
+    alternative_rooms_keyboard,
     approve_matching_confirm,
+    coverage_dashboard_rooms,
+    coverage_room_detail_keyboard,
+    escalation_detail_keyboard,
+    escalation_list_keyboard,
+    expert_confirmed_keyboard,
+    expert_invite_actions,
     expert_management_menu,
+    invite_preview_keyboard,
     matching_result_rooms,
     move_target_room_keyboard,
     room_expert_detail_keyboard,
-    invite_preview_keyboard,
-    expert_invite_actions,
-    alternative_rooms_keyboard,
-    expert_confirmed_keyboard,
-    coverage_dashboard_rooms,
-    coverage_room_detail_keyboard,
-    escalation_list_keyboard,
-    escalation_detail_keyboard,
 )
 from app.config import settings
 from app.database import async_session
@@ -237,7 +237,7 @@ async def expert_action_callback(update: Update, context: ContextTypes.DEFAULT_T
             break
 
     await query.edit_message_text(
-        f"Перенести эксперта в другой зал.\nВыберите целевой зал:",
+        "Перенести эксперта в другой зал.\nВыберите целевой зал:",
         reply_markup=move_target_room_keyboard(
             result["rooms"] if result else [],
             current_room.get("room_id", ""),
@@ -272,6 +272,7 @@ async def move_target_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     # We need to find the assignment ID — query DB
     async with async_session() as session:
         from sqlalchemy import select
+
         from app.models.expert_room_assignment import ExpertRoomAssignment
 
         for exp in current_room.get("experts", []):
@@ -416,7 +417,7 @@ async def _show_coverage(query, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["coverage"] = dashboard
     indicators = {"covered": "🟢", "partial": "🟡", "uncovered": "🔴"}
 
-    text = f"📊 Покрытие экспертами\n\n"
+    text = "📊 Покрытие экспертами\n\n"
     for r in dashboard["rooms"]:
         ind = indicators.get(r["coverage_level"], "🔴")
         text += (
@@ -490,7 +491,7 @@ async def coverage_room_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     suggested = detail.get("suggested_adjacent", [])
     if suggested:
-        text += f"\nПредлагаемые эксперты (смежные теги):\n"
+        text += "\nПредлагаемые эксперты (смежные теги):\n"
         for s in suggested[:5]:
             tags = ", ".join(s.get("adjacent_tags", [])[:3])
             text += f"  💡 {s['name'][:25]} ({tags})\n"
@@ -755,6 +756,7 @@ async def expert_room_choice_callback(update: Update, context: ContextTypes.DEFA
 
         # Find full room ID
         from sqlalchemy import select
+
         from app.models.room import Room
         rooms_result = await session.execute(select(Room))
         all_rooms = rooms_result.scalars().all()
@@ -791,6 +793,7 @@ async def noshow_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     async with async_session() as session:
         from sqlalchemy import select
+
         from app.models.expert_room_assignment import ExpertRoomAssignment
         from app.services import invite_service
 

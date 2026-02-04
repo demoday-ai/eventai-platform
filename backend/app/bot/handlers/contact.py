@@ -100,6 +100,7 @@ async def contact_request_callback(update: Update, context: ContextTypes.DEFAULT
 
         # Get project info
         from sqlalchemy import select
+
         from app.models.project import Project
         result = await session.execute(
             select(Project).where(Project.id == UUID(project_id))

@@ -225,7 +225,10 @@ def get_alerts(
     if student_stats.total > 0 and student_stats.declined > student_stats.total * 0.2:
         alerts.append(Alert(
             level="critical",
-            message=f"Высокий процент отказов: {student_stats.declined} ({student_stats.declined / student_stats.total * 100:.0f}%)",
+            message=(
+                f"Высокий процент отказов: {student_stats.declined}"
+                f" ({student_stats.declined / student_stats.total * 100:.0f}%)"
+            ),
             emoji="🚨"
         ))
 
@@ -325,7 +328,7 @@ def format_dashboard(
 ) -> str:
     """Format dashboard message."""
     lines = [
-        f"📊 *Dashboard Demo Day*",
+        "📊 *Dashboard Demo Day*",
         f"Событие: {event_name}",
         "",
     ]

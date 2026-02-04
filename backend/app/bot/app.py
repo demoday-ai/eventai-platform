@@ -1,12 +1,10 @@
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
+from app.bot.handlers.briefing import get_briefing_handlers
 from app.bot.handlers.business_followup import get_business_followup_handlers
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
 from app.bot.handlers.contact import get_contact_handlers
-from app.bot.handlers.dashboard import get_dashboard_handlers
-from app.bot.handlers.feedback import get_feedback_handlers
-from app.bot.handlers.followup import get_followup_handlers
 from app.bot.handlers.coverage import (
     coverage_back_callback,
     coverage_command,
@@ -15,17 +13,19 @@ from app.bot.handlers.coverage import (
     coverage_room_callback,
     coverage_room_refresh_callback,
 )
+from app.bot.handlers.dashboard import get_dashboard_handlers
 from app.bot.handlers.expert_assignment import (
     expert_invite_callback,
     expert_room_choice_callback,
     get_expert_assignment_handler,
 )
+from app.bot.handlers.feedback import get_feedback_handlers
+from app.bot.handlers.followup import get_followup_handlers
 from app.bot.handlers.guest_profiling import get_profiling_handler
-from app.bot.handlers.briefing import get_briefing_handlers
 from app.bot.handlers.qa import get_qa_handlers
 from app.bot.handlers.reminder import get_reminder_handlers
-from app.bot.handlers.scoring import get_scoring_handlers
 from app.bot.handlers.schedule import get_schedule_handler, get_schedule_preview_handlers
+from app.bot.handlers.scoring import get_scoring_handlers
 from app.bot.handlers.start import get_onboarding_handler
 from app.config import settings
 

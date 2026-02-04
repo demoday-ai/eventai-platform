@@ -3,7 +3,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import check_organizer, get_current_user
@@ -18,7 +18,14 @@ from app.schemas.expert import (
     MatchingRequest,
     MoveExpertRequest,
 )
-from app.services import audit_service, coverage_service, dedup_service, expert_service, invite_service, matching_service
+from app.services import (
+    audit_service,
+    coverage_service,
+    dedup_service,
+    expert_service,
+    invite_service,
+    matching_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +65,7 @@ async def upload_experts(
 
     # Check existing experts
     from sqlalchemy import func, select
+
     from app.models.expert import Expert
 
     count = await session.scalar(
@@ -65,7 +73,10 @@ async def upload_experts(
     )
 
     if count and count > 0 and not confirm_replace:
-        return {"existing_count": count, "message": f"{count} experts already exist. Set confirm_replace=true to replace."}
+        return {
+            "existing_count": count,
+            "message": f"{count} experts already exist. Set confirm_replace=true to replace.",
+        }
 
     if count and count > 0 and confirm_replace:
         await expert_service.delete_all_experts(session, event.id)
@@ -86,8 +97,8 @@ async def upload_experts(
         raise HTTPException(status_code=400, detail="Expected JSON array")
 
     # Use seed loading logic
-    from app.models.tag import Tag
     from app.models.expert_tag import ExpertTag as ExpertTagModel
+    from app.models.tag import Tag
 
     tag_cache: dict[str, object] = {}
     imported = 0

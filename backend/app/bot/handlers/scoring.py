@@ -55,7 +55,7 @@ def project_list_keyboard(projects) -> InlineKeyboardMarkup:
 
 def criterion_keyboard(criterion: str, project_id: UUID) -> InlineKeyboardMarkup:
     """Create keyboard for scoring a criterion (1-3)."""
-    name = CRITERIA_NAMES.get(criterion, criterion)
+    CRITERIA_NAMES.get(criterion, criterion)
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("1️⃣", callback_data=f"sc:crit:{criterion}:1:{project_id}"),
@@ -141,6 +141,7 @@ async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_
 
     async with async_session() as session:
         from sqlalchemy import select
+
         from app.models.project import Project
         result = await session.execute(
             select(Project).where(Project.id == UUID(project_id))

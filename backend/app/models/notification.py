@@ -1,9 +1,9 @@
 """Notification model - tracks all messages sent to participants."""
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,6 +57,7 @@ class Notification(Base):
     scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    reminder_day: Mapped[date | None] = mapped_column(Date, nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

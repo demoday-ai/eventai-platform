@@ -8,9 +8,10 @@ import uuid
 
 
 async def main():
-    from sqlalchemy import select, delete, text
+    from sqlalchemy import delete, select, text
+
     from app.database import async_session
-    from app.models import User, UserRole, Role, Event
+    from app.models import Event, Role, User, UserRole
     from app.models.guest_profile import GuestProfile
     from app.models.recommendation import Recommendation
     from app.services import profiling_service
@@ -194,7 +195,7 @@ async def main():
             if p.selected_tags:
                 print(f"  PASS: Profile has tags={p.selected_tags} → would skip to generate")
             else:
-                print(f"  FAIL: Profile has no tags, would not skip")
+                print("  FAIL: Profile has no tags, would not skip")
 
         # ============================================================
         # TEST 4: Business partner with extra_data (company + objectives)
@@ -284,8 +285,8 @@ async def main():
                         if found_biz:
                             print(f"    PASS: Summary references business context: {found_biz}")
                         else:
-                            print(f"    INFO: Summary doesn't explicitly mention business keywords "
-                                  f"(may still be contextually relevant)")
+                            print("    INFO: Summary doesn't explicitly mention business keywords "
+                                  "(may still be contextually relevant)")
 
         # ============================================================
         # Cleanup

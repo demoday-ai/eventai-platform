@@ -3,7 +3,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -11,7 +11,6 @@ from app.database import get_session
 from app.models.user import User
 from app.schemas.project import (
     ClusteringRequest,
-    ClusteringResult,
     MoveProjectRequest,
     ProjectResponse,
     ReplaceConfirmation,

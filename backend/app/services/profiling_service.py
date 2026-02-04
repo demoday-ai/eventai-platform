@@ -11,12 +11,10 @@ from sqlalchemy import delete, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.clustering_run import ClusteringRun
 from app.models.guest_profile import GuestProfile
 from app.models.project import Project
 from app.models.project_tag import ProjectTag
 from app.models.recommendation import Recommendation
-from app.models.room import Room
 from app.models.room_project import RoomProject
 from app.models.tag import Tag
 from app.services import llm_client
@@ -422,7 +420,7 @@ async def _text_search_scores(
     if not query_parts:
         return {}
 
-    tsquery_str = " | ".join(query_parts)
+    " | ".join(query_parts)
     scores: dict[uuid.UUID, float] = {}
 
     try:

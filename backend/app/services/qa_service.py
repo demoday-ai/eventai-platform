@@ -3,7 +3,6 @@
 Generates context-aware questions for guests and business partners.
 """
 
-import json
 import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID

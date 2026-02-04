@@ -6,9 +6,8 @@ Manages expert project scoring workflow.
 import logging
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment

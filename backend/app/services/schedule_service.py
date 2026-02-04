@@ -6,19 +6,18 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    ChangeType,
     ClusteringRun,
     Event,
-    Room,
     RoomProject,
     ScheduleChangeLog,
     ScheduleSlot,
     SlotStatus,
-    ChangeType,
 )
 from app.schemas.schedule import (
     DaySchedule,
@@ -27,7 +26,6 @@ from app.schemas.schedule import (
     ScheduleGenerateResult,
     ScheduleResponse,
     ScheduleSlotResponse,
-    SlotUpdateResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -261,7 +259,7 @@ async def get_schedule(
                         room_name=room.name if room else "Unknown",
                         project_id=s.project_id,
                         project_title=s.project.title if s.project else "Unknown",
-                        project_author=s.project.author_name if s.project else None,
+                        project_author=s.project.author if s.project else None,
                         start_time=s.start_time,
                         end_time=s.end_time,
                         display_order=s.display_order,

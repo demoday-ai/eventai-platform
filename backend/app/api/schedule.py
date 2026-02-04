@@ -3,7 +3,7 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import check_organizer, get_current_user
@@ -27,9 +27,8 @@ from app.schemas.schedule import (
     SlotUpdateRequest,
     SlotUpdateResult,
 )
-from app.services import audit_service, notification_service, schedule_service
+from app.services import audit_service, notification_service, schedule_service, user_service
 from app.services.notification_service import CancellationWindowClosedError
-from app.services import user_service
 
 router = APIRouter(tags=["Schedule"])
 
@@ -163,7 +162,7 @@ async def update_slot(
                 room_name=slot.room.name if slot.room else "Unknown",
                 project_id=slot.project_id,
                 project_title=slot.project.title if slot.project else "Unknown",
-                project_author=slot.project.author_name if slot.project else None,
+                project_author=slot.project.author if slot.project else None,
                 start_time=slot.start_time,
                 end_time=slot.end_time,
                 display_order=slot.display_order,
@@ -202,7 +201,7 @@ async def get_schedule_changes(
             new_start_time=c.new_start_time,
             old_room_name=c.old_room.name if c.old_room else None,
             new_room_name=c.new_room.name if c.new_room else None,
-            changed_by=c.changed_by.name if c.changed_by else None,
+            changed_by=c.changed_by.full_name if c.changed_by else None,
             created_at=c.created_at,
             notifications_sent=c.notifications_sent,
         )
@@ -261,6 +260,7 @@ async def cancel_reminders(
 @router.post("/reminders/send", response_model=ReminderSendResult)
 async def send_reminders(
     request: ReminderSendRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(check_organizer),
 ):
@@ -275,16 +275,14 @@ async def send_reminders(
     if not await schedule_service.is_schedule_approved(db, event.id):
         raise HTTPException(status_code=400, detail="Schedule not approved")
 
-    # Get bot instance
-    from fastapi import Request
-    # Note: In real implementation, bot would be injected differently
-    # For now, we'll create a mock or skip the actual send in tests
+    bot_app = getattr(http_request.app.state, "bot_app", None)
+    bot = getattr(bot_app, "bot", None) if bot_app else None
+    if not bot:
+        raise HTTPException(status_code=503, detail="Bot is not configured")
 
     try:
-        # This will fail without a real bot instance
-        # In production, bot is passed from app.state
         result = await notification_service.send_eve_reminders(
-            db, event.id, request.day, bot=None  # TODO: inject bot
+            db, event.id, request.day, bot=bot
         )
         return result
     except ValueError as e:

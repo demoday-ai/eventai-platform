@@ -37,7 +37,10 @@ def pipeline_keyboard(followups: list) -> InlineKeyboardMarkup:
     """Create keyboard with pipeline projects."""
     buttons = []
     for f in followups[:8]:
-        title = f.project.title[:25] + ".." if f.project and len(f.project.title) > 25 else (f.project.title if f.project else "Проект")
+        if f.project and len(f.project.title) > 25:
+            title = f.project.title[:25] + ".."
+        else:
+            title = f.project.title if f.project else "Проект"
         buttons.append([InlineKeyboardButton(
             f"{f.status_emoji} {title}",
             callback_data=f"bf:proj:{f.id}"
@@ -131,8 +134,9 @@ async def project_detail_callback(update: Update, context: ContextTypes.DEFAULT_
 
     async with async_session() as session:
         from sqlalchemy import select
-        from app.models.business_followup import BusinessFollowup
         from sqlalchemy.orm import selectinload
+
+        from app.models.business_followup import BusinessFollowup
 
         result = await session.execute(
             select(BusinessFollowup)
@@ -197,6 +201,7 @@ async def loi_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     async with async_session() as session:
         from sqlalchemy import select
+
         from app.models.business_followup import BusinessFollowup
 
         result = await session.execute(

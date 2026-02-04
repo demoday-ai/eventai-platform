@@ -18,7 +18,6 @@ from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
-    ConversationHandler,
 )
 
 from app.config import settings
@@ -203,6 +202,7 @@ async def room_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # Find room by short ID
         from sqlalchemy import select
+
         from app.models.room import Room
 
         result = await session.execute(
@@ -228,7 +228,8 @@ async def room_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             text += f"\n... и ещё {len(items) - 15}"
 
     from app.bot.keyboards import participation_summary_rooms
-    from app.services import participation_service as ps, user_service
+    from app.services import participation_service as ps
+    from app.services import user_service
 
     async with async_session() as session:
         event = await user_service.get_current_event(session)

@@ -6,16 +6,15 @@ Manages business partner pipeline and LOI generation.
 import logging
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.business_followup import BusinessFollowup, PipelineStatus
-from app.models.business_profile import BusinessProfile, BusinessObjective
+from app.models.business_profile import BusinessObjective, BusinessProfile
 from app.models.project import Project
 from app.models.project_recommendation import ProjectRecommendation
 from app.models.user import User
-from app.services import followup_service
 
 logger = logging.getLogger(__name__)
 

@@ -96,13 +96,16 @@ async def lifespan(app: FastAPI):
     scheduler = None
     if settings.bot_token and hasattr(app.state, "bot_app"):
         try:
-            from apscheduler.schedulers.asyncio import AsyncIOScheduler
-            from apscheduler.triggers.interval import IntervalTrigger
-            from apscheduler.triggers.cron import CronTrigger
-            from app.database import async_session as session_factory
-            from app.services import invite_service, user_service as us, notification_service
             from datetime import datetime, timedelta
+
             import pytz
+            from apscheduler.schedulers.asyncio import AsyncIOScheduler
+            from apscheduler.triggers.cron import CronTrigger
+            from apscheduler.triggers.interval import IntervalTrigger
+
+            from app.database import async_session as session_factory
+            from app.services import invite_service, notification_service
+            from app.services import user_service as us
 
             scheduler = AsyncIOScheduler(timezone=pytz.timezone("Europe/Moscow"))
             bot_instance = app.state.bot_app.bot
@@ -194,7 +197,7 @@ async def lifespan(app: FastAPI):
                                     session, event.id, tomorrow
                                 )
                                 # Send to organizers via bot
-                                for org_id in settings.organizer_telegram_ids:
+                                for org_id in settings.organizer_ids:
                                     try:
                                         msg = (
                                             f"📋 Превью напоминаний на {tomorrow}\n\n"
@@ -379,8 +382,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware for frontend
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 app.add_middleware(
     CORSMiddleware,

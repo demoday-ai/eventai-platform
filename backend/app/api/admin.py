@@ -6,21 +6,46 @@ import json
 import logging
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer, get_current_user
+from app.api.deps import check_organizer
 from app.config import settings
 from app.database import get_session
 from app.models import User
 from app.models.role import RoleCode
 from app.models.user import GuestSubtype
 from app.models.user_role import UserRole
-from app.schemas.admin import AuditLogItem, AuditLogResponse, BriefingPreview, BriefingSendResult, DashboardResponse, EventUpdateRequest, GuestUploadResult, MessagingPreviewRequest, MessagingPreviewResponse, MessagingSendRequest, MessagingSendResult, OrganizerCreateRequest, OrganizerItem, ProjectListItem, RoomCoverage, RoomDetailResponse
+from app.schemas.admin import (
+    AuditLogItem,
+    AuditLogResponse,
+    BriefingPreview,
+    BriefingSendResult,
+    DashboardResponse,
+    EventUpdateRequest,
+    GuestUploadResult,
+    MessagingPreviewRequest,
+    MessagingPreviewResponse,
+    MessagingSendRequest,
+    MessagingSendResult,
+    OrganizerCreateRequest,
+    OrganizerItem,
+    ProjectListItem,
+    RoomCoverage,
+    RoomDetailResponse,
+)
 from app.schemas.expert import RowError
 from app.schemas.user import EventResponse
-from app.services import admin_service, audit_service, briefing_service, dedup_service, messaging_service, organizer_service, user_service
+from app.services import (
+    admin_service,
+    audit_service,
+    briefing_service,
+    dedup_service,
+    messaging_service,
+    organizer_service,
+    user_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +218,10 @@ async def upload_guests(
             imported=0,
             duplicates=0,
             errors=[],
-        ).model_dump() | {"existing_count": existing_count, "message": f"{existing_count} guests already exist. Set confirm_replace=true to replace."}
+        ).model_dump() | {
+            "existing_count": existing_count,
+            "message": f"{existing_count} guests already exist. Set confirm_replace=true to replace.",
+        }
 
     if existing_count and existing_count > 0 and confirm_replace:
         # Delete existing guest user_roles and their users for this event

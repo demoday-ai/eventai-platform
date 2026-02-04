@@ -7,14 +7,13 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.contact_request import ContactRequest, ContactRequestStatus
 from app.models.followup_package import FollowupPackage
 from app.models.guest_profile import GuestProfile
-from app.models.project import Project
 from app.models.project_recommendation import ProjectRecommendation
 from app.models.user import User
 
@@ -231,7 +230,7 @@ async def get_guests_without_package(
     packages_result = await session.execute(
         select(FollowupPackage.user_id)
         .where(FollowupPackage.event_id == event_id)
-        .where(FollowupPackage.sent == True)
+        .where(FollowupPackage.sent is True)
     )
     sent_user_ids = {row[0] for row in packages_result.all()}
 

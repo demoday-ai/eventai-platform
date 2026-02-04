@@ -39,7 +39,9 @@ logger = logging.getLogger(__name__)
 AWAITING_CRITERION = 1
 
 
-async def _get_user_with_profiles(session, telegram_id: int) -> tuple[User | None, GuestProfile | None, BusinessProfile | None]:
+async def _get_user_with_profiles(
+    session, telegram_id: int,
+) -> tuple[User | None, GuestProfile | None, BusinessProfile | None]:
     """Get user and their profiles."""
     user = await user_service.get_user_by_telegram_id(session, telegram_id)
     if not user:
@@ -142,6 +144,7 @@ async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_
 
         # Get project
         from sqlalchemy import select
+
         from app.models.project import Project
         result = await session.execute(
             select(Project).where(Project.id == UUID(project_id))
@@ -186,6 +189,7 @@ async def more_questions_callback(update: Update, context: ContextTypes.DEFAULT_
             return
 
         from sqlalchemy import select
+
         from app.models.project import Project
         result = await session.execute(
             select(Project).where(Project.id == UUID(project_id))
@@ -245,8 +249,8 @@ async def back_to_list_callback(update: Update, context: ContextTypes.DEFAULT_TY
             return
 
         await query.edit_message_text(
-            f"❓ *Вопросы для Q&A*\n\n"
-            f"Выберите проект:",
+            "❓ *Вопросы для Q&A*\n\n"
+            "Выберите проект:",
             reply_markup=project_list_keyboard(projects),
             parse_mode="Markdown",
         )
@@ -285,8 +289,8 @@ async def compare_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["cmp_projects"] = {str(p.id): p.title for p in projects}
 
         await update.message.reply_text(
-            f"📊 *Сравнение проектов*\n\n"
-            f"Выберите 2-5 проектов для сравнения:",
+            "📊 *Сравнение проектов*\n\n"
+            "Выберите 2-5 проектов для сравнения:",
             reply_markup=compare_project_keyboard(projects, set()),
             parse_mode="Markdown",
         )
@@ -371,6 +375,7 @@ async def compare_done_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
         # Get selected projects
         from sqlalchemy import select
+
         from app.models.project import Project
         result = await session.execute(
             select(Project).where(Project.id.in_([UUID(pid) for pid in selected]))

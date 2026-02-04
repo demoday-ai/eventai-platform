@@ -19,7 +19,6 @@ from app.models import (
 )
 from app.schemas.admin import (
     Alert,
-    CoverageResponse,
     DashboardResponse,
     ExpertInfo,
     ExpertStats,
@@ -191,7 +190,7 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
             alerts.append(
                 Alert(
                     severity="critical",
-                    message=f"Зал без экспертов",
+                    message="Зал без экспертов",
                     room_id=str(room_id),
                     room_name=room_name,
                 )

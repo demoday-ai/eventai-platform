@@ -5,6 +5,7 @@ Stores generated follow-up packages for guests after Demo Day.
 
 import uuid
 from datetime import datetime
+
 from sqlalchemy import Boolean, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship

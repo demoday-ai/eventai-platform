@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.config import settings
 from app.database import get_session
 from app.models.role import RoleCode
 from app.models.user import User
-from app.config import settings
 from app.schemas.user import (
     RoleInfo,
     SetGuestSubtypeRequest,

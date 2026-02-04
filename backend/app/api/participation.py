@@ -1,9 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer, get_current_user
+from app.api.deps import check_organizer
 from app.database import get_session
 from app.models.user import User
 from app.schemas.participation import (
@@ -30,8 +30,9 @@ async def broadcast_slots(
     try:
         # We need a bot instance — this endpoint is primarily for API access
         # The main flow is through the Telegram bot handler
-        from app.config import settings
         from telegram import Bot
+
+        from app.config import settings
 
         bot = Bot(token=settings.bot_token)
         result = await participation_service.broadcast_slots(session, event, bot)
@@ -91,8 +92,8 @@ async def get_request_detail(
     project = pr.project if pr.project else await session.get(
         __import__("app.models.project", fromlist=["Project"]).Project, pr.project_id
     )
-    from app.models.room_project import RoomProject
     from app.models.room import Room
+    from app.models.room_project import RoomProject
 
     room_name = "N/A"
     if pr.room_project_id:

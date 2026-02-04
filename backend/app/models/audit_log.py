@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import JSON, DateTime, Index, String, func
+from sqlalchemy import JSON, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 

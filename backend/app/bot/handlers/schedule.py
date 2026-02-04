@@ -35,7 +35,7 @@ class ScheduleState(Enum):
 
 def _is_organizer(user_id: int) -> bool:
     """Check if Telegram user is an organizer."""
-    return user_id in settings.organizer_telegram_ids
+    return str(user_id) in settings.organizer_ids
 
 
 async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -381,13 +381,12 @@ async def adjust_slot_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
 
     data = query.data
-    user = update.effective_user
 
     if data.startswith("sched:adj_time:"):
         # Show time picker (simplified - just offer 15-min increments)
         slot_id = data.split(":")[2]
         keyboard = []
-        now = datetime.now(MSK)
+        datetime.now(MSK)
 
         # Offer times from 10:00 to 19:00 in 15-min increments (simplified to hourly)
         for hour in range(10, 20):

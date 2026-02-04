@@ -2,11 +2,11 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import select, func, update, and_, or_
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,19 +14,18 @@ from app.models import (
     ClusteringRun,
     Escalation,
     Event,
+    ExpertRoomAssignment,
     Notification,
     NotificationStatus,
     NotificationType,
+    Role,
+    RoleCode,
     Room,
-    RoomProject,
     ScheduleChangeLog,
     ScheduleSlot,
     SlotStatus,
     User,
     UserRole,
-    Role,
-    RoleCode,
-    ExpertRoomAssignment,
 )
 from app.schemas.schedule import (
     NotificationDashboard,
@@ -221,19 +220,23 @@ async def create_notification_escalation(
         return None
 
     # Determine escalation type
+    user_label = user.full_name or user.username or str(user.id)
     if not user.telegram_user_id:
         esc_type = "notification_undeliverable"
-        message = f"Пользователь {user.name or user.id} не запустил бот (нет telegram_user_id)"
+        message = f"Пользователь {user_label} не запустил бот (нет telegram_user_id)"
     else:
         esc_type = "reminder_send_failed"
-        message = f"Не удалось отправить уведомление пользователю {user.name or user.id}: {notification.error_message or 'Unknown error'}"
+        message = (
+            f"Не удалось отправить уведомление пользователю {user_label}:"
+            f" {notification.error_message or 'Unknown error'}"
+        )
 
     # Check if escalation already exists
     existing = await session.execute(
         select(Escalation)
         .where(Escalation.event_id == event_id)
         .where(Escalation.type == esc_type)
-        .where(Escalation.resolved == False)
+        .where(Escalation.resolved is False)
     )
     if existing.scalars().first():
         return None
@@ -448,6 +451,8 @@ async def send_eve_reminders(
     skipped_count = 0
     notification_ids = []
 
+    scheduled_date = target_day - timedelta(days=1)
+
     # Get all users with roles for this event
     users_result = await session.execute(
         select(User)
@@ -491,6 +496,16 @@ async def send_eve_reminders(
             .where(Notification.user_id == user.id)
             .where(Notification.event_id == event_id)
             .where(Notification.type == NotificationType.EVE_OF_DD.value)
+            .where(
+                or_(
+                    Notification.reminder_day == target_day,
+                    and_(
+                        Notification.reminder_day.is_(None),
+                        Notification.scheduled_at.is_not(None),
+                        func.date(Notification.scheduled_at) == scheduled_date,
+                    ),
+                )
+            )
             .where(Notification.status.notin_([
                 NotificationStatus.FAILED.value,
                 NotificationStatus.CANCELLED.value,
@@ -509,6 +524,7 @@ async def send_eve_reminders(
             content=content,
             status=NotificationStatus.PENDING.value,
             scheduled_at=datetime.now(pytz.UTC),
+            reminder_day=target_day,
         )
         session.add(notification)
         await session.flush()
@@ -730,9 +746,10 @@ async def _get_unreachable_participants(
     for user in users:
         roles = [ur.role.code for ur in user.user_roles if ur.role]
         role = roles[0] if roles else "unknown"
+        user_label = user.full_name or user.username or str(user.id)
         unreachable.append(UnreachableParticipant(
             user_id=user.id,
-            name=user.name or str(user.id),
+            name=user_label,
             role=role,
             reason="Не запустил бот",
         ))
@@ -768,6 +785,16 @@ async def cancel_reminders(
         update(Notification)
         .where(Notification.event_id == event_id)
         .where(Notification.type == NotificationType.EVE_OF_DD.value)
+        .where(
+            or_(
+                Notification.reminder_day == target_day,
+                and_(
+                    Notification.reminder_day.is_(None),
+                    Notification.scheduled_at.is_not(None),
+                    func.date(Notification.scheduled_at) == cancel_date,
+                ),
+            )
+        )
         .where(Notification.status == NotificationStatus.PENDING.value)
         .values(status=NotificationStatus.CANCELLED.value)
         .returning(Notification.id)
@@ -1186,7 +1213,7 @@ async def get_notifications(
     items = [
         NotificationItem(
             id=n.id,
-            user_name=n.user.name if n.user else None,
+            user_name=n.user.full_name if n.user else None,
             type=n.type,
             status=n.status,
             scheduled_at=n.scheduled_at,

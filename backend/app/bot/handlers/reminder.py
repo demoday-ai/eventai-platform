@@ -11,8 +11,7 @@ Callbacks:
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
-from uuid import UUID
+from datetime import date, datetime, timezone
 
 from telegram import Update
 from telegram.ext import (
@@ -215,6 +214,7 @@ async def send_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     async with async_session() as session:
         from sqlalchemy import select
+
         from app.models.reminder import ReminderBatch
 
         # Find batch by prefix
@@ -346,6 +346,7 @@ async def recovery_choice_callback(update: Update, context: ContextTypes.DEFAULT
 
     async with async_session() as session:
         from sqlalchemy import select
+
         from app.models.reminder import ReminderBatch
 
         # Find batch by prefix

@@ -501,7 +501,7 @@ async def check_and_escalate(
                 select(Escalation)
                 .where(Escalation.expert_id == a.expert.id)
                 .where(Escalation.type == "no_response_escalation")
-                .where(Escalation.resolved == False)
+                .where(Escalation.resolved is False)
             )
             if existing.scalars().first():
                 continue
@@ -545,7 +545,7 @@ async def check_and_escalate(
                 select(Escalation)
                 .where(Escalation.room_id == room.id)
                 .where(Escalation.type == esc_type)
-                .where(Escalation.resolved == False)
+                .where(Escalation.resolved is False)
             )
             if existing.scalars().first():
                 continue

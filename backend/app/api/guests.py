@@ -59,6 +59,7 @@ async def get_profile(
 ):
     """Get guest profile for user and event."""
     from sqlalchemy import select
+
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(
@@ -130,6 +131,7 @@ async def generate_recommendations(
 ):
     """Generate personalized project recommendations for guest."""
     from sqlalchemy import select
+
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(
@@ -153,6 +155,7 @@ async def get_recommendations(
 ):
     """Get existing recommendations for guest."""
     from sqlalchemy import select
+
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(
@@ -179,6 +182,7 @@ async def get_project_detail(
 ):
     """Get full project detail from guest's recommendation list."""
     from sqlalchemy import select
+
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(

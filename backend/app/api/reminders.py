@@ -14,7 +14,6 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_session
 from app.models.reminder import (
-    ReminderNotification as Notification,
     ReminderBatch,
     ReminderBatchStatus,
     ReminderType,

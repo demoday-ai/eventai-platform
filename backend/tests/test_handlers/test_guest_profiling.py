@@ -56,7 +56,7 @@ def mock_tags():
 @pytest.mark.asyncio
 async def test_profiling_flow_complete(mock_event, mock_guest_user, mock_tags):
     """T020: Complete guest profiling flow - tags selection to confirmation."""
-    from app.bot.handlers.guest_profiling import profile_command, CHOOSE_TAGS
+    from app.bot.handlers.guest_profiling import CHOOSE_TAGS, profile_command
 
     @asynccontextmanager
     async def mock_session():
@@ -94,7 +94,7 @@ async def test_profiling_flow_complete(mock_event, mock_guest_user, mock_tags):
 @pytest.mark.asyncio
 async def test_edit_existing_profile(mock_event, mock_guest_user, mock_guest_profile, mock_tags):
     """T021: User with existing profile can edit it."""
-    from app.bot.handlers.guest_profiling import profile_command, CHOOSE_TAGS
+    from app.bot.handlers.guest_profiling import profile_command
 
     @asynccontextmanager
     async def mock_session():
@@ -115,7 +115,7 @@ async def test_edit_existing_profile(mock_event, mock_guest_user, mock_guest_pro
         mock_prof_svc.get_or_create_profile = AsyncMock(return_value=mock_guest_profile)
         mock_prof_svc.get_available_tags = AsyncMock(return_value=mock_tags)
 
-        result = await profile_command(mock_update, mock_context)
+        await profile_command(mock_update, mock_context)
 
         # With existing profile, should show current profile
         mock_update.message.reply_text.assert_called()
@@ -133,7 +133,7 @@ async def test_edit_existing_profile(mock_event, mock_guest_user, mock_guest_pro
 @pytest.mark.asyncio
 async def test_validation_min_tags(mock_event, mock_guest_user, mock_tags):
     """T022: Cannot confirm profile without selecting at least one tag."""
-    from app.bot.handlers.guest_profiling import tag_toggle_callback, CHOOSE_TAGS
+    from app.bot.handlers.guest_profiling import CHOOSE_TAGS, tag_toggle_callback
 
     @asynccontextmanager
     async def mock_session():
