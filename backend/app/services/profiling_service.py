@@ -305,7 +305,8 @@ async def save_profile(
     profile.extracted_tags = []
     profile.keywords = keywords
     profile.raw_text = raw_text
-    profile.extra_data = extra_data
+    if extra_data is not None:
+        profile.extra_data = extra_data
 
     await session.commit()
     logger.info("Profile saved: user=%s tags=%s keywords=%s extra_data=%s", profile.user_id, selected_tags, keywords, extra_data)

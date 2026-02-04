@@ -103,8 +103,9 @@ def _format_recommendations(data: dict) -> list[str]:
         if rec.get("conflict_rooms"):
             conflict = f" ⚠️ Параллельно с Зал {', '.join(str(r) for r in rec['conflict_rooms'][:3])}"
 
+        score = int(rec.get("relevance_score", 0))
         entry = (
-            f"*{rec['rank']}. {title}*\n"
+            f"*{rec['rank']}. {title}* ({score}%)\n"
             f"{summary}\n"
             f"📍 {room_info} · {tags_str} · {author}{conflict}\n\n"
         )
@@ -154,8 +155,9 @@ def _format_if_time(data: dict) -> list[str]:
         room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
         tags_str = ", ".join(rec.get("tags", [])[:3])
 
+        score = int(rec.get("relevance_score", 0))
         entry = (
-            f"*{rec['rank']}. {title}*\n"
+            f"*{rec['rank']}. {title}* ({score}%)\n"
             f"{summary}\n"
             f"📍 {room_info} · {tags_str}\n\n"
         )
@@ -620,6 +622,48 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     return VIEW_PROGRAM
 
 
+async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle text messages in VIEW_PROGRAM state — show profile info."""
+    import uuid as _uuid
+
+    user_id = context.user_data.get("profile_user_id")
+    event_id = context.user_data.get("profile_event_id")
+
+    if not user_id or not event_id:
+        await update.message.reply_text(
+            "Используйте кнопки выше или введите /profile для управления программой."
+        )
+        return VIEW_PROGRAM
+
+    async with async_session() as session:
+        profile = await profiling_service.get_or_create_profile(
+            session, _uuid.UUID(user_id), _uuid.UUID(event_id)
+        )
+        tags = ", ".join(profile.selected_tags) if profile.selected_tags else "не выбраны"
+        keywords = ", ".join(profile.keywords) if profile.keywords else "нет"
+        extra = ""
+        if profile.extra_data:
+            ed = profile.extra_data
+            if ed.get("company"):
+                extra += f"\nКомпания: {ed['company']}"
+            if ed.get("business_objectives"):
+                extra += f"\nЦели: {', '.join(ed['business_objectives'])}"
+
+    recs_data = context.user_data.get("recommendations", {})
+    total = recs_data.get("total", 0)
+
+    text = (
+        f"Ваш профиль:\n"
+        f"Теги: {tags}\n"
+        f"Ключевые слова: {keywords}{extra}\n"
+        f"Рекомендаций: {total}\n\n"
+        f"Используйте кнопки выше для просмотра проектов "
+        f"или нажмите «Обновить профиль»."
+    )
+    await update.message.reply_text(text)
+    return VIEW_PROGRAM
+
+
 # --- VIEW_DETAIL state (T028, T030) ---
 
 
@@ -721,7 +765,8 @@ def get_profiling_handler() -> ConversationHandler:
                 CallbackQueryHandler(generate_program_callback, pattern=r"^prof:(generate|later)$"),
             ],
             VIEW_PROGRAM: [
-                CallbackQueryHandler(view_program_callback, pattern=r"^(pdetail:|recpage:|profile:update)"),
+                CallbackQueryHandler(view_program_callback, pattern=r"^(pdetail:|recpage:|profile:update|prof:show_if_time|noop)"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, view_program_text),
             ],
             VIEW_DETAIL: [
                 CallbackQueryHandler(back_to_program_callback, pattern=r"^prof:back_program$"),
