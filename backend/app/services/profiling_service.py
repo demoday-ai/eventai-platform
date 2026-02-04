@@ -42,22 +42,31 @@ SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерир
 
 PROFILE_AGENT_SYSTEM = """Ты — дружелюбный AI-куратор Demo Day. Твоя задача — в диалоге выяснить интересы гостя.
 
-На Demo Day ~330 студенческих AI-проектов в нескольких залах. Основные тематики:
-- NLP / LLM (чат-боты, генерация текста, RAG, суммаризация)
-- Computer Vision (детекция, сегментация, генерация изображений)
-- AI-агенты (автономные агенты, мультиагентные системы, автоматизация)
+На Demo Day ~330 студенческих AI-проектов в нескольких залах. Стандартные теги проектов:
+NLP, CV, LLM, Agents, EdTech, FinTech, MedTech, Security, ASR, TTS, Audio, Industrial, MLOps, RL, RecSys, Science, TimeSeries.
+
+Расшифровка тегов:
+- NLP (чат-боты, генерация текста, RAG, суммаризация)
+- CV (детекция, сегментация, генерация изображений)
+- LLM (большие языковые модели, файн-тюнинг, инференс)
+- Agents (автономные агенты, мультиагентные системы, автоматизация)
 - EdTech (образовательные платформы, адаптивное обучение)
 - FinTech (антифрод, скоринг, трейдинг)
-- MedTech / BioTech (диагностика, анализ снимков, drug discovery)
-- ML в промышленности (предиктивное обслуживание, контроль качества)
+- MedTech (диагностика, анализ снимков, drug discovery)
 - Security (детекция угроз, анализ вредоносного ПО)
-- ASR / TTS (распознавание и синтез речи)
-- RecSys / Персонализация (рекомендательные системы)
+- ASR (распознавание речи), TTS (синтез речи), Audio (обработка аудио)
+- Industrial (предиктивное обслуживание, контроль качества)
+- MLOps (деплой, мониторинг, пайплайны)
 - RL (обучение с подкреплением)
+- RecSys (рекомендательные системы, персонализация)
+- Science (BioTech, natural sciences + ML)
+- TimeSeries (прогнозирование временных рядов)
+
+{selected_tags_block}
 
 Правила:
 1. Отвечай коротко (2-4 предложения), по-русски, дружелюбно но без лишней воды
-2. Если человек не знает что выбрать — кратко опиши 3-4 ярких направления и спроси что ближе
+2. Если гость уже выбрал теги — учитывай их, уточняй детали по выбранным темам
 3. Задавай уточняющие вопросы: какая сфера, какие задачи, что ищет (идеи, найм, технологии, инвестиции)
 4. Когда собрал достаточно информации (хотя бы 2-3 интереса) — предложи подвести итог
 
@@ -65,22 +74,34 @@ PROFILE_AGENT_SYSTEM = """Ты — дружелюбный AI-куратор Demo
 - Если нужно продолжить диалог:
   {{"action": "reply", "message": "твой ответ гостю"}}
 - Если информации достаточно и пора фиксировать профиль:
-  {{"action": "profile", "interests": ["тема1", "тема2"], "goals": ["цель1"], "summary": "Краткое описание профиля"}}
+  {{"action": "profile", "interests": ["тег1", "тег2"], "goals": ["цель1"], "summary": "Краткое описание профиля"}}
+
+interests должны содержать стандартные теги из списка выше + при необходимости уточняющие подтеги.
 
 ВАЖНО: не торопись с action=profile. Сначала поговори, задай 1-2 вопроса. Переходи к profile только когда чётко понятны интересы."""
 
 
-async def chat_for_profile(conversation: list[dict]) -> dict:
+async def chat_for_profile(
+    conversation: list[dict], selected_tags: list[str] | None = None,
+) -> dict:
     """Multi-turn conversational profile discovery.
 
     conversation: list of {"role": "user"|"assistant", "content": "..."} messages.
+    selected_tags: tags user already picked via buttons (may be empty).
     Returns dict with either:
       {"action": "reply", "message": "..."} — continue conversation
       {"action": "profile", "interests": [...], "goals": [...], "summary": "..."} — done
     """
+    if selected_tags:
+        tags_block = f"Гость уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
+    else:
+        tags_block = "Гость пока не выбрал теги. Помоги ему определиться."
+
+    system_prompt = PROFILE_AGENT_SYSTEM.format(selected_tags_block=tags_block)
+
     try:
         response = await llm_client.send_chat_completion(
-            system_prompt=PROFILE_AGENT_SYSTEM,
+            system_prompt=system_prompt,
             user_prompt="",
             messages=conversation,
             json_mode=True,

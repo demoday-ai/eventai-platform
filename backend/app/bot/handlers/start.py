@@ -343,7 +343,8 @@ async def _agent_turn(
     is_message: bool = False,
 ) -> int:
     """Send conversation to LLM agent, handle reply or profile extraction."""
-    result = await profiling_service.chat_for_profile(conversation)
+    selected_tags = list(context.user_data.get("nl_topics", set()))
+    result = await profiling_service.chat_for_profile(conversation, selected_tags)
 
     if result["action"] == "profile":
         # Agent decided we have enough info — show confirmation
