@@ -40,6 +40,8 @@ services:
       args:
         VITE_API_URL: /api/v1
         VITE_APP_NAME: ${VITE_APP_NAME:-Demo Day Admin}
+    ports:
+      - "3000:80"
     depends_on:
       - backend
     networks:
