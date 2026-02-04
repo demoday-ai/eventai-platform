@@ -270,11 +270,15 @@ async def start_profiling_callback(update: Update, context: ContextTypes.DEFAULT
     context.user_data["profile_event_id"] = str(event.id)
 
     # Check if NL profiler already filled the profile — skip straight to generation
+    has_tags = False
     async with async_session() as session:
         profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
         if profile.selected_tags:
             context.user_data["profile_id"] = str(profile.id)
-            return await _do_generate(update, context)
+            has_tags = True
+
+    if has_tags:
+        return await _do_generate(update, context)
 
     # No tags yet — standard path via tag selection
     context.user_data["selected_tags"] = set()
