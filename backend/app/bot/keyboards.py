@@ -512,7 +512,8 @@ def update_profile_keyboard() -> InlineKeyboardMarkup:
 
 
 def program_recommendation_keyboard(
-    recommendations: list[dict], page: int = 0, page_size: int = 8
+    recommendations: list[dict], page: int = 0, page_size: int = 8,
+    has_if_time: bool = False,
 ) -> InlineKeyboardMarkup:
     """Inline buttons for project details from recommendation list."""
     start_idx = page * page_size
@@ -535,6 +536,8 @@ def program_recommendation_keyboard(
             nav.append(InlineKeyboardButton("▶", callback_data=f"recpage:{page + 1}"))
         buttons.append(nav)
 
+    if has_if_time:
+        buttons.append([InlineKeyboardButton("Ещё рекомендации", callback_data="prof:show_if_time")])
     buttons.append([InlineKeyboardButton("Обновить профиль", callback_data="profile:update")])
     return InlineKeyboardMarkup(buttons)
 

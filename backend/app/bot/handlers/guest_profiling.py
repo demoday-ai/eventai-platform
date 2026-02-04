@@ -89,10 +89,9 @@ def _format_interests(selected: list[str], extracted: list[str], keywords: list[
 
 
 def _format_recommendations(data: dict) -> list[str]:
-    """Format recommendations into message parts (respecting 4096 char limit)."""
+    """Format must-visit recommendations into message parts (respecting 4096 char limit)."""
     messages = []
 
-    # Must visit
     must_text = "🎯 *Обязательно посетить:*\n\n"
     for rec in data.get("must_visit", []):
         title = _escape_markdown(rec["title"])
@@ -111,7 +110,43 @@ def _format_recommendations(data: dict) -> list[str]:
         )
         must_text += entry
 
-    # If time
+    # Split long must-visit into multiple messages
+    if len(must_text) > MAX_MESSAGE_LEN:
+        # Rough split by half of entries
+        must_recs = data.get("must_visit", [])
+        mid = len(must_recs) // 2
+        part1 = "🎯 *Обязательно посетить:*\n\n"
+        part2 = ""
+        for i, rec in enumerate(must_recs):
+            title = _escape_markdown(rec["title"])
+            summary = _escape_markdown(rec["summary"][:200] if rec["summary"] else "")
+            author = _escape_markdown(rec.get("author", ""))
+            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
+            tags_str = ", ".join(rec.get("tags", [])[:4])
+            conflict = ""
+            if rec.get("conflict_rooms"):
+                conflict = f" ⚠️ Параллельно с Зал {', '.join(str(r) for r in rec['conflict_rooms'][:3])}"
+            entry = (
+                f"*{rec['rank']}. {title}*\n"
+                f"{summary}\n"
+                f"📍 {room_info} · {tags_str} · {author}{conflict}\n\n"
+            )
+            if i < mid:
+                part1 += entry
+            else:
+                part2 += entry
+        messages.append(part1)
+        if part2:
+            messages.append(part2)
+    else:
+        messages.append(must_text)
+
+    return messages
+
+
+def _format_if_time(data: dict) -> list[str]:
+    """Format if-time recommendations into message parts."""
+    messages = []
     if_time_text = "⏰ *Если останется время:*\n\n"
     for rec in data.get("if_time", []):
         title = _escape_markdown(rec["title"])
@@ -126,11 +161,29 @@ def _format_recommendations(data: dict) -> list[str]:
         )
         if_time_text += entry
 
-    # Split into messages if needed (T023)
-    if len(must_text) + len(if_time_text) <= MAX_MESSAGE_LEN:
-        messages.append(must_text + if_time_text)
+    if len(if_time_text) > MAX_MESSAGE_LEN:
+        if_recs = data.get("if_time", [])
+        mid = len(if_recs) // 2
+        part1 = "⏰ *Если останется время:*\n\n"
+        part2 = ""
+        for i, rec in enumerate(if_recs):
+            title = _escape_markdown(rec["title"])
+            summary = _escape_markdown(rec["summary"][:150] if rec["summary"] else "")
+            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
+            tags_str = ", ".join(rec.get("tags", [])[:3])
+            entry = (
+                f"*{rec['rank']}. {title}*\n"
+                f"{summary}\n"
+                f"📍 {room_info} · {tags_str}\n\n"
+            )
+            if i < mid:
+                part1 += entry
+            else:
+                part2 += entry
+        messages.append(part1)
+        if part2:
+            messages.append(part2)
     else:
-        messages.append(must_text)
         messages.append(if_time_text)
 
     return messages
@@ -486,8 +539,9 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return ConversationHandler.END
 
     messages = _format_recommendations(data)
-    all_recs = data.get("must_visit", []) + data.get("if_time", [])
-    keyboard = program_recommendation_keyboard(all_recs)
+    must_recs = data.get("must_visit", [])
+    has_if_time = bool(data.get("if_time"))
+    keyboard = program_recommendation_keyboard(must_recs, has_if_time=has_if_time)
 
     chat_id = update.effective_chat.id
 
@@ -515,6 +569,25 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
 
     data = query.data
+
+    # Show "if time" recommendations
+    if data == "prof:show_if_time":
+        recs_data = context.user_data.get("recommendations", {})
+        if_time_msgs = _format_if_time(recs_data)
+        if_time_recs = recs_data.get("if_time", [])
+        keyboard = program_recommendation_keyboard(if_time_recs, has_if_time=False)
+        chat_id = update.effective_chat.id
+        for i, msg in enumerate(if_time_msgs):
+            if i == len(if_time_msgs) - 1:
+                await context.bot.send_message(
+                    chat_id=chat_id, text=msg, parse_mode="Markdown",
+                    reply_markup=keyboard,
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=chat_id, text=msg, parse_mode="Markdown",
+                )
+        return VIEW_PROGRAM
 
     # Pagination
     if data.startswith("recpage:"):
