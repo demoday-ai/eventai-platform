@@ -428,14 +428,17 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
     topics = context.user_data.get("nl_topics", set())
     topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
 
-    # Build raw_text from conversation history
+    # Build raw_text from full conversation history
     conversation = context.user_data.get("nl_conversation", [])
     raw_text = "\n".join(
-        m["content"] for m in conversation if m["role"] == "user"
+        f"{'Гость' if m['role'] == 'user' else 'Куратор'}: {m['content']}"
+        for m in conversation
     )
 
-    # Merge topic labels into interests
-    all_tags = list(dict.fromkeys(topic_labels + interests))
+    # selected_tags = what user clicked (buttons)
+    # extracted_tags = what LLM extracted from the interview
+    selected_tags = list(dict.fromkeys(topic_labels))
+    extracted_tags = list(dict.fromkeys(interests))
 
     async with async_session() as session:
         user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
@@ -452,13 +455,16 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
         await profiling_service.save_profile(
             session,
             profile,
-            selected_tags=all_tags,
-            extracted_tags=[],
+            selected_tags=selected_tags,
+            extracted_tags=extracted_tags,
             keywords=profile_data.get("goals", []),
             raw_text=raw_text or None,
         )
 
-    logger.info("Profile confirmed via NL: tg_id=%s tags=%s", telegram_user_id, all_tags)
+    logger.info(
+        "Profile confirmed via NL: tg_id=%s selected=%s extracted=%s",
+        telegram_user_id, selected_tags, extracted_tags,
+    )
 
     await query.edit_message_text(
         "Профиль сохранён! Хотите получить персональную программу?",
