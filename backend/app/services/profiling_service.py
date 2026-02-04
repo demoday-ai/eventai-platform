@@ -40,42 +40,69 @@ SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерир
 {{"summaries": [{{"project_id": "...", "summary": "..."}}, ...]}}"""
 
 
-PROFILE_EXTRACTION_SYSTEM = """Ты AI-ассистент для Demo Day. Проанализируй текст пользователя и извлеки его профиль.
-Определи:
-- interests: список интересов/тематик (3-7 штук, короткие фразы)
-- goals: что человек хочет найти на Demo Day (1-3 цели)
-- summary: краткое описание профиля для подтверждения (1-2 предложения, на русском)
+PROFILE_AGENT_SYSTEM = """Ты — дружелюбный AI-куратор Demo Day. Твоя задача — в диалоге выяснить интересы гостя.
 
-Верни JSON строго в формате:
-{{"interests": ["interest1", "interest2"], "goals": ["goal1"], "summary": "Краткое описание профиля"}}"""
+На Demo Day ~330 студенческих AI-проектов в нескольких залах. Основные тематики:
+- NLP / LLM (чат-боты, генерация текста, RAG, суммаризация)
+- Computer Vision (детекция, сегментация, генерация изображений)
+- AI-агенты (автономные агенты, мультиагентные системы, автоматизация)
+- EdTech (образовательные платформы, адаптивное обучение)
+- FinTech (антифрод, скоринг, трейдинг)
+- MedTech / BioTech (диагностика, анализ снимков, drug discovery)
+- ML в промышленности (предиктивное обслуживание, контроль качества)
+- Security (детекция угроз, анализ вредоносного ПО)
+- ASR / TTS (распознавание и синтез речи)
+- RecSys / Персонализация (рекомендательные системы)
+- RL (обучение с подкреплением)
+
+Правила:
+1. Отвечай коротко (2-4 предложения), по-русски, дружелюбно но без лишней воды
+2. Если человек не знает что выбрать — кратко опиши 3-4 ярких направления и спроси что ближе
+3. Задавай уточняющие вопросы: какая сфера, какие задачи, что ищет (идеи, найм, технологии, инвестиции)
+4. Когда собрал достаточно информации (хотя бы 2-3 интереса) — предложи подвести итог
+
+Формат ответа — СТРОГО JSON:
+- Если нужно продолжить диалог:
+  {{"action": "reply", "message": "твой ответ гостю"}}
+- Если информации достаточно и пора фиксировать профиль:
+  {{"action": "profile", "interests": ["тема1", "тема2"], "goals": ["цель1"], "summary": "Краткое описание профиля"}}
+
+ВАЖНО: не торопись с action=profile. Сначала поговори, задай 1-2 вопроса. Переходи к profile только когда чётко понятны интересы."""
 
 
-async def extract_profile_from_text(raw_text: str) -> dict:
-    """Extract structured profile from free-form user text using LLM.
+async def chat_for_profile(conversation: list[dict]) -> dict:
+    """Multi-turn conversational profile discovery.
 
-    Returns dict with keys: interests, goals, summary.
-    Falls back gracefully on LLM failure.
+    conversation: list of {"role": "user"|"assistant", "content": "..."} messages.
+    Returns dict with either:
+      {"action": "reply", "message": "..."} — continue conversation
+      {"action": "profile", "interests": [...], "goals": [...], "summary": "..."} — done
     """
-    if not raw_text or not raw_text.strip():
-        return {"interests": [], "goals": [], "summary": ""}
-
     try:
         response = await llm_client.send_chat_completion(
-            system_prompt=PROFILE_EXTRACTION_SYSTEM,
-            user_prompt=raw_text,
+            system_prompt=PROFILE_AGENT_SYSTEM,
+            user_prompt="",
+            messages=conversation,
             json_mode=True,
         )
 
-        interests = response.get("interests", [])
-        goals = response.get("goals", [])
-        summary = response.get("summary", "")
-
-        logger.info("Profile extraction: interests=%s goals=%s", interests, goals)
-        return {"interests": interests, "goals": goals, "summary": summary}
+        action = response.get("action", "reply")
+        if action == "profile":
+            logger.info("Profile agent: extracted profile interests=%s", response.get("interests"))
+            return {
+                "action": "profile",
+                "interests": response.get("interests", []),
+                "goals": response.get("goals", []),
+                "summary": response.get("summary", ""),
+            }
+        else:
+            message = response.get("message", "Расскажите подробнее о ваших интересах.")
+            logger.info("Profile agent: continuing conversation")
+            return {"action": "reply", "message": message}
 
     except Exception:
-        logger.warning("LLM profile extraction failed (graceful degradation)")
-        return {"interests": [], "goals": [], "summary": ""}
+        logger.warning("Profile agent LLM failed (graceful degradation)")
+        return {"action": "reply", "message": "Расскажите, какие технологии или области AI вам интересны?"}
 
 
 # --- T005: Helper functions ---

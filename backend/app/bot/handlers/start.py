@@ -100,7 +100,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     # Reset onboarding state
     context.user_data["event_id"] = str(event.id)
     context.user_data["nl_topics"] = set()
-    context.user_data["nl_text"] = None
+    context.user_data["nl_conversation"] = []
 
     await update.message.reply_text(
         f"Добро пожаловать на Demo Day, {full_name}!\n\n"
@@ -126,7 +126,7 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     context.user_data["pending_role_code"] = role_code.value
     context.user_data["nl_topics"] = set()
-    context.user_data["nl_text"] = None
+    context.user_data["nl_conversation"] = []
 
     if role_code == RoleCode.GUEST:
         # Guest → choose subtype
@@ -243,6 +243,21 @@ async def enter_subtype_handler(update: Update, context: ContextTypes.DEFAULT_TY
 # --- NL_PROFILE state ---
 
 
+def _get_conversation(context: ContextTypes.DEFAULT_TYPE) -> list[dict]:
+    """Get conversation history from user_data."""
+    return context.user_data.get("nl_conversation", [])
+
+
+def _add_to_conversation(
+    context: ContextTypes.DEFAULT_TYPE, role: str, content: str
+) -> list[dict]:
+    """Append a message to conversation history and return it."""
+    conv = context.user_data.get("nl_conversation", [])
+    conv.append({"role": role, "content": content})
+    context.user_data["nl_conversation"] = conv
+    return conv
+
+
 async def nl_topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle topic button toggles and 'done' in NL profiling."""
     query = update.callback_query
@@ -251,18 +266,23 @@ async def nl_topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     data = query.data
 
     if data == "nl:done":
-        # Finalize — need at least topics or text
+        # User pressed "Готово" with selected topics — inject as user message
         topics = context.user_data.get("nl_topics", set())
-        nl_text = context.user_data.get("nl_text")
-
-        if not topics and not nl_text:
+        if not topics and not _get_conversation(context):
             await query.edit_message_text(
                 "Укажите хотя бы одну тему или напишите текстом, что вас интересует.",
                 reply_markup=nl_topic_buttons(),
             )
             return NL_PROFILE
 
-        return await _extract_and_confirm(update, context)
+        if topics:
+            topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
+            topic_msg = f"Меня интересуют темы: {', '.join(topic_labels)}"
+            conv = _add_to_conversation(context, "user", topic_msg)
+        else:
+            conv = _get_conversation(context)
+
+        return await _agent_turn(update, context, conv)
 
     # Toggle topic
     _, _, topic_key = data.split(":", 2)
@@ -281,9 +301,10 @@ async def nl_topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def nl_free_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle free text input in NL profiling."""
-    context.user_data["nl_text"] = update.message.text
-    return await _extract_and_confirm(update, context, is_message=True)
+    """Handle free text input in NL profiling — conversational agent."""
+    user_text = update.message.text
+    conv = _add_to_conversation(context, "user", user_text)
+    return await _agent_turn(update, context, conv, is_message=True)
 
 
 def _nl_topic_buttons_with_selection(selected: set[str]):
@@ -315,37 +336,42 @@ def _nl_topic_buttons_with_selection(selected: set[str]):
     return InlineKeyboardMarkup(buttons)
 
 
-async def _extract_and_confirm(
+async def _agent_turn(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
+    conversation: list[dict],
     is_message: bool = False,
 ) -> int:
-    """Combine topics + free text, call LLM, show profile for confirmation."""
-    topics = context.user_data.get("nl_topics", set())
-    nl_text = context.user_data.get("nl_text", "")
+    """Send conversation to LLM agent, handle reply or profile extraction."""
+    result = await profiling_service.chat_for_profile(conversation)
 
-    # Build combined text for LLM
-    topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
-    combined_parts = []
-    if topic_labels:
-        combined_parts.append(f"Интересные темы: {', '.join(topic_labels)}")
-    if nl_text:
-        combined_parts.append(nl_text)
+    if result["action"] == "profile":
+        # Agent decided we have enough info — show confirmation
+        context.user_data["extracted_profile"] = result
+        return await _show_profile_confirmation(update, context, result, is_message)
 
-    combined_text = "\n".join(combined_parts)
+    # Agent wants to continue the conversation
+    reply_text = result["message"]
+    _add_to_conversation(context, "assistant", reply_text)
 
-    # Extract profile via LLM
-    profile_data = await profiling_service.extract_profile_from_text(combined_text)
-    context.user_data["extracted_profile"] = profile_data
+    if is_message:
+        await update.message.reply_text(reply_text)
+    else:
+        await update.callback_query.edit_message_text(reply_text)
 
-    # Format confirmation message
+    return NL_PROFILE
+
+
+async def _show_profile_confirmation(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    profile_data: dict,
+    is_message: bool = False,
+) -> int:
+    """Show extracted profile for user confirmation."""
     summary = profile_data.get("summary", "")
     interests = profile_data.get("interests", [])
     goals = profile_data.get("goals", [])
-
-    if not summary and not interests:
-        # Fallback: just list topics
-        summary = f"Интересы: {', '.join(topic_labels)}" if topic_labels else "Не удалось определить профиль."
 
     confirm_parts = []
     if summary:
@@ -354,6 +380,9 @@ async def _extract_and_confirm(
         confirm_parts.append(f"Интересы: {', '.join(interests)}")
     if goals:
         confirm_parts.append(f"Цели: {', '.join(goals)}")
+
+    if not confirm_parts:
+        confirm_parts.append("Общий интерес к Demo Day")
 
     confirm_text = "Ваш профиль:\n\n" + "\n".join(confirm_parts) + "\n\nВсё верно?"
 
@@ -368,8 +397,6 @@ async def _extract_and_confirm(
             reply_markup=confirm_nl_profile_keyboard(),
         )
 
-    return CONFIRM_PROFILE
-
 
 # --- CONFIRM_PROFILE state ---
 
@@ -383,7 +410,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
 
     if choice == "retry":
         context.user_data["nl_topics"] = set()
-        context.user_data["nl_text"] = None
+        context.user_data["nl_conversation"] = []
         await query.edit_message_text(
             "Расскажите, что вас интересует на Demo Day?\n"
             "Напишите свободным текстом или выберите темы кнопками:",
@@ -398,7 +425,12 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
     interests = profile_data.get("interests", [])
     topics = context.user_data.get("nl_topics", set())
     topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
-    nl_text = context.user_data.get("nl_text", "")
+
+    # Build raw_text from conversation history
+    conversation = context.user_data.get("nl_conversation", [])
+    raw_text = "\n".join(
+        m["content"] for m in conversation if m["role"] == "user"
+    )
 
     # Merge topic labels into interests
     all_tags = list(dict.fromkeys(topic_labels + interests))
@@ -421,7 +453,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             selected_tags=all_tags,
             extracted_tags=[],
             keywords=profile_data.get("goals", []),
-            raw_text=nl_text or None,
+            raw_text=raw_text or None,
         )
 
     logger.info("Profile confirmed via NL: tg_id=%s tags=%s", telegram_user_id, all_tags)
@@ -447,7 +479,7 @@ async def confirm_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ConversationHandler.END
 
     context.user_data["nl_topics"] = set()
-    context.user_data["nl_text"] = None
+    context.user_data["nl_conversation"] = []
     await query.edit_message_text(
         "Выберите новую роль:",
         reply_markup=role_keyboard(),
