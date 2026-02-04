@@ -15,10 +15,12 @@ vi.mock("../hooks/useAuth", () => ({
 
 const mockUploadProjects = vi.fn()
 const mockUploadExperts = vi.fn()
+const mockUploadGuests = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   uploadProjects: (...args: unknown[]) => mockUploadProjects(...args),
   uploadExperts: (...args: unknown[]) => mockUploadExperts(...args),
+  uploadGuests: (...args: unknown[]) => mockUploadGuests(...args),
 }))
 
 const createWrapper = () => {
@@ -37,12 +39,13 @@ describe("DataImport", () => {
     vi.clearAllMocks()
   })
 
-  it("renders both upload sections", () => {
+  it("renders all upload sections", () => {
     render(<DataImport />, { wrapper: createWrapper() })
 
     expect(screen.getByText("Импорт данных")).toBeInTheDocument()
     expect(screen.getByText("Проекты")).toBeInTheDocument()
     expect(screen.getByText("Эксперты")).toBeInTheDocument()
+    expect(screen.getByText("Гости")).toBeInTheDocument()
   })
 
   it("disables upload button when no file selected", () => {
@@ -132,6 +135,42 @@ describe("DataImport", () => {
     await waitFor(() => {
       expect(screen.getByText("Результат импорта экспертов")).toBeInTheDocument()
       expect(screen.getByText("18")).toBeInTheDocument()
+    })
+  })
+
+  it("renders Гости section with subtype dropdown", () => {
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    expect(screen.getByText("Гости")).toBeInTheDocument()
+    expect(screen.getByLabelText("Тип гостя")).toBeInTheDocument()
+  })
+
+  it("handles successful guest upload", async () => {
+    const user = userEvent.setup()
+    mockUploadGuests.mockResolvedValue({
+      total_parsed: 5,
+      imported: 4,
+      duplicates: 1,
+      errors: [],
+    })
+
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    // Select subtype
+    const subtypeSelect = screen.getByLabelText("Тип гостя")
+    await user.selectOptions(subtypeSelect, "investor")
+
+    // Upload file
+    const file = new File(["[]"], "guests.json", { type: "application/json" })
+    const inputs = document.querySelectorAll('input[type="file"]')
+    await user.upload(inputs[2] as HTMLInputElement, file)
+
+    const uploadBtn = screen.getAllByText("Загрузить")[2]
+    await user.click(uploadBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText("Результат импорта гостей")).toBeInTheDocument()
+      expect(screen.getByText("4")).toBeInTheDocument()
     })
   })
 })

@@ -4,6 +4,8 @@ from datetime import date
 
 from pydantic import BaseModel
 
+from app.schemas.expert import RowError
+
 
 class StudentStats(BaseModel):
     """Student statistics."""
@@ -139,3 +141,12 @@ class EventUpdateRequest(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     description: str | None = None
+
+
+class GuestUploadResult(BaseModel):
+    """Result of guest bulk upload."""
+
+    total_parsed: int
+    imported: int
+    duplicates: int
+    errors: list[RowError] = []

@@ -209,6 +209,20 @@ export interface ExpertUploadConflict {
   message: string
 }
 
+// --- Guest Upload types ---
+
+export interface GuestUploadResult {
+  total_parsed: number
+  imported: number
+  duplicates: number
+  errors: RowError[]
+}
+
+export interface GuestUploadConflict {
+  existing_count: number
+  message: string
+}
+
 // --- Clustering types ---
 
 export interface ClusteringRequest {
@@ -731,6 +745,22 @@ export const uploadExperts = async (
   const { data } = await apiClient.post<ExpertUploadResult>("/experts/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     params: { confirm_replace: confirmReplace },
+  })
+  return data
+}
+
+// --- Guest Upload ---
+
+export const uploadGuests = async (
+  file: File,
+  defaultSubtype: string,
+  confirmReplace: boolean
+): Promise<GuestUploadResult> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<GuestUploadResult>("/admin/guests/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    params: { default_subtype: defaultSubtype, confirm_replace: confirmReplace },
   })
   return data
 }
