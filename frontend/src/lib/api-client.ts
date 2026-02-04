@@ -334,6 +334,289 @@ export interface ScheduleApproveResult {
   days: number
 }
 
+// --- Coverage types ---
+
+export interface CoverageRoom {
+  room_id: string
+  room_name: string
+  project_count: number
+  top_tags: string[]
+  confirmed: number
+  pending: number
+  declined: number
+  total_assigned: number
+  coverage_level: "full" | "partial" | "none"
+}
+
+export interface CoverageTotals {
+  confirmed: number
+  pending: number
+  declined: number
+  total_needed: number
+  coverage_percent: number
+}
+
+export interface CoverageSummaryData {
+  rooms: CoverageRoom[]
+  totals: CoverageTotals
+}
+
+export interface ExpertCandidate {
+  expert_id: string
+  name: string
+  matching_tags: string[]
+  current_rooms: string[]
+}
+
+export interface CoverageGap {
+  room_id: string
+  room_name: string
+  uncovered_tag: string
+  project_count_with_tag: number
+  candidates: ExpertCandidate[]
+}
+
+export interface CoverageGapsList {
+  total_gaps: number
+  gaps: CoverageGap[]
+}
+
+export interface CoverageRoomExpert {
+  expert_id: string
+  name: string
+  status: string
+  match_score: number
+  tags: string[]
+  bot_started: boolean
+}
+
+export interface RoomCoverageDetail {
+  room_id: string
+  room_name: string
+  project_count: number
+  project_tags: string[]
+  experts: CoverageRoomExpert[]
+  uncovered_tags: string[]
+  candidates: ExpertCandidate[]
+}
+
+// --- Escalation types ---
+
+export interface EscalationItem {
+  id: string
+  type: string
+  expert_name: string
+  room_name: string
+  message: string
+  resolved: boolean
+  created_at: string
+}
+
+// --- Participation types ---
+
+export interface BroadcastResult {
+  sent: number
+  skipped: number
+  failed: number
+  unregistered: number
+  unregistered_projects: string[]
+}
+
+export interface ParticipationRoomSummary {
+  room_id: string
+  room_name: string
+  total: number
+  acknowledged: number
+  pending: number
+}
+
+export interface ParticipationSummary {
+  total: number
+  acknowledged: number
+  pending: number
+  unregistered: number
+  by_room: ParticipationRoomSummary[]
+}
+
+export interface UnacknowledgedItem {
+  request_id: string
+  project_title: string
+  author_name: string
+  telegram_contact: string
+  room_name: string
+  status: string
+  sent_at: string
+  reminder_sent: boolean
+  escalated: boolean
+}
+
+export interface UnacknowledgedList {
+  items: UnacknowledgedItem[]
+  total: number
+}
+
+// --- Reminder types (schedule.py — JWT auth) ---
+
+export interface RecipientCounts {
+  students: number
+  experts: number
+  guests: number
+  business: number
+  total: number
+}
+
+export interface SampleMessages {
+  student: string | null
+  expert: string | null
+  guest: string | null
+  business: string | null
+}
+
+export interface UnreachableParticipant {
+  user_id: string
+  name: string
+  role: string
+  reason: string
+}
+
+export interface ScheduleReminderPreview {
+  day: string
+  scheduled_send_time: string
+  can_cancel: boolean
+  recipients: RecipientCounts
+  sample_messages: SampleMessages
+  unreachable: UnreachableParticipant[]
+}
+
+export interface ReminderSendResult {
+  day: string
+  sent: number
+  failed: number
+  skipped: number
+}
+
+export interface ReminderCancelResult {
+  cancelled_count: number
+  day: string
+}
+
+// --- Reminder types (reminders.py — query param auth) ---
+
+export interface ReminderBatchSummary {
+  id: string
+  reminder_type: string
+  status: string
+  initiated_by_name: string
+  total_recipients: number
+  sent: number
+  failed: number
+  skipped: number
+  started_at: string
+  completed_at: string | null
+}
+
+export interface ReminderBatchDetail extends ReminderBatchSummary {
+  by_recipient_type: Record<string, { sent: number; failed: number; skipped: number }>
+}
+
+export interface ReminderBatchListResponse {
+  batches: ReminderBatchSummary[]
+}
+
+export interface RolePreview {
+  count: number
+  skipped: number
+  declined: number
+}
+
+export interface BatchReminderPreview {
+  reminder_type: string
+  by_role: Record<string, RolePreview>
+  total_recipients: number
+  total_skipped: number
+  duplicate_warning: boolean
+}
+
+// --- Notification types ---
+
+export interface StatusSummaryData {
+  total: number
+  sent: number
+  failed: number
+  pending: number
+}
+
+export interface RoleStatsItem {
+  role: string
+  sent: number
+  failed: number
+  pending: number
+}
+
+export interface TypeStatsItem {
+  type: string
+  sent: number
+  failed: number
+  pending: number
+}
+
+export interface NotificationDashboardData {
+  summary: StatusSummaryData
+  by_role: RoleStatsItem[]
+  by_type: TypeStatsItem[]
+  unreachable: UnreachableParticipant[]
+}
+
+export interface NotificationItem {
+  id: string
+  user_name: string
+  type: string
+  status: string
+  scheduled_at: string
+  sent_at: string | null
+  error_message: string | null
+  retry_count: number
+}
+
+export interface NotificationListResponse {
+  total: number
+  items: NotificationItem[]
+}
+
+// --- Schedule edit types ---
+
+export interface SlotUpdateRequest {
+  start_time?: string
+  end_time?: string
+  room_id?: string
+  status?: string
+}
+
+export interface SlotUpdateResult {
+  slot: ScheduleSlotResponse
+  change_log_id: string
+  notifications_queued: number
+}
+
+export interface ScheduleChangeItem {
+  id: string
+  slot_id: string
+  project_title: string
+  change_type: string
+  old_start_time: string | null
+  new_start_time: string | null
+  old_room_name: string | null
+  new_room_name: string | null
+  changed_by: string
+  created_at: string
+  notifications_sent: number
+}
+
+export interface ScheduleChangeListResponse {
+  total: number
+  items: ScheduleChangeItem[]
+}
+
 // API functions
 export const getDashboard = async (): Promise<DashboardData> => {
   const { data } = await apiClient.get<DashboardData>("/admin/dashboard")
@@ -471,5 +754,147 @@ export const getSchedule = async (params?: {
 
 export const approveSchedule = async (): Promise<ScheduleApproveResult> => {
   const { data } = await apiClient.post<ScheduleApproveResult>("/schedule/approve")
+  return data
+}
+
+// --- Coverage ---
+
+export const getCoverageSummary = async (): Promise<CoverageSummaryData> => {
+  const { data } = await apiClient.get<CoverageSummaryData>("/coverage")
+  return data
+}
+
+export const getCoverageGaps = async (): Promise<CoverageGapsList> => {
+  const { data } = await apiClient.get<CoverageGapsList>("/coverage/gaps")
+  return data
+}
+
+export const getRoomCoverageDetail = async (roomId: string): Promise<RoomCoverageDetail> => {
+  const { data } = await apiClient.get<RoomCoverageDetail>(`/coverage/${roomId}`)
+  return data
+}
+
+// --- Escalations ---
+
+export const getEscalations = async (resolved?: boolean): Promise<EscalationItem[]> => {
+  const { data } = await apiClient.get<EscalationItem[]>("/escalations", {
+    params: resolved !== undefined ? { resolved } : undefined,
+  })
+  return data
+}
+
+export const resolveEscalation = async (id: string): Promise<EscalationItem> => {
+  const { data } = await apiClient.post<EscalationItem>(`/escalations/${id}/resolve`)
+  return data
+}
+
+// --- Participation ---
+
+export const broadcastParticipation = async (): Promise<BroadcastResult> => {
+  const { data } = await apiClient.post<BroadcastResult>("/participation/broadcast")
+  return data
+}
+
+export const getParticipationSummary = async (roomId?: string): Promise<ParticipationSummary> => {
+  const { data } = await apiClient.get<ParticipationSummary>("/participation/summary", {
+    params: roomId ? { room_id: roomId } : undefined,
+  })
+  return data
+}
+
+export const getUnacknowledged = async (roomId?: string): Promise<UnacknowledgedList> => {
+  const { data } = await apiClient.get<UnacknowledgedList>("/participation/unacknowledged", {
+    params: roomId ? { room_id: roomId } : undefined,
+  })
+  return data
+}
+
+// --- Reminders (schedule.py — JWT auth) ---
+
+export const getScheduleReminderPreview = async (day?: string): Promise<ScheduleReminderPreview> => {
+  const { data } = await apiClient.get<ScheduleReminderPreview>("/reminders/preview", {
+    params: day ? { day } : undefined,
+  })
+  return data
+}
+
+export const sendReminders = async (day: string): Promise<ReminderSendResult> => {
+  const { data } = await apiClient.post<ReminderSendResult>("/reminders/send", { day })
+  return data
+}
+
+export const cancelReminders = async (day: string): Promise<ReminderCancelResult> => {
+  const { data } = await apiClient.post<ReminderCancelResult>("/reminders/cancel", { day })
+  return data
+}
+
+// --- Reminders (reminders.py — query param auth) ---
+
+export const getReminderBatches = async (
+  telegramId: string,
+  params?: { status?: string; type?: string }
+): Promise<ReminderBatchListResponse> => {
+  const { data } = await apiClient.get<ReminderBatchListResponse>("/reminders/batches", {
+    params: { telegram_user_id: telegramId, ...params },
+  })
+  return data
+}
+
+export const getReminderBatchDetail = async (
+  batchId: string,
+  telegramId: string
+): Promise<ReminderBatchDetail> => {
+  const { data } = await apiClient.get<ReminderBatchDetail>(`/reminders/batches/${batchId}`, {
+    params: { telegram_user_id: telegramId },
+  })
+  return data
+}
+
+export const previewReminderBatch = async (
+  telegramId: string,
+  type: string
+): Promise<BatchReminderPreview> => {
+  const { data } = await apiClient.post<BatchReminderPreview>("/reminders/preview", {
+    reminder_type: type,
+    telegram_user_id: telegramId,
+  })
+  return data
+}
+
+// --- Notifications ---
+
+export const getNotificationDashboard = async (params?: {
+  type?: string
+  day?: string
+}): Promise<NotificationDashboardData> => {
+  const { data } = await apiClient.get<NotificationDashboardData>("/notifications/dashboard", { params })
+  return data
+}
+
+export const getNotifications = async (params?: {
+  type?: string
+  status?: string
+  offset?: number
+  limit?: number
+}): Promise<NotificationListResponse> => {
+  const { data } = await apiClient.get<NotificationListResponse>("/notifications", { params })
+  return data
+}
+
+// --- Schedule edits ---
+
+export const updateSlot = async (
+  slotId: string,
+  body: SlotUpdateRequest
+): Promise<SlotUpdateResult> => {
+  const { data } = await apiClient.patch<SlotUpdateResult>(`/schedule/slots/${slotId}`, body)
+  return data
+}
+
+export const getScheduleChanges = async (params?: {
+  offset?: number
+  limit?: number
+}): Promise<ScheduleChangeListResponse> => {
+  const { data } = await apiClient.get<ScheduleChangeListResponse>("/schedule/changes", { params })
   return data
 }

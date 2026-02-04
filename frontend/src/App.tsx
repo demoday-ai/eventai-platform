@@ -8,6 +8,10 @@ import { DataImport } from "./pages/DataImport"
 import { Clustering } from "./pages/Clustering"
 import { ExpertMatching } from "./pages/ExpertMatching"
 import { Schedule } from "./pages/Schedule"
+import { Coverage } from "./pages/Coverage"
+import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
+import { Participation } from "./pages/Participation"
+import { Notifications } from "./pages/Notifications"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { AppLayout } from "./components/layout/AppLayout"
 
@@ -28,7 +32,11 @@ function App() {
           <Route path="/import" element={<DataImport />} />
           <Route path="/clustering" element={<Clustering />} />
           <Route path="/experts" element={<ExpertMatching />} />
+          <Route path="/coverage" element={<Coverage />} />
+          <Route path="/coverage/rooms/:roomId" element={<CoverageRoomDetail />} />
           <Route path="/schedule" element={<Schedule />} />
+          <Route path="/participation" element={<Participation />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/projects" element={<ProjectsList />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
         </Route>

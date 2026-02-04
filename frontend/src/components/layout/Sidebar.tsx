@@ -6,6 +6,9 @@ import {
   Users,
   Calendar,
   FolderOpen,
+  ShieldCheck,
+  UserCheck,
+  Bell,
 } from "lucide-react"
 import { cn } from "../../lib/utils"
 
@@ -14,7 +17,10 @@ const navItems = [
   { to: "/import", label: "Импорт данных", icon: Upload },
   { to: "/clustering", label: "Кластеризация", icon: Layers },
   { to: "/experts", label: "Эксперты", icon: Users },
+  { to: "/coverage", label: "Покрытие", icon: ShieldCheck },
   { to: "/schedule", label: "Расписание", icon: Calendar },
+  { to: "/participation", label: "Участие", icon: UserCheck },
+  { to: "/notifications", label: "Уведомления", icon: Bell },
   { to: "/projects", label: "Проекты", icon: FolderOpen },
 ]
 

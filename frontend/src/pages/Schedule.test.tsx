@@ -15,11 +15,15 @@ vi.mock("../hooks/useAuth", () => ({
 const mockGenerateSchedule = vi.fn()
 const mockGetSchedule = vi.fn()
 const mockApproveSchedule = vi.fn()
+const mockUpdateSlot = vi.fn()
+const mockGetScheduleChanges = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   generateSchedule: (...args: unknown[]) => mockGenerateSchedule(...args),
   getSchedule: (...args: unknown[]) => mockGetSchedule(...args),
   approveSchedule: (...args: unknown[]) => mockApproveSchedule(...args),
+  updateSlot: (...args: unknown[]) => mockUpdateSlot(...args),
+  getScheduleChanges: (...args: unknown[]) => mockGetScheduleChanges(...args),
 }))
 
 const createWrapper = () => {
@@ -78,6 +82,7 @@ describe("Schedule", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetSchedule.mockRejectedValue(new Error("Not found"))
+    mockGetScheduleChanges.mockResolvedValue({ total: 0, items: [] })
   })
 
   it("renders generate step initially", () => {
@@ -145,6 +150,65 @@ describe("Schedule", () => {
       expect(screen.getByText("Зал 1: NLP")).toBeInTheDocument()
       expect(screen.getByText("Команда А")).toBeInTheDocument()
       expect(screen.getByText("Команда Б")).toBeInTheDocument()
+    })
+  })
+
+  it("shows edit button for each slot", async () => {
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      const editButtons = screen.getAllByTitle("Редактировать")
+      expect(editButtons.length).toBe(2)
+    })
+  })
+
+  it("opens inline edit form on pencil click", async () => {
+    const user = userEvent.setup()
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+    })
+
+    const editBtn = screen.getByLabelText("Редактировать Чатбот")
+    await user.click(editBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText("Сохранить")).toBeInTheDocument()
+      expect(screen.getByText("Отмена")).toBeInTheDocument()
+    })
+  })
+
+  it("shows change log when data exists", async () => {
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+    mockGetScheduleChanges.mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: "ch1",
+          slot_id: "slot-1",
+          project_title: "Чатбот",
+          change_type: "time_change",
+          old_start_time: "2026-02-06T10:00:00",
+          new_start_time: "2026-02-06T11:00:00",
+          old_room_name: null,
+          new_room_name: null,
+          changed_by: "admin",
+          created_at: "2026-02-05T15:00:00",
+          notifications_sent: 2,
+        },
+      ],
+    })
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("История изменений")).toBeInTheDocument()
+      expect(screen.getByText("time_change")).toBeInTheDocument()
     })
   })
 })

@@ -19,6 +19,24 @@ import {
   generateSchedule,
   getSchedule,
   approveSchedule,
+  getCoverageSummary,
+  getCoverageGaps,
+  getRoomCoverageDetail,
+  getEscalations,
+  resolveEscalation,
+  broadcastParticipation,
+  getParticipationSummary,
+  getUnacknowledged,
+  getScheduleReminderPreview,
+  sendReminders,
+  cancelReminders,
+  getReminderBatches,
+  getReminderBatchDetail,
+  previewReminderBatch,
+  getNotificationDashboard,
+  getNotifications,
+  updateSlot,
+  getScheduleChanges,
 } from "./api-client"
 
 describe("apiClient", () => {
@@ -395,6 +413,198 @@ describe("apiClient", () => {
 
       const result = await approveSchedule()
       expect(result).toEqual(mockResult)
+    })
+  })
+
+  describe("getCoverageSummary", () => {
+    it("fetches coverage summary", async () => {
+      const mockData = { rooms: [], totals: { confirmed: 10, pending: 5, declined: 2, total_needed: 20, coverage_percent: 50 } }
+      mock.onGet("/coverage").reply(200, mockData)
+
+      const result = await getCoverageSummary()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getCoverageGaps", () => {
+    it("fetches coverage gaps", async () => {
+      const mockData = { total_gaps: 3, gaps: [] }
+      mock.onGet("/coverage/gaps").reply(200, mockData)
+
+      const result = await getCoverageGaps()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getRoomCoverageDetail", () => {
+    it("fetches room coverage detail", async () => {
+      const mockData = { room_id: "r1", room_name: "Зал 1", project_count: 10, project_tags: [], experts: [], uncovered_tags: [], candidates: [] }
+      mock.onGet("/coverage/r1").reply(200, mockData)
+
+      const result = await getRoomCoverageDetail("r1")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getEscalations", () => {
+    it("fetches escalations", async () => {
+      const mockData = [{ id: "e1", type: "no_response", expert_name: "Иван", room_name: "Зал 1", message: "No response", resolved: false, created_at: "2026-02-01" }]
+      mock.onGet("/escalations").reply(200, mockData)
+
+      const result = await getEscalations()
+      expect(result).toEqual(mockData)
+    })
+
+    it("fetches escalations with resolved filter", async () => {
+      mock.onGet("/escalations", { params: { resolved: false } }).reply(200, [])
+
+      const result = await getEscalations(false)
+      expect(result).toEqual([])
+    })
+  })
+
+  describe("resolveEscalation", () => {
+    it("resolves escalation", async () => {
+      const mockData = { id: "e1", type: "no_response", expert_name: "Иван", room_name: "Зал 1", message: "No response", resolved: true, created_at: "2026-02-01" }
+      mock.onPost("/escalations/e1/resolve").reply(200, mockData)
+
+      const result = await resolveEscalation("e1")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("broadcastParticipation", () => {
+    it("broadcasts participation", async () => {
+      const mockData = { sent: 10, skipped: 2, failed: 1, unregistered: 3, unregistered_projects: [] }
+      mock.onPost("/participation/broadcast").reply(200, mockData)
+
+      const result = await broadcastParticipation()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getParticipationSummary", () => {
+    it("fetches participation summary", async () => {
+      const mockData = { total: 50, acknowledged: 30, pending: 15, unregistered: 5, by_room: [] }
+      mock.onGet("/participation/summary").reply(200, mockData)
+
+      const result = await getParticipationSummary()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getUnacknowledged", () => {
+    it("fetches unacknowledged items", async () => {
+      const mockData = { items: [], total: 0 }
+      mock.onGet("/participation/unacknowledged").reply(200, mockData)
+
+      const result = await getUnacknowledged()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getScheduleReminderPreview", () => {
+    it("fetches reminder preview", async () => {
+      const mockData = { day: "2026-02-06", scheduled_send_time: "08:00", can_cancel: true, recipients: { students: 10, experts: 5, guests: 3, business: 2, total: 20 }, sample_messages: { student: "Hi", expert: null, guest: null, business: null }, unreachable: [] }
+      mock.onGet("/reminders/preview").reply(200, mockData)
+
+      const result = await getScheduleReminderPreview()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("sendReminders", () => {
+    it("sends reminders", async () => {
+      const mockData = { day: "2026-02-06", sent: 18, failed: 1, skipped: 1 }
+      mock.onPost("/reminders/send").reply(200, mockData)
+
+      const result = await sendReminders("2026-02-06")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("cancelReminders", () => {
+    it("cancels reminders", async () => {
+      const mockData = { cancelled_count: 5, day: "2026-02-06" }
+      mock.onPost("/reminders/cancel").reply(200, mockData)
+
+      const result = await cancelReminders("2026-02-06")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getReminderBatches", () => {
+    it("fetches reminder batches", async () => {
+      const mockData = { batches: [] }
+      mock.onGet("/reminders/batches").reply(200, mockData)
+
+      const result = await getReminderBatches("123456")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getReminderBatchDetail", () => {
+    it("fetches batch detail", async () => {
+      const mockData = { id: "b1", reminder_type: "eve", status: "completed", initiated_by_name: "Admin", total_recipients: 20, sent: 18, failed: 1, skipped: 1, started_at: "2026-02-05T20:00:00", completed_at: "2026-02-05T20:01:00", by_recipient_type: {} }
+      mock.onGet("/reminders/batches/b1").reply(200, mockData)
+
+      const result = await getReminderBatchDetail("b1", "123456")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("previewReminderBatch", () => {
+    it("previews reminder batch", async () => {
+      const mockData = { reminder_type: "eve", by_role: {}, total_recipients: 20, total_skipped: 2, duplicate_warning: false }
+      mock.onPost("/reminders/preview").reply(200, mockData)
+
+      const result = await previewReminderBatch("123456", "eve")
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getNotificationDashboard", () => {
+    it("fetches notification dashboard", async () => {
+      const mockData = { summary: { total: 100, sent: 90, failed: 5, pending: 5 }, by_role: [], by_type: [], unreachable: [] }
+      mock.onGet("/notifications/dashboard").reply(200, mockData)
+
+      const result = await getNotificationDashboard()
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getNotifications", () => {
+    it("fetches notifications", async () => {
+      const mockData = { total: 50, items: [] }
+      mock.onGet("/notifications").reply(200, mockData)
+
+      const result = await getNotifications()
+      expect(result).toEqual(mockData)
+    })
+
+    it("throws on failure", async () => {
+      mock.onGet("/notifications").reply(500)
+      await expect(getNotifications()).rejects.toThrow()
+    })
+  })
+
+  describe("updateSlot", () => {
+    it("updates a slot", async () => {
+      const mockData = { slot: { id: "s1", room_id: "r1", room_name: "Зал 1", project_id: "p1", project_title: "Test", project_author: null, start_time: "2026-02-06T10:00:00", end_time: "2026-02-06T10:15:00", display_order: 1, status: "scheduled" }, change_log_id: "cl1", notifications_queued: 3 }
+      mock.onPatch("/schedule/slots/s1").reply(200, mockData)
+
+      const result = await updateSlot("s1", { status: "cancelled" })
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("getScheduleChanges", () => {
+    it("fetches schedule changes", async () => {
+      const mockData = { total: 2, items: [] }
+      mock.onGet("/schedule/changes").reply(200, mockData)
+
+      const result = await getScheduleChanges()
+      expect(result).toEqual(mockData)
     })
   })
 })
