@@ -38,22 +38,32 @@ def confirm_change_keyboard() -> InlineKeyboardMarkup:
 
 
 def nl_topic_buttons() -> InlineKeyboardMarkup:
-    """Quick-pick topic buttons for NL profiling stage."""
+    """Quick-pick topic buttons for NL profiling — all seed tags."""
+    # (DB tag name, display label) — keys match tags table
     topics = [
-        ("AI / ML", "nl:topic:ai_ml"),
-        ("NLP", "nl:topic:nlp"),
-        ("Computer Vision", "nl:topic:cv"),
-        ("EdTech", "nl:topic:edtech"),
-        ("FinTech", "nl:topic:fintech"),
-        ("Агенты", "nl:topic:agents"),
-        ("MedTech", "nl:topic:medtech"),
-        ("Security", "nl:topic:security"),
+        ("NLP", "NLP"),
+        ("CV", "CV"),
+        ("LLM", "LLM"),
+        ("Agents", "Агенты"),
+        ("EdTech", "EdTech"),
+        ("FinTech", "FinTech"),
+        ("MedTech", "MedTech"),
+        ("Security", "Security"),
+        ("ASR", "ASR"),
+        ("TTS", "TTS"),
+        ("Audio", "Audio"),
+        ("Industrial", "Industrial"),
+        ("MLOps", "MLOps"),
+        ("RL", "RL"),
+        ("RecSys", "RecSys"),
+        ("Science", "Science"),
+        ("TimeSeries", "TimeSeries"),
     ]
     buttons = []
     row = []
-    for label, cb in topics:
-        row.append(InlineKeyboardButton(label, callback_data=cb))
-        if len(row) == 2:
+    for tag_key, label in topics:
+        row.append(InlineKeyboardButton(label, callback_data=f"nl:topic:{tag_key}"))
+        if len(row) == 3:
             buttons.append(row)
             row = []
     if row:

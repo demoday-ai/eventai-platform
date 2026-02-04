@@ -46,16 +46,25 @@ logger = logging.getLogger(__name__)
 # Conversation states
 CHOOSE_ROLE, CHOOSE_SUBTYPE, ENTER_SUBTYPE, NL_PROFILE, CONFIRM_PROFILE, CONFIRM_CHANGE = range(6)
 
-# Mapping of quick-pick topic callback data to display labels
+# DB tag name → button display label (keys must match tags table)
 TOPIC_LABELS = {
-    "ai_ml": "AI / ML",
-    "nlp": "NLP",
-    "cv": "Computer Vision",
-    "edtech": "EdTech",
-    "fintech": "FinTech",
-    "agents": "Агенты",
-    "medtech": "MedTech",
-    "security": "Security",
+    "NLP": "NLP",
+    "CV": "CV",
+    "LLM": "LLM",
+    "Agents": "Агенты",
+    "EdTech": "EdTech",
+    "FinTech": "FinTech",
+    "MedTech": "MedTech",
+    "Security": "Security",
+    "ASR": "ASR",
+    "TTS": "TTS",
+    "Audio": "Audio",
+    "Industrial": "Industrial",
+    "MLOps": "MLOps",
+    "RL": "RL",
+    "RecSys": "RecSys",
+    "Science": "Science",
+    "TimeSeries": "TimeSeries",
 }
 
 
@@ -276,8 +285,8 @@ async def nl_topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             return NL_PROFILE
 
         if topics:
-            topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
-            topic_msg = f"Меня интересуют темы: {', '.join(topic_labels)}"
+            display_labels = [TOPIC_LABELS.get(t, t) for t in topics]
+            topic_msg = f"Меня интересуют темы: {', '.join(display_labels)}"
             conv = _add_to_conversation(context, "user", topic_msg)
         else:
             conv = _get_conversation(context)
@@ -311,23 +320,14 @@ def _nl_topic_buttons_with_selection(selected: set[str]):
     """Rebuild NL topic buttons with checkmarks for selected topics."""
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-    topics = [
-        ("AI / ML", "nl:topic:ai_ml"),
-        ("NLP", "nl:topic:nlp"),
-        ("Computer Vision", "nl:topic:cv"),
-        ("EdTech", "nl:topic:edtech"),
-        ("FinTech", "nl:topic:fintech"),
-        ("Агенты", "nl:topic:agents"),
-        ("MedTech", "nl:topic:medtech"),
-        ("Security", "nl:topic:security"),
-    ]
     buttons = []
     row = []
-    for label, cb in topics:
-        key = cb.split(":")[-1]
-        prefix = "✓ " if key in selected else ""
-        row.append(InlineKeyboardButton(f"{prefix}{label}", callback_data=cb))
-        if len(row) == 2:
+    for tag_key, display in TOPIC_LABELS.items():
+        prefix = "✓ " if tag_key in selected else ""
+        row.append(InlineKeyboardButton(
+            f"{prefix}{display}", callback_data=f"nl:topic:{tag_key}",
+        ))
+        if len(row) == 3:
             buttons.append(row)
             row = []
     if row:
@@ -374,9 +374,8 @@ async def _show_profile_confirmation(
     goals = profile_data.get("goals", [])
 
     # Merge button-picked topics + LLM-extracted interests for display
-    topics = context.user_data.get("nl_topics", set())
-    topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
-    all_tags = list(dict.fromkeys(topic_labels + interests))
+    button_tags = list(context.user_data.get("nl_topics", set()))
+    all_tags = list(dict.fromkeys(button_tags + interests))
 
     confirm_parts = []
     if summary:
@@ -430,8 +429,8 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
     telegram_user_id = str(tg_user.id)
     profile_data = context.user_data.get("extracted_profile", {})
     interests = profile_data.get("interests", [])
-    topics = context.user_data.get("nl_topics", set())
-    topic_labels = [TOPIC_LABELS.get(t, t) for t in topics]
+    # nl_topics stores DB tag names directly (e.g. "NLP", "CV")
+    button_tags = list(context.user_data.get("nl_topics", set()))
 
     # Build raw_text from full conversation history
     conversation = context.user_data.get("nl_conversation", [])
@@ -441,7 +440,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
     )
 
     # All confirmed tags: button picks + LLM-extracted interests (deduplicated)
-    all_tags = list(dict.fromkeys(topic_labels + interests))
+    all_tags = list(dict.fromkeys(button_tags + interests))
 
     async with async_session() as session:
         user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
