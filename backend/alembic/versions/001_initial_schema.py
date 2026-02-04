@@ -5,6 +5,8 @@ Revises:
 Create Date: 2026-02-02
 """
 
+from datetime import date
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
@@ -25,8 +27,8 @@ ROLES = [
 EVENT = (
     "20000000-0000-0000-0000-000000000001",
     "Demo Day 2026",
-    "2026-02-06",
-    "2026-02-07",
+    date(2026, 2, 6),
+    date(2026, 2, 7),
 )
 
 
@@ -61,7 +63,6 @@ def upgrade() -> None:
     guest_subtype_enum = sa.Enum(
         "applicant", "ai_practitioner", "other", name="guest_subtype_enum"
     )
-    guest_subtype_enum.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "users",

@@ -16,12 +16,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create business_objective enum
-    op.execute("""
-        CREATE TYPE business_objective AS ENUM
-        ('investment', 'hiring', 'technology', 'partnership')
-    """)
-
     # Create business_profiles table
     op.create_table(
         "business_profiles",
@@ -43,7 +37,6 @@ def upgrade() -> None:
             sa.Enum(
                 "investment", "hiring", "technology", "partnership",
                 name="business_objective",
-                create_type=False,
             ),
             nullable=False,
         ),

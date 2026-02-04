@@ -74,7 +74,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.UniqueConstraint(
-            "guest_profile_id", "project_id", name="uq_recommendations_profile_project"
+            "guest_profile_id", "project_id", name="uq_guest_recommendations_profile_project"
         ),
     )
     op.create_index(
