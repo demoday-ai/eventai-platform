@@ -12,6 +12,7 @@ import { Coverage } from "./pages/Coverage"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
 import { Participation } from "./pages/Participation"
 import { Notifications } from "./pages/Notifications"
+import { Settings } from "./pages/Settings"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { AppLayout } from "./components/layout/AppLayout"
 
@@ -39,6 +40,7 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/projects" element={<ProjectsList />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

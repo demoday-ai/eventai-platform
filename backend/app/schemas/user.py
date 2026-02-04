@@ -53,6 +53,7 @@ class EventResponse(BaseModel):
     name: str
     start_date: date
     end_date: date
+    description: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -297,12 +297,98 @@ Data Import        ← NEW
 
 ### Phase 3: Extended Management (API gaps)
 
-**Frontend + Backend:**
-- [ ] Briefing: preview + send — **нужен новый API** (6.2.A)
-- [ ] Conference dates: date picker — **нужен PATCH endpoint** (6.2.B)
-- [ ] Expert single create/edit — **нужен POST/PATCH endpoint** (6.2.D)
-- [ ] Guest bulk import — **нужен upload endpoint** (6.2.E)
-- [ ] Unified messaging — **нужен messaging API** (6.2.F)
+Разбита на 5 подфаз (3a–3e). 3a/3b/3c — независимы, можно делать параллельно. 3d зависит от наличия экспертов (3b). 3e — последней (зависит от 3b, 3c).
+
+```
+3a (Settings)  →  3b (Expert CRUD)  →  3c (Guest import)  →  3d (Briefing)  →  3e (Messaging)
+  минимальный       изолированный        reuse upload         reuse send         самый сложный
+  warm-up           новый CRUD           паттерн              паттерн            зависит от 3b,3c
+```
+
+#### Phase 3a: Settings — Даты конференции
+
+**Объём:** минимальный (warm-up)
+
+**Backend:**
+- [ ] Убедиться что модель `events` имеет `start_date`/`end_date`
+- [ ] `PATCH /api/v1/admin/events/current` — обновление дат/названия/описания (6.2.B)
+
+**Frontend:**
+- [ ] Страница `Settings.tsx` с секцией "Даты конференции"
+- [ ] Date picker (start/end), поля name/description
+- [ ] Кнопка Save, success/error toast
+- [ ] Добавить пункт "Настройки" в sidebar (иконка Settings)
+
+**Критерий выхода:** Организатор меняет даты DD из UI, изменения отражаются в API.
+
+#### Phase 3b: Expert single create/edit
+
+**Объём:** средний, изолированный
+
+**Backend:**
+- [ ] `POST /api/v1/admin/experts` — создание эксперта (name, telegram_contact, telegram_user_id, position, tags[]) (6.2.D)
+- [ ] `PATCH /api/v1/admin/experts/{expert_id}` — редактирование (6.2.D)
+
+**Frontend:**
+- [ ] Кнопка "Добавить эксперта" на странице ExpertMatching или в sidebar
+- [ ] Модалка/страница с формой: имя, Telegram, позиция, теги (multi-select)
+- [ ] Валидация обязательных полей
+- [ ] Inline-редактирование эксперта из списка
+
+**Критерий выхода:** Организатор создаёт/редактирует эксперта без bulk-файла.
+
+#### Phase 3c: Guest bulk import
+
+**Объём:** средний, переиспользует upload-паттерн из DataImport
+
+**Backend:**
+- [ ] `POST /api/v1/admin/guests/upload` — CSV/JSON + `default_subtype` (investor | business_partner | mentor | hr | jury | other) (6.2.E)
+- [ ] Создаёт `users` с `role=guest` + `guest_subtype`
+- [ ] Response: `{ parsed, imported, duplicates, errors }`
+
+**Frontend:**
+- [ ] Секция "Гости" на странице DataImport.tsx (reuse `FileUpload` + `ImportSummary`)
+- [ ] Dropdown для выбора subtype перед загрузкой
+- [ ] Summary с результатами
+
+**Критерий выхода:** Организатор загружает CSV/JSON гостей с preset subtype, видит summary.
+
+#### Phase 3d: Briefing экспертов
+
+**Объём:** средний, Send-паттерн (preview → confirm → result)
+
+**Backend:**
+- [ ] `GET /api/v1/admin/briefing/preview` — total_experts, with_telegram, without_telegram, sample_card (6.2.A)
+- [ ] `POST /api/v1/admin/briefing/send` — массовая отправка карточек проектов (6.2.A)
+- [ ] Response: `{ sent, failed, skipped, elapsed_ms }`
+
+**Frontend:**
+- [ ] Страница `Briefing.tsx` или секция внутри Experts
+- [ ] Preview: метрики (total, with_telegram, without_telegram) + пример карточки
+- [ ] Кнопка Send с confirmation dialog
+- [ ] Результат: sent/failed/skipped
+
+**Критерий выхода:** Организатор видит preview, нажимает Send, видит sent/failed/skipped.
+
+#### Phase 3e: Unified messaging
+
+**Объём:** самый крупный, зависит от 3b и 3c (нужны данные о гостях, экспертах)
+
+**Backend:**
+- [ ] `POST /api/v1/admin/messages/preview` — template, target_audience (role, guest_subtype, room_id), include_links (6.2.F)
+- [ ] `POST /api/v1/admin/messages/send` — то же + dry_run (6.2.F)
+- [ ] Response preview: `{ recipient_count, sample_message, recipients_preview[] }`
+- [ ] Response send: `{ sent, failed, skipped }`
+
+**Frontend:**
+- [ ] Страница `Messaging.tsx` (новая) или секция в Notifications
+- [ ] Audience builder: role selector, guest_subtype filter, room filter
+- [ ] Template textarea с placeholder-переменными
+- [ ] Preview: количество получателей + пример сообщения + список
+- [ ] Кнопка Send с dry_run toggle
+- [ ] Результат: sent/failed/skipped
+
+**Критерий выхода:** Организатор выбирает аудиторию, пишет шаблон, видит preview, отправляет.
 
 ### Phase 4: Access Management + Hardening
 
@@ -338,22 +424,43 @@ Data Import        ← NEW
 | 10 | Напоминания | Preview → Send/Cancel, видна история батчей |
 | 11 | Slot editing | Админ меняет время/зал слота, видит лог изменений |
 
-### Phase 3
+### Phase 3a: Settings
 
 | # | Функция | Критерий |
 |---|---------|----------|
-| 12 | Брифинг | Preview → Send, видно sent/failed/skipped |
-| 13 | Даты DD | Даты редактируются из UI, отражаются в API |
-| 14 | Эксперт (single) | Форма создания/редактирования без bulk файла |
-| 15 | Guests import | Загрузка CSV/JSON с preset subtype, summary |
-| 16 | Messaging | Выбор аудитории, шаблон, preview, send |
+| 12 | Даты DD | Даты редактируются из UI, сохраняются через PATCH, отражаются в API |
+
+### Phase 3b: Expert CRUD
+
+| # | Функция | Критерий |
+|---|---------|----------|
+| 13 | Создание эксперта | Форма: имя, telegram, позиция, теги → создаётся через POST |
+| 14 | Редактирование эксперта | Inline-edit или модалка → обновляется через PATCH |
+
+### Phase 3c: Guest import
+
+| # | Функция | Критерий |
+|---|---------|----------|
+| 15 | Guests import | Загрузка CSV/JSON с preset subtype, summary (parsed/imported/duplicates/errors) |
+
+### Phase 3d: Briefing
+
+| # | Функция | Критерий |
+|---|---------|----------|
+| 16 | Брифинг | Preview (total, with/without telegram, sample) → Send → видно sent/failed/skipped |
+
+### Phase 3e: Messaging
+
+| # | Функция | Критерий |
+|---|---------|----------|
+| 17 | Unified messaging | Выбор аудитории (role/subtype/room), шаблон, preview (count + sample), send (с dry_run) |
 
 ### Phase 4
 
 | # | Функция | Критерий |
 |---|---------|----------|
-| 17 | Организаторы | Add/Remove без правки env, fallback на env работает |
-| 18 | Аудит-лог | Все admin actions логируются с timestamp и actor |
+| 18 | Организаторы | Add/Remove без правки env, fallback на env работает |
+| 19 | Аудит-лог | Все admin actions логируются с timestamp и actor |
 
 ---
 

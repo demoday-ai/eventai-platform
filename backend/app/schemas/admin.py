@@ -1,5 +1,7 @@
 """Admin dashboard schemas."""
 
+from datetime import date
+
 from pydantic import BaseModel
 
 
@@ -128,3 +130,12 @@ class ProjectListItem(BaseModel):
     end_time: str
     status: str  # "confirmed", "pending", "cancelled"
     tags: list[str]
+
+
+class EventUpdateRequest(BaseModel):
+    """Request to update event details."""
+
+    name: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    description: str | None = None

@@ -81,6 +81,14 @@ export interface Event {
   name: string
   start_date: string
   end_date: string | null
+  description?: string | null
+}
+
+export interface EventUpdateRequest {
+  name?: string
+  start_date?: string
+  end_date?: string
+  description?: string
 }
 
 export interface RoomCoverage {
@@ -625,6 +633,11 @@ export const getDashboard = async (): Promise<DashboardData> => {
 
 export const getCurrentEvent = async (): Promise<Event> => {
   const { data } = await apiClient.get<Event>("/events/current")
+  return data
+}
+
+export const updateCurrentEvent = async (body: EventUpdateRequest): Promise<Event> => {
+  const { data } = await apiClient.patch<Event>("/admin/events/current", body)
   return data
 }
 

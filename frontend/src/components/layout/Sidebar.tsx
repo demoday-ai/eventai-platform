@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   UserCheck,
   Bell,
+  Settings,
 } from "lucide-react"
 import { cn } from "../../lib/utils"
 
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/participation", label: "Участие", icon: UserCheck },
   { to: "/notifications", label: "Уведомления", icon: Bell },
   { to: "/projects", label: "Проекты", icon: FolderOpen },
+  { to: "/settings", label: "Настройки", icon: Settings },
 ]
 
 export function Sidebar() {
