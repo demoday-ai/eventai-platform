@@ -8,15 +8,15 @@ from app.models.base import Base
 
 
 class GuestSubtype(str, enum.Enum):
+    STUDENT = "student"
     APPLICANT = "applicant"
-    AI_PRACTITIONER = "ai_practitioner"
     OTHER = "other"
 
 
 GUEST_SUBTYPE_DISPLAY = {
-    GuestSubtype.APPLICANT: "Абитуриент",
-    GuestSubtype.AI_PRACTITIONER: "AI-практик",
-    GuestSubtype.OTHER: "Другое",
+    GuestSubtype.STUDENT: "🎓 Студент",
+    GuestSubtype.APPLICANT: "📚 Абитуриент",
+    GuestSubtype.OTHER: "Другое — ввести текстом",
 }
 
 

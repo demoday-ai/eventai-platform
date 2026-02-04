@@ -40,6 +40,44 @@ SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерир
 {{"summaries": [{{"project_id": "...", "summary": "..."}}, ...]}}"""
 
 
+PROFILE_EXTRACTION_SYSTEM = """Ты AI-ассистент для Demo Day. Проанализируй текст пользователя и извлеки его профиль.
+Определи:
+- interests: список интересов/тематик (3-7 штук, короткие фразы)
+- goals: что человек хочет найти на Demo Day (1-3 цели)
+- summary: краткое описание профиля для подтверждения (1-2 предложения, на русском)
+
+Верни JSON строго в формате:
+{{"interests": ["interest1", "interest2"], "goals": ["goal1"], "summary": "Краткое описание профиля"}}"""
+
+
+async def extract_profile_from_text(raw_text: str) -> dict:
+    """Extract structured profile from free-form user text using LLM.
+
+    Returns dict with keys: interests, goals, summary.
+    Falls back gracefully on LLM failure.
+    """
+    if not raw_text or not raw_text.strip():
+        return {"interests": [], "goals": [], "summary": ""}
+
+    try:
+        response = await llm_client.send_chat_completion(
+            system_prompt=PROFILE_EXTRACTION_SYSTEM,
+            user_prompt=raw_text,
+            json_mode=True,
+        )
+
+        interests = response.get("interests", [])
+        goals = response.get("goals", [])
+        summary = response.get("summary", "")
+
+        logger.info("Profile extraction: interests=%s goals=%s", interests, goals)
+        return {"interests": interests, "goals": goals, "summary": summary}
+
+    except Exception:
+        logger.warning("LLM profile extraction failed (graceful degradation)")
+        return {"interests": [], "goals": [], "summary": ""}
+
+
 # --- T005: Helper functions ---
 
 
