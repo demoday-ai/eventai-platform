@@ -489,10 +489,10 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             await query.edit_message_text("Ошибка. Попробуйте /start заново.")
             return ConversationHandler.END
 
-        # Extract partner metadata if present (business role)
-        metadata = None
+        # Extract partner extra data if present (business role)
+        extra_data = None
         if any(k in profile_data for k in ("company", "position", "partner_status", "business_objectives")):
-            metadata = {
+            extra_data = {
                 k: profile_data[k]
                 for k in ("company", "position", "partner_status", "business_objectives")
                 if k in profile_data
@@ -507,7 +507,7 @@ async def confirm_profile_callback(update: Update, context: ContextTypes.DEFAULT
             selected_tags=all_tags,
             keywords=profile_data.get("goals", []),
             raw_text=raw_text or None,
-            metadata=metadata,
+            extra_data=extra_data,
         )
 
     logger.info("Profile confirmed via NL: tg_id=%s tags=%s", telegram_user_id, all_tags)

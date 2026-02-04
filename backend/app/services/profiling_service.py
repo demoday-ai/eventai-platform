@@ -297,14 +297,14 @@ async def save_profile(
     selected_tags: list[str],
     keywords: list[str],
     raw_text: str | None,
-    metadata: dict | None = None,
+    extra_data: dict | None = None,
 ) -> GuestProfile:
     """Save/update profile fields. Deletes old recommendations on update."""
     profile.selected_tags = selected_tags
     profile.extracted_tags = []
     profile.keywords = keywords
     profile.raw_text = raw_text
-    profile.metadata = metadata
+    profile.extra_data = extra_data
 
     # Delete old recommendations when profile is updated (T033)
     await session.execute(
@@ -312,7 +312,7 @@ async def save_profile(
     )
 
     await session.commit()
-    logger.info("Profile saved: user=%s tags=%s keywords=%s metadata=%s", profile.user_id, selected_tags, keywords, metadata)
+    logger.info("Profile saved: user=%s tags=%s keywords=%s extra_data=%s", profile.user_id, selected_tags, keywords, extra_data)
     return profile
 
 

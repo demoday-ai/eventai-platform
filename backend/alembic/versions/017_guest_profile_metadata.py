@@ -1,4 +1,4 @@
-"""Add metadata JSONB column to guest_profiles.
+"""Add extra_data JSONB column to guest_profiles.
 
 Revision ID: 017
 Revises: 016
@@ -16,8 +16,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("guest_profiles", sa.Column("metadata", JSONB, nullable=True))
+    op.add_column("guest_profiles", sa.Column("extra_data", JSONB, nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("guest_profiles", "metadata")
+    op.drop_column("guest_profiles", "extra_data")
