@@ -16,7 +16,6 @@ import pytest_asyncio
 from telegram import Bot, Update
 from telegram.ext import ApplicationBuilder
 
-from app.models.business_profile import BusinessObjective
 from app.models.role import RoleCode
 
 
@@ -119,12 +118,10 @@ async def app():
         # Import and register handlers
         from app.bot.handlers.start import get_onboarding_handler
         from app.bot.handlers.guest_profiling import get_profiling_handler
-        from app.bot.handlers.business_profiling import get_business_profiling_handler
         from app.bot.handlers.qa import get_qa_handlers
 
         application.add_handler(get_onboarding_handler())
         application.add_handler(get_profiling_handler())
-        application.add_handler(get_business_profiling_handler())
 
         for handler in get_qa_handlers():
             application.add_handler(handler)
@@ -280,20 +277,6 @@ def guest_with_profile(registered_guest, test_event):
     profile.extracted_tags = ["LLM"]
     profile.keywords = ["чат-бот"]
     return registered_guest, profile
-
-
-@pytest.fixture
-def business_with_profile(registered_business, test_event):
-    """Create a business user with filled BusinessProfile mock."""
-    profile = MagicMock()
-    profile.id = uuid.uuid4()
-    profile.user_id = registered_business.id
-    profile.event_id = test_event.id
-    profile.objective = BusinessObjective.INVESTMENT
-    profile.industries = ["fintech", "edtech"]
-    profile.tech_stack = ["python", "llm"]
-    profile.project_stages = ["mvp", "early_traction"]
-    return registered_business, profile
 
 
 # =============================================================================
