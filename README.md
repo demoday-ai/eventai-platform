@@ -1,5 +1,7 @@
 # AI-агент-куратор DemoDay
 
+[![CI](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml)
+
 ![Demo Day Event](https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2000&auto=format&fit=crop)
 
 **AI Talent Camp 2026 | Команда "ЯСНОПОНЯТНО" | Проект #10**
