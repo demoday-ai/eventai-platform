@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { AxiosError } from "axios"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Stepper } from "../components/ui/stepper"
@@ -19,10 +20,21 @@ import {
 
 const STEPS = ["Запуск", "Результат", "Перемещение", "Одобрение", "Приглашения"]
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof AxiosError) {
+    const detail = error.response?.data?.detail
+    if (typeof detail === "string") return detail
+    if (detail && typeof detail === "object" && "message" in detail) return (detail as { message: string }).message
+  }
+  if (error instanceof Error) return error.message
+  return "Неизвестная ошибка"
+}
+
 export function ExpertMatching() {
   const queryClient = useQueryClient()
   const [currentStep, setCurrentStep] = useState(0)
   const [useAdjacentTags, setUseAdjacentTags] = useState(true)
+  const [matchingError, setMatchingError] = useState<string | null>(null)
   const [moveDialog, setMoveDialog] = useState<{
     assignmentId: string
     expertName: string
@@ -55,8 +67,12 @@ export function ExpertMatching() {
     mutationFn: () => runMatching({ use_adjacent_tags: useAdjacentTags }),
     onSuccess: (data) => {
       setMatchingResult(data)
+      setMatchingError(null)
       setCurrentStep(1)
       queryClient.invalidateQueries({ queryKey: ["matching"] })
+    },
+    onError: (error) => {
+      setMatchingError(getErrorMessage(error))
     },
   })
 
@@ -125,6 +141,10 @@ export function ExpertMatching() {
             <CardTitle>Запуск матчинга</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Автоматическое распределение экспертов по залам на основе тегов.
+              Требуется одобренная кластеризация.
+            </p>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -135,14 +155,26 @@ export function ExpertMatching() {
               Использовать смежные теги
             </label>
             <Button
-              onClick={() => runMutation.mutate()}
+              onClick={() => {
+                setMatchingError(null)
+                runMutation.mutate()
+              }}
               disabled={runMutation.isPending}
             >
-              {runMutation.isPending ? "Матчинг..." : "Запустить матчинг"}
+              {runMutation.isPending ? "Матчинг выполняется..." : "Запустить матчинг"}
             </Button>
-            {runMutation.isError && (
+
+            {runMutation.isPending && (
+              <div className="p-3 bg-blue-50 rounded-md">
+                <p className="text-sm text-blue-800">
+                  Матчинг выполняется... Это может занять до минуты.
+                </p>
+              </div>
+            )}
+
+            {matchingError && (
               <p className="text-sm text-red-500">
-                Ошибка: {runMutation.error instanceof Error ? runMutation.error.message : "Неизвестная ошибка"}
+                Ошибка: {matchingError}
               </p>
             )}
           </CardContent>
