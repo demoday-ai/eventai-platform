@@ -437,6 +437,9 @@ export function Landing() {
             <a href="#team" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-text-secondary)" }}>
               Команда
             </a>
+            <a href="/login" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-accent)" }}>
+              Админка
+            </a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -941,6 +944,24 @@ export function Landing() {
               />
             </div>
           </div>
+
+          <Reveal delay={600}>
+            <div className="mt-12 text-center">
+              <a
+                href="/login"
+                className="font-display inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-medium transition-all duration-200 hover:scale-[1.03]"
+                style={{
+                  background: "var(--ld-surface)",
+                  color: "var(--ld-accent)",
+                  border: "2px solid var(--ld-accent)",
+                }}
+              >
+                <BarChart3 className="h-4 w-4" />
+                Войти в админ-панель
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          </Reveal>
         </div>
       </section>
 
