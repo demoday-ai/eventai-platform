@@ -1455,9 +1455,9 @@ export function Landing() {
                     className="h-10 w-auto dark:invert"
                   />
                 </a>
-                {/* AI Talent Hub Logo */}
+                {/* AI ITMO Logo */}
                 <a
-                  href="https://aitalent.io"
+                  href="https://ai.itmo.ru/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 transition-opacity hover:opacity-80"
@@ -1472,7 +1472,7 @@ export function Landing() {
                     className="font-display text-lg font-semibold"
                     style={{ color: "var(--ld-text)" }}
                   >
-                    AI Talent Hub
+                    AI ITMO
                   </span>
                 </a>
               </div>
