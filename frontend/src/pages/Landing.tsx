@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 
 const BOT_URL = "https://t.me/demoday_ai_talent_hub_test_bot"
-const GITHUB_URL = "https://github.com/demoday-ai/demoday-core"
+const GITHUB_URL = "https://github.com/AI-Talent-Camp-2026/demoday-ai"
 
 /* ============================================================
    Theme
