@@ -430,12 +430,7 @@ function NavBar({ dark, toggle }: { dark: boolean; toggle: () => void }) {
             className="font-display flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg"
             style={{ color: "var(--ld-text)" }}
           >
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg"
-              style={{ background: "var(--ld-accent)", color: "#fff" }}
-            >
-              <Sparkles className="h-4 w-4" />
-            </div>
+            <img src="/logo.png" alt="EventAI" className="h-8 w-8 rounded-lg" />
             <span className="hidden sm:inline">EventAI</span>
           </a>
 
@@ -1861,12 +1856,7 @@ export function Landing() {
                 className="font-display inline-flex items-center gap-2 text-lg font-semibold"
                 style={{ color: "var(--ld-text)" }}
               >
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{ background: "var(--ld-accent)", color: "#fff" }}
-                >
-                  <Sparkles className="h-4 w-4" />
-                </div>
+                <img src="/logo.png" alt="EventAI" className="h-8 w-8 rounded-lg" />
                 EventAI
               </a>
               <p
