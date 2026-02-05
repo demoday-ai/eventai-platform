@@ -1743,7 +1743,7 @@ export function Landing() {
               <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} telegram="grbn_dima" photo="/team/dima.jpg" />
               <TeamMember name="Анастасия Гапеева" role="UX/UI, фронтенд" tag="AG" delay={80} photo="/team/nastya.jpg" />
               <TeamMember name="Иван Александров" role="Разработка, бизнес-логика" tag="IA" delay={160} photo="/team/ivan.jpg" />
-              <TeamMember name="Claude" role="AI-ассистент команды" tag="AI" delay={240} />
+              <TeamMember name="Claude" role="AI-ассистент команды" tag="AI" delay={240} photo="/team/claude.svg" />
             </div>
           </Reveal>
         </div>
