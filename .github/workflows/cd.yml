@@ -15,8 +15,8 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.JUMP_KEY }}" > ~/.ssh/jump-key
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy-key
+          echo "${{ secrets.JUMP_KEY_B64 }}" | base64 -d > ~/.ssh/jump-key
+          echo "${{ secrets.DEPLOY_KEY_B64 }}" | base64 -d > ~/.ssh/deploy-key
           chmod 600 ~/.ssh/jump-key ~/.ssh/deploy-key
           cat >> ~/.ssh/config << 'EOF'
           Host bastion
