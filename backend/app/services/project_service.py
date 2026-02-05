@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import logging
+import re
 import uuid
 
 from sqlalchemy import delete, func, select
@@ -14,11 +15,47 @@ from app.models.project import Project
 from app.models.project_tag import ProjectTag
 from app.models.room_project import RoomProject
 from app.models.tag import Tag
+from app.services import profiling_service
 from app.schemas.project import ProjectUploadRow, RowError
 
 logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = {"title", "description", "tags", "author", "telegram_contact"}
+DEFAULT_TAGS = [
+    "NLP",
+    "CV",
+    "LLM",
+    "Agents",
+    "EdTech",
+    "FinTech",
+    "MedTech",
+    "Security",
+    "ASR",
+    "TTS",
+]
+
+
+def _parse_tags(tags: str) -> list[str]:
+    return [t.strip() for t in tags.split(",") if t.strip()]
+
+
+def _match_tags_heuristic(text: str, candidate_tags: list[str]) -> list[str]:
+    text_lower = text.lower()
+    matched: list[str] = []
+    for tag in candidate_tags:
+        tag_lower = tag.lower()
+        if len(tag_lower) <= 3:
+            if re.search(rf"\\b{re.escape(tag_lower)}\\b", text_lower):
+                matched.append(tag)
+        elif tag_lower in text_lower:
+            matched.append(tag)
+    return matched
+
+
+async def _get_candidate_tags(session: AsyncSession) -> list[str]:
+    result = await session.execute(select(Tag.name).order_by(Tag.name))
+    tags = [row[0] for row in result.all()]
+    return tags or DEFAULT_TAGS.copy()
 
 
 def parse_csv(content: bytes) -> list[dict]:
@@ -97,8 +134,23 @@ async def save_projects(
     """Bulk insert projects with tag resolution. Returns count loaded."""
     tag_cache: dict[str, Tag] = {}
     loaded = 0
+    candidate_tags = await _get_candidate_tags(session)
 
     for row in rows:
+        tag_names = _parse_tags(row.tags) if row.tags else []
+        if not tag_names:
+            raw_text = f"{row.title}\n{row.description}"
+            tag_names = _match_tags_heuristic(raw_text, candidate_tags)
+
+            if not tag_names and candidate_tags:
+                extracted = await profiling_service.extract_interests_from_text(
+                    raw_text=raw_text,
+                    available_tags=candidate_tags,
+                )
+                tag_names = extracted.get("tags", [])
+            if not tag_names:
+                tag_names = ["Other"]
+
         project = Project(
             event_id=event_id,
             title=row.title,
@@ -110,9 +162,8 @@ async def save_projects(
         session.add(project)
         await session.flush()
 
-        if row.tags:
-            for tag_name in row.tags.split(","):
-                tag_name = tag_name.strip()
+        if tag_names:
+            for tag_name in tag_names:
                 if not tag_name:
                     continue
 
