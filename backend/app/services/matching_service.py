@@ -238,6 +238,9 @@ async def run_matching(
 
     await session.commit()
 
+    # Normalize scores to 0-1 range
+    max_score = max((asgn.match_score for _, asgn, _ in assignments), default=1.0) or 1.0
+
     # Build result
     rooms_result = []
     for room_id, (room, _) in room_tags.items():
@@ -245,7 +248,7 @@ async def run_matching(
             {
                 "expert_id": str(exp.id),
                 "name": exp.name,
-                "match_score": asgn.match_score,
+                "match_score": round(asgn.match_score / max_score, 3),
                 "matching_tags": tags,
                 "is_manual": asgn.is_manual,
             }
@@ -332,6 +335,9 @@ async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
     # Get rooms
     room_tags = await get_room_tags(session, clustering.id)
 
+    # Normalize scores to 0-1 range
+    max_score = max((a.match_score for a in assignments), default=1.0) or 1.0
+
     # Group by room
     rooms_result = []
     for room_id, (room, _) in room_tags.items():
@@ -342,7 +348,7 @@ async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
             experts.append({
                 "expert_id": str(a.expert.id),
                 "name": a.expert.name,
-                "match_score": a.match_score,
+                "match_score": round(a.match_score / max_score, 3),
                 "matching_tags": tag_names,
                 "is_manual": a.is_manual,
                 "status": a.status,
