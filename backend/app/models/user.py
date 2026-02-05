@@ -11,22 +11,12 @@ class GuestSubtype(str, enum.Enum):
     STUDENT = "student"
     APPLICANT = "applicant"
     OTHER = "other"
-    INVESTOR = "investor"
-    BUSINESS_PARTNER = "business_partner"
-    MENTOR = "mentor"
-    HR = "hr"
-    JURY = "jury"
 
 
 GUEST_SUBTYPE_DISPLAY = {
     GuestSubtype.STUDENT: "🎓 Студент",
     GuestSubtype.APPLICANT: "📚 Абитуриент",
     GuestSubtype.OTHER: "Другое — ввести текстом",
-    GuestSubtype.INVESTOR: "💰 Инвестор",
-    GuestSubtype.BUSINESS_PARTNER: "🤝 Бизнес-партнёр",
-    GuestSubtype.MENTOR: "🧑‍🏫 Ментор",
-    GuestSubtype.HR: "👔 HR",
-    GuestSubtype.JURY: "⚖️ Жюри",
 }
 
 
