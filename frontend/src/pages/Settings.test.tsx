@@ -291,7 +291,6 @@ describe("Settings", () => {
       expect(screen.getByText("Админ Иванов")).toBeInTheDocument()
     })
 
-    expect(screen.getByText("111222")).toBeInTheDocument()
     expect(screen.getByText("admin_user")).toBeInTheDocument()
     expect(screen.getByText("Петров Петр")).toBeInTheDocument()
   })
@@ -316,11 +315,10 @@ describe("Settings", () => {
     await userEvent.click(screen.getByText("Добавить организатора"))
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Telegram ID *")).toBeInTheDocument()
+      expect(screen.getByLabelText("Username *")).toBeInTheDocument()
     })
 
-    await userEvent.type(screen.getByLabelText("Telegram ID *"), "555666")
-    await userEvent.type(screen.getByLabelText("Username"), "new_org")
+    await userEvent.type(screen.getByLabelText("Username *"), "new_org")
     await userEvent.type(screen.getByLabelText("Имя"), "Новый Организатор")
 
     // Click the submit button within the organizer form (has type="submit")
@@ -333,7 +331,7 @@ describe("Settings", () => {
     })
 
     expect(vi.mocked(apiClient.addOrganizer).mock.calls[0][0]).toEqual({
-      telegram_id: "555666",
+      telegram_id: "",
       telegram_username: "new_org",
       name: "Новый Организатор",
     })

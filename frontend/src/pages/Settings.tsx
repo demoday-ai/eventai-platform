@@ -298,7 +298,6 @@ function TagsSection() {
 function OrganizersSection() {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
-  const [telegramId, setTelegramId] = useState("")
   const [username, setUsername] = useState("")
   const [orgName, setOrgName] = useState("")
 
@@ -312,7 +311,6 @@ function OrganizersSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizers"] })
       setShowForm(false)
-      setTelegramId("")
       setUsername("")
       setOrgName("")
     },
@@ -327,10 +325,10 @@ function OrganizersSection() {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!telegramId.trim()) return
+    if (!username.trim()) return
     addMutation.mutate({
-      telegram_id: telegramId.trim(),
-      telegram_username: username.trim() || null,
+      telegram_id: "",
+      telegram_username: username.trim(),
       name: orgName.trim() || null,
     })
   }
@@ -348,7 +346,6 @@ function OrganizersSection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Telegram ID</th>
                   <th className="text-left py-2 pr-4">Username</th>
                   <th className="text-left py-2 pr-4">Имя</th>
                   <th className="text-left py-2 pr-4">Добавлен</th>
@@ -358,7 +355,6 @@ function OrganizersSection() {
               <tbody>
                 {organizers.map((org: OrganizerItem) => (
                   <tr key={org.id} className="border-b">
-                    <td className="py-2 pr-4">{org.telegram_id}</td>
                     <td className="py-2 pr-4">{org.telegram_username || "—"}</td>
                     <td className="py-2 pr-4">{org.name || "—"}</td>
                     <td className="py-2 pr-4 whitespace-nowrap">
@@ -394,16 +390,7 @@ function OrganizersSection() {
         {showForm && (
           <form onSubmit={handleAdd} className="space-y-3 border rounded-md p-4">
             <div className="space-y-2">
-              <Label htmlFor="org-telegram-id">Telegram ID *</Label>
-              <Input
-                id="org-telegram-id"
-                value={telegramId}
-                onChange={(e) => setTelegramId(e.target.value)}
-                placeholder="123456789"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="org-username">Username</Label>
+              <Label htmlFor="org-username">Username *</Label>
               <Input
                 id="org-username"
                 value={username}
@@ -421,7 +408,7 @@ function OrganizersSection() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button type="submit" disabled={addMutation.isPending || !telegramId.trim()}>
+              <Button type="submit" disabled={addMutation.isPending || !username.trim()}>
                 {addMutation.isPending ? "Добавление..." : "Добавить"}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
