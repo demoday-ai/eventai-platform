@@ -78,7 +78,7 @@ export function Briefing() {
             <CardTitle>Предпросмотр брифинга</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Всего экспертов</p>
                 <p className="text-2xl font-bold">{preview.expert_count}</p>
@@ -114,7 +114,7 @@ export function Briefing() {
             <CardTitle>Брифинги отправлены</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Отправлено</p>
                 <p className="text-2xl font-bold text-green-600">{sendResult.sent}</p>

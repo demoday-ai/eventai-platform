@@ -65,12 +65,12 @@ export function Coverage() {
       <h2 className="text-2xl font-bold">Покрытие экспертами</h2>
 
       {/* Tab buttons */}
-      <div className="flex gap-1 border-b pb-0">
+      <div className="flex gap-1 border-b pb-0 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
+            className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors whitespace-nowrap ${
               activeTab === tab
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted"
@@ -88,7 +88,7 @@ export function Coverage() {
           {summaryError && <p className="text-sm text-red-500">Ошибка загрузки данных покрытия</p>}
           {summary && (
             <>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{summary.totals.confirmed}</div>

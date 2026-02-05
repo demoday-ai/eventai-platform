@@ -109,10 +109,10 @@ export function ExpertMatching() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <h2 className="text-2xl font-bold">Эксперты</h2>
         <Link to="/experts/list">
-          <Button variant="outline" size="sm">Список экспертов</Button>
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">Список экспертов</Button>
         </Link>
       </div>
 
@@ -154,7 +154,7 @@ export function ExpertMatching() {
         <div className="space-y-4">
           <Card>
             <CardContent className="pt-4">
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Всего экспертов</p>
                   <p className="text-2xl font-bold">{matchingResult.total_experts}</p>
@@ -171,7 +171,7 @@ export function ExpertMatching() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {matchingResult.rooms.map((room) => (
               <Card key={room.room_id}>
                 <CardHeader>
@@ -207,9 +207,9 @@ export function ExpertMatching() {
             ))}
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={() => setCurrentStep(2)}>Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(0)}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
+            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
               Перезапустить
             </Button>
           </div>
@@ -222,7 +222,7 @@ export function ExpertMatching() {
           <p className="text-sm text-muted-foreground">
             Нажмите &quot;Переместить&quot; рядом с экспертом, чтобы перенести его в другой зал.
           </p>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {matchingResult.rooms.map((room) => (
               <Card key={room.room_id}>
                 <CardHeader>
@@ -293,9 +293,9 @@ export function ExpertMatching() {
             </Card>
           )}
 
-          <div className="flex gap-2">
-            <Button onClick={() => setCurrentStep(3)}>Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setCurrentStep(3)} className="w-full sm:w-auto">Далее</Button>
+            <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
               Назад
             </Button>
           </div>
@@ -312,14 +312,15 @@ export function ExpertMatching() {
             <p className="text-sm">
               Всего экспертов: {matchingResult.total_experts}, назначены: {matchingResult.matched_experts}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={() => approveMutation.mutate()}
                 disabled={approveMutation.isPending}
+                className="w-full sm:w-auto"
               >
                 {approveMutation.isPending ? "Одобрение..." : "Одобрить"}
               </Button>
-              <Button variant="outline" onClick={() => setCurrentStep(2)}>
+              <Button variant="outline" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
                 Назад
               </Button>
             </div>
@@ -358,7 +359,7 @@ export function ExpertMatching() {
                 <CardTitle>Предпросмотр приглашений</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Всего экспертов</p>
                     <p className="text-2xl font-bold">{invitePreview.total_experts}</p>

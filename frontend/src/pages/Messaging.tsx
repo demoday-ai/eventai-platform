@@ -244,7 +244,7 @@ export function Messaging() {
             <CardTitle>Результат рассылки</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Отправлено</p>
                 <p className="text-2xl font-bold text-green-600">{sendResult.sent}</p>

@@ -190,7 +190,7 @@ export function Schedule() {
             scheduleData.days.map((day) => (
               <div key={day.date} className="space-y-3">
                 <h3 className="text-lg font-semibold capitalize">{formatDate(day.date)}</h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {day.rooms.map((room) => (
                     <Card key={room.room_id}>
                       <CardHeader>
@@ -318,9 +318,9 @@ export function Schedule() {
             ))
           )}
 
-          <div className="flex gap-2">
-            <Button onClick={() => setCurrentStep(2)}>Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(0)}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
+            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
               Перегенерировать
             </Button>
           </div>
@@ -415,14 +415,15 @@ export function Schedule() {
                 Расписание одобрено: {approveResult.total_slots} слотов, {approveResult.rooms} залов, {approveResult.days} дней
               </p>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   onClick={() => approveMutation.mutate()}
                   disabled={approveMutation.isPending}
+                  className="w-full sm:w-auto"
                 >
                   {approveMutation.isPending ? "Одобрение..." : "Одобрить"}
                 </Button>
-                <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
                   Назад
                 </Button>
               </div>

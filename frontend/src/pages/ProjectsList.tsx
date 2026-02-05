@@ -102,7 +102,7 @@ export function ProjectsList() {
               <CardTitle>Проекты ({projects.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 {/* Room Filter */}
                 <div className="space-y-2">
                   <Label htmlFor="room-filter">Зал</Label>

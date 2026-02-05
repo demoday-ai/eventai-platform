@@ -87,7 +87,7 @@ export function Participation() {
           {summaryError && <p className="text-sm text-red-500">Ошибка загрузки</p>}
           {summary && (
             <>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{summary.total}</div>

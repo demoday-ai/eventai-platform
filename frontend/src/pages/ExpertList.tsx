@@ -26,13 +26,13 @@ export function ExpertList() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold">Список экспертов</h2>
         <div className="flex gap-2">
           <Link to="/experts">
-            <Button variant="outline">Матчинг</Button>
+            <Button variant="outline" className="flex-1 sm:flex-none">Матчинг</Button>
           </Link>
-          <Button onClick={() => setDialog({ mode: "create" })}>
+          <Button onClick={() => setDialog({ mode: "create" })} className="flex-1 sm:flex-none">
             Добавить эксперта
           </Button>
         </div>
