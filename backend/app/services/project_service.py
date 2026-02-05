@@ -15,8 +15,8 @@ from app.models.project import Project
 from app.models.project_tag import ProjectTag
 from app.models.room_project import RoomProject
 from app.models.tag import Tag
-from app.services import profiling_service
 from app.schemas.project import ProjectUploadRow, RowError
+from app.services import profiling_service
 
 logger = logging.getLogger(__name__)
 

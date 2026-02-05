@@ -120,6 +120,40 @@ class RoomDetailResponse(BaseModel):
     uncovered_topics: list[str]
 
 
+class RoomUpdateRequest(BaseModel):
+    """Update room theme/name."""
+
+    name: str | None = None
+    theme_rationale: str | None = None
+
+
+class RoomUpdateResponse(BaseModel):
+    """Room update response."""
+
+    id: str
+    name: str
+    theme_rationale: str
+
+
+class TagListResponse(BaseModel):
+    """List of available tags."""
+
+    tags: list[str]
+
+
+class TagUpsertRequest(BaseModel):
+    """Add optional base tags for conference."""
+
+    tags: list[str]
+
+
+class TagUpsertResponse(BaseModel):
+    """Result of adding base tags."""
+
+    added: list[str]
+    skipped: list[str]
+
+
 class ProjectListItem(BaseModel):
     """Project list item."""
 

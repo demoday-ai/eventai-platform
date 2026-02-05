@@ -55,6 +55,7 @@ class RoomSummary(BaseModel):
 class ClusteringRequest(BaseModel):
     num_rooms: int = Field(default=6, ge=2, le=20)
     feedback: str | None = None
+    room_themes: list[str] | None = None
 
 
 class RoomSchema(BaseModel):

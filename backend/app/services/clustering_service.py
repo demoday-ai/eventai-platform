@@ -44,9 +44,14 @@ def _build_user_prompt(
     projects: list[dict],
     num_rooms: int,
     feedback: str | None = None,
+    room_themes: list[str] | None = None,
 ) -> str:
     """Build the user prompt for clustering."""
     prompt = f"Распредели {len(projects)} проектов по {num_rooms} залам.\n\n"
+    if room_themes:
+        themes = ", ".join(room_themes)
+        prompt += f"Тематики залов заданы организатором: {themes}.\n"
+        prompt += "Используй эти тематики как названия залов и ориентиры для распределения.\n\n"
     prompt += "Проекты:\n"
     prompt += json.dumps(projects, ensure_ascii=False, indent=None)
 
@@ -62,6 +67,7 @@ async def run_clustering(
     event_id: uuid.UUID,
     num_rooms: int = 6,
     feedback: str | None = None,
+    room_themes: list[str] | None = None,
 ) -> ClusteringRun:
     """Run AI clustering for projects in an event.
 
@@ -98,7 +104,7 @@ async def run_clustering(
         })
         project_map[pid] = p
 
-    user_prompt = _build_user_prompt(projects_data, num_rooms, feedback)
+    user_prompt = _build_user_prompt(projects_data, num_rooms, feedback, room_themes=room_themes)
 
     # 3. Call LLM
     logger.info("Running clustering: %d projects → %d rooms", len(projects), num_rooms)

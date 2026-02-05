@@ -6,14 +6,18 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
+    ClusteringRun,
     ExpertRoomAssignment,
     ParticipationRequest,
     ParticipationStatus,
     Project,
+    ProjectTag,
     Role,
     RoleCode,
     Room,
+    RoomProject,
     ScheduleSlot,
+    Tag,
     User,
     UserRole,
 )
@@ -298,7 +302,7 @@ async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCover
 
 async def get_room_detail(db: AsyncSession, event_id: UUID, room_id: UUID) -> RoomDetailResponse:
     """Get detailed information about a specific room."""
-    from app.models import ClusteringRun, ProjectTag, RoomProject, Tag
+    # Uses ClusteringRun/ProjectTag/RoomProject/Tag via module imports
 
     # Get room
     room = await db.scalar(select(Room).where(Room.id == room_id, Room.event_id == event_id))
@@ -510,3 +514,60 @@ async def get_projects_list(
         )
 
     return projects_list
+
+
+async def list_tags(db: AsyncSession) -> list[str]:
+    """List all available tags."""
+    result = await db.execute(select(Tag.name).order_by(Tag.name))
+    return [row[0] for row in result.all()]
+
+
+async def add_tags(db: AsyncSession, tags: list[str]) -> tuple[list[str], list[str]]:
+    """Add new tags (dedupe by lowercase). Returns (added, skipped)."""
+    cleaned = [t.strip() for t in tags if t and t.strip()]
+    if not cleaned:
+        return [], []
+
+    existing_result = await db.execute(select(Tag.name))
+    existing = {row[0].lower() for row in existing_result.all()}
+
+    added: list[str] = []
+    skipped: list[str] = []
+    for tag in cleaned:
+        if tag.lower() in existing:
+            skipped.append(tag)
+            continue
+        db.add(Tag(name=tag))
+        existing.add(tag.lower())
+        added.append(tag)
+
+    if added:
+        await db.commit()
+
+    return added, skipped
+
+
+async def update_room_theme(
+    db: AsyncSession,
+    event_id: UUID,
+    room_id: UUID,
+    name: str | None = None,
+    theme_rationale: str | None = None,
+) -> Room:
+    """Update room name/theme for current event."""
+    room = await db.scalar(
+        select(Room)
+        .join(ClusteringRun, Room.clustering_run_id == ClusteringRun.id)
+        .where(Room.id == room_id, ClusteringRun.event_id == event_id)
+    )
+    if not room:
+        raise ValueError("Room not found")
+
+    if name is not None:
+        room.name = name.strip() or room.name
+    if theme_rationale is not None:
+        room.theme_rationale = theme_rationale.strip() or room.theme_rationale
+
+    await db.commit()
+    await db.refresh(room)
+    return room

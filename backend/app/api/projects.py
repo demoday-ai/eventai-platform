@@ -176,12 +176,19 @@ async def run_clustering(
     event_id = event.id
     num_rooms = request.num_rooms
     feedback = request.feedback
+    room_themes = request.room_themes
+
+    if room_themes is not None and len(room_themes) != num_rooms:
+        raise HTTPException(
+            status_code=422,
+            detail="room_themes length must match num_rooms",
+        )
 
     async def do_clustering():
         """Run clustering in background with fresh DB session."""
         async with async_session() as bg_session:
             run = await clustering_service.run_clustering(
-                bg_session, event_id, num_rooms, feedback
+                bg_session, event_id, num_rooms, feedback, room_themes=room_themes
             )
             return {"run_id": str(run.id)}
 
