@@ -1038,6 +1038,85 @@ export function Landing() {
         </div>
       </section>
 
+      {/* ===================== FAQ ===================== */}
+      <section
+        id="faq"
+        className="relative py-20 px-6"
+        style={{ borderTop: "1px solid var(--ld-border-subtle)" }}
+      >
+        <div className="mx-auto max-w-3xl">
+          <div className="text-center">
+            <Reveal>
+              <SectionTag>FAQ</SectionTag>
+            </Reveal>
+            <Reveal delay={100}>
+              <h2
+                className="font-display mt-6 text-2xl font-medium tracking-tight sm:text-3xl"
+                style={{ color: "var(--ld-text)" }}
+              >
+                Частые вопросы
+              </h2>
+            </Reveal>
+          </div>
+
+          <div className="mt-10 space-y-4">
+            {[
+              {
+                q: "На какой масштаб рассчитана платформа?",
+                a: "Протестировано на реальном Demo Day: 330 проектов, 10 параллельных залов, 50+ экспертов, 2 дня. Гость физически успевает посетить менее 20% — бот решает эту проблему.",
+              },
+              {
+                q: "Чем это лучше расписания в Google-таблице?",
+                a: "\"Гигантская таблица, в которой чёрт ногу сломит\" — цитата из CustDev. Бот за 2 минуты диалога выдаёт персональный топ проектов с рейтингом релевантности, вместо ручного поиска по 20+ вкладкам.",
+              },
+              {
+                q: "Чем отличается от Demo-Hero?",
+                a: "Demo-Hero использовал tinder-механику (пары проектов). При 330 проектах нужно 53+ минуты свайпа — нереалистично. Наш подход: спросить \"что ищете?\" и мгновенно показать релевантное через AI.",
+              },
+              {
+                q: "Для кого этот продукт?",
+                a: "5 ролей: организаторы (автокластеризация, дашборд), студенты (подтверждение, обратная связь), эксперты (матчинг, овервью), гости (персональная программа), бизнес-партнёры (поиск под задачу, follow-up).",
+              },
+              {
+                q: "Откуда данные о проектах?",
+                a: "Импорт из формы контрольного рубежа + парсинг GitHub. AI автоматически извлекает теги, описания, стек. Организатор загружает Excel/CSV — система делает остальное.",
+              },
+              {
+                q: "Это бесплатно?",
+                a: "Да. Open source под MIT лицензией. Бесплатно для университетов, хакатонов, некоммерческих мероприятий. Разворачивайте на своей инфраструктуре.",
+              },
+            ].map((item, i) => (
+              <Reveal key={i} delay={i * 60}>
+                <details
+                  className="group rounded-xl p-5"
+                  style={{
+                    background: "var(--ld-surface)",
+                    border: "1px solid var(--ld-border)",
+                  }}
+                >
+                  <summary
+                    className="font-display flex cursor-pointer items-center justify-between text-sm font-medium sm:text-base"
+                    style={{ color: "var(--ld-text)" }}
+                  >
+                    {item.q}
+                    <ChevronDown
+                      className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                      style={{ color: "var(--ld-text-muted)" }}
+                    />
+                  </summary>
+                  <p
+                    className="font-body mt-3 text-sm leading-relaxed"
+                    style={{ color: "var(--ld-text-secondary)" }}
+                  >
+                    {item.a}
+                  </p>
+                </details>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ===================== TEAM ===================== */}
       <section
         id="team"
