@@ -245,10 +245,6 @@ async def run_clustering(
     if not event:
         raise HTTPException(status_code=400, detail="Нет активного события")
 
-    role = await user_service.get_user_role_with_info(session, user.id, event.id)
-    if not role or role.code != "organizer":
-        raise HTTPException(status_code=403, detail="Только организатор может запускать кластеризацию")
-
     # Check for already running clustering job (legacy check)
     existing_job = get_active_job_by_type("clustering")
     if existing_job:
@@ -337,14 +333,10 @@ async def move_project(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Move project to another room (organizer only)."""
+    """Move project to another room."""
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=400, detail="Нет активного события")
-
-    role = await user_service.get_user_role_with_info(session, user.id, event.id)
-    if not role or role.code != "organizer":
-        raise HTTPException(status_code=403, detail="Только организатор")
 
     try:
         await clustering_service.move_project(
@@ -366,14 +358,10 @@ async def approve_clustering(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Approve clustering as schedule (organizer only)."""
+    """Approve clustering as schedule."""
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=400, detail="Нет активного события")
-
-    role = await user_service.get_user_role_with_info(session, user.id, event.id)
-    if not role or role.code != "organizer":
-        raise HTTPException(status_code=403, detail="Только организатор")
 
     try:
         result = await clustering_service.approve_clustering(session, run_id)

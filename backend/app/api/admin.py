@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer, get_current_user
+from app.api.deps import get_current_user
 from app.config import settings
 from app.database import get_session
 from app.models import User
@@ -60,7 +60,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 @router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Get dashboard statistics for organizer."""
 
@@ -76,7 +76,7 @@ async def get_dashboard(
 @router.get("/coverage", response_model=list[RoomCoverage])
 async def get_coverage(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Get room coverage statistics."""
 
@@ -94,7 +94,7 @@ async def get_coverage(
 async def get_room_detail(
     room_id: UUID,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Get detailed information about a specific room."""
 
@@ -116,7 +116,7 @@ async def update_room(
     room_id: UUID,
     request: RoomUpdateRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Update room name/theme (organizer-managed)."""
     event = await user_service.get_current_event(db)
@@ -161,7 +161,7 @@ async def update_room(
 @router.get("/tags", response_model=TagListResponse)
 async def list_tags(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """List available tags."""
     tags = await admin_service.list_tags(db)
@@ -172,7 +172,7 @@ async def list_tags(
 async def add_tags(
     request: TagUpsertRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Add optional base tags for conference."""
     added, skipped = await admin_service.add_tags(db, request.tags)
@@ -210,7 +210,7 @@ async def get_projects(
 async def update_current_event(
     request: EventUpdateRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Update current event details (name, dates, description)."""
 
@@ -408,7 +408,7 @@ async def upload_guests(
 @router.get("/briefing/preview", response_model=BriefingPreview)
 async def get_briefing_preview(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Get briefing preview: how many experts will receive briefings."""
 
@@ -431,7 +431,7 @@ async def get_briefing_preview(
 @router.post("/briefing/send", response_model=BriefingSendResult)
 async def send_briefings(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Send briefings to all confirmed experts."""
 
@@ -464,7 +464,7 @@ VALID_MESSAGING_ROLES = {"student", "expert", "guest", "business"}
 async def messaging_preview(
     request: MessagingPreviewRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Preview messaging recipients before sending."""
 
@@ -505,7 +505,7 @@ async def messaging_preview(
 async def messaging_send(
     request: MessagingSendRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Send messages to selected audience."""
 
@@ -559,7 +559,7 @@ async def get_audit_log(
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Get paginated admin audit log."""
 
@@ -589,7 +589,7 @@ async def get_audit_log(
 @router.get("/organizers", response_model=list[OrganizerItem])
 async def list_organizers(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """List all organizers."""
     organizers = await organizer_service.list_organizers(db)
@@ -610,7 +610,7 @@ async def list_organizers(
 async def add_organizer(
     request: OrganizerCreateRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Add a new organizer."""
     organizer = await organizer_service.add_organizer(
@@ -635,7 +635,7 @@ async def add_organizer(
 async def delete_organizer(
     organizer_id: UUID,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Remove an organizer."""
     deleted = await organizer_service.remove_organizer(db, organizer_id)

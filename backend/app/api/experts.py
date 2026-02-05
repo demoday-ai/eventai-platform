@@ -6,7 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer, get_current_user
+from app.api.deps import get_current_user
 from app.database import get_session
 from app.models.user import User
 from app.schemas.expert import (
@@ -207,7 +207,7 @@ async def upload_experts(
 async def create_expert(
     body: ExpertCreateRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -247,7 +247,7 @@ async def update_expert(
     expert_id: uuid.UUID,
     body: ExpertUpdateRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -317,7 +317,7 @@ async def get_expert(
 async def run_matching_endpoint(
     body: MatchingRequest | None = None,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Run expert-room matching. Uses Celery for async LLM processing."""
     from app.services import user_service
@@ -368,7 +368,7 @@ async def move_expert_endpoint(
     assignment_id: uuid.UUID,
     body: MoveExpertRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -390,7 +390,7 @@ async def move_expert_endpoint(
 @router.post("/matching/approve")
 async def approve_matching_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -416,7 +416,7 @@ async def approve_matching_endpoint(
 @router.get("/invites/preview")
 async def invite_preview_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -434,7 +434,7 @@ async def invite_preview_endpoint(
 @router.post("/invites/confirm")
 async def invite_confirm_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -453,7 +453,7 @@ async def invite_confirm_endpoint(
 @router.get("/coverage")
 async def coverage_dashboard_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -471,7 +471,7 @@ async def coverage_dashboard_endpoint(
 @router.get("/coverage/gaps")
 async def coverage_gaps_endpoint(
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -490,7 +490,7 @@ async def coverage_gaps_endpoint(
 async def coverage_room_detail_endpoint(
     room_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
@@ -526,7 +526,7 @@ async def list_escalations_endpoint(
 async def resolve_escalation_endpoint(
     escalation_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 

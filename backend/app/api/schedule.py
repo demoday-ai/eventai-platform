@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer, get_current_user
+from app.api.deps import get_current_user
 from app.database import get_session
 from app.models import User
 from app.schemas.schedule import (
@@ -40,7 +40,7 @@ router = APIRouter(tags=["Schedule"])
 async def generate_schedule(
     request: ScheduleGenerateRequest = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Auto-generate schedule from approved clustering."""
 
@@ -94,7 +94,7 @@ async def get_schedule(
 @router.post("/schedule/approve", response_model=ScheduleApproveResult)
 async def approve_schedule(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Approve the schedule."""
 
@@ -120,7 +120,7 @@ async def update_slot(
     slot_id: UUID,
     request: SlotUpdateRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Update a schedule slot (T030)."""
 
@@ -218,7 +218,7 @@ async def get_schedule_changes(
 async def preview_reminders(
     day: date | None = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Preview pending reminders."""
 
@@ -239,7 +239,7 @@ async def preview_reminders(
 async def cancel_reminders(
     request: ReminderCancelRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Cancel pending eve-of-DD reminders."""
 
@@ -262,7 +262,7 @@ async def send_reminders(
     request: ReminderSendRequest,
     http_request: Request,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Manually trigger reminder send."""
 
@@ -297,7 +297,7 @@ async def get_notification_dashboard(
     type: str | None = None,
     day: date | None = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Notification delivery dashboard (T032)."""
 

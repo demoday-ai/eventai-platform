@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer
+from app.api.deps import get_current_user
 from app.database import get_session
 from app.models.user import User
 from app.schemas.participation import (
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/participation", tags=["Participation"])
 
 @router.post("/broadcast", response_model=BroadcastResult)
 async def broadcast_slots(
-    user: User = Depends(check_organizer),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
 
@@ -45,7 +45,7 @@ async def broadcast_slots(
 @router.get("/summary", response_model=ParticipationSummary)
 async def get_summary(
     room_id: uuid.UUID | None = None,
-    user: User = Depends(check_organizer),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
 
@@ -62,7 +62,7 @@ async def get_summary(
 @router.get("/unacknowledged", response_model=UnacknowledgedList)
 async def get_unacknowledged(
     room_id: uuid.UUID | None = None,
-    user: User = Depends(check_organizer),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
 
@@ -79,7 +79,7 @@ async def get_unacknowledged(
 @router.get("/{request_id}", response_model=ParticipationRequestDetail)
 async def get_request_detail(
     request_id: uuid.UUID,
-    user: User = Depends(check_organizer),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
 
