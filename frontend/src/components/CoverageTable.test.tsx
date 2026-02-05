@@ -98,10 +98,10 @@ describe("CoverageTable", () => {
     // Row 1 (header) + 3 data rows
     expect(rows).toHaveLength(4)
 
-    // Check for status emojis or text
-    expect(screen.getByText("🟢")).toBeInTheDocument() // full
-    expect(screen.getByText("🟡")).toBeInTheDocument() // partial
-    expect(screen.getByText("🔴")).toBeInTheDocument() // none
+    // Check for status text labels
+    expect(screen.getByText("Покрыт")).toBeInTheDocument() // full
+    expect(screen.getByText("Частично")).toBeInTheDocument() // partial
+    expect(screen.getByText("Не покрыт")).toBeInTheDocument() // none
   })
 
   it("renders detail buttons for each room", () => {

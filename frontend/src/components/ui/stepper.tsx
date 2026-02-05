@@ -1,3 +1,4 @@
+import { Check } from "lucide-react"
 import { cn } from "../../lib/utils"
 
 interface StepperProps {
@@ -32,7 +33,7 @@ export function Stepper({ steps, currentStep }: StepperProps) {
                       : "border-muted-foreground/30 text-muted-foreground bg-background"
                 )}
               >
-                {index < currentStep ? "✓" : index + 1}
+                {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
               </div>
               <span
                 className={cn(

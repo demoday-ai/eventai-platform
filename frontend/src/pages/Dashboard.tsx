@@ -1,5 +1,6 @@
-import { useEffect } from "react"
+import { useEffect, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { RefreshCw, ClipboardList, GraduationCap, Users, Building2, AlertTriangle, AlertCircle, Info, CheckCircle, XCircle, Clock } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Skeleton } from "../components/ui/skeleton"
@@ -59,8 +60,8 @@ export function Dashboard() {
               Обновлено: {formatLastUpdate(dataUpdatedAt)}
             </span>
           )}
-          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-            🔄
+          <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
@@ -96,9 +97,9 @@ export function Dashboard() {
               subtitle={
                 isLoading
                   ? "Загрузка..."
-                  : `✓ ${data?.students.confirmed} | ⏳ ${data?.students.pending} | ✗ ${data?.students.declined}`
+                  : <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-600 inline" />{data?.students.confirmed} | <Clock className="w-3 h-3 text-yellow-600 inline" />{data?.students.pending} | <XCircle className="w-3 h-3 text-red-600 inline" />{data?.students.declined}</span>
               }
-              icon="📋"
+              icon={<ClipboardList className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
               loading={isLoading}
             />
             <MetricCard
@@ -107,9 +108,9 @@ export function Dashboard() {
               subtitle={
                 isLoading
                   ? "Загрузка..."
-                  : `✓ ${data?.experts.confirmed} | ⏳ ${data?.experts.pending}`
+                  : <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-600 inline" />{data?.experts.confirmed} | <Clock className="w-3 h-3 text-yellow-600 inline" />{data?.experts.pending}</span>
               }
-              icon="👨‍🏫"
+              icon={<GraduationCap className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
               loading={isLoading}
             />
             <MetricCard
@@ -120,7 +121,7 @@ export function Dashboard() {
                   ? "Загрузка..."
                   : data?.guests.by_subtype.map((s) => `${s.subtype}: ${s.count}`).join(" | ") || "Нет данных"
               }
-              icon="👥"
+              icon={<Users className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
               loading={isLoading}
             />
             <MetricCard
@@ -129,9 +130,9 @@ export function Dashboard() {
               subtitle={
                 isLoading
                   ? "Загрузка..."
-                  : `🟢 ${data?.rooms.with_experts} | 🔴 ${data?.rooms.without_experts}`
+                  : <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-600 inline" />{data?.rooms.with_experts} | <XCircle className="w-3 h-3 text-red-600 inline" />{data?.rooms.without_experts}</span>
               }
-              icon="🏠"
+              icon={<Building2 className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
               loading={isLoading}
             />
           </div>
@@ -174,8 +175,8 @@ function MetricCard({
 }: {
   title: string
   value: string
-  subtitle: string
-  icon: string
+  subtitle: ReactNode
+  icon: ReactNode
   loading?: boolean
 }) {
   if (loading) {
@@ -204,7 +205,7 @@ function MetricCard({
             <p className="text-2xl md:text-3xl font-bold mt-1">{value}</p>
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
           </div>
-          <span className="text-xl md:text-2xl">{icon}</span>
+          <span>{icon}</span>
         </div>
       </CardContent>
     </Card>
@@ -226,11 +227,11 @@ function AlertsCard({ alerts }: { alerts: AlertType[] }) {
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "critical":
-        return "🚨"
+        return <AlertTriangle className="w-5 h-5 text-red-600" />
       case "warning":
-        return "⚠️"
+        return <AlertCircle className="w-5 h-5 text-yellow-600" />
       default:
-        return "ℹ️"
+        return <Info className="w-5 h-5 text-blue-600" />
     }
   }
 
@@ -247,7 +248,7 @@ function AlertsCard({ alerts }: { alerts: AlertType[] }) {
               className={`p-3 rounded-lg border ${getSeverityColor(alert.severity)}`}
             >
               <div className="flex items-start gap-2">
-                <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
+                <span className="shrink-0">{getSeverityIcon(alert.severity)}</span>
                 <div className="flex-1">
                   <p className="font-medium">{alert.message}</p>
                   {alert.room_name && (

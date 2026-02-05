@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom"
+import { CheckCircle, AlertCircle, XCircle } from "lucide-react"
 import type { RoomCoverage } from "../lib/api-client"
 import { Button } from "./ui/button"
 
@@ -31,11 +32,11 @@ export function CoverageTable({ data }: CoverageTableProps) {
   const getStatusIcon = (status: RoomCoverage["coverage_status"]) => {
     switch (status) {
       case "full":
-        return "🟢"
+        return <CheckCircle className="w-4 h-4 text-green-600" />
       case "partial":
-        return "🟡"
+        return <AlertCircle className="w-4 h-4 text-yellow-600" />
       case "none":
-        return "🔴"
+        return <XCircle className="w-4 h-4 text-red-600" />
     }
   }
 
