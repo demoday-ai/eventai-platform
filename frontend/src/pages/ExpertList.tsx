@@ -1,12 +1,47 @@
 import { useState, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
 import { Card, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { ExpertFormDialog } from "../components/ExpertFormDialog"
 import { APP_NAME } from "../lib/constants"
-import { getExperts, type ExpertListItem } from "../lib/api-client"
+import { getExperts, updateExpertStatus, type ExpertListItem } from "../lib/api-client"
+
+function StatusBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-xs text-muted-foreground">—</span>
+
+  const styles: Record<string, string> = {
+    confirmed: "bg-green-100 text-green-800",
+    declined: "bg-red-100 text-red-800",
+    invited: "bg-yellow-100 text-yellow-800",
+    invite_ready: "bg-yellow-100 text-yellow-800",
+    proposed: "bg-gray-100 text-gray-700",
+    approved: "bg-gray-100 text-gray-700",
+  }
+
+  const labels: Record<string, string> = {
+    confirmed: "Подтверждён",
+    declined: "Отклонён",
+    invited: "Приглашён",
+    invite_ready: "Готов к приглашению",
+    proposed: "Предложен",
+    approved: "Одобрен",
+  }
+
+  return (
+    <span
+      data-testid="status-badge"
+      className={`px-1.5 py-0.5 text-xs rounded ${styles[status] || "bg-gray-100 text-gray-700"}`}
+    >
+      {labels[status] || status}
+    </span>
+  )
+}
+
+function canChangeStatus(status: string | null): boolean {
+  return status !== null && status !== "confirmed" && status !== "declined"
+}
 
 export function ExpertList() {
   const [search, setSearch] = useState("")
@@ -14,6 +49,15 @@ export function ExpertList() {
     mode: "create" | "edit"
     expert?: ExpertListItem
   } | null>(null)
+  const queryClient = useQueryClient()
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      updateExpertStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["experts"] })
+    },
+  })
 
   useEffect(() => {
     document.title = `${APP_NAME} - Список экспертов`
@@ -62,6 +106,7 @@ export function ExpertList() {
                     <th className="pb-2 font-medium">Telegram</th>
                     <th className="pb-2 font-medium">Должность</th>
                     <th className="pb-2 font-medium">Теги</th>
+                    <th className="pb-2 font-medium">Статус</th>
                     <th className="pb-2 font-medium"></th>
                   </tr>
                 </thead>
@@ -85,6 +130,33 @@ export function ExpertList() {
                               {tag}
                             </span>
                           ))}
+                        </div>
+                      </td>
+                      <td className="py-2">
+                        <div className="flex items-center gap-1">
+                          <StatusBadge status={expert.assignment_status} />
+                          {canChangeStatus(expert.assignment_status) && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-700 h-6 px-1.5 text-xs"
+                                disabled={statusMutation.isPending}
+                                onClick={() => statusMutation.mutate({ id: expert.id, status: "confirmed" })}
+                              >
+                                Подтвердить
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-700 h-6 px-1.5 text-xs"
+                                disabled={statusMutation.isPending}
+                                onClick={() => statusMutation.mutate({ id: expert.id, status: "declined" })}
+                              >
+                                Отклонить
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </td>
                       <td className="py-2">

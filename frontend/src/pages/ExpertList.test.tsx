@@ -17,6 +17,7 @@ vi.mock("../lib/api-client", () => ({
   getExperts: vi.fn(),
   createExpert: vi.fn(),
   updateExpert: vi.fn(),
+  updateExpertStatus: vi.fn(),
 }))
 
 const mockExperts: apiClient.ExpertListItem[] = [
@@ -191,5 +192,65 @@ describe("ExpertList", () => {
 
     expect(screen.getByText("Имя обязательно")).toBeInTheDocument()
     expect(apiClient.createExpert).not.toHaveBeenCalled()
+  })
+
+  it("displays status badges for experts", async () => {
+    const expertsWithStatuses: apiClient.ExpertListItem[] = [
+      { ...mockExperts[0], assignment_status: "invited" },
+      { ...mockExperts[1], assignment_status: "confirmed" },
+    ]
+    vi.mocked(apiClient.getExperts).mockResolvedValue(expertsWithStatuses)
+
+    render(<ExpertList />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Иван Петров")).toBeInTheDocument()
+    })
+
+    expect(screen.getByText("Приглашён")).toBeInTheDocument()
+    expect(screen.getByText("Подтверждён")).toBeInTheDocument()
+  })
+
+  it("shows confirm/decline buttons for invited expert and calls API on confirm", async () => {
+    const expertsWithInvited: apiClient.ExpertListItem[] = [
+      { ...mockExperts[0], assignment_status: "invited" },
+    ]
+    vi.mocked(apiClient.getExperts).mockResolvedValue(expertsWithInvited)
+    vi.mocked(apiClient.updateExpertStatus).mockResolvedValue({
+      ...mockExperts[0],
+      assignment_status: "confirmed",
+    })
+
+    render(<ExpertList />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Иван Петров")).toBeInTheDocument()
+    })
+
+    expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+    expect(screen.getByText("Отклонить")).toBeInTheDocument()
+
+    await userEvent.click(screen.getByText("Подтвердить"))
+
+    await waitFor(() => {
+      expect(apiClient.updateExpertStatus).toHaveBeenCalledWith("e1", "confirmed")
+    })
+  })
+
+  it("does not show confirm/decline buttons for confirmed expert", async () => {
+    const confirmedExperts: apiClient.ExpertListItem[] = [
+      { ...mockExperts[1], assignment_status: "confirmed" },
+    ]
+    vi.mocked(apiClient.getExperts).mockResolvedValue(confirmedExperts)
+
+    render(<ExpertList />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Мария Сидорова")).toBeInTheDocument()
+    })
+
+    expect(screen.getByText("Подтверждён")).toBeInTheDocument()
+    expect(screen.queryByText("Подтвердить")).not.toBeInTheDocument()
+    expect(screen.queryByText("Отклонить")).not.toBeInTheDocument()
   })
 })

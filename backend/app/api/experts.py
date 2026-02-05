@@ -14,6 +14,7 @@ from app.schemas.expert import (
     ExpertCreateRequest,
     ExpertDetailResponse,
     ExpertResponse,
+    ExpertStatusUpdate,
     ExpertUpdateRequest,
     MatchingRequest,
     MoveExpertRequest,
@@ -271,6 +272,32 @@ async def update_expert(
     await session.commit()
 
     # Reload with tags
+    expert = await expert_service.get_expert_detail(session, expert_id)
+    return _expert_to_response(expert)
+
+
+@router.patch("/experts/{expert_id}/status")
+async def update_expert_status(
+    expert_id: uuid.UUID,
+    body: ExpertStatusUpdate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    expert = await expert_service.get_expert_detail(session, expert_id)
+    if not expert:
+        raise HTTPException(status_code=404, detail="Expert not found")
+
+    if not expert.assignments:
+        raise HTTPException(status_code=400, detail="Expert has no assignment")
+
+    assignment = expert.assignments[0]
+
+    if body.status == "confirmed":
+        await invite_service.confirm_attendance(session, assignment.id)
+    else:
+        await invite_service.decline_attendance(session, assignment.id)
+
+    # Reload after status change
     expert = await expert_service.get_expert_detail(session, expert_id)
     return _expert_to_response(expert)
 

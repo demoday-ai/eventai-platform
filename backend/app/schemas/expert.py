@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -158,6 +159,10 @@ class RoomCoverageDetail(BaseModel):
     room_name: str
     experts: list[RoomExpertDetail] = []
     suggested_adjacent: list[AdjacentExpert] = []
+
+
+class ExpertStatusUpdate(BaseModel):
+    status: Literal["confirmed", "declined"]
 
 
 class ExpertCreateRequest(BaseModel):

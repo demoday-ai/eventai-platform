@@ -854,6 +854,11 @@ export const updateExpert = async (id: string, body: ExpertUpdateRequest): Promi
   return data
 }
 
+export const updateExpertStatus = async (expertId: string, status: string): Promise<ExpertListItem> => {
+  const { data } = await apiClient.patch<ExpertListItem>(`/experts/${expertId}/status`, { status })
+  return data
+}
+
 // --- Matching ---
 
 export const runMatching = async (params?: MatchingRequest): Promise<MatchingResult> => {
