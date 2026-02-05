@@ -15,6 +15,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "alembic>=1.14.0",
     "pydantic-settings>=2.0.0",
+    "email-validator>=2.0.0",
     "python-jose[cryptography]>=3.3.0",
     "httpx>=0.27.0",
     "python-multipart>=0.0.9",
@@ -29,6 +30,8 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.8.0",
     "aiosqlite>=0.21.0",
+    "telethon>=1.42.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -51,4 +54,5 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
     "integration: requires external services (e.g., database)",
+    "e2e: end-to-end tests using real Telegram API (requires credentials)",
 ]
