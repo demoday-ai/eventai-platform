@@ -1,0 +1,50 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.JUMP_KEY }}" > ~/.ssh/jump-key
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy-key
+          chmod 600 ~/.ssh/jump-key ~/.ssh/deploy-key
+          cat >> ~/.ssh/config << 'EOF'
+          Host bastion
+            HostName bastion.camp.aitalenthub.ru
+            User jump
+            IdentityFile ~/.ssh/jump-key
+            IdentitiesOnly yes
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+
+          Host team12
+            HostName 10.20.0.4
+            User team12
+            ProxyJump bastion
+            IdentityFile ~/.ssh/deploy-key
+            IdentitiesOnly yes
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+
+      - name: Deploy
+        run: |
+          ssh team12 << 'DEPLOY'
+            set -e
+            cd ~/workspace/demoday-ai
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose -f docker-compose.prod.yml pull 2>/dev/null || true
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml ps
+          DEPLOY
