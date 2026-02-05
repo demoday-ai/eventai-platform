@@ -278,11 +278,23 @@
     }
 
     .team-card img {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       object-fit: cover;
       margin-bottom: 0.5em;
+    }
+
+    .team-card img.dima {
+      object-position: center 20%;
+    }
+
+    .team-card img.nastya {
+      object-position: center 15%;
+    }
+
+    .team-card img.ivan {
+      object-position: center 25%;
     }
 
     .team-card .name {
@@ -300,8 +312,8 @@
     }
 
     .team-card.ai-card .avatar {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), var(--teal));
       display: flex;
@@ -583,17 +595,17 @@
         <h2>ЯСНОПОНЯТНО + Claude</h2>
         <div class="team-row">
           <div class="team-card">
-            <img src="team/dima.jpg" alt="Дмитрий Горбунов">
+            <img src="team/dima.jpg" alt="Дмитрий Горбунов" class="dima">
             <div class="name">Дмитрий Горбунов</div>
             <div class="role">Тимлид, продукт</div>
           </div>
           <div class="team-card">
-            <img src="team/nastya.jpg" alt="Анастасия Гапеева">
+            <img src="team/nastya.jpg" alt="Анастасия Гапеева" class="nastya">
             <div class="name">Анастасия Гапеева</div>
             <div class="role">UX/UI, фронтенд</div>
           </div>
           <div class="team-card">
-            <img src="team/ivan.jpg" alt="Иван Александров">
+            <img src="team/ivan.jpg" alt="Иван Александров" class="ivan">
             <div class="name">Иван Александров</div>
             <div class="role">Backend, логика</div>
           </div>
