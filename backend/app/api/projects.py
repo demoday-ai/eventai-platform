@@ -66,11 +66,6 @@ async def upload_projects(
     if not event:
         raise HTTPException(status_code=400, detail="Нет активного события")
 
-    # Check organizer role
-    role = await user_service.get_user_role_with_info(session, user.id, event.id)
-    if not role or role.code != "organizer":
-        raise HTTPException(status_code=403, detail="Только организатор может загружать проекты")
-
     # Check for already running upload job
     existing_job = get_active_job_by_type("project_upload")
     if existing_job:

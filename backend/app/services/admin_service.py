@@ -151,9 +151,11 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     guests = GuestStats(total=total_guests, by_subtype=by_subtype)
 
     # Room stats
-    total_rooms = await db.scalar(
-        select(func.count(Room.id)).where(Room.event_id == event_id)
-    )
+    total_rooms = 0
+    if current_clustering:
+        total_rooms = await db.scalar(
+            select(func.count(Room.id)).where(Room.clustering_run_id == current_clustering.id)
+        )
 
     if current_clustering:
         rooms_with_experts = await db.scalar(
@@ -179,7 +181,7 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
         # Get room names without experts
         rooms_result = await db.execute(
             select(Room.id, Room.name)
-            .where(Room.event_id == event_id)
+            .where(Room.clustering_run_id == current_clustering.id)
             .where(
                 ~Room.id.in_(
                     select(ExpertRoomAssignment.room_id.distinct()).where(
@@ -245,7 +247,9 @@ async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCover
         return []
 
     # Get all rooms for this event
-    rooms_result = await db.execute(select(Room).where(Room.event_id == event_id))
+    rooms_result = await db.execute(
+        select(Room).where(Room.clustering_run_id == current_clustering.id)
+    )
     rooms = rooms_result.scalars().all()
 
     coverage_list = []
@@ -255,10 +259,7 @@ async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCover
         from app.models import RoomProject
 
         projects_count = await db.scalar(
-            select(func.count(RoomProject.id)).where(
-                RoomProject.room_id == room.id,
-                RoomProject.clustering_run_id == current_clustering.id,
-            )
+            select(func.count(RoomProject.id)).where(RoomProject.room_id == room.id)
         )
 
         # Count total experts assigned to this room
@@ -305,7 +306,11 @@ async def get_room_detail(db: AsyncSession, event_id: UUID, room_id: UUID) -> Ro
     # Uses ClusteringRun/ProjectTag/RoomProject/Tag via module imports
 
     # Get room
-    room = await db.scalar(select(Room).where(Room.id == room_id, Room.event_id == event_id))
+    room = await db.scalar(
+        select(Room)
+        .join(ClusteringRun, Room.clustering_run_id == ClusteringRun.id)
+        .where(Room.id == room_id, ClusteringRun.event_id == event_id)
+    )
     if not room:
         raise ValueError("Room not found")
 
@@ -368,10 +373,7 @@ async def get_room_detail(db: AsyncSession, event_id: UUID, room_id: UUID) -> Ro
                 ScheduleSlot,
                 (ScheduleSlot.project_id == Project.id) & (ScheduleSlot.room_id == room_id),
             )
-            .where(
-                RoomProject.room_id == room_id,
-                RoomProject.clustering_run_id == current_clustering.id,
-            )
+            .where(RoomProject.room_id == room_id)
         )
 
         for room_project, project, schedule_slot in projects_result.all():
@@ -405,10 +407,7 @@ async def get_room_detail(db: AsyncSession, event_id: UUID, room_id: UUID) -> Ro
             .select_from(RoomProject)
             .join(ProjectTag, ProjectTag.project_id == RoomProject.project_id)
             .join(Tag, ProjectTag.tag_id == Tag.id)
-            .where(
-                RoomProject.room_id == room_id,
-                RoomProject.clustering_run_id == current_clustering.id,
-            )
+            .where(RoomProject.room_id == room_id)
             .distinct()
         )
         project_tags = {tag[0] for tag in project_tags_result.all()}
@@ -462,7 +461,7 @@ async def get_projects_list(
             ScheduleSlot,
             (ScheduleSlot.project_id == Project.id) & (ScheduleSlot.room_id == Room.id),
         )
-        .where(RoomProject.clustering_run_id == current_clustering.id)
+        .where(Room.clustering_run_id == current_clustering.id)
     )
 
     # Apply filters
