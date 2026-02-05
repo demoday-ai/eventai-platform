@@ -112,7 +112,20 @@ backend/
 
 **AI** — OpenRouter (Claude, GPT), TF-IDF + LLM re-ranking
 
-**Infra** — Docker Compose, Traefik, Yandex Cloud
+**Infra** — Docker Compose, Celery, RabbitMQ, Redis, Traefik, Yandex Cloud
+
+<br>
+
+## Мониторинг
+
+| Сервис | URL | Описание |
+|:-------|:----|:---------|
+| Admin Panel | [team12.camp.aitalenthub.ru](https://team12.camp.aitalenthub.ru) | Панель организатора |
+| RabbitMQ | [/rabbitmq/](https://team12.camp.aitalenthub.ru/rabbitmq/) | Очередь задач |
+| Flower | [/flower/](https://team12.camp.aitalenthub.ru/flower/) | Мониторинг Celery воркеров |
+| API Docs | [/api/v1/docs](https://team12.camp.aitalenthub.ru/api/v1/docs) | Swagger UI |
+
+Логин/пароль для RabbitMQ и Flower: `demoday` / `demoday`
 
 <br>
 
