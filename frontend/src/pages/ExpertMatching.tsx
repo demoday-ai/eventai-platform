@@ -242,7 +242,7 @@ export function ExpertMatching() {
           <div className="flex flex-col sm:flex-row gap-2">
             <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
             <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
-              Перезапустить
+              Назад
             </Button>
           </div>
         </div>

@@ -262,13 +262,9 @@ export function Clustering() {
             <Button
               variant="outline"
               className="w-full sm:w-auto"
-              onClick={() => {
-                setClusteringResult(null)
-                setCurrentStep(0)
-                queryClient.invalidateQueries({ queryKey: ["clustering"] })
-              }}
+              onClick={() => setCurrentStep(0)}
             >
-              Перезапустить
+              Назад
             </Button>
           </div>
         </div>
