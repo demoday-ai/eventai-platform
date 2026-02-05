@@ -495,7 +495,7 @@ export function Landing() {
           <Reveal>
             <div className="mb-8 flex justify-center">
               <div
-                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold sm:px-6 sm:py-3 sm:text-base"
+                className="font-display inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold sm:px-6 sm:py-3 sm:text-base"
                 style={{
                   background: "var(--ld-accent)",
                   color: "#fff",
