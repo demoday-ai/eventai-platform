@@ -422,38 +422,39 @@ function NavBar({ dark, toggle }: { dark: boolean; toggle: () => void }) {
         borderBottom: scrolled ? "1px solid var(--ld-border-subtle)" : "1px solid transparent",
       }}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-        {/* Logo */}
-        <a
-          href="#"
-          className="font-display flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg"
-          style={{ color: "var(--ld-text)" }}
-        >
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg"
-            style={{ background: "var(--ld-accent)", color: "#fff" }}
+      <div className="relative mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <a
+            href="#"
+            className="font-display flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg"
+            style={{ color: "var(--ld-text)" }}
           >
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <span className="hidden xs:inline">EventAI</span>
-        </a>
-
-        {/* Desktop Nav */}
-        <div className="font-display hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-[var(--ld-surface-hover)]"
-              style={{ color: "var(--ld-text-secondary)" }}
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg"
+              style={{ background: "var(--ld-accent)", color: "#fff" }}
             >
-              {link.label}
-            </a>
-          ))}
-        </div>
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span className="hidden sm:inline">EventAI</span>
+          </a>
 
-        {/* Right side */}
-        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Desktop Nav - Centered */}
+          <div className="font-display absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 md:flex">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-[var(--ld-surface-hover)]"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={toggle}
             className="flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:scale-105"
@@ -497,6 +498,7 @@ function NavBar({ dark, toggle }: { dark: boolean; toggle: () => void }) {
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
+          </div>
         </div>
       </div>
 
