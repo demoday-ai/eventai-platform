@@ -403,12 +403,27 @@ function LeadCaptureForm() {
     e.preventDefault()
     setFormState("sending")
 
-    // Simulate sending (replace with actual API call)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch("/api/v1/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          event_type: formData.eventType,
+          message: formData.message,
+        }),
+      })
 
-    // For now, just log and show success
-    console.log("Lead captured:", formData)
-    setFormState("success")
+      if (!response.ok) {
+        throw new Error("Failed to submit")
+      }
+
+      setFormState("success")
+    } catch (error) {
+      console.error("Lead submission failed:", error)
+      setFormState("error")
+    }
   }
 
   if (formState === "success") {
@@ -439,6 +454,56 @@ function LeadCaptureForm() {
         >
           Свяжемся с вами в течение 24 часов
         </p>
+      </div>
+    )
+  }
+
+  if (formState === "error") {
+    return (
+      <div
+        className="mt-8 rounded-2xl p-8 text-center"
+        style={{
+          background: "var(--ld-surface)",
+          border: "1px solid var(--ld-border)",
+          boxShadow: "var(--ld-card-shadow)",
+        }}
+      >
+        <div
+          className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+          style={{ background: "var(--ld-ember-soft)" }}
+        >
+          <Mail className="h-8 w-8" style={{ color: "var(--ld-ember)" }} />
+        </div>
+        <h3
+          className="font-display text-xl font-medium"
+          style={{ color: "var(--ld-text)" }}
+        >
+          Что-то пошло не так
+        </h3>
+        <p
+          className="font-body mt-2 text-sm"
+          style={{ color: "var(--ld-text-secondary)" }}
+        >
+          Напишите напрямую в Telegram:{" "}
+          <a
+            href="https://t.me/grbn_dima"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--ld-accent)" }}
+          >
+            @grbn_dima
+          </a>
+        </p>
+        <button
+          onClick={() => setFormState("idle")}
+          className="font-display mt-4 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
+          style={{
+            background: "var(--ld-accent-soft)",
+            color: "var(--ld-accent)",
+          }}
+        >
+          Попробовать снова
+        </button>
       </div>
     )
   }

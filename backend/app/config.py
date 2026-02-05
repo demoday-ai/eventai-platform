@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_model: str = "openai/gpt-5.2"
+    team_chat_id: str = ""  # Telegram chat ID for lead notifications
 
     @property
     def organizer_ids(self) -> set[str]:
