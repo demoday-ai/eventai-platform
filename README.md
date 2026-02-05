@@ -1,191 +1,486 @@
-# AI-агент-куратор DemoDay
+# EventAI — AI-платформа для мероприятий
 
 [![CI](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml)
 [![CD](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml)
 
-![Demo Day Event](https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2000&auto=format&fit=crop)
+![Event Management](https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2000&auto=format&fit=crop)
 
-**AI Talent Camp 2026 | Команда "ЯСНОПОНЯТНО" | Проект #10**
+**AI Talent Camp 2026 | Проект #10**
+Разработано в рамках магистратуры «Искусственный интеллект» ИТМО
 
-AI-платформа для автоматизации подготовки и проведения Demo Day: кластеризация проектов, распределение экспертов, подтверждение участия, напоминания, персональная программа для гостей и бизнес-партнёров, обратная связь и follow-up. Единая точка входа для всех 5 ролей в Telegram.
+AI-платформа для персонализации мероприятий с параллельными треками: Demo Day, конференции, хакатоны, выставки. Telegram-бот генерирует персональную программу за 2 минуты диалога. Админ-панель автоматизирует кластеризацию проектов, распределение экспертов, расписание и напоминания.
 
-**Автор идеи:** Дмитрий Ботов (@dmbotov) — организатор Demo Day, AI Talent Hub
+**🌐 Live Demo:** https://team12.camp.aitalenthub.ru
+**🤖 Telegram Bot:** [@demoday_ai_talent_hub_test_bot](https://t.me/demoday_ai_talent_hub_test_bot)
+
+---
 
 ## Проблема
 
 На Demo Day ~330 проектов в 6-10 параллельных залах. Ключевые боли:
 
-**Расфокус экспертов.** Эксперту непонятно, как попасть на проекты, где он может принести ценность своим фидбеком. Слишком большой выбор, сложно выбрать релевантное.
-
-> "Каждый проект нельзя однозначно отнести к той или иной секции — секция это условность. И каждый эксперт сложнее — не сводится к экспертизе одной секции." — Дмитрий Ботов, автор идеи
-
-**Хаос с расписанием.** Составляется вручную одним человеком. ChatGPT кластеризует плохо, были дубликаты. 80 студентов не попали в расписание за ночь до DD.
+- **Расфокус экспертов** — непонятно, куда идти, чтобы принести ценность
+- **Хаос с расписанием** — составляется вручную, 80 студентов не попали за ночь до DD
+- **Низкая явка** — конверсия из приглашений ~40-50% из-за позднего расписания
+- **Эксперты вслепую** — нет контекста о проектах заранее
+- **Бизнес не находит релевантное** — нет автоматизированного подбора
+- **Гости видят <20% проектов** — пропускают интересное из-за параллельности
 
 > "Это пипец! Если вы упростите этот ужас, я буду благодарна." — Инна, организатор Demo Day
 
-**Неявка экспертов.** Нужно 60-80 экспертов, активных ~30-40. Расписание готово поздно → эксперты не могут спланировать → низкая конверсия.
+---
 
-> "Поскольку расписание случается сильно позже, то есть проблемы с тем, чтобы выдернуться на конкретные слоты. Конверсия из приглашений в итоговое появление — где-то 40-50%." — Дмитрий Ботов
+## Решение
 
-**Эксперты идут вслепую.** Нет информации о проектах заранее — только тема комнаты.
+### Для гостей и партнёров
+Telegram-бот с персонализацией:
+- **2-минутное профилирование** — AI-диалог извлекает интересы
+- **Персональный топ проектов** — рейтинг релевантности по профилю
+- **Q&A-помощник** — 3-5 вопросов к каждому проекту
+- **Сравнение проектов** — таблица отличий 2-5 проектов
+- **Маршрут по залам** — оптимальный порядок посещения
+- **Контакт с авторами** — запрос через бота с согласия
 
-> "Недостаточно контекста, чтобы задать какой-то существенный вопрос. Зачем я вообще пришёл, потратил своё время?" — Рустем Хакимуллин, ML-эксперт
-
-**Бизнес не находит релевантное.** Олег — единственный человек, который связывает бизнес с проектами. Не масштабируется.
-
-> "Я сто процентов не в контексте, не могу ответить. Начинается технический доклад — я ничего не понимаю, отключаюсь." — Олег Шатов, руководитель AI Talent Hub
-
-**Гости видят <20% проектов.** Расписание — "гигантская гугл-таблица, миллион вкладок". Пропускают интересное из-за параллельности.
-
-> "Введя свои интересы, мне предложил бот доклады — было бы очень удобно." — Анастасия Гапеева, гость-абитуриент
-
-## Сегменты
-
-| Сегмент | Кол-во | Приоритет |
-|---------|--------|-----------|
-| Организаторы | ~5 | Основной |
-| Студенты | ~330 проектов | Основной |
-| Эксперты / менторы | ~50 | Основной |
-| Бизнес/партнёры | ~15-20 | Вторичный |
-| Гости | ~50 реальных | Вторичный |
-
-## Customer Discovery
-
-5 интервью, 4 сегмента, 17 гипотез, RICE-матрица v4.0:
-
-| # | Интервью | Сегмент | Ключевой инсайт |
-|---|----------|---------|-----------------|
-| 1 | Инна (организатор Хаба) | Организатор | Расписание = хаос. ChatGPT кластеризует плохо. 80 студентов не попали в расписание за ночь до DD |
-| 2 | Рустем Хакимуллин (ML-эксперт) | Эксперт | Идёт вслепую. Хочет получать материалы за 1-2 дня. Использует Claude для погружения в контекст |
-| 3 | Олег Шатов (руководитель Хаба) | Бизнес/организатор | Бутылочное горлышко. Из 330 проектов уверен только в 15-20. Ручной процесс не масштабируется |
-| 4 | Анастасия Гапеева (гость-абитуриент) | Гость | Посетила ~5 проектов из 330. Пропустила самый интересный из-за сдвига тайминга |
-| 5 | **Дмитрий Ботов (автор идеи)** | Организатор | Расфокус экспертов + неравномерное распределение обратной связи. Ключевая метрика: NPS экспертов и студентов |
-
-## Что реализовано
-
-Telegram-бот с 15 эпиками:
-
-- **Онбординг** — 5 ролей: организатор, студент, эксперт, гость, бизнес
-- **AI-кластеризация** — 330 проектов → 6-10 тематических залов (через LLM)
+### Для организаторов
+Админ-панель с автоматизацией:
+- **AI-кластеризация** — 330 проектов → 6-10 тематических залов (LLM)
+- **Распределение экспертов** — автоматический подбор по тегам
+- **Генерация расписания** — слоты по 15 минут, конфликты исключены
 - **Подтверждение участия** — студенты и эксперты подтверждают через бота
-- **Назначение экспертов** — распределение по комнатам с учётом тегов
-- **Генерация расписания** — слоты по 15 минут, автоматический таймлайн
-- **Напоминания** — eve-of-DD (18:00 за день), pre-slot (за час), при сдвиге тайминга
-- **Профилирование гостей** — интересы, теги, персональная подборка проектов
-- **Профилирование бизнеса** — задачи, отрасль, подбор релевантных проектов
-- **Q&A помощник** — генерация вопросов под профиль гостя/бизнеса
+- **Напоминания** — eve-of-DD, pre-slot, сдвиги тайминга
+- **Аналитика покрытия** — кто из экспертов где, пробелы, эскалации
 - **Оценивание** — эксперты ставят оценки через бота (не Google Таблицы)
-- **Business follow-up** — конспект, контакты с согласия, next steps
 
-## Структура репозитория
+---
+
+## Архитектура
+
+### Структура проекта
 
 ```
-├── backend/                               # FastAPI backend + Telegram bot
+demoday-core/
+├── frontend/                          # React 19 + TypeScript + Vite
+│   ├── src/
+│   │   ├── pages/                     # 32 страницы
+│   │   │   ├── Landing.tsx            # Публичный лендинг (72 KB)
+│   │   │   ├── Dashboard.tsx          # Дашборд организатора
+│   │   │   ├── DataImport.tsx         # Загрузка CSV/Excel
+│   │   │   ├── Clustering.tsx         # AI-кластеризация
+│   │   │   ├── ExpertMatching.tsx     # Распределение экспертов
+│   │   │   ├── Schedule.tsx           # Генерация расписания
+│   │   │   ├── Coverage.tsx           # Аналитика покрытия
+│   │   │   ├── Notifications.tsx      # Управление уведомлениями
+│   │   │   └── ...                    # + 24 страницы
+│   │   ├── components/
+│   │   │   ├── ui/                    # shadcn/ui компоненты
+│   │   │   ├── layout/                # Навигация, AppLayout
+│   │   │   └── import/                # FileUpload, ImportSummary
+│   │   ├── lib/
+│   │   │   ├── api-client.ts          # HTTP клиент (axios)
+│   │   │   └── utils.ts               # Утилиты
+│   │   └── hooks/                     # Custom React hooks
+│   ├── Dockerfile                     # Multi-stage build + nginx
+│   └── package.json                   # Dependencies
+│
+├── backend/                           # FastAPI + Python 3.12
 │   ├── app/
-│   │   ├── api/                           #   REST API endpoints
-│   │   ├── bot/                           #   Telegram bot handlers
-│   │   ├── models/                        #   SQLAlchemy models (24 сущности)
-│   │   ├── schemas/                       #   Pydantic schemas
-│   │   ├── services/                      #   Business logic + LLM client
-│   │   └── main.py                        #   FastAPI app + APScheduler jobs
-│   ├── alembic/                           #   Database migrations
-│   ├── tests/                             #   Pytest tests
-│   └── pyproject.toml                     #   Dependencies
+│   │   ├── api/                       # 13 роутеров, 60+ endpoints
+│   │   │   ├── admin.py               # Дашборд, метрики (17.9 KB)
+│   │   │   ├── projects.py            # CRUD проектов
+│   │   │   ├── experts.py             # Управление экспертами (15.5 KB)
+│   │   │   ├── guests.py              # Профилирование гостей
+│   │   │   ├── schedule.py            # Расписание и слоты
+│   │   │   ├── reminders.py           # Напоминания
+│   │   │   ├── leads.py               # Форма заявок (→ Telegram)
+│   │   │   └── ...
+│   │   ├── bot/                       # Telegram bot handlers
+│   │   │   ├── handlers/              # 18 handler modules
+│   │   │   │   ├── start.py           # Онбординг (5 ролей)
+│   │   │   │   ├── guest_profiling.py # Профилирование гостей
+│   │   │   │   ├── expert_assignment.py # Назначение экспертов
+│   │   │   │   ├── briefing.py        # Брифинг экспертов
+│   │   │   │   ├── reminder.py        # Отправка напоминаний
+│   │   │   │   └── ...
+│   │   │   ├── keyboards.py           # Telegram клавиатуры
+│   │   │   └── app.py                 # Bot initialization
+│   │   ├── models/                    # SQLAlchemy models (34 entities)
+│   │   │   ├── user.py, role.py       # RBAC
+│   │   │   ├── project.py, tag.py     # Проекты и теги
+│   │   │   ├── expert.py              # Эксперты
+│   │   │   ├── guest_profile.py       # Профили гостей
+│   │   │   ├── schedule_slot.py       # Слоты расписания
+│   │   │   └── ...
+│   │   ├── services/                  # 30+ бизнес-логики
+│   │   │   ├── clustering_service.py  # LLM кластеризация
+│   │   │   ├── profiling_service.py   # AI профилирование
+│   │   │   ├── matching_service.py    # Подбор экспертов
+│   │   │   ├── qa_service.py          # Q&A генерация
+│   │   │   ├── schedule_service.py    # Генерация расписания
+│   │   │   ├── reminder_service.py    # Логика напоминаний
+│   │   │   ├── llm_client.py          # OpenRouter API
+│   │   │   └── ...
+│   │   └── main.py                    # FastAPI + APScheduler
+│   ├── alembic/                       # DB migrations
+│   ├── tests/                         # pytest + pytest-asyncio
+│   ├── Dockerfile                     # Python 3.12 image
+│   └── pyproject.toml                 # Dependencies
 │
 ├── data/
-│   └── seed/                              #   Seed data (400 проектов)
+│   └── seed/                          # 400 тестовых проектов
 │
 ├── docs/
-│   ├── 00-research/                       # Исследования и аналитика прошлого DD
-│   │   ├── demoday-analytics.md           #   Масштаб, конфликты, сценарии
-│   │   ├── past-demoday-projects.md       #   Каталог ~330 проектов по залам
-│   │   └── expert-community-analysis.md   #   Анализ 294 экспертов, 31 тег
-│   │
-│   ├── 01-discovery/                      # Воркшоп 1: AI-First Customer Discovery
-│   │   ├── customer-discovery.md          #   Опросник CustDev + заметки по 5 интервью
-│   │   ├── interview-transcript.md        #   Транскрипт #1: организатор Инна
-│   │   ├── interview-transcript-expert.md #   Транскрипт #2: эксперт Рустем
-│   │   ├── interview-transcript-guest.md  #   Транскрипт #3: Олег Шатов (бизнес)
-│   │   ├── interview-transcript-4.md      #   Транскрипт #4: Настя Гапеева (гость)
-│   │   ├── interview-transcript-botov.md  #   Транскрипт #5: Дмитрий Ботов (автор)
-│   │   ├── lean-canvas.md                 #   Lean Canvas (v2.0, 5 сегментов)
-│   │   ├── rice-matrix.md                 #   RICE-матрица v4.0: 17 гипотез
-│   │   └── ...                            #   ICP, Pain Map, JTBD, VPC
-│   │
-│   └── 02-specification/                  # Воркшоп 2: Specification-Driven Development
-│       ├── 01-brief.md                    #   Бриф проекта (v3.0)
-│       ├── 02-user-story-map.md           #   User Story Map (v2.1)
-│       ├── 07-c4-architecture.md          #   C4-диаграмма (v1.1, 5 persons)
-│       ├── 08-er-diagram.md               #   ER-диаграмма (v1.1, 24 сущности)
-│       ├── 10-api-inventory.md            #   API-инвентаризация (v1.1, 72 endpoint)
-│       └── ...                            #   Personas, wireframes, diagrams
+│   ├── 00-research/                   # Исследования прошлого DD
+│   │   ├── demoday-analytics.md       # Масштаб, конфликты
+│   │   └── past-demoday-projects.md   # ~330 проектов
+│   ├── 01-discovery/                  # Customer Discovery
+│   │   ├── lean-canvas.md             # 5 сегментов
+│   │   ├── rice-matrix.md             # 17 гипотез, 4 интервью
+│   │   └── interview-transcript*.md   # 5 транскриптов
+│   └── 02-specification/              # Spec-driven development
+│       ├── 02-user-story-map.md       # 15 epics, 21 stories
+│       ├── 07-c4-architecture.md      # C4 diagram
+│       ├── 08-er-diagram.md           # 34 entities
+│       └── 10-api-inventory.md        # 72 endpoints
 │
-├── telegram-log/                          # Telegram-бот для логирования чата команды
-│
-├── docker-compose.yml                     # PostgreSQL + Backend
-└── CLAUDE.md                              # Контекст для Claude Code
+├── docker-compose.yml                 # Development
+├── docker-compose.prod.yml            # Production (Traefik)
+├── DEPLOY.md                          # Production deployment guide
+└── CLAUDE.md                          # Context для Claude Code
 ```
 
-## Стек
+---
 
-- **Backend:** Python 3.12, FastAPI, uvicorn
-- **Bot:** python-telegram-bot 21.x (polling mode)
-- **DB:** PostgreSQL 16, SQLAlchemy 2.0 (async), Alembic
-- **AI:** OpenRouter API (Claude/GPT для кластеризации и Q&A)
-- **Scheduler:** APScheduler 3.10 (напоминания, escalations)
-- **Deploy:** Docker Compose, Yandex Cloud VM
+## Стек технологий
 
-## Развёртывание
+### Backend
+| Компонент | Версия | Назначение |
+|-----------|--------|-----------|
+| Python | 3.12+ | Язык программирования |
+| FastAPI | 0.115+ | REST API framework |
+| uvicorn | 0.32+ | ASGI server |
+| SQLAlchemy | 2.0+ | ORM (async) |
+| PostgreSQL | 16 | База данных |
+| Alembic | 1.14+ | Миграции БД |
+| python-telegram-bot | 21.x | Telegram bot library |
+| APScheduler | 3.10+ | Scheduled jobs (reminders) |
+| httpx | 0.27+ | Async HTTP client |
+| OpenRouter API | — | LLM доступ (Claude/GPT) |
+| email-validator | 2.0+ | Валидация email |
+| pydantic-settings | 2.0+ | Конфигурация |
+| python-jose | 3.3+ | JWT токены |
 
-### Production Deploy (AI Talent Camp VM)
+### Frontend
+| Компонент | Версия | Назначение |
+|-----------|--------|-----------|
+| React | 19 | UI framework |
+| TypeScript | 5.9 | Типизация |
+| Vite | 7.2 | Build tool |
+| React Router | 7.13 | Routing |
+| TanStack Query | 5.90 | Server state |
+| Tailwind CSS | 4.1 | Styling |
+| shadcn/ui | — | UI components |
+| axios | 1.13 | HTTP client |
+| lucide-react | 0.563 | Icons |
+| Vitest | 4.0 | Testing |
 
-**📖 Полная документация:** [DEPLOY.md](./DEPLOY.md)
+### Инфраструктура
+| Компонент | Назначение |
+|-----------|-----------|
+| Docker Compose | Контейнеризация |
+| PostgreSQL 16-alpine | БД (с volume для persistence) |
+| nginx | Статика фронтенда |
+| Traefik | Reverse proxy + SSL (production) |
+| Yandex Cloud VM | Хостинг (4 vCPU, 8 GB RAM) |
 
+---
+
+## Быстрый старт
+
+### 1. Требования
+- Docker + Docker Compose
+- Node.js 18+ (для локальной разработки фронтенда)
+- Python 3.12+ (для локальной разработки бэкенда)
+
+### 2. Клонировать репозиторий
 ```bash
-# На Team VM (через bastion)
-cd ~/demoday-ai
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
-```
-
-Доступ: `https://team10.camp.aitalenthub.ru`
-
-### Локальная разработка
-
-```bash
-# 1. Клонировать репозиторий
 git clone https://github.com/AI-Talent-Camp-2026/demoday-ai.git
 cd demoday-ai
-
-# 2. Настроить .env файлы
-cp backend/.env.example backend/.env
-# Заполнить: BOT_TOKEN, OPENROUTER_API_KEY, ORGANIZER_TELEGRAM_IDS
-
-# 3. Запустить локально
-docker compose up -d --build
-
-# 4. Фронтенд (разработка)
-cd frontend
-npm install
-npm run dev  # http://localhost:5173
-
-# 5. Проверить
-curl http://localhost:8000/health
-curl http://localhost:3000/health
 ```
 
-### Инициализация БД
-
+### 3. Настроить переменные окружения
 ```bash
-# Миграции
+cp backend/.env.example backend/.env
+```
+
+Заполнить обязательные переменные:
+```env
+BOT_TOKEN=your-telegram-bot-token
+OPENROUTER_API_KEY=your-openrouter-key
+ORGANIZER_TELEGRAM_IDS=123456789
+TEAM_CHAT_ID=-100XXXXXXXXXX
+TEAM_BOT_TOKEN=team-bot-token (optional)
+```
+
+### 4. Запустить
+```bash
+docker compose up -d --build
+```
+
+Сервисы:
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:8000 (внутри контейнера)
+- **Database:** localhost:5432 (внутри контейнера)
+
+### 5. Инициализация БД
+```bash
+# Применить миграции
 docker compose exec backend alembic upgrade head
 
-# Seed data (опционально, для тестирования)
+# Загрузить тестовые данные (опционально)
 docker compose exec backend python -m app.scripts.seed
 ```
 
+---
+
+## Разработка
+
+### Frontend (локально)
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173
+npm test         # Запуск тестов
+npm run build    # Production build
+```
+
+### Backend (локально)
+```bash
+cd backend
+pip install -e .
+pytest                     # Все тесты
+pytest -m integration      # Только интеграционные
+pytest --cov               # С coverage
+```
+
+### Миграции БД
+```bash
+# Создать миграцию
+docker compose exec backend alembic revision --autogenerate -m "описание"
+
+# Применить
+docker compose exec backend alembic upgrade head
+
+# Откатить
+docker compose exec backend alembic downgrade -1
+```
+
+---
+
+## Production Deploy
+
+**Полная документация:** [DEPLOY.md](./DEPLOY.md)
+
+### На AI Talent Camp VM (team12)
+
+```bash
+# Подключиться через bastion
+ssh -F ~/.ssh/ai-camp/ssh-config team12
+
+# Перейти в рабочую директорию
+cd ~/workspace/demoday-ai
+
+# Обновить код
+git pull
+
+# Развернуть
+docker compose up -d --build
+
+# Проверить логи
+docker compose logs backend --tail 50
+docker compose logs frontend --tail 50
+```
+
+**Доступ:**
+- Landing: https://team12.camp.aitalenthub.ru
+- Admin: https://team12.camp.aitalenthub.ru/login
+- API: https://team12.camp.aitalenthub.ru/api/v1
+
+### Production конфигурация
+
+**Файл:** `docker-compose.prod.yml` (используется автоматически на сервере)
+
+- Traefik reverse proxy с Let's Encrypt SSL
+- Health checks для всех сервисов
+- Автоматический restart (unless-stopped)
+- Изолированная внутренняя сеть
+- Логи с ротацией
+
+---
+
+## API Endpoints
+
+### Public
+- `GET /` — Landing page
+- `POST /api/v1/leads` — Lead capture form
+
+### Authentication
+- `POST /api/v1/auth/login` — Login
+- `POST /api/v1/auth/logout` — Logout
+
+### Admin Dashboard
+- `GET /api/v1/admin/dashboard` — Metrics
+- `GET /api/v1/admin/coverage` — Coverage stats
+- `POST /api/v1/admin/messaging/send` — Bulk messaging
+- `POST /api/v1/admin/organizer` — Create organizer
+
+### Projects
+- `GET /api/v1/projects` — List projects
+- `POST /api/v1/projects` — Create project
+- `PUT /api/v1/projects/{id}` — Update project
+- `DELETE /api/v1/projects/{id}` — Delete project
+
+### Experts
+- `GET /api/v1/experts` — List experts
+- `POST /api/v1/experts` — Create expert
+- `POST /api/v1/experts/{id}/assign` — Assign to room
+- `POST /api/v1/experts/{id}/score` — Submit score
+
+### Guests
+- `POST /api/v1/profile` — Create/update profile
+- `POST /api/v1/recommendations/{user_id}` — Generate recommendations
+- `GET /api/v1/recommendations/{user_id}` — Get recommendations
+
+### Schedule
+- `GET /api/v1/schedule` — Get schedule
+- `POST /api/v1/schedule/generate` — Auto-generate slots
+- `POST /api/v1/schedule/notify` — Send schedule notifications
+
+**Всего:** 60+ REST endpoints + Telegram bot webhook
+
+---
+
+## Тестирование
+
+### Frontend Tests
+```bash
+cd frontend
+npm test                 # Запуск всех тестов
+npm run test:ui          # UI режим
+npm run test:coverage    # С coverage
+```
+
+**Покрытие:**
+- Dashboard, ExpertMatching, Settings — full coverage
+- Landing, DataImport — частичное покрытие
+- Всего: 16+ test файлов
+
+### Backend Tests
+```bash
+cd backend
+pytest                              # Все тесты
+pytest -m integration               # Только интеграционные
+pytest -m e2e                       # E2E (требуют credentials)
+pytest --cov --cov-report=html      # HTML coverage отчет
+```
+
+**Целевое покрытие:**
+- Новые фичи: 80%+
+- Критические пути: 100%
+
+---
+
+## Telegram Bot
+
+### Возможности бота
+
+**Для всех ролей:**
+- /start — Онбординг и выбор роли
+- /help — Справка
+- /settings — Настройки
+
+**Для организаторов:**
+- Управление событиями
+- Рассылка сообщений
+- Мониторинг покрытия
+
+**Для экспертов:**
+- Подтверждение участия
+- Получение брифингов
+- Оценивание проектов
+
+**Для гостей:**
+- Профилирование интересов
+- Персональные рекомендации
+- Q&A помощник
+- Сравнение проектов
+
+**Для студентов:**
+- Подтверждение участия
+- Получение фидбэка
+- Контакт с партнёрами
+
+### Настройка бота
+
+1. Создать бота через [@BotFather](https://t.me/BotFather)
+2. Получить токен
+3. Добавить в `.env`:
+```env
+BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+BOT_MODE=polling
+```
+
+4. Для уведомлений в чат команды:
+```env
+TEAM_CHAT_ID=-100XXXXXXXXXX
+TEAM_BOT_TOKEN=team-bot-token
+```
+
+---
+
+## Customer Discovery
+
+**5 интервью, 4 сегмента, 17 гипотез**
+
+| # | Респондент | Сегмент | Ключевой инсайт |
+|---|-----------|---------|-----------------|
+| 1 | Инна | Организатор | Расписание = хаос. 80 студентов не попали за ночь |
+| 2 | Рустем Хакимуллин | Эксперт | Идёт вслепую. Нужен контекст за 1-2 дня |
+| 3 | Олег Шатов | Бизнес | Из 330 проектов уверен в 15-20. Не масштабируется |
+| 4 | Анастасия Гапеева | Гость | Посетила 5 из 330. Пропустила самый интересный |
+| 5 | Дмитрий Ботов | Автор идеи | Расфокус экспертов + неравномерный фидбэк |
+
+**Документация:**
+- [docs/01-discovery/lean-canvas.md](./docs/01-discovery/lean-canvas.md) — Lean Canvas v2.0
+- [docs/01-discovery/rice-matrix.md](./docs/01-discovery/rice-matrix.md) — RICE-матрица v4.0
+- [docs/01-discovery/interview-transcript*.md](./docs/01-discovery/) — Транскрипты интервью
+
+---
+
 ## Команда
 
-- **Дмитрий Горбунов** (@grbn_dima) — тимлид, продукт, UX/UI
+**AI Talent Camp 2026 | Команда "ЯСНОПОНЯТНО" | Проект #10**
+
+- **Дмитрий Горбунов** ([@grbn_dima](https://t.me/grbn_dima)) — тимлид, продукт, UX/UI
 - **Анастасия Гапеева** — UX/UI, фронтенд
 - **Иван Александров** — разработка, бизнес-логика
-- **Claude** — AI-ассистент команды
+- **Claude Opus 4.5** — AI-ассистент команды
+
+**Автор идеи:** Дмитрий Ботов ([@dmbotov](https://t.me/dmbotov)) — организатор Demo Day, AI Talent Hub
+
+---
+
+## Лицензия
+
+MIT License — свободное использование для некоммерческих и коммерческих целей.
+
+---
+
+## Контакты
+
+- **Live Demo:** https://team12.camp.aitalenthub.ru
+- **Telegram Bot:** [@demoday_ai_talent_hub_test_bot](https://t.me/demoday_ai_talent_hub_test_bot)
+- **GitHub:** [AI-Talent-Camp-2026/demoday-ai](https://github.com/AI-Talent-Camp-2026/demoday-ai)
+- **Связаться:** [@grbn_dima](https://t.me/grbn_dima)
+
+Разработано в рамках магистратуры «Искусственный интеллект» ИТМО
+[AI Talent Hub](https://ai.itmo.ru) × [ИТМО](https://itmo.ru)
