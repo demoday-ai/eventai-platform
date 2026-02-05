@@ -31,17 +31,27 @@ export function DataImport() {
   }, [])
 
   // Fetch current data stats
-  const { data: dashboard, refetch: refetchDashboard } = useQuery({
+  const { data: dashboard, refetch: refetchDashboard, error: dashboardError, isLoading: dashboardLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
     retry: false,
   })
 
-  const { data: projects, refetch: refetchProjects } = useQuery({
+  const { data: projects, refetch: refetchProjects, error: projectsError, isLoading: projectsLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: () => getProjects(),
     retry: false,
   })
+
+  // Log errors for debugging
+  useEffect(() => {
+    if (projectsError) {
+      console.error("Projects query error:", projectsError)
+    }
+    if (dashboardError) {
+      console.error("Dashboard query error:", dashboardError)
+    }
+  }, [projectsError, dashboardError])
 
   const projectCount = projects?.length ?? 0
   const expertCount = dashboard?.experts?.total ?? 0
@@ -255,7 +265,17 @@ export function DataImport() {
         <CardContent className="space-y-4">
           {/* Current data status - always show */}
           {!isProjectJobRunning && (
-            projectCount > 0 ? (
+            projectsLoading ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <p className="text-sm text-gray-600">Загрузка данных...</p>
+              </div>
+            ) : projectsError ? (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">
+                  Ошибка загрузки данных: {(projectsError as AxiosError<{ detail: string }>)?.response?.data?.detail || "Неизвестная ошибка"}
+                </p>
+              </div>
+            ) : projectCount > 0 ? (
               <div className="p-3 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-800 font-medium">
                   Загружено проектов: {projectCount}
@@ -371,7 +391,17 @@ export function DataImport() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Current data status - always show */}
-          {expertCount > 0 ? (
+          {dashboardLoading ? (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <p className="text-sm text-gray-600">Загрузка данных...</p>
+            </div>
+          ) : dashboardError ? (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">
+                Ошибка загрузки данных: {(dashboardError as AxiosError<{ detail: string }>)?.response?.data?.detail || "Неизвестная ошибка"}
+              </p>
+            </div>
+          ) : expertCount > 0 ? (
             <div className="p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800 font-medium">
                 Загружено экспертов: {expertCount}
@@ -449,7 +479,17 @@ export function DataImport() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Current data status - always show */}
-          {guestCount > 0 ? (
+          {dashboardLoading ? (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <p className="text-sm text-gray-600">Загрузка данных...</p>
+            </div>
+          ) : dashboardError ? (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">
+                Ошибка загрузки данных: {(dashboardError as AxiosError<{ detail: string }>)?.response?.data?.detail || "Неизвестная ошибка"}
+              </p>
+            </div>
+          ) : guestCount > 0 ? (
             <div className="p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800 font-medium">
                 Загружено гостей: {guestCount}
