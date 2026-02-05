@@ -747,6 +747,27 @@ export const addTags = async (tags: string[]): Promise<TagUpsertResponse> => {
   return data
 }
 
+export interface TagSuggestResponse {
+  suggested_tags: string[]
+  project_count: number
+}
+
+export interface TagReplaceResponse {
+  final_tags: string[]
+  added: string[]
+  removed: string[]
+}
+
+export const suggestTags = async (): Promise<TagSuggestResponse> => {
+  const { data } = await apiClient.post<TagSuggestResponse>("/admin/tags/suggest")
+  return data
+}
+
+export const replaceTags = async (tags: string[]): Promise<TagReplaceResponse> => {
+  const { data } = await apiClient.put<TagReplaceResponse>("/admin/tags", { tags })
+  return data
+}
+
 export const getProjects = async (params?: ProjectsListParams): Promise<ProjectListItem[]> => {
   const { data } = await apiClient.get<ProjectListItem[]>("/admin/projects", { params })
   return data

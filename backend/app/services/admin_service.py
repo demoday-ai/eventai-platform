@@ -1,8 +1,9 @@
 """Admin dashboard service."""
 
+import logging
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -574,3 +575,91 @@ async def update_room_theme(
     await db.commit()
     await db.refresh(room)
     return room
+
+
+logger = logging.getLogger(__name__)
+
+TAG_SUGGEST_SYSTEM = (
+    "Ты AI-ассистент для организатора Demo Day. "
+    "Проанализируй названия и описания проектов и предложи 10-20 тегов "
+    "для классификации этих проектов по тематикам. "
+    "Теги должны быть короткие (1-2 слова), на английском языке. "
+    "Верни JSON строго в формате:\n"
+    '{"tags": ["EdTech", "NLP", "CV", ...]}'
+)
+
+
+async def suggest_tags(db: AsyncSession, event_id: UUID) -> dict:
+    """Analyze project descriptions and suggest tags via LLM."""
+    from app.services import llm_client
+
+    result = await db.execute(
+        select(Project.title, Project.description)
+        .where(Project.event_id == event_id)
+        .limit(50)
+    )
+    projects = result.all()
+
+    if not projects:
+        return {"suggested_tags": [], "project_count": 0}
+
+    summaries = []
+    for title, description in projects:
+        desc_short = (description or "")[:200]
+        summaries.append(f"- {title}: {desc_short}")
+
+    user_prompt = "Проекты:\n" + "\n".join(summaries)
+
+    try:
+        response = await llm_client.send_chat_completion(
+            system_prompt=TAG_SUGGEST_SYSTEM,
+            user_prompt=user_prompt,
+            json_mode=True,
+        )
+        suggested = response.get("tags", [])
+        # Ensure all tags are strings
+        suggested = [str(t).strip() for t in suggested if t and str(t).strip()]
+        return {"suggested_tags": suggested, "project_count": len(projects)}
+    except Exception:
+        logger.exception("LLM tag suggestion failed")
+        return {"suggested_tags": [], "project_count": len(projects)}
+
+
+async def replace_tags(db: AsyncSession, tags: list[str]) -> dict:
+    """Replace all tags with a new set. Returns added/removed/final lists."""
+    cleaned = list(dict.fromkeys(t.strip() for t in tags if t and t.strip()))
+
+    # Get existing tags
+    existing_result = await db.execute(select(Tag.id, Tag.name))
+    existing_map = {row[1]: row[0] for row in existing_result.all()}
+    existing_names = set(existing_map.keys())
+    new_names = set(cleaned)
+
+    to_add = new_names - existing_names
+    to_remove = existing_names - new_names
+
+    added = []
+    for name in sorted(to_add):
+        db.add(Tag(name=name))
+        added.append(name)
+
+    removed = []
+    for name in sorted(to_remove):
+        tag_id = existing_map[name]
+        # Check if tag is used by any project
+        usage_count = await db.scalar(
+            select(func.count(ProjectTag.id)).where(ProjectTag.tag_id == tag_id)
+        )
+        if usage_count and usage_count > 0:
+            # Tag is in use — keep it but note it
+            continue
+        await db.execute(delete(Tag).where(Tag.id == tag_id))
+        removed.append(name)
+
+    await db.commit()
+
+    # Return final state
+    final_result = await db.execute(select(Tag.name).order_by(Tag.name))
+    final_tags = [row[0] for row in final_result.all()]
+
+    return {"final_tags": final_tags, "added": added, "removed": removed}

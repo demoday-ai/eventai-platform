@@ -37,6 +37,9 @@ from app.schemas.admin import (
     RoomUpdateRequest,
     RoomUpdateResponse,
     TagListResponse,
+    TagReplaceRequest,
+    TagReplaceResponse,
+    TagSuggestResponse,
     TagUpsertRequest,
     TagUpsertResponse,
 )
@@ -184,6 +187,40 @@ async def add_tags(
     )
 
     return TagUpsertResponse(added=added, skipped=skipped)
+
+
+@router.post("/tags/suggest", response_model=TagSuggestResponse)
+async def suggest_tags(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Suggest tags based on project descriptions using LLM."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    result = await admin_service.suggest_tags(db, event.id)
+    return TagSuggestResponse(**result)
+
+
+@router.put("/tags", response_model=TagReplaceResponse)
+async def replace_tags(
+    request: TagReplaceRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Replace all tags with a new set."""
+    result = await admin_service.replace_tags(db, request.tags)
+
+    await audit_service.log_action(
+        db, current_user, "tags_replace",
+        entity_type="tags",
+        details={"added": result["added"], "removed": result["removed"]},
+    )
+
+    return TagReplaceResponse(**result)
 
 
 @router.get("/projects", response_model=list[ProjectListItem])

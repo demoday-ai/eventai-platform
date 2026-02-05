@@ -8,7 +8,7 @@ import { APP_NAME } from "../lib/constants"
 import {
   getCurrentEvent, updateCurrentEvent, getAuditLog,
   getOrganizers, addOrganizer, removeOrganizer,
-  getTags, addTags,
+  getTags, addTags, suggestTags, replaceTags,
   type Event, type EventUpdateRequest, type AuditLogItem,
   type OrganizerItem,
 } from "../lib/api-client"
@@ -192,6 +192,11 @@ function TagsSection() {
   const [tagError, setTagError] = useState("")
   const [tagInfo, setTagInfo] = useState<string | null>(null)
 
+  // Suggest flow state
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([])
+  const [selectedSuggested, setSelectedSuggested] = useState<Set<string>>(new Set())
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["tags"],
     queryFn: getTags,
@@ -216,6 +221,41 @@ function TagsSection() {
     },
   })
 
+  const suggestMutation = useMutation({
+    mutationFn: suggestTags,
+    onSuccess: (result) => {
+      if (result.suggested_tags.length === 0) {
+        setTagError("Нет проектов для анализа или LLM не вернул теги")
+        return
+      }
+      setSuggestedTags(result.suggested_tags)
+      setSelectedSuggested(new Set(result.suggested_tags))
+      setShowSuggestions(true)
+      setTagInfo(`Проанализировано проектов: ${result.project_count}`)
+      setTagError("")
+    },
+    onError: (err) => {
+      setTagError(err instanceof Error ? err.message : "Не удалось получить предложения")
+    },
+  })
+
+  const replaceMutation = useMutation({
+    mutationFn: replaceTags,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] })
+      setShowSuggestions(false)
+      setSuggestedTags([])
+      setSelectedSuggested(new Set())
+      const added = result.added.length
+      const removed = result.removed.length
+      setTagInfo(`Утверждено. Добавлено: ${added}, удалено: ${removed}. Итого тегов: ${result.final_tags.length}.`)
+      setTagError("")
+    },
+    onError: (err) => {
+      setTagError(err instanceof Error ? err.message : "Не удалось обновить теги")
+    },
+  })
+
   const tags = data?.tags ?? []
 
   const parseTags = (raw: string) => {
@@ -236,6 +276,27 @@ function TagsSection() {
     mutation.mutate(parsed)
   }
 
+  const toggleSuggested = (tag: string) => {
+    setSelectedSuggested((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) {
+        next.delete(tag)
+      } else {
+        next.add(tag)
+      }
+      return next
+    })
+  }
+
+  const handleApprove = () => {
+    const selected = Array.from(selectedSuggested)
+    if (selected.length === 0) {
+      setTagError("Выберите хотя бы один тег")
+      return
+    }
+    replaceMutation.mutate(selected)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -243,7 +304,7 @@ function TagsSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Теги помогают в автокластеризации и подборе экспертов.
+          Теги помогают в автокластеризации и подборе экспертов. При загрузке проектов применяются только утверждённые теги.
         </p>
 
         {isLoading && <p className="text-muted-foreground">Загрузка...</p>}
@@ -265,9 +326,68 @@ function TagsSection() {
           <p className="text-sm text-muted-foreground">Теги пока не добавлены.</p>
         )}
 
+        {/* Suggest tags from LLM */}
+        {!showSuggestions && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setTagInfo(null)
+              setTagError("")
+              suggestMutation.mutate()
+            }}
+            disabled={suggestMutation.isPending}
+          >
+            {suggestMutation.isPending ? "Анализ проектов..." : "Предложить теги на основе проектов"}
+          </Button>
+        )}
+
+        {/* Suggestion chips */}
+        {showSuggestions && suggestedTags.length > 0 && (
+          <div className="border rounded-md p-4 space-y-3">
+            <p className="text-sm font-medium">Предложенные теги (нажмите, чтобы убрать/добавить):</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedTags.map((tag) => {
+                const isSelected = selectedSuggested.has(tag)
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleSuggested(tag)}
+                    className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted text-muted-foreground border-transparent line-through"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleApprove}
+                disabled={replaceMutation.isPending || selectedSuggested.size === 0}
+              >
+                {replaceMutation.isPending ? "Сохранение..." : `Утвердить (${selectedSuggested.size})`}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowSuggestions(false)
+                  setSuggestedTags([])
+                  setSelectedSuggested(new Set())
+                }}
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="tag-input">Добавить теги</Label>
+            <Label htmlFor="tag-input">Добавить теги вручную</Label>
             <textarea
               id="tag-input"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

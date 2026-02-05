@@ -213,9 +213,16 @@ async def save_projects(
     total = len(rows)
     candidate_tags = await _get_candidate_tags(session)
 
+    # Build set of allowed tags for strict enforcement
+    candidate_tags_set = set(candidate_tags)
+
     for i, row in enumerate(rows):
         tag_names = _parse_tags(row.tags) if row.tags else []
         generated_tags = False
+
+        # Strict enforcement: only keep tags that exist in candidate set
+        if tag_names:
+            tag_names = [t for t in tag_names if t in candidate_tags_set]
 
         if not tag_names:
             generated_tags = True
@@ -254,10 +261,8 @@ async def save_projects(
                     if existing:
                         tag_cache[tag_name] = existing
                     else:
-                        tag = Tag(name=tag_name)
-                        session.add(tag)
-                        await session.flush()
-                        tag_cache[tag_name] = tag
+                        # Strict: do not create new tags, skip unknown ones
+                        continue
 
                 pt = ProjectTag(project_id=project.id, tag_id=tag_cache[tag_name].id)
                 session.add(pt)

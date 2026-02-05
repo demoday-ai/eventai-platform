@@ -283,3 +283,24 @@ class OrganizerCreateRequest(BaseModel):
     telegram_id: str
     telegram_username: str | None = None
     name: str | None = None
+
+
+class TagSuggestResponse(BaseModel):
+    """LLM-suggested tags based on project descriptions."""
+
+    suggested_tags: list[str]
+    project_count: int
+
+
+class TagReplaceRequest(BaseModel):
+    """Replace all tags with a new set."""
+
+    tags: list[str]
+
+
+class TagReplaceResponse(BaseModel):
+    """Result of replacing tags."""
+
+    final_tags: list[str]
+    added: list[str]
+    removed: list[str]
