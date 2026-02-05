@@ -1092,6 +1092,7 @@ export function Landing() {
 
       {/* ===================== METRICS ===================== */}
       <section
+        id="metrics"
         className="relative py-16 px-6 sm:py-24"
         style={{ borderTop: "1px solid var(--ld-border-subtle)" }}
       >
