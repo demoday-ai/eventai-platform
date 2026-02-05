@@ -21,6 +21,7 @@ class JobStatus(str, Enum):
 @dataclass
 class Job:
     id: str
+    job_type: str | None = None
     status: JobStatus = JobStatus.PENDING
     result: Any = None
     error: str | None = None
@@ -30,19 +31,35 @@ class Job:
 
 # In-memory job store (for single-instance deployment)
 _jobs: dict[str, Job] = {}
+# Track active jobs by type to prevent duplicates
+_active_jobs_by_type: dict[str, str] = {}  # type -> job_id
 
 
-def create_job() -> Job:
+def create_job(job_type: str | None = None) -> Job:
     """Create a new job and return it."""
     job_id = str(uuid.uuid4())
-    job = Job(id=job_id)
+    job = Job(id=job_id, job_type=job_type)
     _jobs[job_id] = job
+    if job_type:
+        _active_jobs_by_type[job_type] = job_id
     return job
 
 
 def get_job(job_id: str) -> Job | None:
     """Get job by ID."""
     return _jobs.get(job_id)
+
+
+def get_active_job_by_type(job_type: str) -> Job | None:
+    """Get active (pending/running) job by type."""
+    job_id = _active_jobs_by_type.get(job_type)
+    if job_id:
+        job = _jobs.get(job_id)
+        if job and job.status in (JobStatus.PENDING, JobStatus.RUNNING):
+            return job
+        # Job completed or failed, clean up
+        del _active_jobs_by_type[job_type]
+    return None
 
 
 def update_job(job_id: str, status: JobStatus, result: Any = None, error: str | None = None) -> None:
@@ -54,6 +71,9 @@ def update_job(job_id: str, status: JobStatus, result: Any = None, error: str | 
         job.error = error
         if status in (JobStatus.COMPLETED, JobStatus.FAILED):
             job.completed_at = datetime.now(timezone.utc)
+            # Clean up active job tracking
+            if job.job_type and _active_jobs_by_type.get(job.job_type) == job_id:
+                del _active_jobs_by_type[job.job_type]
 
 
 async def run_in_background(job_id: str, coro) -> None:
@@ -68,9 +88,12 @@ async def run_in_background(job_id: str, coro) -> None:
         update_job(job_id, JobStatus.FAILED, error=str(e))
 
 
-def start_background_job(coro) -> Job:
-    """Create a job and start running the coroutine in background."""
-    job = create_job()
+def start_background_job(coro, job_type: str | None = None) -> Job:
+    """Create a job and start running the coroutine in background.
+
+    If job_type is provided, prevents starting duplicate jobs of the same type.
+    """
+    job = create_job(job_type=job_type)
     asyncio.create_task(run_in_background(job.id, coro))
     return job
 

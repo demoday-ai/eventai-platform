@@ -18,7 +18,7 @@ from app.schemas.project import (
     UploadResult,
 )
 from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
-from app.services.background_jobs import JobStatus, get_job, start_background_job
+from app.services.background_jobs import JobStatus, get_active_job_by_type, get_job, start_background_job
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +167,11 @@ async def run_clustering(
     if not role or role.code != "organizer":
         raise HTTPException(status_code=403, detail="Только организатор может запускать кластеризацию")
 
+    # Check for already running clustering job
+    existing_job = get_active_job_by_type("clustering")
+    if existing_job:
+        return {"job_id": existing_job.id, "status": existing_job.status.value}
+
     # Capture params for background job
     event_id = event.id
     num_rooms = request.num_rooms
@@ -180,7 +185,7 @@ async def run_clustering(
             )
             return {"run_id": str(run.id)}
 
-    job = start_background_job(do_clustering())
+    job = start_background_job(do_clustering(), job_type="clustering")
     return {"job_id": job.id, "status": job.status.value}
 
 

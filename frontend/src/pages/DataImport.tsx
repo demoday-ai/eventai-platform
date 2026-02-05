@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AxiosError } from "axios"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
@@ -11,6 +11,8 @@ import {
   uploadProjects,
   uploadExperts,
   uploadGuests,
+  getDashboard,
+  getProjects,
   type UploadResult,
   type ExpertUploadResult,
   type GuestUploadResult,
@@ -20,9 +22,35 @@ import {
 } from "../lib/api-client"
 
 export function DataImport() {
+  const queryClient = useQueryClient()
+
   useEffect(() => {
     document.title = `${APP_NAME} - Импорт данных`
   }, [])
+
+  // Fetch current data stats
+  const { data: dashboard, refetch: refetchDashboard } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: getDashboard,
+    retry: false,
+  })
+
+  const { data: projects, refetch: refetchProjects } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => getProjects(),
+    retry: false,
+  })
+
+  const projectCount = projects?.length ?? 0
+  const expertCount = dashboard?.experts?.total ?? 0
+  const guestCount = dashboard?.guests?.total ?? 0
+
+  const refreshAllStats = () => {
+    refetchDashboard()
+    refetchProjects()
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+    queryClient.invalidateQueries({ queryKey: ["projects"] })
+  }
 
   // --- Projects ---
   const [projectFile, setProjectFile] = useState<File | null>(null)
@@ -35,6 +63,8 @@ export function DataImport() {
     onSuccess: (data) => {
       setProjectResult(data)
       setProjectConflict(null)
+      setProjectFile(null)
+      refreshAllStats()
     },
     onError: (error: AxiosError<UploadConflict>) => {
       if (error.response?.status === 409 && error.response.data) {
@@ -72,6 +102,8 @@ export function DataImport() {
       } else {
         setExpertResult(data)
         setExpertConflict(null)
+        setExpertFile(null)
+        refreshAllStats()
       }
     },
   })
@@ -105,6 +137,8 @@ export function DataImport() {
       } else {
         setGuestResult(data)
         setGuestConflict(null)
+        setGuestFile(null)
+        refreshAllStats()
       }
     },
   })
@@ -132,6 +166,18 @@ export function DataImport() {
           <CardTitle>Проекты</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current data status */}
+          {projectCount > 0 && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800 font-medium">
+                Загружено проектов: {projectCount}
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Для замены загрузите новый файл
+              </p>
+            </div>
+          )}
+
           <FileUpload
             accept=".csv,.json"
             onFileSelect={setProjectFile}
@@ -142,7 +188,7 @@ export function DataImport() {
             onClick={handleProjectUpload}
             disabled={!projectFile || projectMutation.isPending}
           >
-            {projectMutation.isPending ? "Загрузка..." : "Загрузить"}
+            {projectMutation.isPending ? "Загрузка..." : projectCount > 0 ? "Заменить" : "Загрузить"}
           </Button>
 
           {projectConflict && (
@@ -192,6 +238,18 @@ export function DataImport() {
           <CardTitle>Эксперты</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current data status */}
+          {expertCount > 0 && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800 font-medium">
+                Загружено экспертов: {expertCount}
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Для замены загрузите новый файл
+              </p>
+            </div>
+          )}
+
           <FileUpload
             accept=".json"
             onFileSelect={setExpertFile}
@@ -202,7 +260,7 @@ export function DataImport() {
             onClick={handleExpertUpload}
             disabled={!expertFile || expertMutation.isPending}
           >
-            {expertMutation.isPending ? "Загрузка..." : "Загрузить"}
+            {expertMutation.isPending ? "Загрузка..." : expertCount > 0 ? "Заменить" : "Загрузить"}
           </Button>
 
           {expertConflict && (
@@ -252,6 +310,20 @@ export function DataImport() {
           <CardTitle>Гости</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current data status */}
+          {guestCount > 0 && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800 font-medium">
+                Загружено гостей: {guestCount}
+              </p>
+              {dashboard?.guests?.by_subtype && dashboard.guests.by_subtype.length > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  {dashboard.guests.by_subtype.map(s => `${s.subtype}: ${s.count}`).join(", ")}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <label htmlFor="guest-subtype" className="text-sm font-medium mb-1 block">
               Тип гостя
@@ -283,7 +355,7 @@ export function DataImport() {
             onClick={handleGuestUpload}
             disabled={!guestFile || !guestSubtype || guestMutation.isPending}
           >
-            {guestMutation.isPending ? "Загрузка..." : "Загрузить"}
+            {guestMutation.isPending ? "Загрузка..." : guestCount > 0 ? "Добавить" : "Загрузить"}
           </Button>
 
           {guestConflict && (

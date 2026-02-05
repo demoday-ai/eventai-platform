@@ -16,11 +16,15 @@ vi.mock("../hooks/useAuth", () => ({
 const mockUploadProjects = vi.fn()
 const mockUploadExperts = vi.fn()
 const mockUploadGuests = vi.fn()
+const mockGetDashboard = vi.fn()
+const mockGetProjects = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   uploadProjects: (...args: unknown[]) => mockUploadProjects(...args),
   uploadExperts: (...args: unknown[]) => mockUploadExperts(...args),
   uploadGuests: (...args: unknown[]) => mockUploadGuests(...args),
+  getDashboard: () => mockGetDashboard(),
+  getProjects: () => mockGetProjects(),
 }))
 
 const createWrapper = () => {
@@ -37,6 +41,15 @@ const createWrapper = () => {
 describe("DataImport", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: empty data
+    mockGetDashboard.mockResolvedValue({
+      students: { total: 0, confirmed: 0, pending: 0, declined: 0 },
+      experts: { total: 0, confirmed: 0, pending: 0, invited: 0 },
+      guests: { total: 0, by_subtype: [] },
+      rooms: { total: 0, with_experts: 0, without_experts: 0 },
+      alerts: [],
+    })
+    mockGetProjects.mockResolvedValue([])
   })
 
   it("renders all upload sections", () => {
