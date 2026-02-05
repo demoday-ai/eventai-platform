@@ -40,7 +40,7 @@ from app.bot.keyboards import (
     role_keyboard,
 )
 from app.database import async_session
-from app.models.role import ROLE_DISPLAY_NAMES, RoleCode
+from app.models.role import RoleCode
 from app.models.user import GUEST_SUBTYPE_DISPLAY, GuestSubtype
 from app.services import profiling_service, user_service
 
