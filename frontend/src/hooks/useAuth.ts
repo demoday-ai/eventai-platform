@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react"
-import { MOCK_ORGANIZER_IDS } from "../lib/constants"
+import { apiClient } from "../lib/api-client"
 
 const AUTH_KEY = "demoday_auth"
+const TOKEN_KEY = "auth_token"
 
 interface AuthState {
   telegramId: string | null
@@ -9,14 +10,15 @@ interface AuthState {
 }
 
 interface UseAuthReturn extends AuthState {
-  login: (telegramId: string) => { success: boolean; error?: string }
+  login: (telegramId: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
 }
 
 function getStoredAuth(): AuthState {
   try {
     const stored = localStorage.getItem(AUTH_KEY)
-    if (stored) {
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (stored && token) {
       const parsed = JSON.parse(stored)
       return {
         telegramId: parsed.telegramId,
@@ -37,32 +39,38 @@ export function useAuth(): UseAuthReturn {
     setState(getStoredAuth())
   }, [])
 
-  const login = useCallback((telegramId: string): { success: boolean; error?: string } => {
+  const login = useCallback(async (telegramId: string): Promise<{ success: boolean; error?: string }> => {
     const trimmedId = telegramId.trim()
 
     if (!trimmedId) {
       return { success: false, error: "Введите Telegram ID" }
     }
 
-    // Check if ID is in allowed list (mock validation)
-    if (!MOCK_ORGANIZER_IDS.includes(trimmedId)) {
-      return { success: false, error: "Доступ запрещён. ID не в списке организаторов." }
+    try {
+      // Call dev-login API
+      const { data } = await apiClient.post("/auth/dev-login", null, {
+        params: { telegram_id: trimmedId },
+      })
+
+      // Store auth data and token
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ telegramId: trimmedId }))
+      localStorage.setItem(TOKEN_KEY, data.access_token)
+
+      setState({
+        telegramId: trimmedId,
+        isAuthenticated: true,
+      })
+
+      return { success: true }
+    } catch (err) {
+      console.error("Login error:", err)
+      return { success: false, error: "Ошибка входа. Попробуйте позже." }
     }
-
-    // Store auth
-    const authData = { telegramId: trimmedId }
-    localStorage.setItem(AUTH_KEY, JSON.stringify(authData))
-
-    setState({
-      telegramId: trimmedId,
-      isAuthenticated: true,
-    })
-
-    return { success: true }
   }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem(AUTH_KEY)
+    localStorage.removeItem(TOKEN_KEY)
     setState({ telegramId: null, isAuthenticated: false })
   }, [])
 

@@ -4,7 +4,7 @@ import { useAuth } from "../hooks/useAuth"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card"
-import { APP_NAME, MOCK_ORGANIZER_IDS } from "../lib/constants"
+import { APP_NAME } from "../lib/constants"
 
 export function Login() {
   const [telegramId, setTelegramId] = useState("")
@@ -18,10 +18,7 @@ export function Login() {
     setError("")
     setIsLoading(true)
 
-    // Simulate network delay for realism
-    await new Promise((r) => setTimeout(r, 300))
-
-    const result = login(telegramId)
+    const result = await login(telegramId)
 
     if (result.success) {
       navigate("/dashboard")
@@ -70,9 +67,7 @@ export function Login() {
 
             {/* Dev hint */}
             <div className="p-3 text-xs text-muted-foreground bg-muted rounded-md">
-              <strong>Dev mode:</strong> Используйте один из тестовых ID:
-              <br />
-              {MOCK_ORGANIZER_IDS.join(", ")}
+              <strong>Dev mode:</strong> Введите любой числовой Telegram ID
             </div>
           </CardContent>
 

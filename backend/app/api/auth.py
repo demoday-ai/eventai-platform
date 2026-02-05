@@ -81,6 +81,38 @@ def decode_token(token: str) -> str:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
+@router.post("/dev-login", response_model=AuthResponse)
+async def dev_login(telegram_id: str, session: AsyncSession = Depends(get_session)):
+    """Dev-only login endpoint. Accepts telegram_id without verification."""
+    user = await user_service.upsert_user(
+        session,
+        telegram_user_id=telegram_id,
+        full_name=f"Dev User {telegram_id}",
+        username=None,
+    )
+
+    event = await user_service.get_current_event(session)
+    role_info = None
+    if event:
+        role = await user_service.get_user_role_with_info(session, user.id, event.id)
+        if role:
+            role_info = RoleInfo(code=role.code, name=role.name)
+
+    token = create_access_token(telegram_id)
+
+    return AuthResponse(
+        access_token=token,
+        user=UserProfile(
+            id=user.id,
+            telegram_user_id=user.telegram_user_id,
+            full_name=user.full_name,
+            username=user.username,
+            role=role_info,
+            guest_subtype=user.guest_subtype,
+        ),
+    )
+
+
 @router.post("/login", response_model=AuthResponse)
 async def login(body: TelegramAuthRequest, session: AsyncSession = Depends(get_session)):
     _verify_telegram_login(body)
