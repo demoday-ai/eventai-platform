@@ -452,346 +452,310 @@ export function Landing() {
       </nav>
 
       {/* ===================== HERO ===================== */}
-      <section className="noise-overlay dot-grid relative flex min-h-screen flex-col items-center justify-center px-6 pt-24 pb-16">
+      <section className="dot-grid relative flex min-h-screen flex-col items-center justify-center px-6 pt-24 pb-16">
+        {/* Simplified gradient background - static on mobile */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div
-            className="animate-hero-gradient absolute -left-32 -top-32 h-[600px] w-[600px] rounded-full opacity-30 blur-[120px]"
+            className="animate-hero-gradient absolute -left-20 -top-20 h-[400px] w-[400px] rounded-full opacity-25 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[100px]"
             style={{ background: "var(--ld-hero-gradient-1)" }}
           />
           <div
-            className="animate-hero-gradient absolute -right-20 top-1/4 h-[500px] w-[500px] rounded-full opacity-20 blur-[100px]"
+            className="animate-hero-gradient absolute -right-10 top-1/3 h-[300px] w-[300px] rounded-full opacity-15 blur-[60px] sm:h-[400px] sm:w-[400px] sm:blur-[80px]"
             style={{ background: "var(--ld-hero-gradient-2)", animationDelay: "-7s" }}
-          />
-          <div
-            className="animate-hero-gradient absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full opacity-15 blur-[80px]"
-            style={{ background: "var(--ld-hero-gradient-3)", animationDelay: "-14s" }}
           />
         </div>
 
         <div className="relative z-10 mx-auto max-w-4xl text-center">
+          {/* Target audience badge */}
           <Reveal>
-            <div className="mb-8 inline-flex items-center gap-2">
-              <SectionTag>AI Talent Camp 2026</SectionTag>
+            <div className="mb-6 inline-flex items-center gap-2">
+              <span
+                className="font-body inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+                style={{
+                  background: "var(--ld-accent-soft)",
+                  color: "var(--ld-accent-text)",
+                  border: "1px solid var(--ld-border-subtle)",
+                }}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Для организаторов конференций и Demo Day
+              </span>
             </div>
           </Reveal>
 
+          {/* Main headline - clear value prop */}
           <Reveal delay={100}>
-            <h1 className="font-display text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl md:text-[4.5rem]">
+            <h1 className="font-display text-3xl font-medium leading-[1.15] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+              <span style={{ color: "var(--ld-text)" }}>
+                Персональная программа
+              </span>
+              <br />
               <span
-                className="animate-shimmer"
                 style={{
-                  backgroundImage: `linear-gradient(90deg, var(--ld-hero-gradient-1), var(--ld-hero-gradient-2), var(--ld-hero-gradient-3), var(--ld-hero-gradient-1))`,
+                  background: `linear-gradient(135deg, var(--ld-hero-gradient-1), var(--ld-hero-gradient-2))`,
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
                 }}
               >
-                AI-навигатор
-              </span>
-              <br />
-              <span style={{ color: "var(--ld-text)" }}>
-                для мероприятий
+                каждому гостю за 2 минуты
               </span>
             </h1>
           </Reveal>
 
+          {/* Problem statement - concrete numbers */}
           <Reveal delay={200}>
             <p
-              className="font-body mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg"
+              className="font-body mx-auto mt-5 max-w-xl text-base leading-relaxed sm:text-lg"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              Конференции, Demo Day, хакатоны, выставки — сотни проектов и докладов идут параллельно.{" "}
-              <strong style={{ color: "var(--ld-text)" }}>
-                Ваши гости теряют до 80% релевантного контента.
-              </strong>{" "}
-              AI-платформа создаёт персональную программу каждому участнику за 2&nbsp;минуты через Telegram-бота.
+              На вашем мероприятии{" "}
+              <strong style={{ color: "var(--ld-ember)" }}>сотни проектов в параллельных залах</strong>.
+              {" "}Гости физически успевают увидеть менее 20%.
+              {" "}Telegram-бот составит каждому персональный топ за диалог.
             </p>
           </Reveal>
 
+          {/* Single primary CTA */}
           <Reveal delay={300}>
-            <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-8 flex flex-col items-center gap-4">
               <a
                 href={BOT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-display group flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-medium transition-all duration-200 hover:scale-[1.03]"
+                className="font-display group flex items-center gap-2.5 rounded-xl px-8 py-4 text-base font-medium transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: "var(--ld-accent)",
                   color: "#fff",
                   boxShadow: `0 4px 20px var(--ld-accent-glow)`,
                 }}
               >
-                <MessageCircle className="h-4 w-4" />
-                Попробовать Live Demo
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                <MessageCircle className="h-5 w-5" />
+                Попробовать на реальных данных
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </a>
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-medium transition-all duration-200 hover:scale-[1.03]"
-                style={{
-                  background: "var(--ld-surface)",
-                  color: "var(--ld-text-secondary)",
-                  border: "1px solid var(--ld-border)",
-                }}
-              >
-                <Github className="h-4 w-4" />
-                Open Source
-                <ArrowUpRight className="h-3.5 w-3.5 opacity-50" />
-              </a>
+              <div className="flex items-center gap-4">
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-body flex items-center gap-1.5 text-sm transition-opacity hover:opacity-70"
+                  style={{ color: "var(--ld-text-muted)" }}
+                >
+                  <Github className="h-4 w-4" />
+                  Open Source
+                </a>
+                <span style={{ color: "var(--ld-border)" }}>•</span>
+                <span
+                  className="font-body text-sm"
+                  style={{ color: "var(--ld-text-muted)" }}
+                >
+                  Бесплатно для некоммерческих
+                </span>
+              </div>
             </div>
           </Reveal>
 
-          {/* Use case icons */}
+          {/* Social proof - concrete case */}
           <Reveal delay={400}>
             <div
-              className="mx-auto mt-16 flex max-w-lg items-center justify-center gap-6 rounded-xl px-8 py-5 sm:gap-10"
+              className="mx-auto mt-12 max-w-md rounded-xl p-4"
               style={{
                 background: "var(--ld-surface)",
                 border: "1px solid var(--ld-border-subtle)",
-                boxShadow: "var(--ld-card-shadow)",
               }}
             >
-              {[
-                { icon: Clapperboard, l: "Demo Day" },
-                { icon: Calendar, l: "Конференции" },
-                { icon: Brain, l: "Хакатоны" },
-                { icon: Building2, l: "Выставки" },
-              ].map((s, i) => (
-                <div key={i} className="flex flex-col items-center gap-1.5 text-center">
-                  <s.icon className="h-5 w-5" style={{ color: "var(--ld-accent)" }} />
-                  <div
-                    className="font-body text-[10px] uppercase tracking-wider"
-                    style={{ color: "var(--ld-text-muted)" }}
-                  >
-                    {s.l}
-                  </div>
+              <div className="flex items-center justify-center gap-6 sm:gap-8">
+                <div className="text-center">
+                  <div className="font-display text-2xl font-medium" style={{ color: "var(--ld-accent)" }}>330</div>
+                  <div className="font-body text-[11px] uppercase tracking-wide" style={{ color: "var(--ld-text-muted)" }}>проектов</div>
                 </div>
-              ))}
+                <div className="h-8 w-px" style={{ background: "var(--ld-border)" }} />
+                <div className="text-center">
+                  <div className="font-display text-2xl font-medium" style={{ color: "var(--ld-accent)" }}>10</div>
+                  <div className="font-body text-[11px] uppercase tracking-wide" style={{ color: "var(--ld-text-muted)" }}>залов</div>
+                </div>
+                <div className="h-8 w-px" style={{ background: "var(--ld-border)" }} />
+                <div className="text-center">
+                  <div className="font-display text-2xl font-medium" style={{ color: "var(--ld-accent)" }}>2 мин</div>
+                  <div className="font-body text-[11px] uppercase tracking-wide" style={{ color: "var(--ld-text-muted)" }}>на профиль</div>
+                </div>
+              </div>
+              <div className="font-body mt-3 text-center text-xs" style={{ color: "var(--ld-text-muted)" }}>
+                Протестировано на Demo Day AI Talent Hub ИТМО
+              </div>
             </div>
           </Reveal>
         </div>
 
-        <Reveal delay={600} className="absolute bottom-6">
-          <div className="flex animate-float flex-col items-center">
-            <ChevronDown className="h-5 w-5" style={{ color: "var(--ld-text-muted)" }} />
-          </div>
+        <Reveal delay={500} className="absolute bottom-6 hidden sm:block">
+          <a href="#problem" className="flex flex-col items-center transition-opacity hover:opacity-70">
+            <ChevronDown className="h-5 w-5 animate-float" style={{ color: "var(--ld-text-muted)" }} />
+          </a>
         </Reveal>
       </section>
 
       {/* ===================== PROBLEM ===================== */}
       <section
         id="problem"
-        className="relative py-24 px-6"
+        className="relative py-16 px-6 sm:py-24"
         style={{ borderTop: "1px solid var(--ld-border-subtle)" }}
       >
-        <div className="mx-auto max-w-4xl text-center">
-          <Reveal>
-            <SectionTag>Проблема организаторов</SectionTag>
-          </Reveal>
-          <Reveal delay={100}>
-            <h2
-              className="font-display mt-6 text-2xl font-medium tracking-tight sm:text-3xl"
-              style={{ color: "var(--ld-text)" }}
-            >
-              Масштаб растёт.{" "}
-              <span style={{ color: "var(--ld-ember)" }}>Вовлечённость — нет.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={150}>
+        <div className="mx-auto max-w-4xl">
+          <div className="text-center">
+            <Reveal>
+              <SectionTag>Проблема</SectionTag>
+            </Reveal>
+            <Reveal delay={100}>
+              <h2
+                className="font-display mt-5 text-xl font-medium tracking-tight sm:text-2xl md:text-3xl"
+                style={{ color: "var(--ld-text)" }}
+              >
+                Чем больше проектов —{" "}
+                <span style={{ color: "var(--ld-ember)" }}>тем меньше видят гости</span>
+              </h2>
+            </Reveal>
+          </div>
+
+          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatBlock value="<20%" label="проектов успеет посетить гость" accent="ember" delay={150} />
+            <StatBlock value="68%" label="релевантного контента пропущено" accent="amber" delay={200} />
+            <StatBlock value="0" label="follow-up после мероприятия" accent="teal" delay={250} />
+          </div>
+
+          <Reveal delay={300}>
             <p
-              className="font-body mx-auto mt-4 max-w-2xl leading-relaxed"
+              className="font-body mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed sm:text-base"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              На крупных мероприятиях сотни проектов идут параллельно в нескольких залах.
-              Расписание составляется вручную за ночь. Гости не находят
-              релевантный контент. Эксперты перегружены. Обратная связь не доходит
-              до участников. Бизнес-партнёры уходят, не увидев нужные проекты.
+              Гости не знают, куда идти. Бизнес-партнёры не находят нужные проекты.
+              Эксперты перегружены. Организаторы составляют расписание вручную за ночь до события.
             </p>
           </Reveal>
-
-          <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatBlock value="<20%" label="контента увидит гость" accent="ember" delay={200} />
-            <StatBlock value="68%" label="пропущено по интересам" accent="amber" delay={280} />
-            <StatBlock value="0" label="follow-up после события" accent="teal" delay={360} />
-          </div>
         </div>
       </section>
 
       {/* ===================== FEATURES / PLATFORM ===================== */}
       <section
         id="features"
-        className="relative py-24 px-6"
+        className="relative py-16 px-6 sm:py-24"
         style={{
           borderTop: "1px solid var(--ld-border-subtle)",
           background: "var(--ld-bg-alt)",
         }}
       >
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-5xl">
           <div className="text-center">
             <Reveal>
-              <SectionTag>Платформа</SectionTag>
+              <SectionTag>Решение</SectionTag>
             </Reveal>
             <Reveal delay={100}>
               <h2
-                className="font-display mt-6 text-2xl font-medium tracking-tight sm:text-3xl"
+                className="font-display mt-5 text-xl font-medium tracking-tight sm:text-2xl md:text-3xl"
                 style={{ color: "var(--ld-text)" }}
               >
-                AI-агент для каждого участника
+                Telegram-бот делает мероприятие персональным
               </h2>
-            </Reveal>
-            <Reveal delay={150}>
-              <p
-                className="font-body mx-auto mt-3 max-w-lg"
-                style={{ color: "var(--ld-text-secondary)" }}
-              >
-                Telegram-бот, который профилирует интересы через диалог и делает мероприятие
-                персональным для каждого гостя, эксперта и партнёра
-              </p>
             </Reveal>
           </div>
 
-          <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-3 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard
               icon={Target}
-              title="Персональная программа"
-              description="AI анализирует все проекты и собирает топ для каждого участника с релевантностью в %, разбивкой по залам и приоритетами."
+              title="Персональный топ проектов"
+              description="AI ранжирует все проекты под интересы гостя. Рейтинг релевантности, разбивка по залам."
               index={0}
             />
             <FeatureCard
               icon={Brain}
               title="Q&A-помощник"
-              description="3-5 умных вопросов к каждому проекту, заточенных под профиль и задачи участника. Готовый гайд для содержательного диалога."
+              description="3-5 умных вопросов к проекту под профиль гостя. Готовый гайд для диалога."
               index={1}
             />
             <FeatureCard
               icon={BarChart3}
-              title="Матрица сравнения"
-              description="Сравнение 2-5 проектов в таблице: тема, зал, релевантность, ключевые отличия — для принятия решений."
+              title="Сравнение проектов"
+              description="Таблица сравнения 2-5 проектов: тема, зал, отличия — для быстрого выбора."
               index={2}
             />
             <FeatureCard
               icon={MapPin}
               title="Маршрут по залам"
-              description="AI учитывает параллельность треков и планирует переходы между залами без потерь релевантного контента."
+              description="Оптимальный порядок посещения с учётом параллельных секций."
               index={3}
             />
             <FeatureCard
               icon={Phone}
               title="Контакт с авторами"
-              description="Безопасный обмен контактами с согласия обеих сторон. Одна кнопка — запрос автору — решение."
+              description="Запрос контакта через бота. Автор решает — делиться или нет."
               index={4}
             />
             <FeatureCard
               icon={Users}
-              title="Мультиролевая система"
-              description="Гость, бизнес-партнёр, эксперт, студент, организатор — каждая роль получает свой интерфейс и функции."
+              title="5 ролей"
+              description="Гость, партнёр, эксперт, студент, организатор — свой интерфейс каждому."
               index={5}
             />
           </div>
         </div>
       </section>
 
-      {/* ===================== CASE STUDY: ITMO Demo Day ===================== */}
+      {/* ===================== CASE STUDY ===================== */}
       <section
         id="case"
-        className="relative py-24 px-6"
+        className="relative py-16 px-6 sm:py-24"
         style={{ borderTop: "1px solid var(--ld-border-subtle)" }}
       >
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
             <Reveal>
-              <SectionTag>Кейс</SectionTag>
+              <SectionTag>Как это выглядит</SectionTag>
             </Reveal>
             <Reveal delay={100}>
               <h2
-                className="font-display mt-6 text-2xl font-medium tracking-tight sm:text-3xl"
+                className="font-display mt-5 text-xl font-medium tracking-tight sm:text-2xl md:text-3xl"
                 style={{ color: "var(--ld-text)" }}
               >
-                Demo Day AI Talent Hub
+                Диалог с ботом → персональная программа
               </h2>
             </Reveal>
             <Reveal delay={150}>
               <p
-                className="font-body mx-auto mt-3 max-w-xl"
+                className="font-body mx-auto mt-3 max-w-lg text-sm sm:text-base"
                 style={{ color: "var(--ld-text-secondary)" }}
               >
-                Платформа разработана и протестирована на реальном Demo Day — крупнейшем
-                событии AI Talent Hub с 330 проектами в 10 залах
+                Реальный пример: HR-директор ищет проекты по автоматизации найма
               </p>
             </Reveal>
           </div>
 
-          <div className="mt-14 grid gap-8 lg:grid-cols-2 items-start">
-            {/* Left: stats & details */}
-            <div className="space-y-6">
+          <div className="mt-10 grid gap-6 lg:grid-cols-5 lg:gap-8">
+            {/* Left: what bot does - simplified */}
+            <div className="space-y-4 lg:col-span-2">
               <Reveal>
                 <div
-                  className="rounded-xl p-6"
+                  className="rounded-xl p-5"
                   style={{
                     background: "var(--ld-surface)",
                     border: "1px solid var(--ld-border)",
-                    boxShadow: "var(--ld-card-shadow)",
                   }}
                 >
                   <div
                     className="font-display text-xs font-medium uppercase tracking-widest"
                     style={{ color: "var(--ld-text-muted)" }}
                   >
-                    Масштаб события
+                    Бот умеет
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
+                  <ul className="font-body mt-3 space-y-2 text-sm" style={{ color: "var(--ld-text-secondary)" }}>
                     {[
-                      { v: "330", l: "проектов" },
-                      { v: "10", l: "параллельных залов" },
-                      { v: "2", l: "дня" },
-                      { v: "5", l: "ролей участников" },
-                    ].map((s, i) => (
-                      <div key={i}>
-                        <div
-                          className="font-display text-2xl font-medium"
-                          style={{ color: "var(--ld-accent)" }}
-                        >
-                          {s.v}
-                        </div>
-                        <div
-                          className="font-body text-xs"
-                          style={{ color: "var(--ld-text-secondary)" }}
-                        >
-                          {s.l}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Reveal>
-
-              <Reveal delay={100}>
-                <div
-                  className="rounded-xl p-6"
-                  style={{
-                    background: "var(--ld-surface)",
-                    border: "1px solid var(--ld-border)",
-                    boxShadow: "var(--ld-card-shadow)",
-                  }}
-                >
-                  <div
-                    className="font-display text-xs font-medium uppercase tracking-widest"
-                    style={{ color: "var(--ld-text-muted)" }}
-                  >
-                    Что решает платформа
-                  </div>
-                  <ul className="font-body mt-4 space-y-2.5 text-sm" style={{ color: "var(--ld-text-secondary)" }}>
-                    {[
-                      "NL-профилирование: гость описывает интересы свободным текстом",
-                      "AI-ранжирование 330 проектов с % релевантности",
-                      "Q&A-помощник: умные вопросы для содержательного диалога",
-                      "Безопасный обмен контактами с авторами",
-                      "Маршрут между залами с учётом параллельности",
+                      "Профилировать через диалог",
+                      "Ранжировать проекты под гостя",
+                      "Генерировать вопросы к проектам",
+                      "Сравнивать проекты в таблице",
+                      "Организовать обмен контактами",
                     ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span style={{ color: "var(--ld-accent)" }} className="mt-1 shrink-0">
+                      <li key={i} className="flex items-center gap-2">
+                        <span style={{ color: "var(--ld-accent)" }} className="shrink-0">
                           <ArrowRight className="h-3 w-3" />
                         </span>
                         {item}
@@ -803,9 +767,10 @@ export function Landing() {
             </div>
 
             {/* Right: chat mockup */}
-            <Reveal delay={150}>
-              <div
-                className="overflow-hidden rounded-2xl"
+            <div className="lg:col-span-3">
+              <Reveal delay={150}>
+                <div
+                  className="overflow-hidden rounded-2xl"
                 style={{
                   background: "var(--ld-surface)",
                   border: "1px solid var(--ld-border)",
@@ -871,6 +836,7 @@ export function Landing() {
                 </div>
               </div>
             </Reveal>
+            </div>
           </div>
         </div>
       </section>

@@ -200,6 +200,24 @@
 .animate-cursor { animation: typewriter-cursor 1s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
 
+/* Disable heavy animations on mobile and reduced-motion */
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  .animate-hero-gradient {
+    animation: none !important;
+    transform: scale(1.2);
+  }
+  .animate-shimmer {
+    animation: none !important;
+    background-position: center;
+  }
+  .animate-float {
+    animation: none !important;
+  }
+  .noise-overlay::before {
+    display: none !important;
+  }
+}
+
 /* Staggered delays */
 .delay-0 { animation-delay: 0ms; }
 .delay-75 { animation-delay: 75ms; }
@@ -236,10 +254,20 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Theme transition */
-.theme-transition,
-.theme-transition *,
-.theme-transition *::before,
-.theme-transition *::after {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+/* Theme transition - only on specific elements, not all descendants */
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* GPU acceleration for heavy elements */
+.animate-hero-gradient {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Reduce blur intensity on mobile for performance */
+@media (max-width: 768px) {
+  .blur-\[120px\] { filter: blur(60px); }
+  .blur-\[100px\] { filter: blur(50px); }
+  .blur-\[80px\] { filter: blur(40px); }
 }
