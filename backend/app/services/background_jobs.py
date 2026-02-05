@@ -23,6 +23,7 @@ class Job:
     id: str
     job_type: str | None = None
     status: JobStatus = JobStatus.PENDING
+    progress: dict | None = None  # For tracking progress: {current, total, stage}
     result: Any = None
     error: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -74,6 +75,13 @@ def update_job(job_id: str, status: JobStatus, result: Any = None, error: str | 
             # Clean up active job tracking
             if job.job_type and _active_jobs_by_type.get(job.job_type) == job_id:
                 del _active_jobs_by_type[job.job_type]
+
+
+def update_job_progress(job_id: str, progress: dict) -> None:
+    """Update job progress info."""
+    job = _jobs.get(job_id)
+    if job:
+        job.progress = progress
 
 
 async def run_in_background(job_id: str, coro) -> None:

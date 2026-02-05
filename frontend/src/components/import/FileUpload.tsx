@@ -7,36 +7,39 @@ interface FileUploadProps {
   accept: string
   onFileSelect: (file: File) => void
   label: string
+  disabled?: boolean
 }
 
-export function FileUpload({ accept, onFileSelect, label }: FileUploadProps) {
+export function FileUpload({ accept, onFileSelect, label, disabled = false }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = useCallback(
     (file: File) => {
+      if (disabled) return
       setSelectedFile(file)
       onFileSelect(file)
     },
-    [onFileSelect]
+    [onFileSelect, disabled]
   )
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragActive(false)
+      if (disabled) return
       if (e.dataTransfer.files?.[0]) {
         handleFile(e.dataTransfer.files[0])
       }
     },
-    [handleFile]
+    [handleFile, disabled]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setDragActive(true)
-  }, [])
+    if (!disabled) setDragActive(true)
+  }, [disabled])
 
   const handleDragLeave = useCallback(() => {
     setDragActive(false)
@@ -61,7 +64,7 @@ export function FileUpload({ accept, onFileSelect, label }: FileUploadProps) {
     <Card
       className={`border-2 border-dashed transition-colors ${
         dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
-      }`}
+      } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -73,6 +76,7 @@ export function FileUpload({ accept, onFileSelect, label }: FileUploadProps) {
           variant="outline"
           size="sm"
           onClick={() => inputRef.current?.click()}
+          disabled={disabled}
         >
           Выбрать файл
         </Button>

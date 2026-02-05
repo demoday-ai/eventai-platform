@@ -82,19 +82,51 @@ async def upload_experts(
         await expert_service.delete_all_experts(session, event.id)
 
     # Parse uploaded file
+    import csv
+    import io
     import json
+
     content = await file.read()
+    filename = (file.filename or "").lower()
+
+    if not filename.endswith((".csv", ".json")):
+        raise HTTPException(status_code=400, detail="Поддерживаемые форматы: CSV, JSON")
 
     file_hash = dedup_service.compute_file_hash(content)
     dup_info = await dedup_service.check_recent_duplicate(session, file_hash, "upload_experts")
 
-    try:
-        data = json.loads(content.decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON file")
+    if filename.endswith(".csv"):
+        try:
+            text = content.decode("utf-8-sig")
+            reader = csv.DictReader(io.StringIO(text))
+            data = []
+            for row in reader:
+                # Convert CSV row to expected format
+                item = {
+                    "id": row.get("id", ""),
+                    "name": row.get("name", ""),
+                    "telegram": row.get("telegram", ""),
+                    "position": row.get("position", ""),
+                    "inviter": row.get("inviter", ""),
+                    "dd_status": row.get("dd_status", ""),
+                }
+                # Parse tags from comma-separated string
+                tags_str = row.get("expertise_tags", "") or row.get("tags", "")
+                if tags_str:
+                    item["expertise_tags"] = [t.strip() for t in tags_str.split(",") if t.strip()]
+                else:
+                    item["expertise_tags"] = []
+                data.append(item)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Ошибка парсинга CSV: {e}")
+    else:
+        try:
+            data = json.loads(content.decode("utf-8"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON file")
 
-    if not isinstance(data, list):
-        raise HTTPException(status_code=400, detail="Expected JSON array")
+        if not isinstance(data, list):
+            raise HTTPException(status_code=400, detail="Expected JSON array")
 
     # Use seed loading logic
     from app.models.expert_tag import ExpertTag as ExpertTagModel

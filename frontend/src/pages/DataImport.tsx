@@ -13,12 +13,14 @@ import {
   uploadGuests,
   getDashboard,
   getProjects,
+  getUploadJobStatus,
   type UploadResult,
   type ExpertUploadResult,
   type GuestUploadResult,
   type GuestUploadConflict,
   type UploadConflict,
   type ExpertUploadConflict,
+  type UploadJobResponse,
 } from "../lib/api-client"
 
 export function DataImport() {
@@ -56,19 +58,58 @@ export function DataImport() {
   const [projectFile, setProjectFile] = useState<File | null>(null)
   const [projectResult, setProjectResult] = useState<UploadResult | null>(null)
   const [projectConflict, setProjectConflict] = useState<UploadConflict | null>(null)
+  const [projectJobId, setProjectJobId] = useState<string | null>(null)
+  const [projectJobStatus, setProjectJobStatus] = useState<string | null>(null)
+  const [projectProgress, setProjectProgress] = useState<UploadJobResponse["progress"] | null>(null)
+  const [projectError, setProjectError] = useState<string | null>(null)
+
+  // Poll project upload job status
+  useEffect(() => {
+    if (!projectJobId || projectJobStatus === "completed" || projectJobStatus === "failed") {
+      return
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const status = await getUploadJobStatus(projectJobId)
+        setProjectJobStatus(status.status)
+        setProjectProgress(status.progress || null)
+
+        if (status.status === "completed" && status.result) {
+          setProjectResult(status.result)
+          setProjectJobId(null)
+          setProjectJobStatus(null)
+          setProjectProgress(null)
+          setProjectFile(null)
+          refreshAllStats()
+        } else if (status.status === "failed") {
+          setProjectError(status.error || "Неизвестная ошибка")
+          setProjectJobId(null)
+        }
+      } catch (err) {
+        console.error("Failed to poll job status:", err)
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [projectJobId, projectJobStatus])
 
   const projectMutation = useMutation({
     mutationFn: ({ file, replace }: { file: File; replace: boolean }) =>
       uploadProjects(file, replace),
     onSuccess: (data) => {
-      setProjectResult(data)
-      setProjectConflict(null)
-      setProjectFile(null)
-      refreshAllStats()
+      if (data.job_id) {
+        setProjectJobId(data.job_id)
+        setProjectJobStatus(data.status)
+        setProjectError(null)
+        setProjectConflict(null)
+      }
     },
     onError: (error: AxiosError<UploadConflict>) => {
       if (error.response?.status === 409 && error.response.data) {
         setProjectConflict(error.response.data)
+      } else {
+        setProjectError(error.message)
       }
     },
   })
@@ -77,14 +118,18 @@ export function DataImport() {
     if (!projectFile) return
     setProjectResult(null)
     setProjectConflict(null)
+    setProjectError(null)
     projectMutation.mutate({ file: projectFile, replace: false })
   }
 
   const handleProjectReplace = () => {
     if (!projectFile) return
     setProjectConflict(null)
+    setProjectError(null)
     projectMutation.mutate({ file: projectFile, replace: true })
   }
+
+  const isProjectJobRunning = projectJobId && (projectJobStatus === "pending" || projectJobStatus === "running")
 
   // --- Experts ---
   const [expertFile, setExpertFile] = useState<File | null>(null)
@@ -95,7 +140,6 @@ export function DataImport() {
     mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
       uploadExperts(file, confirmReplace),
     onSuccess: (data) => {
-      // Backend returns conflict info as 200 with existing_count field
       if ("existing_count" in data) {
         setExpertConflict(data as unknown as ExpertUploadConflict)
         setExpertResult(null)
@@ -167,7 +211,7 @@ export function DataImport() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Current data status */}
-          {projectCount > 0 && (
+          {projectCount > 0 && !isProjectJobRunning && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800 font-medium">
                 Загружено проектов: {projectCount}
@@ -178,17 +222,54 @@ export function DataImport() {
             </div>
           )}
 
+          {/* Upload progress */}
+          {isProjectJobRunning && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800 font-medium">
+                {projectProgress?.stage === "deleting" && "Удаление старых данных..."}
+                {projectProgress?.stage === "saving" && (
+                  <>
+                    Загрузка: {projectProgress.current}/{projectProgress.total}
+                    {projectProgress.tags_generated !== undefined && projectProgress.tags_generated > 0 && (
+                      <span className="ml-2 text-blue-600">
+                        (тегов сгенерировано: {projectProgress.tags_generated})
+                      </span>
+                    )}
+                  </>
+                )}
+                {!projectProgress?.stage && "Обработка..."}
+              </p>
+              <div className="mt-2 w-full bg-blue-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: projectProgress?.total
+                      ? `${(projectProgress.current / projectProgress.total) * 100}%`
+                      : "0%",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <FileUpload
             accept=".csv,.json"
             onFileSelect={setProjectFile}
             label="Перетащите CSV или JSON файл с проектами"
+            disabled={!!isProjectJobRunning}
           />
 
           <Button
             onClick={handleProjectUpload}
-            disabled={!projectFile || projectMutation.isPending}
+            disabled={!projectFile || projectMutation.isPending || !!isProjectJobRunning}
           >
-            {projectMutation.isPending ? "Загрузка..." : projectCount > 0 ? "Заменить" : "Загрузить"}
+            {isProjectJobRunning
+              ? "Загрузка..."
+              : projectMutation.isPending
+              ? "Запуск..."
+              : projectCount > 0
+              ? "Заменить"
+              : "Загрузить"}
           </Button>
 
           {projectConflict && (
@@ -211,12 +292,9 @@ export function DataImport() {
             </Card>
           )}
 
-          {projectMutation.isError && !projectConflict && (
+          {(projectMutation.isError || projectError) && !projectConflict && (
             <p className="text-sm text-red-500">
-              Ошибка загрузки:{" "}
-              {projectMutation.error instanceof Error
-                ? projectMutation.error.message
-                : "Неизвестная ошибка"}
+              Ошибка загрузки: {projectError || (projectMutation.error instanceof Error ? projectMutation.error.message : "Неизвестная ошибка")}
             </p>
           )}
 
@@ -251,9 +329,9 @@ export function DataImport() {
           )}
 
           <FileUpload
-            accept=".json"
+            accept=".csv,.json"
             onFileSelect={setExpertFile}
-            label="Перетащите JSON файл с экспертами"
+            label="Перетащите CSV или JSON файл с экспертами"
           />
 
           <Button

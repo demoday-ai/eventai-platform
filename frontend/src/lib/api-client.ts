@@ -740,13 +740,32 @@ export const getProjects = async (params?: ProjectsListParams): Promise<ProjectL
 
 // --- Project Upload ---
 
-export const uploadProjects = async (file: File, replace: boolean): Promise<UploadResult> => {
+export interface UploadJobResponse {
+  job_id: string
+  status: "pending" | "running" | "completed" | "failed"
+  total?: number
+  progress?: {
+    stage: string
+    current: number
+    total: number
+    tags_generated?: number
+  }
+  result?: UploadResult
+  error?: string
+}
+
+export const uploadProjects = async (file: File, replace: boolean): Promise<UploadJobResponse> => {
   const formData = new FormData()
   formData.append("file", file)
-  const { data } = await apiClient.post<UploadResult>("/projects/upload", formData, {
+  const { data } = await apiClient.post<UploadJobResponse>("/projects/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     params: { replace },
   })
+  return data
+}
+
+export const getUploadJobStatus = async (jobId: string): Promise<UploadJobResponse> => {
+  const { data } = await apiClient.get<UploadJobResponse>(`/projects/upload/job/${jobId}`)
   return data
 }
 

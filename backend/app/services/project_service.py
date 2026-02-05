@@ -20,7 +20,7 @@ from app.services import profiling_service
 
 logger = logging.getLogger(__name__)
 
-REQUIRED_FIELDS = {"title", "description", "tags", "author", "telegram_contact"}
+REQUIRED_FIELDS = {"title", "description", "author", "telegram_contact"}
 DEFAULT_TAGS = [
     "NLP",
     "CV",
@@ -130,15 +130,21 @@ async def save_projects(
     session: AsyncSession,
     event_id: uuid.UUID,
     rows: list[ProjectUploadRow],
-) -> int:
-    """Bulk insert projects with tag resolution. Returns count loaded."""
+    progress_callback: callable | None = None,
+) -> dict:
+    """Bulk insert projects with tag resolution. Returns stats dict."""
     tag_cache: dict[str, Tag] = {}
     loaded = 0
+    tags_generated = 0
+    total = len(rows)
     candidate_tags = await _get_candidate_tags(session)
 
-    for row in rows:
+    for i, row in enumerate(rows):
         tag_names = _parse_tags(row.tags) if row.tags else []
+        generated_tags = False
+
         if not tag_names:
+            generated_tags = True
             raw_text = f"{row.title}\n{row.description}"
             tag_names = _match_tags_heuristic(raw_text, candidate_tags)
 
@@ -183,9 +189,20 @@ async def save_projects(
                 session.add(pt)
 
         loaded += 1
+        if generated_tags:
+            tags_generated += 1
+
+        # Report progress every 10 items or at the end
+        if progress_callback and (loaded % 10 == 0 or loaded == total):
+            progress_callback({
+                "stage": "saving",
+                "current": loaded,
+                "total": total,
+                "tags_generated": tags_generated,
+            })
 
     await session.commit()
-    return loaded
+    return {"loaded": loaded, "tags_generated": tags_generated}
 
 
 async def get_projects(
