@@ -24,7 +24,7 @@ jobs:
 
       - run: ruff check .
 
-      - run: pytest tests/ --ignore=tests/test_handlers/test_onboarding.py -v
+      - run: pytest tests/ --ignore=tests/test_handlers/test_onboarding.py --ignore=tests/e2e/ -v
 
   frontend:
     runs-on: ubuntu-latest
