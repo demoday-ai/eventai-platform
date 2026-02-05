@@ -128,12 +128,12 @@ export function Notifications() {
       <h2 className="text-2xl font-bold">Уведомления</h2>
 
       {/* Tab buttons */}
-      <div className="flex gap-1 border-b pb-0">
+      <div className="flex gap-1 border-b pb-0 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
+            className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors whitespace-nowrap ${
               activeTab === tab
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted"
@@ -147,11 +147,11 @@ export function Notifications() {
       {/* Tab: Дашборд */}
       {activeTab === "Дашборд" && (
         <div className="space-y-4">
-          <div className="flex gap-4">
-            <div>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <label className="text-sm font-medium">Тип</label>
               <select
-                className="ml-2 rounded-md border px-2 py-1 text-sm"
+                className="rounded-md border px-2 py-1.5 text-sm"
                 value={dashType}
                 onChange={(e) => setDashType(e.target.value)}
               >
@@ -161,11 +161,11 @@ export function Notifications() {
                 <option value="invitation">Приглашения</option>
               </select>
             </div>
-            <div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <label className="text-sm font-medium">День</label>
               <Input
                 type="date"
-                className="ml-2 inline-block w-auto"
+                className="w-full sm:w-auto"
                 value={dashDay}
                 onChange={(e) => setDashDay(e.target.value)}
               />
@@ -175,7 +175,7 @@ export function Notifications() {
           {dashError && <p className="text-sm text-red-500">Ошибка загрузки дашборда</p>}
           {dashboard && (
             <>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{dashboard.summary.total}</div>

@@ -135,6 +135,7 @@ export function Clustering() {
             <Button
               onClick={() => runMutation.mutate()}
               disabled={runMutation.isPending}
+              className="w-full sm:w-auto"
             >
               {runMutation.isPending ? "Кластеризация..." : "Запустить"}
             </Button>
@@ -151,10 +152,11 @@ export function Clustering() {
       {currentStep === 1 && clusteringResult && (
         <div className="space-y-4">
           <RoomsGrid rooms={clusteringResult.rooms} />
-          <div className="flex gap-2">
-            <Button onClick={() => setCurrentStep(2)}>Далее</Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setCurrentStep(0)
               }}
@@ -171,7 +173,7 @@ export function Clustering() {
           <p className="text-sm text-muted-foreground">
             Нажмите &quot;Переместить&quot; рядом с проектом, чтобы перенести его в другой зал.
           </p>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {clusteringResult.rooms.map((room) => (
               <Card key={room.id}>
                 <CardHeader>
@@ -246,9 +248,9 @@ export function Clustering() {
             </Card>
           )}
 
-          <div className="flex gap-2">
-            <Button onClick={() => setCurrentStep(3)}>Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setCurrentStep(3)} className="w-full sm:w-auto">Далее</Button>
+            <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
               Назад
             </Button>
           </div>
@@ -273,14 +275,15 @@ export function Clustering() {
                   Кластеризация одобрена
                 </p>
               ) : (
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button
                     onClick={() => approveMutation.mutate(clusteringResult.id)}
                     disabled={approveMutation.isPending}
+                    className="w-full sm:w-auto"
                   >
                     {approveMutation.isPending ? "Одобрение..." : "Одобрить"}
                   </Button>
-                  <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                  <Button variant="outline" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
                     Назад
                   </Button>
                 </div>
@@ -299,7 +302,7 @@ export function Clustering() {
 
 function RoomsGrid({ rooms }: { rooms: ClusteringRoom[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       {rooms.map((room) => (
         <Card key={room.id}>
           <CardHeader>

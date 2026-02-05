@@ -89,7 +89,7 @@ export function Dashboard() {
           )}
 
           {/* Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <MetricCard
               title="Студенты"
               value={isLoading ? "—" : data?.students.total.toString() || "0"}
@@ -152,7 +152,12 @@ export function Dashboard() {
                   Загрузка...
                 </div>
               ) : (
-                <CoverageTable data={coverageData || []} />
+                <>
+                  <p className="text-xs text-muted-foreground mb-2 md:hidden">
+                    Проведите для прокрутки →
+                  </p>
+                  <CoverageTable data={coverageData || []} />
+                </>
               )}
             </CardContent>
           </Card>
@@ -176,14 +181,14 @@ function MetricCard({
   if (loading) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-3 md:pt-6 md:p-6">
           <div className="flex items-start justify-between">
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-16" />
-              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-4 w-20 md:w-24" />
+              <Skeleton className="h-8 md:h-10 w-12 md:w-16" />
+              <Skeleton className="h-3 w-24 md:w-32" />
             </div>
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-6 w-6 md:h-8 md:w-8 rounded-full" />
           </div>
         </CardContent>
       </Card>
@@ -192,14 +197,14 @@ function MetricCard({
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="p-3 md:pt-6 md:p-6">
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold mt-1">{value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs md:text-sm text-muted-foreground">{title}</p>
+            <p className="text-2xl md:text-3xl font-bold mt-1">{value}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
           </div>
-          <span className="text-2xl">{icon}</span>
+          <span className="text-xl md:text-2xl">{icon}</span>
         </div>
       </CardContent>
     </Card>
