@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import check_organizer
+from app.api.deps import check_organizer, get_current_user
 from app.config import settings
 from app.database import get_session
 from app.models import User
@@ -192,7 +192,7 @@ async def get_projects(
     status: str | None = None,
     search: str | None = None,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Get list of all projects with optional filters."""
 
@@ -255,7 +255,7 @@ async def upload_guests(
     default_subtype: str = Query(...),
     confirm_replace: bool = Query(False),
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
     """Bulk import guests from CSV or JSON file."""
 

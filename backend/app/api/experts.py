@@ -54,7 +54,7 @@ async def upload_experts(
     file: UploadFile = File(...),
     confirm_replace: bool = Query(False),
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(check_organizer),
+    current_user: User = Depends(get_current_user),
 ):
 
 
