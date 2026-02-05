@@ -105,7 +105,7 @@
 
     .team-row { display: flex; justify-content: center; gap: 14px; margin-top: 10px; }
     .team-card { background: var(--surface); border-radius: 10px; padding: 8px; text-align: center; width: 120px; }
-    .team-card img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 4px; }
+    .team-card img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; margin-bottom: 4px; }
     .team-card img.dima { object-position: center 20%; }
     .team-card img.nastya { object-position: center 15%; }
     .team-card img.ivan { object-position: center 25%; }
@@ -113,7 +113,7 @@
     .team-card .role { font-size: 0.45em; color: var(--text-muted); }
     .team-card.ai-card { border: 1px solid var(--accent); }
     .team-card.ai-card .avatar {
-      width: 70px; height: 70px; border-radius: 50%;
+      width: 56px; height: 56px; border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), var(--accent-light));
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 4px; font-size: 1.8em;
@@ -162,28 +162,28 @@
       <!-- Slide 1: Title + One-liner -->
       <section data-background-color="#212121">
         <div class="tag">AI Product Camp 2026 · Команда ЯСНОПОНЯТНО</div>
-        <h1>
+        <h1 style="margin-bottom:0.1em;">
           <img src="bot/compass-01-minimal.svg" alt="" style="height:1.1em; vertical-align:middle; margin-right:0.1em;">
           Event<span class="accent">AI</span>
         </h1>
-        <p class="oneliner">
-          AI-платформа для <span class="accent">организаторов конференций</span>:<br>
-          бот + админка, которые автоматизируют расписание<br>
+        <p class="oneliner" style="font-size:1em; margin:0.2em 0;">
+          AI-платформа для <span class="accent">организаторов конференций</span>:
+          бот + админка, которые автоматизируют расписание
           и дают каждому гостю персональную программу <span class="accent-light">за минуту</span>
         </p>
-        <div class="qr-row" style="margin-top: 12px;">
+        <div class="qr-row" style="margin-top:8px;">
           <div class="qr-item">
-            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:110px; height:110px;">
+            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:80px; height:80px;">
             <div class="qr-label">Telegram-бот</div>
           </div>
           <div class="qr-item">
-            <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:110px; height:110px;">
+            <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:80px; height:80px;">
             <div class="qr-label">Лендинг</div>
           </div>
         </div>
-        <div class="logos-bar">
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;opacity:0.4;">
           <img src="ai-talent-hub-logo.svg" alt="AI Talent Hub" class="itmo-logo" style="height:18px;">
-          <img src="claude-logo.png" alt="Claude" style="height:22px;opacity:0.4;">
+          <img src="claude-logo.png" alt="Claude" style="height:20px;">
         </div>
       </section>
 
@@ -427,38 +427,34 @@
       <!-- Slide 9: Экономика -->
       <section data-background-color="#212121">
         <div class="tag">Экономика</div>
-        <h2>Кто платит и за что</h2>
-        <div class="two-col">
+        <h2 style="margin-bottom:0.2em;">Кто платит и за что</h2>
+        <div class="two-col" style="gap:14px;">
           <div style="text-align:left;">
-            <p class="smaller muted" style="margin-bottom:4px;">Модель: B2B</p>
-            <ul class="list-check">
-              <li><strong>B2B</strong> — организаторы платят за событие</li>
+            <p class="tiny muted" style="margin-bottom:3px;"><strong>Модель: B2B SaaS</strong></p>
+            <ul class="list-check" style="font-size:0.6em;">
+              <li>Организаторы платят за событие</li>
               <li>От <span class="accent">100 000 &#8381;</span> за мероприятие</li>
-              <li>Cost на событие: ~3-5K &#8381;</li>
-              <li>Маржа: <span class="accent">>90%</span></li>
+              <li>Cost: ~3-5K &#8381; · Маржа: <span class="accent">>90%</span></li>
             </ul>
           </div>
           <div style="text-align:left;">
-            <p class="smaller muted" style="margin-bottom:4px;">Размер рынка</p>
-            <div class="tam-bar">
-              <span class="bar-label accent">TAM</span>
+            <p class="tiny muted" style="margin-bottom:3px;"><strong>Размер рынка (500+ IT-конф./год)</strong></p>
+            <div class="tam-bar" style="padding:4px 8px;margin:3px 0;">
+              <span class="bar-label accent" style="font-size:0.55em;">TAM</span>
               <div class="bar-fill" style="width:100%;background:var(--accent);"></div>
-              <span class="bar-value">500 × 100K = <strong>50M&#8381;/год</strong></span>
+              <span class="bar-value" style="font-size:0.5em;">500 × 100K = <strong>50M&#8381;</strong></span>
             </div>
-            <div class="tam-bar">
-              <span class="bar-label accent-light">SAM</span>
+            <div class="tam-bar" style="padding:4px 8px;margin:3px 0;">
+              <span class="bar-label accent-light" style="font-size:0.55em;">SAM</span>
               <div class="bar-fill" style="width:40%;background:var(--accent-light);"></div>
-              <span class="bar-value">100 событий = <strong>10M&#8381;</strong></span>
+              <span class="bar-value" style="font-size:0.5em;">100 событий = <strong>10M&#8381;</strong></span>
             </div>
-            <div class="tam-bar">
-              <span class="bar-label amber">SOM</span>
+            <div class="tam-bar" style="padding:4px 8px;margin:3px 0;">
+              <span class="bar-label amber" style="font-size:0.55em;">SOM</span>
               <div class="bar-fill" style="width:10%;background:var(--amber);"></div>
-              <span class="bar-value">10% SAM = <strong>5M&#8381; на старте</strong></span>
+              <span class="bar-value" style="font-size:0.5em;">10% = <strong>5M&#8381; на старте</strong></span>
             </div>
           </div>
-        </div>
-        <div class="highlight-box tiny" style="margin-top:6px;">
-          <strong>500+ IT-конференций/год.</strong> 10% — наши клиенты = 50 событий × 100K&#8381; = <span class="accent">5M&#8381;/год</span>
         </div>
       </section>
 
@@ -490,15 +486,12 @@
             <div class="role">AI-ассистент</div>
           </div>
         </div>
-        <div class="highlight-box tiny" style="margin-top:10px;">
-          <strong>Agentic-процесс:</strong> Claude Code в чате команды → код, тесты, документация, деплой.
-          <span class="accent">100%</span> кода написано с AI.
-        </div>
-        <div class="highlight-box tiny" style="margin-top:4px; border-color:var(--accent-light);">
-          <strong class="accent-light">Ускорение:</strong>
-          Фича от идеи до деплоя за <span class="accent">2 часа</span> ·
-          <span class="accent">153 теста</span> автоматически ·
-          Параллельные Claude-сессии
+        <div class="highlight-box tiny" style="margin-top:8px;">
+          <strong>Agentic-процесс:</strong> Claude Code в чате команды → код, тесты, деплой.
+          <span class="accent">100%</span> кода с AI ·
+          Фича за <span class="accent">2 часа</span> ·
+          <span class="accent">153 теста</span> авто ·
+          Параллельные сессии
         </div>
       </section>
 
