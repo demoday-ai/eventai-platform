@@ -1234,4 +1234,6 @@ def get_profiling_handler() -> ConversationHandler:
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         per_message=False,
+        name="profiling",
+        persistent=True,
     )

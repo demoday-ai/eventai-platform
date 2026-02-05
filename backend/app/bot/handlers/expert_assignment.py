@@ -880,4 +880,6 @@ def get_expert_assignment_handler() -> ConversationHandler:
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        name="expert_assignment",
+        persistent=True,
     )
