@@ -3,8 +3,6 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 from app.bot.handlers.briefing import get_briefing_handlers
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
-# NOTE: follow-up/contact features temporarily disabled (not ready for production)
-# from app.bot.handlers.contact import get_contact_handlers
 from app.bot.handlers.coverage import (
     coverage_back_callback,
     coverage_command,
