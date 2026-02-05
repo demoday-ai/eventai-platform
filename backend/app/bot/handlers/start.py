@@ -261,7 +261,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
             has_profile = bool(profile.selected_tags)
 
-    logger.info("start: user=%s tg_id=%s has_role=%s has_profile=%s", full_name, telegram_user_id, role is not None, has_profile)
+    logger.info(
+        "start: user=%s tg_id=%s has_role=%s has_profile=%s",
+        full_name,
+        telegram_user_id,
+        role is not None,
+        has_profile,
+    )
 
     # Returning user with profile → direct to agent mode
     if role and has_profile and profile:
@@ -763,8 +769,6 @@ async def confirm_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Run recommendation generation and display results (from callback)."""
-    query = update.callback_query
-
     # Show typing indicator
     await context.bot.send_chat_action(
         chat_id=update.effective_chat.id, action=ChatAction.TYPING
@@ -1398,7 +1402,10 @@ async def _show_rebuild_confirmation(
     if is_message:
         await update.message.reply_text(text, reply_markup=confirm_nl_profile_keyboard(prefix="reb_nlconf"))
     else:
-        await update.callback_query.edit_message_text(text, reply_markup=confirm_nl_profile_keyboard(prefix="reb_nlconf"))
+        await update.callback_query.edit_message_text(
+            text,
+            reply_markup=confirm_nl_profile_keyboard(prefix="reb_nlconf"),
+        )
 
     return NL_REBUILD_CONFIRM
 
