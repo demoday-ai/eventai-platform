@@ -2,7 +2,7 @@
   <a href="https://ai.itmo.ru"><strong>AI Talent Hub</strong></a> ×
   <a href="https://itmo.ru"><strong>ИТМО</strong></a>
   <br>
-  <sub>AI Talent Camp 2026 · Проект #10</sub>
+  <sub>AI Talent Camp 2026 · Проект #12</sub>
 </p>
 
 <p align="center">
