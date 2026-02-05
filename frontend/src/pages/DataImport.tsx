@@ -291,11 +291,19 @@ export function DataImport() {
           )}
 
           <FileUpload
-            accept=".csv,.json"
+            accept=".csv,.json,.xlsx"
             onFileSelect={setProjectFile}
-            label="Перетащите CSV или JSON файл с проектами"
+            label="Перетащите CSV, JSON или XLSX файл с проектами"
             disabled={!!isProjectJobRunning}
           />
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer hover:text-foreground">Формат файла</summary>
+            <div className="mt-1 pl-3 space-y-1">
+              <p><strong>Обязательные поля:</strong> <code>title</code> (мин. 3 символа), <code>description</code> (макс. 2000), <code>author</code></p>
+              <p><strong>Необязательные:</strong> <code>telegram_contact</code>, <code>tags</code></p>
+              <p><strong>Алиасы:</strong> <code>название</code>/<code>проект</code> = title, <code>описание</code> = description, <code>автор</code>/<code>команда</code> = author, <code>теги</code>/<code>технологии</code> = tags</p>
+            </div>
+          </details>
 
           <Button
             onClick={handleProjectUpload}
@@ -353,10 +361,17 @@ export function DataImport() {
         </CardHeader>
         <CardContent className="space-y-4">
           <FileUpload
-            accept=".csv,.json"
+            accept=".csv,.json,.xlsx"
             onFileSelect={setExpertFile}
-            label="Перетащите CSV или JSON файл с экспертами"
+            label="Перетащите CSV, JSON или XLSX файл с экспертами"
           />
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer hover:text-foreground">Формат файла</summary>
+            <div className="mt-1 pl-3 space-y-1">
+              <p><strong>Обязательные поля:</strong> <code>id</code>, <code>name</code></p>
+              <p><strong>Необязательные:</strong> <code>telegram</code>, <code>position</code>, <code>expertise_tags</code></p>
+            </div>
+          </details>
 
           <Button
             onClick={handleExpertUpload}
@@ -431,10 +446,17 @@ export function DataImport() {
           </div>
 
           <FileUpload
-            accept=".csv,.json"
+            accept=".csv,.json,.xlsx"
             onFileSelect={setGuestFile}
-            label="Перетащите CSV или JSON файл с гостями"
+            label="Перетащите CSV, JSON или XLSX файл с гостями"
           />
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer hover:text-foreground">Формат файла</summary>
+            <div className="mt-1 pl-3 space-y-1">
+              <p><strong>Обязательные поля:</strong> <code>name</code></p>
+              <p><strong>Необязательные:</strong> <code>telegram</code></p>
+            </div>
+          </details>
 
           <Button
             onClick={handleGuestUpload}

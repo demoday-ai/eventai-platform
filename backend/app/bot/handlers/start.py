@@ -67,26 +67,36 @@ logger = logging.getLogger(__name__)
     NL_REBUILD_CONFIRM,   # 9 - Rebuild confirmation (from profiling)
 ) = range(10)
 
-# DB tag name → button display label (keys must match tags table)
-TOPIC_LABELS = {
-    "NLP": "NLP",
-    "CV": "CV",
-    "LLM": "LLM",
-    "Agents": "Агенты",
+# Fallback topic labels when DB is unavailable
+_FALLBACK_TOPIC_LABELS: dict[str, str] = {
     "EdTech": "EdTech",
-    "FinTech": "FinTech",
     "MedTech": "MedTech",
+    "Wellness": "Wellness",
+    "Agents": "Agents",
+    "NLP": "NLP",
+    "RAG": "RAG",
+    "LLM": "LLM",
+    "Retail": "Retail",
+    "FinTech": "FinTech",
+    "DevTools": "DevTools",
+    "Analytics": "Analytics",
+    "Media": "Media",
+    "CV": "CV",
+    "HR": "HR",
     "Security": "Security",
-    "ASR": "ASR",
-    "TTS": "TTS",
-    "Audio": "Audio",
     "Industrial": "Industrial",
-    "MLOps": "MLOps",
-    "RL": "RL",
-    "RecSys": "RecSys",
-    "Science": "Science",
-    "TimeSeries": "TimeSeries",
 }
+
+
+async def _get_topics() -> list[tuple[str, str]]:
+    """Fetch topic tags from DB, falling back to _FALLBACK_TOPIC_LABELS."""
+    try:
+        from app.services import project_service
+        async with async_session() as session:
+            return await project_service.get_topic_tags_for_buttons(session)
+    except Exception:
+        logger.debug("_get_topics: DB unavailable, using fallback")
+        return list(_FALLBACK_TOPIC_LABELS.items())
 
 MAX_MESSAGE_LEN = 4096
 
@@ -318,7 +328,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             f"С возвращением, {full_name}! Давайте продолжим подбор программы.\n\n"
             f"Расскажите, что вас интересует на Demo Day?\n"
             f"Напишите свободным текстом или выберите темы кнопками:",
-            reply_markup=nl_topic_buttons(prefix="onb_nl"),
+            reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
         )
         return ONBOARD_NL_PROFILE
 
@@ -382,7 +392,7 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         "это займёт буквально пару минут.\n\n"
         "Расскажите, что вас интересует на Demo Day?\n"
         "Напишите свободным текстом или выберите темы кнопками:",
-        reply_markup=nl_topic_buttons(prefix="onb_nl"),
+        reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
     )
     return ONBOARD_NL_PROFILE
 
@@ -434,7 +444,7 @@ async def subtype_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"проекты под тебя — это займёт буквально пару минут.\n\n"
         f"Расскажи, что тебе интересно на Demo Day?\n"
         f"Напиши свободным текстом или выбери темы кнопками:",
-        reply_markup=nl_topic_buttons(prefix="onb_nl"),
+        reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
     )
     return ONBOARD_NL_PROFILE
 
@@ -472,7 +482,7 @@ async def enter_subtype_handler(update: Update, context: ContextTypes.DEFAULT_TY
         f"проекты под вас — это займёт буквально пару минут.\n\n"
         f"Расскажите, что вас интересует на Demo Day?\n"
         f"Напишите свободным текстом или выберите темы кнопками:",
-        reply_markup=nl_topic_buttons(prefix="onb_nl"),
+        reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
     )
     return ONBOARD_NL_PROFILE
 
@@ -497,11 +507,12 @@ def _add_to_conversation(
     return conv
 
 
-def _onb_nl_topic_buttons_with_selection(selected: set[str]):
+async def _onb_nl_topic_buttons_with_selection(selected: set[str]):
     """Rebuild NL topic buttons with checkmarks for selected topics (onboarding)."""
+    topics = await _get_topics()
     buttons = []
     row = []
-    for tag_key, display in TOPIC_LABELS.items():
+    for tag_key, display in topics:
         prefix = "✓ " if tag_key in selected else ""
         row.append(InlineKeyboardButton(
             f"{prefix}{display}", callback_data=f"onb_nl:topic:{tag_key}",
@@ -528,12 +539,12 @@ async def onb_nl_topic_callback(update: Update, context: ContextTypes.DEFAULT_TY
         if not topics and not _get_conversation(context):
             await query.edit_message_text(
                 "Укажите хотя бы одну тему или напишите текстом, что вас интересует.",
-                reply_markup=nl_topic_buttons(prefix="onb_nl"),
+                reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
             )
             return ONBOARD_NL_PROFILE
 
         if topics:
-            display_labels = [TOPIC_LABELS.get(t, t) for t in topics]
+            display_labels = [_FALLBACK_TOPIC_LABELS.get(t, t) for t in topics]
             topic_msg = f"Меня интересуют темы: {', '.join(display_labels)}"
             conv = _add_to_conversation(context, "user", topic_msg)
         else:
@@ -552,7 +563,7 @@ async def onb_nl_topic_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     # Rebuild keyboard with checkmarks
     await query.edit_message_reply_markup(
-        reply_markup=_onb_nl_topic_buttons_with_selection(topics)
+        reply_markup=await _onb_nl_topic_buttons_with_selection(topics)
     )
     return ONBOARD_NL_PROFILE
 
@@ -718,7 +729,7 @@ async def onb_confirm_profile_callback(update: Update, context: ContextTypes.DEF
             "Давайте попробуем заново.\n\n"
             "Расскажите, что вас интересует на Demo Day?\n"
             "Напишите свободным текстом или выберите темы кнопками:",
-            reply_markup=nl_topic_buttons(prefix="onb_nl"),
+            reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
         )
         return ONBOARD_NL_PROFILE
 
@@ -800,7 +811,7 @@ async def confirm_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text(
             "Продолжаем! Расскажите, что вас интересует, "
             "или выберите темы кнопками:",
-            reply_markup=nl_topic_buttons(prefix="onb_nl"),
+            reply_markup=nl_topic_buttons(prefix="onb_nl", topics=await _get_topics()),
         )
         return ONBOARD_NL_PROFILE
 
@@ -1805,7 +1816,7 @@ async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TY
         "Пересобираем профиль.\n\n"
         "Что вас интересует на Demo Day?\n"
         "Напишите текстом или выберите темы:",
-        reply_markup=nl_topic_buttons(prefix="reb_nl"),
+        reply_markup=nl_topic_buttons(prefix="reb_nl", topics=await _get_topics()),
     )
 
     return NL_REBUILD
@@ -1839,17 +1850,18 @@ async def _restart_nl_profiling_from_callback(update: Update, context: ContextTy
         "Пересобираем профиль.\n\n"
         "Что вас интересует на Demo Day?\n"
         "Напишите текстом или выберите темы:",
-        reply_markup=nl_topic_buttons(prefix="reb_nl"),
+        reply_markup=nl_topic_buttons(prefix="reb_nl", topics=await _get_topics()),
     )
 
     return NL_REBUILD
 
 
-def _reb_nl_topic_buttons_with_selection(selected: set[str]):
+async def _reb_nl_topic_buttons_with_selection(selected: set[str]):
     """Rebuild NL topic buttons with checkmarks (rebuild mode)."""
+    topics = await _get_topics()
     buttons = []
     row = []
-    for tag_key, display in TOPIC_LABELS.items():
+    for tag_key, display in topics:
         prefix = "✓ " if tag_key in selected else ""
         row.append(InlineKeyboardButton(
             f"{prefix}{display}", callback_data=f"reb_nl:topic:{tag_key}",
@@ -1877,12 +1889,12 @@ async def nl_rebuild_topic_callback(update: Update, context: ContextTypes.DEFAUL
         if not topics and not conv:
             await query.edit_message_text(
                 "Укажите хотя бы одну тему или напишите, что вас интересует.",
-                reply_markup=nl_topic_buttons(prefix="reb_nl"),
+                reply_markup=nl_topic_buttons(prefix="reb_nl", topics=await _get_topics()),
             )
             return NL_REBUILD
 
         if topics:
-            display_labels = [TOPIC_LABELS.get(t, t) for t in topics]
+            display_labels = [_FALLBACK_TOPIC_LABELS.get(t, t) for t in topics]
             topic_msg = f"Меня интересуют: {', '.join(display_labels)}"
             conv.append({"role": "user", "content": topic_msg})
             context.user_data["rebuild_conversation"] = conv
@@ -1899,7 +1911,7 @@ async def nl_rebuild_topic_callback(update: Update, context: ContextTypes.DEFAUL
     context.user_data["rebuild_topics"] = topics
 
     await query.edit_message_reply_markup(
-        reply_markup=_reb_nl_topic_buttons_with_selection(topics)
+        reply_markup=await _reb_nl_topic_buttons_with_selection(topics)
     )
     return NL_REBUILD
 
@@ -1951,10 +1963,11 @@ async def _rebuild_agent_turn(
     conversation.append({"role": "assistant", "content": reply_text})
     context.user_data["rebuild_conversation"] = conversation
 
+    reb_kb = nl_topic_buttons(prefix="reb_nl", topics=await _get_topics())
     if is_message:
-        await update.message.reply_text(reply_text, reply_markup=nl_topic_buttons(prefix="reb_nl"))
+        await update.message.reply_text(reply_text, reply_markup=reb_kb)
     else:
-        await update.callback_query.edit_message_text(reply_text, reply_markup=nl_topic_buttons(prefix="reb_nl"))
+        await update.callback_query.edit_message_text(reply_text, reply_markup=reb_kb)
 
     return NL_REBUILD
 
@@ -2013,7 +2026,7 @@ async def nl_rebuild_confirm_callback(update: Update, context: ContextTypes.DEFA
         context.user_data["rebuild_conversation"] = []
         await query.edit_message_text(
             "Давайте заново.\n\nЧто вас интересует на Demo Day?",
-            reply_markup=nl_topic_buttons(prefix="reb_nl"),
+            reply_markup=nl_topic_buttons(prefix="reb_nl", topics=await _get_topics()),
         )
         return NL_REBUILD
 

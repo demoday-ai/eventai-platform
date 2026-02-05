@@ -23,22 +23,22 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = {"title", "description", "author"}
 DEFAULT_TAGS = [
-    # Технологии
-    "LLM",
-    "Agents",
-    "RAG",
-    "Voice",
-    "CV",
-    "RecSys",
-    # Области
-    "HealthTech",
-    "HR",
     "EdTech",
+    "MedTech",
+    "Wellness",
+    "Agents",
+    "NLP",
+    "RAG",
+    "LLM",
     "Retail",
+    "FinTech",
+    "DevTools",
     "Analytics",
-    "SocialMedia",
-    "Documents",
-    "Automation",
+    "Media",
+    "CV",
+    "HR",
+    "Security",
+    "Industrial",
 ]
 
 
@@ -63,6 +63,18 @@ async def _get_candidate_tags(session: AsyncSession) -> list[str]:
     result = await session.execute(select(Tag.name).order_by(Tag.name))
     tags = [row[0] for row in result.all()]
     return tags or DEFAULT_TAGS.copy()
+
+
+async def get_topic_tags_for_buttons(session: AsyncSession) -> list[tuple[str, str]]:
+    """Get tags from DB for topic selection buttons. Returns list of (tag_name, display_label).
+
+    Falls back to DEFAULT_TAGS when the tags table is empty.
+    """
+    result = await session.execute(select(Tag.name).order_by(Tag.name))
+    tags = [row[0] for row in result.all()]
+    if tags:
+        return [(t, t) for t in tags]
+    return [(t, t) for t in DEFAULT_TAGS]
 
 
 # Column name mappings (alternative names -> standard name)
@@ -115,6 +127,23 @@ def parse_json(content: bytes) -> list[dict]:
     """Parse JSON content (array of objects) with normalized column names."""
     data = json.loads(content.decode("utf-8-sig"))
     return [_normalize_row(row) for row in data]
+
+
+def parse_xlsx(content: bytes) -> list[dict]:
+    """Parse XLSX content into list of row dicts with normalized column names."""
+    import openpyxl
+    wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    ws = wb.active
+    rows_iter = ws.iter_rows(values_only=True)
+    headers = [str(h).strip() if h else f"col_{i}" for i, h in enumerate(next(rows_iter))]
+    result = []
+    for row_values in rows_iter:
+        if all(v is None for v in row_values):
+            continue
+        row = {headers[i]: (str(v).strip() if v is not None else "") for i, v in enumerate(row_values)}
+        result.append(_normalize_row(row))
+    wb.close()
+    return result
 
 
 def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowError], list[str]]:

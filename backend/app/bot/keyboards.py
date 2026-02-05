@@ -28,32 +28,37 @@ def guest_subtype_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
-def nl_topic_buttons(prefix: str = "nl") -> InlineKeyboardMarkup:
-    """Quick-pick topic buttons for NL profiling — all seed tags.
+_DEFAULT_TOPICS: list[tuple[str, str]] = [
+    ("EdTech", "EdTech"),
+    ("MedTech", "MedTech"),
+    ("Wellness", "Wellness"),
+    ("Agents", "Agents"),
+    ("NLP", "NLP"),
+    ("RAG", "RAG"),
+    ("LLM", "LLM"),
+    ("Retail", "Retail"),
+    ("FinTech", "FinTech"),
+    ("DevTools", "DevTools"),
+    ("Analytics", "Analytics"),
+    ("Media", "Media"),
+    ("CV", "CV"),
+    ("HR", "HR"),
+    ("Security", "Security"),
+    ("Industrial", "Industrial"),
+]
+
+
+def nl_topic_buttons(
+    prefix: str = "nl", topics: list[tuple[str, str]] | None = None,
+) -> InlineKeyboardMarkup:
+    """Quick-pick topic buttons for NL profiling.
 
     Args:
         prefix: Callback data prefix. Use "onb_nl" for onboarding, "reb_nl" for rebuild.
+        topics: Optional list of (tag_key, display_label). Falls back to _DEFAULT_TOPICS.
     """
-    # (DB tag name, display label) — keys match tags table
-    topics = [
-        ("NLP", "NLP"),
-        ("CV", "CV"),
-        ("LLM", "LLM"),
-        ("Agents", "Агенты"),
-        ("EdTech", "EdTech"),
-        ("FinTech", "FinTech"),
-        ("MedTech", "MedTech"),
-        ("Security", "Security"),
-        ("ASR", "ASR"),
-        ("TTS", "TTS"),
-        ("Audio", "Audio"),
-        ("Industrial", "Industrial"),
-        ("MLOps", "MLOps"),
-        ("RL", "RL"),
-        ("RecSys", "RecSys"),
-        ("Science", "Science"),
-        ("TimeSeries", "TimeSeries"),
-    ]
+    if topics is None:
+        topics = _DEFAULT_TOPICS
     buttons = []
     row = []
     for tag_key, label in topics:

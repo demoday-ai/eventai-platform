@@ -73,10 +73,10 @@ async def upload_projects(
 
     # Check file format
     filename = (file.filename or "").lower()
-    if not filename.endswith((".csv", ".json")):
+    if not filename.endswith((".csv", ".json", ".xlsx")):
         raise HTTPException(
             status_code=400,
-            detail="Поддерживаемые форматы: CSV, JSON",
+            detail="Поддерживаемые форматы: CSV, JSON, XLSX",
         )
 
     content = await file.read()
@@ -87,6 +87,8 @@ async def upload_projects(
     try:
         if filename.endswith(".csv"):
             rows = project_service.parse_csv(content)
+        elif filename.endswith(".xlsx"):
+            rows = project_service.parse_xlsx(content)
         else:
             rows = project_service.parse_json(content)
     except Exception as e:

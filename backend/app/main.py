@@ -38,28 +38,20 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Failed to create tables (non-fatal)")
 
-    # Load seed data on startup
+    # Seed organizers from env on startup
     try:
         from app.database import async_session
-        from app.services import expert_service, seed_service, user_service
+        from app.services import user_service
 
         async with async_session() as session:
             event = await user_service.get_current_event(session)
             if event:
-                loaded = await seed_service.load_seed_projects(session, event.id)
-                if loaded:
-                    logger.info("Seed data loaded: %d projects", loaded)
-
-                expert_loaded = await expert_service.load_seed_experts(session, event.id)
-                if expert_loaded:
-                    logger.info("Expert seed loaded: %d experts", expert_loaded)
-
                 from app.services import organizer_service
                 org_seeded = await organizer_service.seed_from_env(session)
                 if org_seeded:
                     logger.info("Organizer seed loaded: %d organizers", org_seeded)
     except Exception:
-        logger.exception("Failed to load seed data (non-fatal)")
+        logger.exception("Failed to seed organizers (non-fatal)")
 
     if settings.bot_token:
         from app.bot.app import create_bot_app

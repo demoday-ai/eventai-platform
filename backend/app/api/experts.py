@@ -90,36 +90,52 @@ async def upload_experts(
     content = await file.read()
     filename = (file.filename or "").lower()
 
-    if not filename.endswith((".csv", ".json")):
-        raise HTTPException(status_code=400, detail="Поддерживаемые форматы: CSV, JSON")
+    if not filename.endswith((".csv", ".json", ".xlsx")):
+        raise HTTPException(status_code=400, detail="Поддерживаемые форматы: CSV, JSON, XLSX")
 
     file_hash = dedup_service.compute_file_hash(content)
     dup_info = await dedup_service.check_recent_duplicate(session, file_hash, "upload_experts")
+
+    def _parse_expert_row(row: dict) -> dict:
+        """Convert a raw row dict into the expected expert format."""
+        item = {
+            "id": row.get("id", ""),
+            "name": row.get("name", ""),
+            "telegram": row.get("telegram", ""),
+            "position": row.get("position", ""),
+            "inviter": row.get("inviter", ""),
+            "dd_status": row.get("dd_status", ""),
+        }
+        tags_str = row.get("expertise_tags", "") or row.get("tags", "")
+        if tags_str:
+            item["expertise_tags"] = [t.strip() for t in tags_str.split(",") if t.strip()]
+        else:
+            item["expertise_tags"] = []
+        return item
 
     if filename.endswith(".csv"):
         try:
             text = content.decode("utf-8-sig")
             reader = csv.DictReader(io.StringIO(text))
-            data = []
-            for row in reader:
-                # Convert CSV row to expected format
-                item = {
-                    "id": row.get("id", ""),
-                    "name": row.get("name", ""),
-                    "telegram": row.get("telegram", ""),
-                    "position": row.get("position", ""),
-                    "inviter": row.get("inviter", ""),
-                    "dd_status": row.get("dd_status", ""),
-                }
-                # Parse tags from comma-separated string
-                tags_str = row.get("expertise_tags", "") or row.get("tags", "")
-                if tags_str:
-                    item["expertise_tags"] = [t.strip() for t in tags_str.split(",") if t.strip()]
-                else:
-                    item["expertise_tags"] = []
-                data.append(item)
+            data = [_parse_expert_row(row) for row in reader]
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Ошибка парсинга CSV: {e}")
+    elif filename.endswith(".xlsx"):
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+            ws = wb.active
+            rows_iter = ws.iter_rows(values_only=True)
+            headers = [str(h).strip() if h else f"col_{i}" for i, h in enumerate(next(rows_iter))]
+            data = []
+            for row_values in rows_iter:
+                if all(v is None for v in row_values):
+                    continue
+                row = {headers[i]: (str(v).strip() if v is not None else "") for i, v in enumerate(row_values)}
+                data.append(_parse_expert_row(row))
+            wb.close()
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Ошибка парсинга XLSX: {e}")
     else:
         try:
             data = json.loads(content.decode("utf-8"))

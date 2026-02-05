@@ -345,8 +345,22 @@ async def upload_guests(
             rows = list(reader)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid CSV file")
+    elif filename.endswith(".xlsx"):
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+            ws = wb.active
+            rows_iter = ws.iter_rows(values_only=True)
+            headers = [str(h).strip() if h else f"col_{i}" for i, h in enumerate(next(rows_iter))]
+            for row_values in rows_iter:
+                if all(v is None for v in row_values):
+                    continue
+                rows.append({headers[i]: (str(v).strip() if v is not None else "") for i, v in enumerate(row_values)})
+            wb.close()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid XLSX file")
     else:
-        raise HTTPException(status_code=400, detail="Unsupported file format. Use .csv or .json")
+        raise HTTPException(status_code=400, detail="Unsupported file format. Use .csv, .json or .xlsx")
 
     # Process rows
     imported = 0
