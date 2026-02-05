@@ -262,9 +262,13 @@ def contact_button(project_id: UUID) -> InlineKeyboardButton:
 
 
 def get_contact_handlers() -> list:
-    """Return list of handlers for EPIC-010."""
+    """Return list of handlers for EPIC-010.
+
+    Note: contact:req: is handled inside the onboarding ConversationHandler
+    (VIEW_DETAIL state in start.py). Only approve/reject are standalone
+    because they are triggered by students who are NOT in the guest conversation.
+    """
     return [
-        CallbackQueryHandler(contact_request_callback, pattern=r"^contact:req:"),
         CallbackQueryHandler(contact_approve_callback, pattern=r"^contact:approve:"),
         CallbackQueryHandler(contact_reject_callback, pattern=r"^contact:reject:"),
     ]

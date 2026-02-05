@@ -26,6 +26,7 @@ from telegram.ext import (
     filters,
 )
 
+from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.models.business_profile import BusinessProfile
 from app.models.guest_profile import GuestProfile
@@ -89,14 +90,13 @@ async def questions_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not user:
             await update.message.reply_text(
-                "❌ Пользователь не найден. Начните с /start"
+                "Сначала пройдите регистрацию через /start"
             )
             return
 
         if not _is_guest_or_business(user):
             await update.message.reply_text(
-                "ℹ️ Команда /questions доступна только для гостей и бизнес-партнёров.\n"
-                "Эксперты формулируют вопросы самостоятельно."
+                "Команда /questions доступна только для гостей и бизнес-партнёров."
             )
             return
 
@@ -105,8 +105,8 @@ async def questions_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not projects:
             await update.message.reply_text(
-                "📋 У вас пока нет проектов в программе.\n"
-                "Пройдите профилирование командой /profile, чтобы получить персональную подборку."
+                "Сначала получите персональную программу через /start, "
+                "чтобы подготовить вопросы по проектам."
             )
             return
 
@@ -288,12 +288,14 @@ async def compare_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         if not user:
-            await update.message.reply_text("❌ Пользователь не найден. Начните с /start")
+            await update.message.reply_text(
+                "Сначала пройдите регистрацию через /start"
+            )
             return
 
         if not _is_guest_or_business(user):
             await update.message.reply_text(
-                "ℹ️ Команда /compare доступна только для гостей и бизнес-партнёров."
+                "Команда /compare доступна только для гостей и бизнес-партнёров."
             )
             return
 
@@ -301,8 +303,8 @@ async def compare_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if len(projects) < 2:
             await update.message.reply_text(
-                "📋 Недостаточно проектов для сравнения (нужно минимум 2).\n"
-                "Пройдите профилирование /profile"
+                "Для сравнения нужно минимум 2 проекта. "
+                "Сначала получите персональную программу через /start."
             )
             return
 
@@ -418,12 +420,19 @@ async def compare_done_callback(update: Update, context: ContextTypes.DEFAULT_TY
     # Store for adding criteria
     context.user_data["cmp_matrix"] = matrix
     context.user_data["cmp_criteria"] = criteria
+    context.user_data["cmp_project_ids"] = project_ids
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("➕ Добавить критерий", callback_data="cmp:add")],
     ])
 
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    # Matrix can exceed 4096 chars with many projects/criteria
+    await safe_send_long_message(
+        bot=context.bot,
+        chat_id=update.effective_chat.id,
+        text=text,
+        reply_markup=keyboard,
+    )
 
 
 async def add_criterion_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -437,7 +446,7 @@ async def add_criterion_callback(update: Update, context: ContextTypes.DEFAULT_T
 
 
 async def receive_criterion(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Receive custom criterion from user."""
+    """Receive custom criterion from user and auto-regenerate matrix."""
     criterion = update.message.text.strip()
     if not criterion:
         await update.message.reply_text("❌ Критерий не может быть пустым")
@@ -447,10 +456,51 @@ async def receive_criterion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     criteria.append(criterion)
     context.user_data["cmp_criteria"] = criteria
 
-    await update.message.reply_text(
-        f"✅ Критерий '{criterion}' добавлен.\n"
-        f"Для перегенерации матрицы используйте /compare заново."
+    # Auto-regenerate matrix with new criterion
+    selected = context.user_data.get("cmp_project_ids") or context.user_data.get("cmp_selected", set())
+    if not selected or len(selected) < 2:
+        await update.message.reply_text(
+            f"✅ Критерий '{criterion}' добавлен.\n"
+            f"Используйте /compare для генерации матрицы."
+        )
+        return ConversationHandler.END
+
+    await update.message.reply_text(f"✅ Критерий '{criterion}' добавлен. Обновляю матрицу...")
+
+    from app.worker.tasks import generate_comparison_matrix_task
+    from app.worker.utils import wait_for_task
+
+    async with async_session() as session:
+        user, _, business_profile = await _get_user_with_profiles(
+            session, update.effective_user.id
+        )
+        if not user:
+            await update.message.reply_text("❌ Ошибка: пользователь не найден")
+            return ConversationHandler.END
+
+        user_id = str(user.id)
+
+    project_ids = list(selected)
+    task = generate_comparison_matrix_task.delay(user_id, project_ids, criteria)
+    completed, matrix = await wait_for_task(task.id, timeout=25, poll_interval=0.5)
+
+    if not completed or matrix is None:
+        matrix = {"error": "Не удалось сгенерировать матрицу. Попробуйте позже."}
+
+    text = qa_service.format_matrix_text(matrix, criteria)
+    context.user_data["cmp_matrix"] = matrix
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ Добавить критерий", callback_data="cmp:add")],
+    ])
+
+    await safe_send_long_message(
+        bot=context.bot,
+        chat_id=update.effective_chat.id,
+        text=text,
+        reply_markup=keyboard,
     )
+
     return ConversationHandler.END
 
 

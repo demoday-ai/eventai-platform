@@ -16,6 +16,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
+from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.services import followup_service, user_service
 
@@ -37,7 +38,7 @@ async def followup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         if not user:
             await update.message.reply_text(
-                "❌ Вы не зарегистрированы. Используйте /start"
+                "Сначала пройдите регистрацию через /start"
             )
             return
 
@@ -45,14 +46,16 @@ async def followup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         profile = await user_service.get_guest_profile(session, user.id)
         if not profile:
             await update.message.reply_text(
-                "❌ Follow-up пакет доступен только для гостей.\n"
-                "Пройдите профилирование через /start"
+                "Сначала получите персональную программу через /start, "
+                "чтобы сформировать follow-up пакет."
             )
             return
 
         event = await user_service.get_current_event(session)
         if not event:
-            await update.message.reply_text("❌ Нет текущего события.")
+            await update.message.reply_text(
+                "Сейчас нет активных мероприятий."
+            )
             return
 
         # Get or generate package
@@ -61,12 +64,13 @@ async def followup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await session.commit()
 
-        # Format and send
+        # Format and send (may exceed 4096 chars with many projects)
         message = followup_service.format_package_message(package)
-        await update.message.reply_text(
-            message,
+        await safe_send_long_message(
+            bot=context.bot,
+            chat_id=update.effective_chat.id,
+            text=message,
             reply_markup=refresh_keyboard(),
-            parse_mode="Markdown",
         )
 
 
@@ -95,10 +99,12 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await session.commit()
 
         message = followup_service.format_package_message(package)
-        await query.edit_message_text(
-            message,
+        # Use safe_send for potentially long messages (edit can't split)
+        await safe_send_long_message(
+            bot=context.bot,
+            chat_id=update.effective_chat.id,
+            text=message,
             reply_markup=refresh_keyboard(),
-            parse_mode="Markdown",
         )
 
 

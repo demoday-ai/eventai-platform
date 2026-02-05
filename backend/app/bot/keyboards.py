@@ -545,7 +545,7 @@ def program_recommendation_keyboard(
     buttons = []
     for rec in page_recs:
         label = f"#{rec['rank']} {rec['title'][:35]}"
-        pid_short = rec["project_id"][:8]
+        pid_short = rec["project_id"][:12]
         buttons.append([InlineKeyboardButton(label, callback_data=f"pdetail:{pid_short}")])
 
     # Pagination
@@ -567,6 +567,29 @@ def program_recommendation_keyboard(
 def back_to_program_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+    ])
+
+
+def check_readiness_keyboard() -> InlineKeyboardMarkup:
+    """Inline button to check if recommendation generation is ready."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Проверить готовность", callback_data="prof:check_ready")],
+    ])
+
+
+def retry_generation_keyboard() -> InlineKeyboardMarkup:
+    """Inline button to retry failed recommendation generation."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Попробовать заново", callback_data="prof:retry_gen")],
+        [InlineKeyboardButton("Изменить профиль", callback_data="profile:update")],
+    ])
+
+
+def resume_or_restart_keyboard() -> InlineKeyboardMarkup:
+    """Ask user to resume current profiling or start over."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Продолжить", callback_data="prof:resume")],
+        [InlineKeyboardButton("Начать заново", callback_data="prof:restart")],
     ])
 
 

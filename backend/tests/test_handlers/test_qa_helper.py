@@ -187,9 +187,10 @@ async def test_qa_llm_fallback(mock_guest_user, mock_guest_profile, mock_project
         call_args = mock_update.message.reply_text.call_args
         text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
 
-        # Should mention no projects or suggest profiling
+        # Should mention profiling or /start
         assert (
             "нет" in text.lower() or
             "профил" in text.lower() or
-            "пока" in text.lower()
+            "пока" in text.lower() or
+            "/start" in text.lower()
         )

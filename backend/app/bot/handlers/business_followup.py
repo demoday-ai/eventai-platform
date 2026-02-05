@@ -23,6 +23,7 @@ from telegram.ext import (
     filters,
 )
 
+from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.models.business_followup import PipelineStatus
 from app.services import business_followup_service, user_service
@@ -33,10 +34,14 @@ logger = logging.getLogger(__name__)
 AWAITING_NOTES = 1
 
 
-def pipeline_keyboard(followups: list) -> InlineKeyboardMarkup:
-    """Create keyboard with pipeline projects."""
+def pipeline_keyboard(followups: list, page: int = 0, page_size: int = 8) -> InlineKeyboardMarkup:
+    """Create keyboard with paginated pipeline projects."""
+    start_idx = page * page_size
+    page_followups = followups[start_idx:start_idx + page_size]
+    total_pages = max(1, (len(followups) + page_size - 1) // page_size)
+
     buttons = []
-    for f in followups[:8]:
+    for f in page_followups:
         if f.project and len(f.project.title) > 25:
             title = f.project.title[:25] + ".."
         else:
@@ -45,6 +50,17 @@ def pipeline_keyboard(followups: list) -> InlineKeyboardMarkup:
             f"{f.status_emoji} {title}",
             callback_data=f"bf:proj:{f.id}"
         )])
+
+    # Pagination
+    if total_pages > 1:
+        nav = []
+        if page > 0:
+            nav.append(InlineKeyboardButton("◀", callback_data=f"bf:page:{page - 1}"))
+        nav.append(InlineKeyboardButton(f"{page + 1}/{total_pages}", callback_data="bf:noop"))
+        if page < total_pages - 1:
+            nav.append(InlineKeyboardButton("▶", callback_data=f"bf:page:{page + 1}"))
+        buttons.append(nav)
+
     buttons.append([InlineKeyboardButton("🔄 Обновить", callback_data="bf:refresh")])
     return InlineKeyboardMarkup(buttons)
 
@@ -74,7 +90,7 @@ async def bizfollowup_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         if not user:
             await update.message.reply_text(
-                "❌ Вы не зарегистрированы. Используйте /start"
+                "Сначала пройдите регистрацию через /start"
             )
             return
 
@@ -82,14 +98,16 @@ async def bizfollowup_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         profile = await business_followup_service.get_business_profile(session, user.id)
         if not profile:
             await update.message.reply_text(
-                "❌ Business Follow-up доступен только для бизнес-партнёров.\n"
-                "Пройдите бизнес-профилирование через /start"
+                "Сначала пройдите бизнес-профилирование через /start, "
+                "чтобы получить доступ к pipeline."
             )
             return
 
         event = await user_service.get_current_event(session)
         if not event:
-            await update.message.reply_text("❌ Нет текущего события.")
+            await update.message.reply_text(
+                "Сейчас нет активных мероприятий."
+            )
             return
 
         # Get or init pipeline
@@ -225,10 +243,12 @@ async def loi_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        await query.edit_message_text(
-            f"📝 *Letter of Intent*\n\n```\n{loi}\n```\n\n"
-            "_Скопируйте и отправьте команде проекта_",
-            parse_mode="Markdown",
+        # LOI can be long — use safe send
+        await safe_send_long_message(
+            bot=context.bot,
+            chat_id=update.effective_chat.id,
+            text=f"📝 *Letter of Intent*\n\n```\n{loi}\n```\n\n"
+                 "_Скопируйте и отправьте команде проекта_",
         )
 
 
@@ -304,6 +324,35 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await back_callback(update, context)
 
 
+async def page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle pipeline pagination."""
+    query = update.callback_query
+    await query.answer()
+
+    page = int(query.data.split(":")[-1])
+
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram(
+            session, str(query.from_user.id)
+        )
+        if not user:
+            await query.edit_message_text("❌ Пользователь не найден")
+            return
+
+        event = await user_service.get_current_event(session)
+        if not event:
+            await query.edit_message_text("❌ Нет текущего события")
+            return
+
+        followups = await business_followup_service.get_pipeline_projects(
+            session, user.id, event.id
+        )
+
+        await query.edit_message_reply_markup(
+            reply_markup=pipeline_keyboard(followups, page=page),
+        )
+
+
 def get_business_followup_handlers() -> list:
     """Return list of handlers for EPIC-015."""
     notes_conv = ConversationHandler(
@@ -325,5 +374,6 @@ def get_business_followup_handlers() -> list:
         CallbackQueryHandler(loi_callback, pattern=r"^bf:loi:"),
         CallbackQueryHandler(back_callback, pattern=r"^bf:back$"),
         CallbackQueryHandler(refresh_callback, pattern=r"^bf:refresh$"),
+        CallbackQueryHandler(page_callback, pattern=r"^bf:page:"),
         notes_conv,
     ]

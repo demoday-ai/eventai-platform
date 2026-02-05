@@ -30,11 +30,13 @@ from telegram.ext import (
 
 from app.bot.handlers.contact import contact_button, contact_request_callback
 from app.bot.keyboards import (
-    confirm_change_keyboard,
+    check_readiness_keyboard,
     confirm_nl_profile_keyboard,
     guest_subtype_keyboard,
     nl_topic_buttons,
     program_recommendation_keyboard,
+    resume_or_restart_keyboard,
+    retry_generation_keyboard,
     role_keyboard,
 )
 from app.database import async_session
@@ -118,10 +120,12 @@ def _truncate(text: str, limit: int) -> str:
 
 
 def _escape_markdown(text: str) -> str:
-    """Escape Markdown special characters."""
+    """Escape Markdown special characters (idempotent — won't double-escape)."""
     if not text:
         return ""
     for char in ['*', '_', '`', '[', ']', '(', ')']:
+        # Remove existing escapes first, then re-escape uniformly
+        text = text.replace('\\' + char, char)
         text = text.replace(char, '\\' + char)
     return text
 
@@ -237,6 +241,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         from app.bot.handlers.expert_assignment import handle_expert_start
         return await handle_expert_start(update, context)
 
+    # Fix 11: Check if user has active profiling session
+    nl_conversation = context.user_data.get("nl_conversation", [])
+    if nl_conversation:
+        await update.message.reply_text(
+            "Вы уже начали подбор программы. Продолжить или начать заново?",
+            reply_markup=resume_or_restart_keyboard(),
+        )
+        return CONFIRM_CHANGE
+
     tg_user = update.effective_user
     telegram_user_id = str(tg_user.id)
     full_name = tg_user.full_name or tg_user.first_name
@@ -249,7 +262,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
         event = await user_service.get_current_event(session)
         if not event:
-            await update.message.reply_text("Нет активного события. Попробуйте позже.")
+            await update.message.reply_text(
+                "Сейчас нет запланированных мероприятий.\n\n"
+                "Мы пришлём уведомление, когда откроется регистрация "
+                "на ближайший Demo Day."
+            )
             return ConversationHandler.END
 
         role = await user_service.get_user_role_with_info(session, user.id, event.id)
@@ -280,18 +297,23 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         )
         return await _do_generate_from_message(update, context)
 
-    # Returning user without profile → ask to change role or proceed
-    if role:
-        role_name = ROLE_DISPLAY_NAMES.get(RoleCode(role.code), role.code)
-        context.user_data["current_role"] = role.code
+    # Returning user with role but no profile → continue profiling directly
+    if role and not has_profile:
+        context.user_data["pending_role_code"] = role.code
         context.user_data["event_id"] = str(event.id)
+        context.user_data["nl_topics"] = set()
+        context.user_data["nl_conversation"] = []
+        if profile:
+            context.user_data["profile_id"] = str(profile.id)
+            context.user_data["profile_user_id"] = str(user.id)
+            context.user_data["profile_event_id"] = str(event.id)
         await update.message.reply_text(
-            f"С возвращением, {full_name}!\n"
-            f"Ваша роль: {role_name}\n\n"
-            f"Хотите сменить роль?",
-            reply_markup=confirm_change_keyboard(),
+            f"С возвращением, {full_name}! Давайте продолжим подбор программы.\n\n"
+            f"Расскажите, что вас интересует на Demo Day?\n"
+            f"Напишите свободным текстом или выберите темы кнопками:",
+            reply_markup=nl_topic_buttons(prefix="onb_nl"),
         )
-        return CONFIRM_CHANGE
+        return ONBOARD_NL_PROFILE
 
     # New user → start onboarding
     context.user_data["event_id"] = str(event.id)
@@ -764,7 +786,24 @@ async def confirm_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     query = update.callback_query
     await query.answer()
 
-    _, choice = query.data.split(":", 1)
+    data = query.data
+
+    # Handle resume/restart from Fix 11 (profiling in progress)
+    if data == "prof:resume":
+        await query.edit_message_text(
+            "Продолжаем! Расскажите, что вас интересует, "
+            "или выберите темы кнопками:",
+            reply_markup=nl_topic_buttons(prefix="onb_nl"),
+        )
+        return ONBOARD_NL_PROFILE
+
+    if data == "prof:restart":
+        context.user_data["nl_topics"] = set()
+        context.user_data["nl_conversation"] = []
+        context.user_data.pop("recommendations", None)
+        context.user_data.pop("program_chat", None)
+
+    _, choice = data.split(":", 1)
 
     if choice == "no":
         await query.edit_message_text("Хорошо, роль не изменена.")
@@ -810,7 +849,8 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="Генерация программы занимает больше времени, чем обычно. "
-                 "Подождите немного и отправьте любое сообщение, чтобы проверить готовность.",
+                 "Нажмите кнопку ниже, чтобы проверить готовность.",
+            reply_markup=check_readiness_keyboard(),
         )
         return VIEW_PROGRAM
 
@@ -851,7 +891,8 @@ async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAUL
         context.user_data["pending_task_id"] = task.id
         await update.message.reply_text(
             "Генерация программы занимает больше времени, чем обычно. "
-            "Подождите немного и отправьте любое сообщение, чтобы проверить готовность."
+            "Нажмите кнопку ниже, чтобы проверить готовность.",
+            reply_markup=check_readiness_keyboard(),
         )
         return VIEW_PROGRAM
 
@@ -972,11 +1013,45 @@ AGENT_TOOLS = [
 
 
 async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle callbacks in VIEW_PROGRAM: detail, pagination, update."""
+    """Handle callbacks in VIEW_PROGRAM: detail, pagination, update, check readiness."""
     query = update.callback_query
     await query.answer()
 
     data = query.data
+
+    # Check readiness of pending generation task
+    if data == "prof:check_ready":
+        from app.worker.utils import get_task_status
+        pending_task_id = context.user_data.get("pending_task_id")
+        if not pending_task_id:
+            await query.edit_message_text("Нет ожидающих задач. Используйте /start.")
+            return VIEW_PROGRAM
+        status = get_task_status(pending_task_id)
+        if status["ready"]:
+            if status.get("successful") and status.get("result"):
+                context.user_data["recommendations"] = status["result"]
+                context.user_data.pop("pending_task_id", None)
+                await query.edit_message_text("Программа готова!")
+                return await _show_program(update, context)
+            else:
+                context.user_data.pop("pending_task_id", None)
+                await query.edit_message_text(
+                    "К сожалению, генерация не удалась. "
+                    "Попробуйте заново или измените профиль.",
+                    reply_markup=retry_generation_keyboard(),
+                )
+                return VIEW_PROGRAM
+        else:
+            await query.edit_message_text(
+                "Программа всё ещё генерируется. Подождите немного.",
+                reply_markup=check_readiness_keyboard(),
+            )
+            return VIEW_PROGRAM
+
+    # Retry failed generation
+    if data == "prof:retry_gen":
+        await query.edit_message_text("Перезапускаю генерацию программы... ⏳")
+        return await _do_generate(update, context)
 
     # Show "if time" recommendations
     if data == "prof:show_if_time":
@@ -1037,12 +1112,15 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             else:
                 context.user_data.pop("pending_task_id", None)
                 await update.message.reply_text(
-                    "Не удалось сгенерировать программу. Попробуйте /start заново."
+                    "К сожалению, генерация не удалась. "
+                    "Попробуйте заново или измените профиль.",
+                    reply_markup=retry_generation_keyboard(),
                 )
                 return VIEW_PROGRAM
         else:
             await update.message.reply_text(
-                "Программа всё ещё генерируется. Пожалуйста, подождите..."
+                "Программа всё ещё генерируется. Подождите немного.",
+                reply_markup=check_readiness_keyboard(),
             )
             return VIEW_PROGRAM
 
@@ -1136,7 +1214,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     # Find project by rank
                     for rec in all_recs:
                         if rec["rank"] == rank:
-                            pid_short = rec["project_id"][:8]
+                            pid_short = rec["project_id"][:12]
                             # Send confirmation then show detail
                             await update.message.reply_text(f"Показываю проект #{rank}...")
                             return await _show_project_detail_from_text(update, context, pid_short)
@@ -1150,6 +1228,8 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
             else:
                 reply = response.get("content", "")
+                if not reply or not reply.strip():
+                    reply = "Не удалось получить ответ. Попробуйте переформулировать вопрос."
 
         except Exception:
             logger.exception("Agent failed in VIEW_PROGRAM")
@@ -1222,7 +1302,7 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data["current_project_title"] = detail['title']
     context.user_data["current_project_rank"] = project_rank
 
-    pid_short_btn = str(project_id)[:8]
+    pid_short_btn = str(project_id)[:12]
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
         [contact_button(project_id)],
@@ -1292,7 +1372,7 @@ async def _show_project_detail_from_text(
     context.user_data["current_project_title"] = detail['title']
     context.user_data["current_project_rank"] = project_rank
 
-    pid_short_btn = str(project_id)[:8]
+    pid_short_btn = str(project_id)[:12]
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
         [contact_button(project_id)],
@@ -1361,7 +1441,7 @@ async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     for i, q in enumerate(questions, 1):
         text += f"{i}. {q}\n\n"
 
-    pid_short_btn = str(project_id)[:8]
+    pid_short_btn = str(project_id)[:12]
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Ещё вопросы", callback_data=f"qa:more:{pid_short_btn}")],
         [InlineKeyboardButton("Назад к проекту", callback_data=f"pdetail:{pid_short_btn}")],
@@ -1711,12 +1791,12 @@ def get_onboarding_handler() -> ConversationHandler:
                 CallbackQueryHandler(onb_confirm_profile_callback, pattern=r"^onb_nlconf:"),
             ],
             CONFIRM_CHANGE: [
-                CallbackQueryHandler(confirm_change, pattern=r"^change:"),
+                CallbackQueryHandler(confirm_change, pattern=r"^(change:|prof:resume|prof:restart)"),
             ],
             VIEW_PROGRAM: [
                 CallbackQueryHandler(
                     view_program_callback,
-                    pattern=r"^(pdetail:|recpage:|profile:update|prof:show_if_time|noop)",
+                    pattern=r"^(pdetail:|recpage:|profile:update|prof:show_if_time|prof:check_ready|prof:retry_gen|noop)",
                 ),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, view_program_text),
             ],

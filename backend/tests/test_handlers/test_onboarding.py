@@ -69,10 +69,8 @@ async def test_start_command_new_user(mock_event, mock_user):
     mock_context.user_data = {}
 
     with patch("app.bot.handlers.start.async_session", mock_session), \
-         patch("app.bot.handlers.start.user_service") as mock_user_svc, \
-         patch("app.bot.handlers.start.settings") as mock_settings:
+         patch("app.bot.handlers.start.user_service") as mock_user_svc:
 
-        mock_settings.organizer_ids = []
         mock_user_svc.upsert_user = AsyncMock(return_value=mock_user)
         mock_user_svc.get_current_event = AsyncMock(return_value=mock_event)
         mock_user_svc.get_user_role_with_info = AsyncMock(return_value=None)
@@ -92,8 +90,8 @@ async def test_start_command_new_user(mock_event, mock_user):
 
 @pytest.mark.asyncio
 async def test_start_command_existing_user(mock_event, mock_user, mock_role):
-    """T014: /start for existing user with role shows change prompt."""
-    from app.bot.handlers.start import CONFIRM_CHANGE, start_command
+    """T014: /start for existing user with role but no profile goes to profiling."""
+    from app.bot.handlers.start import ONBOARD_NL_PROFILE, start_command
 
     @asynccontextmanager
     async def mock_session():
@@ -106,31 +104,34 @@ async def test_start_command_existing_user(mock_event, mock_user, mock_role):
     mock_update.effective_user.username = "test_user"
     mock_update.message.reply_text = AsyncMock()
 
+    mock_profile = MagicMock()
+    mock_profile.id = uuid.uuid4()
+    mock_profile.selected_tags = None  # No tags = no completed profile
+
     mock_context = MagicMock()
     mock_context.args = []
     mock_context.user_data = {}
 
     with patch("app.bot.handlers.start.async_session", mock_session), \
          patch("app.bot.handlers.start.user_service") as mock_user_svc, \
-         patch("app.bot.handlers.start.settings") as mock_settings:
+         patch("app.bot.handlers.start.profiling_service") as mock_prof_svc:
 
-        mock_settings.organizer_ids = []
         mock_user_svc.upsert_user = AsyncMock(return_value=mock_user)
         mock_user_svc.get_current_event = AsyncMock(return_value=mock_event)
         mock_user_svc.get_user_role_with_info = AsyncMock(return_value=mock_role)
+        mock_prof_svc.get_or_create_profile = AsyncMock(return_value=mock_profile)
 
         result = await start_command(mock_update, mock_context)
 
-        # Should return CONFIRM_CHANGE state
-        assert result == CONFIRM_CHANGE
+        # Should return ONBOARD_NL_PROFILE state (continue profiling)
+        assert result == ONBOARD_NL_PROFILE
 
-        # Should call reply_text mentioning existing role
+        # Should call reply_text with continue message
         mock_update.message.reply_text.assert_called_once()
         call_args = mock_update.message.reply_text.call_args
         text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
 
-        # Text should reference the user's role or ask about changing
-        assert "роль" in text.lower() or "сменить" in text.lower() or mock_user.full_name in text
+        assert "продолжим" in text.lower() or mock_user.full_name in text
 
 
 @pytest.mark.asyncio
@@ -157,10 +158,7 @@ async def test_invalid_role_callback(mock_event, mock_user):
     mock_context.user_data = {}
 
     with patch("app.bot.handlers.start.async_session", mock_session), \
-         patch("app.bot.handlers.start.user_service"), \
-         patch("app.bot.handlers.start.settings") as mock_settings:
-
-        mock_settings.organizer_ids = []
+         patch("app.bot.handlers.start.user_service"):
 
         # Should raise ValueError for invalid RoleCode
         try:
