@@ -43,6 +43,7 @@ class ScheduleGenerateRequest(BaseModel):
     slot_duration_minutes: int = 15
     room_overrides: list[RoomTimeOverride] = []
     breaks: list[BreakTime] = []
+    force: bool = False
 
 
 class RoomSummary(BaseModel):

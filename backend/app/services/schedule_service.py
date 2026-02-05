@@ -80,6 +80,7 @@ async def generate_schedule(
     slot_duration_minutes: int = 15,
     room_overrides: list[RoomTimeOverride] | None = None,
     breaks: list[BreakTime] | None = None,
+    force: bool = False,
 ) -> ScheduleGenerateResult:
     """
     Generate schedule slots from approved clustering.
@@ -116,7 +117,14 @@ async def generate_schedule(
         .where(ScheduleSlot.clustering_run_id == clustering.id)
     )
     if (existing.scalar() or 0) > 0:
-        raise ValueError("Schedule already exists for this clustering run")
+        if force:
+            await session.execute(
+                ScheduleSlot.__table__.delete().where(
+                    ScheduleSlot.clustering_run_id == clustering.id
+                )
+            )
+        else:
+            raise ValueError("Schedule already exists for this clustering run")
 
     # Get event for dates
     event_result = await session.execute(

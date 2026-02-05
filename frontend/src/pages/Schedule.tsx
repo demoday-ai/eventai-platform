@@ -88,6 +88,7 @@ export function Schedule() {
         slot_duration_minutes: slotDuration,
         room_overrides: roomOverridesList.length > 0 ? roomOverridesList : undefined,
         breaks: breaksList.length > 0 ? breaksList : undefined,
+        force: true,
       })
     },
     onSuccess: (data) => {

@@ -369,6 +369,7 @@ export interface ScheduleGenerateRequest {
   slot_duration_minutes?: number
   room_overrides?: RoomTimeOverride[]
   breaks?: BreakTime[]
+  force?: boolean
 }
 
 export interface ScheduleRoomSummary {
