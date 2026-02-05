@@ -618,10 +618,11 @@ async def _onb_agent_turn(
             # First turn - force a follow-up question instead of immediate profile
             fallback_question = "Отлично! А какую задачу ты хочешь решить или что хочешь узнать на Demo Day?"
             _add_to_conversation(context, "assistant", fallback_question)
-            if is_message:
-                await update.message.reply_text(fallback_question)
-            else:
-                await update.callback_query.edit_message_text(fallback_question, reply_markup=None)
+            if not is_message:
+                await update.callback_query.edit_message_reply_markup(reply_markup=None)
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id, text=fallback_question,
+            )
             return ONBOARD_NL_PROFILE
 
         # Agent decided we have enough info — show confirmation
@@ -632,10 +633,11 @@ async def _onb_agent_turn(
     reply_text = result["message"]
     _add_to_conversation(context, "assistant", reply_text)
 
-    if is_message:
-        await update.message.reply_text(reply_text)
-    else:
-        await update.callback_query.edit_message_text(reply_text, reply_markup=None)
+    if not is_message:
+        await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id, text=reply_text,
+    )
 
     return ONBOARD_NL_PROFILE
 
@@ -696,16 +698,13 @@ async def _show_onb_profile_confirmation(
 
     confirm_text = "Ваш профиль:\n\n" + "\n".join(confirm_parts) + "\n\nВсё верно?"
 
-    if is_message:
-        await update.message.reply_text(
-            confirm_text,
-            reply_markup=confirm_nl_profile_keyboard(prefix="onb_nlconf"),
-        )
-    else:
-        await update.callback_query.edit_message_text(
-            confirm_text,
-            reply_markup=confirm_nl_profile_keyboard(prefix="onb_nlconf"),
-        )
+    if not is_message:
+        await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=confirm_text,
+        reply_markup=confirm_nl_profile_keyboard(prefix="onb_nlconf"),
+    )
 
     return ONBOARD_CONFIRM
 
@@ -1963,11 +1962,14 @@ async def _rebuild_agent_turn(
     conversation.append({"role": "assistant", "content": reply_text})
     context.user_data["rebuild_conversation"] = conversation
 
+    if not is_message:
+        await update.callback_query.edit_message_reply_markup(reply_markup=None)
     reb_kb = nl_topic_buttons(prefix="reb_nl", topics=await _get_topics())
-    if is_message:
-        await update.message.reply_text(reply_text, reply_markup=reb_kb)
-    else:
-        await update.callback_query.edit_message_text(reply_text, reply_markup=reb_kb)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=reply_text,
+        reply_markup=reb_kb,
+    )
 
     return NL_REBUILD
 
@@ -1998,13 +2000,13 @@ async def _show_rebuild_confirmation(
 
     text = "Новый профиль:\n\n" + "\n".join(parts) + "\n\nВсё верно?"
 
-    if is_message:
-        await update.message.reply_text(text, reply_markup=confirm_nl_profile_keyboard(prefix="reb_nlconf"))
-    else:
-        await update.callback_query.edit_message_text(
-            text,
-            reply_markup=confirm_nl_profile_keyboard(prefix="reb_nlconf"),
-        )
+    if not is_message:
+        await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=text,
+        reply_markup=confirm_nl_profile_keyboard(prefix="reb_nlconf"),
+    )
 
     return NL_REBUILD_CONFIRM
 
