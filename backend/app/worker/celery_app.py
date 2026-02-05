@@ -20,4 +20,12 @@ celery_app.conf.update(
     task_time_limit=300,  # 5 min max
     task_soft_time_limit=240,  # Soft limit for graceful shutdown
     broker_connection_retry_on_startup=True,
+    # Fair scheduling: worker takes 1 task at a time
+    worker_prefetch_multiplier=1,
+    # Queue routing: heavy tasks go to separate queue
+    task_default_queue="default",
+    task_routes={
+        "app.worker.tasks.cluster_projects_task": {"queue": "heavy"},
+        "app.worker.tasks.run_matching_task": {"queue": "heavy"},
+    },
 )
