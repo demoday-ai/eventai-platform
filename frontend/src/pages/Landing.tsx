@@ -918,7 +918,7 @@ export function Landing() {
                 }}
               >
                 <Target className="h-4 w-4 sm:h-5 sm:w-5" />
-                Для организаторов конференций и Demo Day
+                Для организаторов мероприятий
               </div>
             </div>
           </Reveal>
