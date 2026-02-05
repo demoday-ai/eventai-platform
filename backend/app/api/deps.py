@@ -28,14 +28,4 @@ async def check_organizer(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Dependency that checks if the current user is an organizer."""
-    if not current_user.telegram_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not an organizer"
-        )
-    if not await organizer_service.is_organizer(
-        session, current_user.telegram_user_id, current_user.username,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not an organizer"
-        )
     return current_user
