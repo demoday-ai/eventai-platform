@@ -22,6 +22,7 @@ vi.mock("../lib/api-client", () => ({
   removeOrganizer: vi.fn(),
   getTags: vi.fn(),
   addTags: vi.fn(),
+  suggestTags: vi.fn(),
 }))
 
 const mockEvent: apiClient.Event = {
