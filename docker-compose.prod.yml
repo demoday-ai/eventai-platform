@@ -38,11 +38,47 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - internal
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # RabbitMQ Management UI at /rabbitmq/
+      - "traefik.http.routers.rabbitmq.rule=Host(`${DOMAIN:-team12.camp.aitalenthub.ru}`) && PathPrefix(`/rabbitmq`)"
+      - "traefik.http.routers.rabbitmq.entrypoints=websecure"
+      - "traefik.http.routers.rabbitmq.tls=true"
+      - "traefik.http.routers.rabbitmq.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.rabbitmq.middlewares=rabbitmq-stripprefix"
+      - "traefik.http.middlewares.rabbitmq-stripprefix.stripprefix.prefixes=/rabbitmq"
+      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # Celery Flower - worker monitoring
+  flower:
+    image: mher/flower:2.0
+    command: celery --broker=amqp://${RABBITMQ_USER:-demoday}:${RABBITMQ_PASS:-demoday}@rabbitmq:5672// flower --url_prefix=/flower
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-demoday}:${RABBITMQ_PASS:-demoday}@rabbitmq:5672//
+      - FLOWER_BASIC_AUTH=${FLOWER_USER:-demoday}:${FLOWER_PASS:-demoday}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - internal
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # Flower UI at /flower/
+      - "traefik.http.routers.flower.rule=Host(`${DOMAIN:-team12.camp.aitalenthub.ru}`) && PathPrefix(`/flower`)"
+      - "traefik.http.routers.flower.entrypoints=websecure"
+      - "traefik.http.routers.flower.tls=true"
+      - "traefik.http.routers.flower.tls.certresolver=letsencrypt"
+      - "traefik.http.services.flower.loadbalancer.server.port=5555"
     restart: unless-stopped
 
   backend:

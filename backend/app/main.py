@@ -9,6 +9,7 @@ from app.api.events import router as events_router
 from app.api.experts import router as experts_router
 from app.api.guests import router as guests_router
 from app.api.leads import router as leads_router
+from app.api.monitoring import router as monitoring_router
 from app.api.participation import router as participation_router
 from app.api.projects import router as projects_router
 from app.api.reminders import router as reminders_router
@@ -408,6 +409,7 @@ app.include_router(guests_router, prefix="/api/v1")
 app.include_router(participation_router, prefix="/api/v1")
 app.include_router(reminders_router, prefix="/api/v1")
 app.include_router(leads_router, prefix="/api/v1")
+app.include_router(monitoring_router, prefix="/api/v1")
 
 
 @app.get("/health")
