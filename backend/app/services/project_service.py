@@ -21,7 +21,7 @@ from app.services import profiling_service
 
 logger = logging.getLogger(__name__)
 
-REQUIRED_FIELDS = {"title", "description", "author", "telegram_contact"}
+REQUIRED_FIELDS = {"title", "description", "author"}
 DEFAULT_TAGS = [
     "NLP",
     "CV",
@@ -59,16 +59,56 @@ async def _get_candidate_tags(session: AsyncSession) -> list[str]:
     return tags or DEFAULT_TAGS.copy()
 
 
+# Column name mappings (alternative names -> standard name)
+COLUMN_ALIASES = {
+    "title": ["project_name", "name", "название", "проект"],
+    "description": ["desc", "описание"],
+    "author": ["team_members", "team_name", "team", "автор", "команда"],
+    "telegram_contact": ["telegram", "tg", "contact", "контакт", "team_id"],
+    "tags": ["tech_stack", "stack", "теги", "технологии"],
+}
+
+
+def _normalize_row(row: dict) -> dict:
+    """Normalize column names using aliases."""
+    normalized = {}
+    row_lower = {k.lower().strip(): v for k, v in row.items()}
+
+    for standard_name, aliases in COLUMN_ALIASES.items():
+        # First check if standard name exists
+        if standard_name in row:
+            normalized[standard_name] = row[standard_name]
+        elif standard_name.lower() in row_lower:
+            normalized[standard_name] = row_lower[standard_name.lower()]
+        else:
+            # Check aliases
+            for alias in aliases:
+                if alias in row:
+                    normalized[standard_name] = row[alias]
+                    break
+                elif alias.lower() in row_lower:
+                    normalized[standard_name] = row_lower[alias.lower()]
+                    break
+
+    # Copy any other fields that weren't mapped
+    for key, value in row.items():
+        if key not in normalized:
+            normalized[key] = value
+
+    return normalized
+
+
 def parse_csv(content: bytes) -> list[dict]:
-    """Parse CSV content into list of row dicts."""
+    """Parse CSV content into list of row dicts with normalized column names."""
     text = content.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))
-    return list(reader)
+    return [_normalize_row(row) for row in reader]
 
 
 def parse_json(content: bytes) -> list[dict]:
-    """Parse JSON content (array of objects)."""
-    return json.loads(content.decode("utf-8-sig"))
+    """Parse JSON content (array of objects) with normalized column names."""
+    data = json.loads(content.decode("utf-8-sig"))
+    return [_normalize_row(row) for row in data]
 
 
 def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowError], list[str]]:
@@ -102,9 +142,7 @@ def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowErr
             continue
 
         tg = (row.get("telegram_contact") or "").strip()
-        if not tg:
-            errors.append(RowError(row=i, field="telegram_contact", message="Telegram контакт обязателен"))
-            continue
+        # telegram_contact is optional
 
         if title in seen_titles:
             duplicate_titles.append(title)
