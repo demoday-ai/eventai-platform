@@ -1216,10 +1216,10 @@ export function Landing() {
               }}
             >
               <p
-                className="font-body text-center text-sm"
+                className="font-body text-center text-sm leading-relaxed"
                 style={{ color: "var(--ld-text-secondary)" }}
               >
-                <strong style={{ color: "var(--ld-text)" }}>Методология:</strong> IDF-скоринг по тегам и ключевым словам → LLM re-ranking (Claude/GPT) → оценка против экспертных аннотаций с грейдами 0-3
+                <strong style={{ color: "var(--ld-text)" }}>Как измеряли:</strong> система подбирает проекты по тегам и ключевым словам профиля, затем AI (Claude/GPT) переранжирует топ-20 с учётом контекста. Результаты сравнили с оценками экспертов — каждая пара «профиль-проект» размечена по шкале релевантности 0-3.
               </p>
             </div>
           </Reveal>

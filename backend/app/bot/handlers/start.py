@@ -361,6 +361,19 @@ async def _agent_turn(
     )
 
     if result["action"] == "profile":
+        # Enforce at least one question before profile confirmation
+        user_messages = [m for m in conversation if m.get("role") == "user"]
+        assistant_messages = [m for m in conversation if m.get("role") == "assistant"]
+        if len(user_messages) <= 1 and len(assistant_messages) == 0:
+            # First turn - force a follow-up question instead of immediate profile
+            fallback_question = "Отлично! А какую задачу ты хочешь решить или что хочешь узнать на Demo Day?"
+            _add_to_conversation(context, "assistant", fallback_question)
+            if is_message:
+                await update.message.reply_text(fallback_question)
+            else:
+                await update.callback_query.edit_message_text(fallback_question)
+            return NL_PROFILE
+
         # Agent decided we have enough info — show confirmation
         context.user_data["extracted_profile"] = result
         return await _show_profile_confirmation(update, context, result, is_message)
