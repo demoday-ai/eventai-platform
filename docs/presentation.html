@@ -20,7 +20,7 @@
       --text-muted: #ADADAD;
     }
 
-    .reveal { font-family: 'Inter Tight', sans-serif; }
+    .reveal { font-family: 'Inter Tight', sans-serif; font-size: 30px; }
     .reveal h1, .reveal h2, .reveal h3 {
       font-family: 'Inter Tight', sans-serif;
       font-weight: 600; text-transform: none; letter-spacing: -0.02em; color: var(--text);
@@ -171,19 +171,19 @@
           бот + админка, которые автоматизируют расписание
           и дают каждому гостю персональную программу <span class="accent-light">за минуту</span>
         </p>
-        <div class="qr-row" style="margin-top:8px;">
-          <div class="qr-item">
-            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:80px; height:80px;">
-            <div class="qr-label">Telegram-бот</div>
-          </div>
-          <div class="qr-item">
-            <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:80px; height:80px;">
-            <div class="qr-label">Лендинг</div>
-          </div>
+        <!-- QR corners -->
+        <div style="position:absolute;bottom:20px;left:30px;text-align:center;">
+          <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:90px;height:90px;">
+          <div class="qr-label">Telegram-бот</div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;opacity:0.4;">
-          <img src="ai-talent-hub-logo.svg" alt="AI Talent Hub" class="itmo-logo" style="height:18px;">
-          <img src="claude-logo.png" alt="Claude" style="height:20px;">
+        <div style="position:absolute;bottom:20px;right:30px;text-align:center;">
+          <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:90px;height:90px;">
+          <div class="qr-label">Лендинг</div>
+        </div>
+        <!-- Logos center bottom -->
+        <div style="position:absolute;bottom:25px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;opacity:0.4;">
+          <img src="ai-talent-hub-logo.svg" alt="AI Talent Hub" class="itmo-logo" style="height:16px;">
+          <img src="claude-logo.png" alt="Claude" style="height:18px;">
         </div>
       </section>
 
@@ -289,10 +289,8 @@
             </ul>
           </div>
           <div style="text-align:center;">
-            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:120px;height:120px;">
+            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:100px;height:100px;">
             <div class="tiny muted" style="margin-top:3px;">Попробуйте!</div>
-            <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:80px;height:80px;margin-top:8px;">
-            <div class="tiny muted" style="margin-top:2px;">Лендинг</div>
           </div>
         </div>
       </section>
@@ -427,32 +425,32 @@
       <!-- Slide 9: Экономика -->
       <section data-background-color="#212121">
         <div class="tag">Экономика</div>
-        <h2 style="margin-bottom:0.2em;">Кто платит и за что</h2>
-        <div class="two-col" style="gap:14px;">
+        <h2>Кто платит и за что</h2>
+        <div class="two-col">
           <div style="text-align:left;">
-            <p class="tiny muted" style="margin-bottom:3px;"><strong>Модель: B2B SaaS</strong></p>
-            <ul class="list-check" style="font-size:0.6em;">
+            <p class="smaller" style="margin-bottom:6px;"><strong>B2B SaaS</strong></p>
+            <ul class="list-check">
               <li>Организаторы платят за событие</li>
               <li>От <span class="accent">100 000 &#8381;</span> за мероприятие</li>
-              <li>Cost: ~3-5K &#8381; · Маржа: <span class="accent">>90%</span></li>
+              <li>Cost: ~3-5K &#8381; · Маржа <span class="accent">>90%</span></li>
             </ul>
           </div>
           <div style="text-align:left;">
-            <p class="tiny muted" style="margin-bottom:3px;"><strong>Размер рынка (500+ IT-конф./год)</strong></p>
-            <div class="tam-bar" style="padding:4px 8px;margin:3px 0;">
-              <span class="bar-label accent" style="font-size:0.55em;">TAM</span>
+            <p class="smaller" style="margin-bottom:6px;"><strong>Рынок (500+ IT-конф./год)</strong></p>
+            <div class="tam-bar">
+              <span class="bar-label accent">TAM</span>
               <div class="bar-fill" style="width:100%;background:var(--accent);"></div>
-              <span class="bar-value" style="font-size:0.5em;">500 × 100K = <strong>50M&#8381;</strong></span>
+              <span class="bar-value">500 × 100K = <strong>50M&#8381;</strong></span>
             </div>
-            <div class="tam-bar" style="padding:4px 8px;margin:3px 0;">
-              <span class="bar-label accent-light" style="font-size:0.55em;">SAM</span>
+            <div class="tam-bar">
+              <span class="bar-label accent-light">SAM</span>
               <div class="bar-fill" style="width:40%;background:var(--accent-light);"></div>
-              <span class="bar-value" style="font-size:0.5em;">100 событий = <strong>10M&#8381;</strong></span>
+              <span class="bar-value">100 событий = <strong>10M&#8381;</strong></span>
             </div>
-            <div class="tam-bar" style="padding:4px 8px;margin:3px 0;">
-              <span class="bar-label amber" style="font-size:0.55em;">SOM</span>
+            <div class="tam-bar">
+              <span class="bar-label amber">SOM</span>
               <div class="bar-fill" style="width:10%;background:var(--amber);"></div>
-              <span class="bar-value" style="font-size:0.5em;">10% = <strong>5M&#8381; на старте</strong></span>
+              <span class="bar-value">10% = <strong>5M&#8381; на старте</strong></span>
             </div>
           </div>
         </div>
@@ -462,36 +460,29 @@
       <section data-background-color="#212121">
         <div class="tag">Команда</div>
         <h2>ЯСНОПОНЯТНО + Claude</h2>
-        <div class="team-row">
-          <div class="team-card">
-            <img src="team/dima.jpg" alt="Дмитрий Горбунов" class="dima">
-            <div class="name">Дмитрий Горбунов</div>
-            <div class="role">Тимлид, продукт</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;">
+            <img src="team/dima.jpg" alt="Дмитрий Горбунов" class="dima" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+            <div><div style="font-weight:600;font-size:0.6em;">Дмитрий Горбунов</div><div style="font-size:0.45em;color:var(--text-muted);">Тимлид, продукт</div></div>
           </div>
-          <div class="team-card">
-            <img src="team/nastya.jpg" alt="Анастасия Гапеева" class="nastya">
-            <div class="name">Анастасия Гапеева</div>
-            <div class="role">UX/UI, фронтенд</div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;">
+            <img src="team/nastya.jpg" alt="Анастасия Гапеева" class="nastya" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+            <div><div style="font-weight:600;font-size:0.6em;">Анастасия Гапеева</div><div style="font-size:0.45em;color:var(--text-muted);">UX/UI, фронтенд</div></div>
           </div>
-          <div class="team-card">
-            <img src="team/ivan.jpg" alt="Иван Александров" class="ivan">
-            <div class="name">Иван Александров</div>
-            <div class="role">Backend, логика</div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;">
+            <img src="team/ivan.jpg" alt="Иван Александров" class="ivan" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+            <div><div style="font-weight:600;font-size:0.6em;">Иван Александров</div><div style="font-size:0.45em;color:var(--text-muted);">Backend, логика</div></div>
           </div>
-          <div class="team-card ai-card">
-            <div class="avatar">
-              <img src="claude-logo.png" alt="Claude" style="width:36px;height:36px;">
-            </div>
-            <div class="name accent">Claude</div>
-            <div class="role">AI-ассистент</div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;">
+            <img src="claude-logo.png" alt="Claude" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-light));padding:6px;">
+            <div><div style="font-weight:600;font-size:0.6em;color:var(--accent);">Claude</div><div style="font-size:0.45em;color:var(--text-muted);">AI-ассистент</div></div>
           </div>
         </div>
-        <div class="highlight-box tiny" style="margin-top:8px;">
-          <strong>Agentic-процесс:</strong> Claude Code в чате команды → код, тесты, деплой.
+        <div class="highlight-box tiny" style="margin-top:10px;">
+          <strong>Agentic:</strong> Claude Code в чате → код, тесты, деплой.
           <span class="accent">100%</span> кода с AI ·
           Фича за <span class="accent">2 часа</span> ·
-          <span class="accent">153 теста</span> авто ·
-          Параллельные сессии
+          <span class="accent">153 теста</span> авто
         </div>
       </section>
 
