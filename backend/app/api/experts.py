@@ -432,7 +432,7 @@ async def approve_matching_endpoint(
 
     count = await matching_service.approve_matching(session, clustering.id)
     if count == 0:
-        raise HTTPException(status_code=404, detail="No proposed assignments to approve")
+        return ApproveResult(approved_count=0, message="All assignments already approved")
 
     return ApproveResult(approved_count=count, message=f"Approved {count} expert assignments")
 

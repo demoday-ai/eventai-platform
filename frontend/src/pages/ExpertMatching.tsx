@@ -357,7 +357,7 @@ export function ExpertMatching() {
               </Button>
             </div>
             {approveMutation.isError && (
-              <p className="text-sm text-red-500">Ошибка одобрения</p>
+              <p className="text-sm text-red-500">Ошибка одобрения: {getErrorMessage(approveMutation.error)}</p>
             )}
           </CardContent>
         </Card>
