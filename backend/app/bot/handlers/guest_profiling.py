@@ -402,7 +402,6 @@ async def nl_rebuild_confirm_callback(update: Update, context: ContextTypes.DEFA
         return NL_REBUILD
 
     # Save profile and regenerate recommendations
-    import uuid as _uuid
     tg_user = query.from_user
     telegram_user_id = str(tg_user.id)
     profile_data = context.user_data.get("rebuild_profile", {})
@@ -892,7 +891,10 @@ AGENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "rebuild_profile",
-            "description": "Перезапустить профилирование — пользователь хочет изменить свои интересы, пересобрать профиль, начать заново, или получить другие рекомендации на основе новых интересов",
+            "description": (
+                "Перезапустить профилирование — пользователь хочет изменить интересы, "
+                "пересобрать профиль, начать заново или получить другие рекомендации"
+            ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
