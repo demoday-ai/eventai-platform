@@ -397,7 +397,7 @@ const NAV_LINKS = [
   { href: "#case", label: "Демо" },
   { href: "#how", label: "Подключение" },
   { href: "#faq", label: "FAQ" },
-  { href: "#contact", label: "Контакт" },
+  { href: "#contact", label: "Связаться" },
 ]
 
 function NavBar({ dark, toggle }: { dark: boolean; toggle: () => void }) {
@@ -1436,7 +1436,7 @@ export function Landing() {
               },
               {
                 q: "Сколько это стоит?",
-                a: "Гибкая модель: оплата за событие (от $199) или годовая подписка для регулярных мероприятий. Для университетов, акселераторов и крупных конференций — индивидуальные условия. Оставьте контакт ниже — обсудим ваш кейс.",
+                a: "Гибкая модель: оплата за событие (от 100 000 ₽) или годовая подписка для регулярных мероприятий. Для университетов, акселераторов и крупных конференций — индивидуальные условия. Оставьте заявку — обсудим ваш кейс.",
               },
             ].map((item, i) => (
               <Reveal key={i} delay={i * 60}>
@@ -1482,7 +1482,7 @@ export function Landing() {
         <div className="mx-auto max-w-2xl">
           <div className="text-center">
             <Reveal>
-              <SectionTag>Контакт</SectionTag>
+              <SectionTag>Связаться</SectionTag>
             </Reveal>
             <Reveal delay={100}>
               <h2
@@ -1759,7 +1759,7 @@ export function Landing() {
                 className="font-display text-xs font-semibold uppercase tracking-wider"
                 style={{ color: "var(--ld-text-secondary)" }}
               >
-                Контакт
+                Связаться
               </h4>
               <ul className="mt-3 space-y-2">
                 <li>
