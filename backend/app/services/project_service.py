@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import uuid
+from collections.abc import Callable
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -130,7 +131,7 @@ async def save_projects(
     session: AsyncSession,
     event_id: uuid.UUID,
     rows: list[ProjectUploadRow],
-    progress_callback: callable | None = None,
+    progress_callback: Callable | None = None,
 ) -> dict:
     """Bulk insert projects with tag resolution. Returns stats dict."""
     tag_cache: dict[str, Tag] = {}
