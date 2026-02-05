@@ -15,7 +15,6 @@ from app.schemas.project import (
     ProjectResponse,
     ReplaceConfirmation,
     RoomSummary,
-    UploadResult,
 )
 from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
 from app.services.background_jobs import (
