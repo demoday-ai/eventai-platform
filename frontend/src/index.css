@@ -127,10 +127,10 @@
 
 /* --- Typography --- */
 .font-display {
-  font-family: 'DM Mono', 'Menlo', monospace;
+  font-family: 'Manrope', system-ui, sans-serif;
 }
 .font-body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* --- Animations --- */
