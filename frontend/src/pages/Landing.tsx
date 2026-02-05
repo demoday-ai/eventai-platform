@@ -278,11 +278,13 @@ function TeamMember({
   role,
   tag,
   delay,
+  telegram,
 }: {
   name: string
   role: string
   tag: string
   delay: number
+  telegram?: string
 }) {
   return (
     <Reveal delay={delay}>
@@ -302,7 +304,7 @@ function TeamMember({
         >
           {tag}
         </div>
-        <div>
+        <div className="flex-1">
           <div
             className="font-display text-sm font-medium"
             style={{ color: "var(--ld-text)" }}
@@ -316,6 +318,20 @@ function TeamMember({
             {role}
           </div>
         </div>
+        {telegram && (
+          <a
+            href={`https://t.me/${telegram}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-body flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:scale-105"
+            style={{
+              background: "var(--ld-accent-soft)",
+              color: "var(--ld-accent)",
+            }}
+          >
+            @{telegram}
+          </a>
+        )}
       </div>
     </Reveal>
   )
@@ -1034,7 +1050,7 @@ export function Landing() {
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2">
-            <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} />
+            <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} telegram="grbn_dima" />
             <TeamMember name="Анастасия Гапеева" role="UX/UI, фронтенд" tag="AG" delay={80} />
             <TeamMember name="Иван Александров" role="Разработка, бизнес-логика" tag="IA" delay={160} />
             <TeamMember name="Claude" role="AI-ассистент команды" tag="AI" delay={240} />
