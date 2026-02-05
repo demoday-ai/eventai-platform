@@ -378,9 +378,18 @@ export function Clustering() {
                 {clusteringResult.rooms.reduce((sum, r) => sum + r.project_count, 0)}
               </p>
               {isApproved ? (
-                <p className="text-sm text-green-600 font-medium">
-                  Кластеризация одобрена
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-green-600 font-medium">
+                    Кластеризация одобрена
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(2)}
+                    className="w-full sm:w-auto"
+                  >
+                    Назад к редактированию
+                  </Button>
+                </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button

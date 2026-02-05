@@ -144,6 +144,7 @@ export function DataImport() {
   const [expertFile, setExpertFile] = useState<File | null>(null)
   const [expertResult, setExpertResult] = useState<ExpertUploadResult | null>(null)
   const [expertConflict, setExpertConflict] = useState<ExpertUploadConflict | null>(null)
+  const [expertError, setExpertError] = useState<string | null>(null)
 
   const expertMutation = useMutation({
     mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
@@ -156,7 +157,16 @@ export function DataImport() {
         setExpertResult(data)
         setExpertConflict(null)
         setExpertFile(null)
+        setExpertError(null)
         refreshAllStats()
+      }
+    },
+    onError: (error: AxiosError<{ detail: string }>) => {
+      const detail = error.response?.data?.detail
+      if (typeof detail === "string") {
+        setExpertError(detail)
+      } else {
+        setExpertError(error.message)
       }
     },
   })
@@ -165,6 +175,7 @@ export function DataImport() {
     if (!expertFile) return
     setExpertResult(null)
     setExpertConflict(null)
+    setExpertError(null)
     expertMutation.mutate({ file: expertFile, confirmReplace: false })
   }
 
@@ -179,6 +190,7 @@ export function DataImport() {
   const [guestSubtype, setGuestSubtype] = useState<string>("")
   const [guestResult, setGuestResult] = useState<GuestUploadResult | null>(null)
   const [guestConflict, setGuestConflict] = useState<GuestUploadConflict | null>(null)
+  const [guestError, setGuestError] = useState<string | null>(null)
 
   const guestMutation = useMutation({
     mutationFn: ({ file, subtype, confirmReplace }: { file: File; subtype: string; confirmReplace: boolean }) =>
@@ -191,7 +203,16 @@ export function DataImport() {
         setGuestResult(data)
         setGuestConflict(null)
         setGuestFile(null)
+        setGuestError(null)
         refreshAllStats()
+      }
+    },
+    onError: (error: AxiosError<{ detail: string }>) => {
+      const detail = error.response?.data?.detail
+      if (typeof detail === "string") {
+        setGuestError(detail)
+      } else {
+        setGuestError(error.message)
       }
     },
   })
@@ -200,6 +221,7 @@ export function DataImport() {
     if (!guestFile || !guestSubtype) return
     setGuestResult(null)
     setGuestConflict(null)
+    setGuestError(null)
     guestMutation.mutate({ file: guestFile, subtype: guestSubtype, confirmReplace: false })
   }
 
@@ -370,12 +392,9 @@ export function DataImport() {
             </Card>
           )}
 
-          {expertMutation.isError && (
+          {(expertMutation.isError || expertError) && (
             <p className="text-sm text-red-500">
-              Ошибка загрузки:{" "}
-              {expertMutation.error instanceof Error
-                ? expertMutation.error.message
-                : "Неизвестная ошибка"}
+              Ошибка загрузки: {expertError || "Неизвестная ошибка"}
             </p>
           )}
 
@@ -465,12 +484,9 @@ export function DataImport() {
             </Card>
           )}
 
-          {guestMutation.isError && (
+          {(guestMutation.isError || guestError) && (
             <p className="text-sm text-red-500">
-              Ошибка загрузки:{" "}
-              {guestMutation.error instanceof Error
-                ? guestMutation.error.message
-                : "Неизвестная ошибка"}
+              Ошибка загрузки: {guestError || "Неизвестная ошибка"}
             </p>
           )}
 
