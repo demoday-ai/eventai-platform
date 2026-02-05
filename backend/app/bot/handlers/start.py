@@ -39,10 +39,17 @@ from app.bot.keyboards import (
     retry_generation_keyboard,
     role_keyboard,
 )
+from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.models.role import RoleCode
 from app.models.user import GUEST_SUBTYPE_DISPLAY, GuestSubtype
-from app.services import profiling_service, user_service
+from app.services import (
+    business_followup_service,
+    followup_service,
+    profiling_service,
+    qa_service,
+    user_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -964,8 +971,10 @@ async def _show_program_from_message(update: Update, context: ContextTypes.DEFAU
 
     # Send hint about features
     hint = (
-        "Кликните на проект для подробностей. "
-        "Я также могу помочь подготовить вопросы для докладчика — просто спросите в чате."
+        "Кликните на проект для подробностей, или напишите в чат:\n"
+        "- \"сравни проекты 1 и 3\" — матрица сравнения\n"
+        "- \"подготовь вопросы к проекту 2\" — вопросы для Q&A\n"
+        "- \"покажи follow-up\" — итоги и контакты"
     )
     await update.message.reply_text(hint)
 
@@ -1006,6 +1015,78 @@ AGENT_TOOLS = [
         "function": {
             "name": "show_profile",
             "description": "Показать текущий профиль пользователя (теги, интересы, цели)",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "compare_projects",
+            "description": (
+                "Сравнить несколько проектов — генерирует детальную матрицу сравнения. "
+                "Используй когда пользователь просит сравнить, выбрать лучший из нескольких, "
+                "или понять разницу между проектами."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "project_ranks": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Номера проектов для сравнения (от 2 до 5)",
+                    },
+                    "criteria": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Критерии сравнения (необязательно, будут подобраны автоматически)",
+                    },
+                },
+                "required": ["project_ranks"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_questions",
+            "description": (
+                "Подготовить вопросы для Q&A к конкретному проекту. "
+                "Используй когда пользователь хочет подготовиться к общению "
+                "с автором проекта или задать вопросы на презентации."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "project_rank": {
+                        "type": "integer",
+                        "description": "Номер проекта в списке рекомендаций",
+                    },
+                },
+                "required": ["project_rank"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_followup",
+            "description": (
+                "Получить follow-up пакет — итоги после Demo Day: "
+                "список посещённых проектов, контакты авторов, шаблон письма. "
+                "Только для гостей."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_pipeline",
+            "description": (
+                "Показать бизнес-пайплайн — список проектов со статусами "
+                "(заинтересован, на связи, переговоры, сделка). "
+                "Только для бизнес-партнёров."
+            ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1094,6 +1175,200 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     return VIEW_PROGRAM
 
 
+# ---------------------------------------------------------------------------
+# Agent tool handlers
+# ---------------------------------------------------------------------------
+
+
+async def _handle_compare_projects(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    tool_args: dict,
+    all_recs: list[dict],
+    is_business: bool,
+) -> str:
+    """Handle compare_projects tool call — generate comparison matrix."""
+    from app.worker.tasks import generate_comparison_matrix_task
+    from app.worker.utils import wait_for_task
+
+    ranks = tool_args.get("project_ranks", [])
+    if len(ranks) < 2:
+        return "Для сравнения нужно минимум 2 проекта."
+    if len(ranks) > 5:
+        ranks = ranks[:5]
+
+    # Map ranks to project IDs
+    project_ids = []
+    titles = []
+    for rank in ranks:
+        for rec in all_recs:
+            if rec["rank"] == rank:
+                project_ids.append(rec["project_id"])
+                titles.append(rec["title"])
+                break
+
+    if len(project_ids) < 2:
+        return "Не удалось найти указанные проекты в рекомендациях."
+
+    # Get user for criteria
+    tg_id = str(update.effective_user.id)
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram_id(session, tg_id)
+        if not user:
+            return "Пользователь не найден. Используйте /start."
+        business_profile = None
+        if is_business:
+            business_profile = await business_followup_service.get_business_profile(
+                session, user.id,
+            )
+
+    criteria = tool_args.get("criteria") or qa_service.get_default_criteria(
+        user, business_profile
+    )
+
+    await update.message.reply_text("Генерирую матрицу сравнения...")
+
+    task = generate_comparison_matrix_task.delay(
+        str(user.id), project_ids, criteria,
+    )
+    completed, matrix = await wait_for_task(task.id, timeout=25, poll_interval=0.5)
+
+    if not completed or matrix is None:
+        return "Не удалось сгенерировать сравнение. Попробуйте позже."
+
+    if isinstance(matrix, dict) and matrix.get("error"):
+        return f"Ошибка сравнения: {matrix['error']}"
+
+    text = qa_service.format_matrix_text(matrix, criteria)
+    await safe_send_long_message(
+        context.bot, update.effective_chat.id, text,
+    )
+    return ""  # already sent
+
+
+async def _handle_generate_questions(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    tool_args: dict,
+    all_recs: list[dict],
+) -> str:
+    """Handle generate_questions tool call — Q&A for a project."""
+    from app.worker.tasks import generate_qa_questions_task
+    from app.worker.utils import wait_for_task
+
+    rank = tool_args.get("project_rank", 1)
+    project_id = None
+    project_title = None
+    for rec in all_recs:
+        if rec["rank"] == rank:
+            project_id = rec["project_id"]
+            project_title = rec.get("title", "Проект")
+            break
+
+    if not project_id:
+        return f"Проект #{rank} не найден в рекомендациях."
+
+    tg_id = str(update.effective_user.id)
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram_id(session, tg_id)
+        if not user:
+            return "Пользователь не найден. Используйте /start."
+
+    await update.message.reply_text(f"Генерирую вопросы для проекта #{rank}...")
+
+    task = generate_qa_questions_task.delay(str(user.id), project_id)
+    completed, questions = await wait_for_task(task.id, timeout=20, poll_interval=0.5)
+
+    if not completed or not questions:
+        return "Не удалось сгенерировать вопросы. Попробуйте позже."
+
+    text = f"*Вопросы для проекта #{rank}:*\n_{_escape_markdown(project_title)}_\n\n"
+    for i, q in enumerate(questions, 1):
+        text += f"{i}. {q}\n\n"
+    return text
+
+
+async def _handle_get_followup(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> str:
+    """Handle get_followup tool call — guest follow-up package."""
+    role_code = context.user_data.get("pending_role_code", "")
+    if role_code == RoleCode.BUSINESS.value:
+        return "Follow-up пакет доступен только для гостей. Используйте get_pipeline."
+
+    user_id = context.user_data.get("profile_user_id")
+    event_id = context.user_data.get("profile_event_id")
+
+    if not user_id or not event_id:
+        return "Профиль не найден. Используйте /start."
+
+    await update.message.reply_text("Формирую follow-up пакет...")
+
+    async with async_session() as session:
+        package = await followup_service.get_or_create_package(
+            session, _uuid.UUID(user_id), _uuid.UUID(event_id),
+        )
+
+    if not package:
+        return "Пока нет данных для follow-up. Сначала посетите проекты."
+
+    text = followup_service.format_package_message(package)
+    await safe_send_long_message(
+        context.bot, update.effective_chat.id, text,
+    )
+    return ""  # already sent
+
+
+async def _handle_get_pipeline(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> str:
+    """Handle get_pipeline tool call — business partner pipeline."""
+    role_code = context.user_data.get("pending_role_code", "")
+    if role_code != RoleCode.BUSINESS.value:
+        return "Пайплайн доступен только для бизнес-партнёров. Используйте get_followup."
+
+    user_id = context.user_data.get("profile_user_id")
+    event_id = context.user_data.get("profile_event_id")
+
+    if not user_id or not event_id:
+        return "Профиль не найден. Используйте /start."
+
+    await update.message.reply_text("Загружаю бизнес-пайплайн...")
+
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram_id(
+            session, str(update.effective_user.id),
+        )
+        if not user:
+            return "Пользователь не найден. Используйте /start."
+
+        followups = await business_followup_service.get_pipeline_projects(
+            session, user.id, _uuid.UUID(event_id),
+        )
+
+        if not followups:
+            added = await business_followup_service.init_pipeline_from_recommendations(
+                session, user.id, _uuid.UUID(event_id),
+            )
+            if added:
+                followups = await business_followup_service.get_pipeline_projects(
+                    session, user.id, _uuid.UUID(event_id),
+                )
+
+        if not followups:
+            return "Пайплайн пуст. Сначала получите рекомендации через /start."
+
+        profile = await business_followup_service.get_business_profile(session, user.id)
+        text = business_followup_service.format_pipeline_message(followups, profile)
+
+    await safe_send_long_message(
+        context.bot, update.effective_chat.id, text,
+    )
+    return ""  # already sent
+
+
 async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle text messages in VIEW_PROGRAM — LLM agent with tool calling."""
     from app.worker.tasks import agent_chat_task
@@ -1162,19 +1437,36 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             f"{(rec.get('summary') or '')[:150]}\n"
         )
 
+    role_code = context.user_data.get("pending_role_code", "")
+    is_business = role_code == RoleCode.BUSINESS.value
+
+    role_tools = ""
+    if is_business:
+        role_tools = (
+            "- get_pipeline — показать бизнес-пайплайн (статусы проектов, прогресс сделок)\n"
+        )
+    else:
+        role_tools = (
+            "- get_followup — получить follow-up пакет (итоги, контакты авторов, шаблон письма)\n"
+        )
+
     system_prompt = (
         "Ты — AI-куратор Demo Day. Пользователь получил персональную программу проектов.\n"
         "Отвечай кратко, по делу, на русском. Без эмодзи.\n\n"
-        "ТВОИ ВОЗМОЖНОСТИ:\n"
-        "- Отвечать на вопросы о проектах из рекомендаций\n"
-        "- Готовить вопросы для Q&A к конкретному проекту\n"
-        "- Сравнивать проекты между собой\n"
-        "- Помогать планировать маршрут по залам\n"
-        "- Показывать профиль пользователя (tool: show_profile)\n"
-        "- Показывать детали проекта (tool: show_project)\n"
-        "- Перезапускать профилирование если пользователь хочет изменить интересы (tool: rebuild_profile)\n\n"
-        "ВАЖНО: Если пользователь хочет изменить интересы, пересобрать профиль, "
-        "получить другие рекомендации, начать заново — ОБЯЗАТЕЛЬНО вызови tool rebuild_profile.\n\n"
+        f"РОЛЬ ПОЛЬЗОВАТЕЛЯ: {'бизнес-партнёр' if is_business else 'гость'}\n\n"
+        "ИНСТРУМЕНТЫ (tools):\n"
+        "- show_project — показать детали ОДНОГО проекта по номеру\n"
+        "- show_profile — показать профиль пользователя\n"
+        "- compare_projects — сравнить 2-5 проектов (генерирует матрицу сравнения)\n"
+        "- generate_questions — подготовить вопросы для Q&A к проекту\n"
+        f"{role_tools}"
+        "- rebuild_profile — перезапустить профилирование\n\n"
+        "ПРАВИЛА:\n"
+        "- Для сравнения проектов ВСЕГДА вызывай compare_projects, НЕ пиши текстом\n"
+        "- show_project — ТОЛЬКО для одного проекта, НЕ для сравнения\n"
+        "- Если пользователь хочет изменить интересы — вызови rebuild_profile\n"
+        "- Для простых вопросов о проектах отвечай текстом, используя данные из РЕКОМЕНДАЦИЙ\n"
+        "- Помогай планировать маршрут по залам\n\n"
         f"ПРОФИЛЬ:\n{profile_info}\n\n"
         f"РЕКОМЕНДАЦИИ ({len(all_recs)} проектов):\n{recs_summary}"
     )
@@ -1223,6 +1515,22 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 elif tool_name == "show_profile":
                     reply = f"Ваш профиль:\n{profile_info}"
 
+                elif tool_name == "compare_projects":
+                    reply = await _handle_compare_projects(
+                        update, context, tool_args, all_recs, is_business,
+                    )
+
+                elif tool_name == "generate_questions":
+                    reply = await _handle_generate_questions(
+                        update, context, tool_args, all_recs,
+                    )
+
+                elif tool_name == "get_followup":
+                    reply = await _handle_get_followup(update, context)
+
+                elif tool_name == "get_pipeline":
+                    reply = await _handle_get_pipeline(update, context)
+
                 else:
                     reply = "Неизвестное действие."
 
@@ -1235,10 +1543,15 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             logger.exception("Agent failed in VIEW_PROGRAM")
             reply = "Произошла ошибка. Попробуйте ещё раз или используйте кнопки."
 
-    chat_history.append({"role": "assistant", "content": reply})
-    context.user_data["program_chat"] = chat_history
+    if reply:
+        chat_history.append({"role": "assistant", "content": reply})
+        context.user_data["program_chat"] = chat_history
+        await update.message.reply_text(reply, parse_mode="Markdown")
+    else:
+        # Tool already sent the response (e.g. safe_send_long_message)
+        chat_history.append({"role": "assistant", "content": "(результат отправлен)"})
+        context.user_data["program_chat"] = chat_history
 
-    await update.message.reply_text(reply)
     return VIEW_PROGRAM
 
 

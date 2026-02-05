@@ -28,15 +28,6 @@ def guest_subtype_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
-def confirm_change_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("Да, сменить роль", callback_data="change:yes")],
-            [InlineKeyboardButton("Нет, оставить", callback_data="change:no")],
-        ]
-    )
-
-
 def nl_topic_buttons(prefix: str = "nl") -> InlineKeyboardMarkup:
     """Quick-pick topic buttons for NL profiling — all seed tags.
 
@@ -207,68 +198,6 @@ def approve_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-# --- Business Profiling keyboards ---
-
-
-def objective_keyboard() -> InlineKeyboardMarkup:
-    """Business objective selection: Investment, Hiring, Technology, Partnership."""
-    from app.models.business_profile import OBJECTIVE_DISPLAY
-
-    buttons = [
-        [InlineKeyboardButton(display, callback_data=f"bp:obj:{obj.value}")]
-        for obj, display in OBJECTIVE_DISPLAY.items()
-    ]
-    return InlineKeyboardMarkup(buttons)
-
-
-def industries_keyboard(selected: list[str] | None = None) -> InlineKeyboardMarkup:
-    """Industry selection with multi-select support."""
-    selected = selected or []
-    industries = [
-        ("fintech", "FinTech"),
-        ("edtech", "EdTech"),
-        ("nlp", "NLP"),
-        ("cv", "Computer Vision"),
-        ("agents", "AI Agents"),
-        ("ml_prod", "ML в продакшене"),
-        ("security", "Security"),
-        ("medtech", "MedTech"),
-        ("other", "Другое"),
-    ]
-    buttons = []
-    for code, display in industries:
-        marker = "✓ " if code in selected else ""
-        buttons.append([
-            InlineKeyboardButton(f"{marker}{display}", callback_data=f"bp:ind:{code}")
-        ])
-    buttons.append([
-        InlineKeyboardButton("Готово →", callback_data="bp:ind:done"),
-    ])
-    return InlineKeyboardMarkup(buttons)
-
-
-def stages_keyboard(selected: list[str] | None = None) -> InlineKeyboardMarkup:
-    """Project stage selection with multi-select support."""
-    selected = selected or []
-    stages = [
-        ("idea", "Идея"),
-        ("mvp", "MVP"),
-        ("early_traction", "Ранняя тяга"),
-        ("scaling", "Масштабирование"),
-        ("mature", "Зрелый продукт"),
-    ]
-    buttons = []
-    for code, display in stages:
-        marker = "✓ " if code in selected else ""
-        buttons.append([
-            InlineKeyboardButton(f"{marker}{display}", callback_data=f"bp:stg:{code}")
-        ])
-    buttons.append([
-        InlineKeyboardButton("Готово →", callback_data="bp:stg:done"),
-    ])
-    return InlineKeyboardMarkup(buttons)
-
-
 # --- Expert assignment keyboards ---
 
 
@@ -409,128 +338,7 @@ def escalation_detail_keyboard(escalation_id: str) -> InlineKeyboardMarkup:
     ])
 
 
-# --- Guest profiling keyboards (EPIC-005) ---
-
-
-def start_profiling_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Получить программу", callback_data="start_profiling")],
-    ])
-
-
-def tag_selection_keyboard(
-    tags: list[tuple[str, int]], selected: set[str]
-) -> InlineKeyboardMarkup:
-    """Inline keyboard with toggle buttons for tag selection (3-column grid).
-    tags: list of (tag_name, project_count). selected: set of currently selected tag names.
-    """
-    buttons = []
-    row = []
-    # Show top-15 tags by project count
-    for tag_name, count in tags[:15]:
-        prefix = "✓ " if tag_name in selected else ""
-        label = f"{prefix}{tag_name}"
-        # Truncate callback data to fit 64-byte limit
-        cb_data = f"ptag:{tag_name[:50]}"
-        row.append(InlineKeyboardButton(label, callback_data=cb_data))
-        if len(row) == 3:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-
-    # Action buttons
-    buttons.append([
-        InlineKeyboardButton("Написать текстом", callback_data="ptag:_text"),
-        InlineKeyboardButton("Готово", callback_data="ptag:_done"),
-    ])
-    return InlineKeyboardMarkup(buttons)
-
-
-def confirm_profile_keyboard() -> InlineKeyboardMarkup:
-    """Confirm or edit extracted profile."""
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✓ Подтвердить", callback_data="bp:confirm:yes")],
-        [InlineKeyboardButton("✎ Исправить", callback_data="bp:confirm:edit")],
-        [InlineKeyboardButton("↺ Начать заново", callback_data="bp:confirm:restart")],
-    ])
-
-
-def skip_free_text_keyboard() -> InlineKeyboardMarkup:
-    """Skip free text input."""
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Пропустить →", callback_data="bp:text:skip")],
-    ])
-
-
-def recommendations_page_keyboard(
-    page: int,
-    total_pages: int,
-    items: list,
-) -> InlineKeyboardMarkup:
-    """Paginated recommendations list."""
-    buttons = []
-
-    # Project buttons
-    for rec in items:
-        score_bar = "●" * (rec.relevance_score // 20) + "○" * (5 - rec.relevance_score // 20)
-        bookmark = "⭐" if rec.is_bookmarked else ""
-        label = f"{bookmark}{rec.project.title[:30]} [{score_bar}]"
-        # Use first 8 chars of UUID for callback (64 byte limit)
-        buttons.append([
-            InlineKeyboardButton(label, callback_data=f"bp:proj:{str(rec.id)[:8]}")
-        ])
-
-    # Navigation row
-    nav = []
-    if page > 1:
-        nav.append(InlineKeyboardButton("◀ Назад", callback_data=f"bp:rec:page:{page - 1}"))
-    nav.append(InlineKeyboardButton(f"{page}/{total_pages}", callback_data="bp:noop"))
-    if page < total_pages:
-        nav.append(InlineKeyboardButton("Вперёд ▶", callback_data=f"bp:rec:page:{page + 1}"))
-    if nav:
-        buttons.append(nav)
-
-    # Actions row
-    buttons.append([
-        InlineKeyboardButton("↺ Обновить", callback_data="bp:rec:refresh"),
-        InlineKeyboardButton("✎ Профиль", callback_data="bp:rec:edit"),
-    ])
-
-    return InlineKeyboardMarkup(buttons)
-
-
-def project_card_keyboard(recommendation_id: str, is_bookmarked: bool) -> InlineKeyboardMarkup:
-    """Single project detail view."""
-    bookmark_text = "★ Убрать из избранного" if is_bookmarked else "☆ В избранное"
-    rec_id_short = recommendation_id[:8]
-
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(bookmark_text, callback_data=f"bp:bm:{rec_id_short}")],
-        [InlineKeyboardButton("← К списку", callback_data="bp:proj:back")],
-    ])
-
-
-def confirm_interests_keyboard() -> InlineKeyboardMarkup:
-    """Confirm extracted interests from free text."""
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Да", callback_data="prof:yes")],
-        [InlineKeyboardButton("Нет, изменить", callback_data="prof:no")],
-    ])
-
-
-def generate_program_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Сгенерировать программу", callback_data="prof:generate")],
-        [InlineKeyboardButton("Позже", callback_data="prof:later")],
-    ])
-
-
-def update_profile_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Да, обновить", callback_data="prof:update_yes")],
-        [InlineKeyboardButton("Нет", callback_data="prof:update_no")],
-    ])
+# --- Guest program keyboards ---
 
 
 def program_recommendation_keyboard(
@@ -562,12 +370,6 @@ def program_recommendation_keyboard(
         buttons.append([InlineKeyboardButton("Ещё рекомендации", callback_data="prof:show_if_time")])
     buttons.append([InlineKeyboardButton("Обновить профиль", callback_data="profile:update")])
     return InlineKeyboardMarkup(buttons)
-
-
-def back_to_program_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
-    ])
 
 
 def check_readiness_keyboard() -> InlineKeyboardMarkup:

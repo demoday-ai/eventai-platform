@@ -1,7 +1,6 @@
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
 from app.bot.handlers.briefing import get_briefing_handlers
-from app.bot.handlers.business_followup import get_business_followup_handlers
 from app.bot.handlers.clustering import get_clustering_handler
 from app.bot.handlers.confirmation import get_confirmation_handlers
 from app.bot.handlers.contact import get_contact_handlers
@@ -20,8 +19,6 @@ from app.bot.handlers.expert_assignment import (
     get_expert_assignment_handler,
 )
 from app.bot.handlers.feedback import get_feedback_handlers
-from app.bot.handlers.followup import get_followup_handlers
-from app.bot.handlers.qa import get_qa_handlers
 from app.bot.handlers.reminder import get_reminder_handlers
 from app.bot.handlers.schedule import get_schedule_handler, get_schedule_preview_handlers
 from app.bot.handlers.scoring import get_scoring_handlers
@@ -66,10 +63,6 @@ def create_bot_app() -> Application:
     for handler in get_briefing_handlers():
         application.add_handler(handler)
 
-    # EPIC-009: Q&A Helper handlers
-    for handler in get_qa_handlers():
-        application.add_handler(handler)
-
     # EPIC-010: Contact Request handlers
     for handler in get_contact_handlers():
         application.add_handler(handler)
@@ -84,14 +77,6 @@ def create_bot_app() -> Application:
 
     # EPIC-013: Expert Scoring handlers
     for handler in get_scoring_handlers():
-        application.add_handler(handler)
-
-    # EPIC-014: Guest Follow-up handlers
-    for handler in get_followup_handlers():
-        application.add_handler(handler)
-
-    # EPIC-015: Business Follow-up handlers
-    for handler in get_business_followup_handlers():
         application.add_handler(handler)
 
     return application
