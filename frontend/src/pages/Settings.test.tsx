@@ -111,7 +111,8 @@ describe("Settings", () => {
     render(<Settings />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText("Мероприятие")).toBeInTheDocument()
+      const nameInput = screen.getByLabelText("Название") as HTMLInputElement
+      expect(nameInput.value).toBe("Demo Day 2026")
     })
 
     const nameInput = screen.getByLabelText("Название") as HTMLInputElement
