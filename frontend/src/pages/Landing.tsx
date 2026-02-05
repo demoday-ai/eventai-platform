@@ -21,6 +21,8 @@ import {
   Clapperboard,
   Mail,
   CheckCircle,
+  Menu,
+  X,
 } from "lucide-react"
 
 const BOT_URL = "https://t.me/demoday_ai_talent_hub_test_bot"
@@ -387,6 +389,154 @@ function ChatBubble({
 }
 
 /* ============================================================
+   Navigation
+   ============================================================ */
+
+const NAV_LINKS = [
+  { href: "#features", label: "Возможности" },
+  { href: "#case", label: "Демо" },
+  { href: "#how", label: "Подключение" },
+  { href: "#faq", label: "FAQ" },
+  { href: "#contact", label: "Контакт" },
+]
+
+function NavBar({ dark, toggle }: { dark: boolean; toggle: () => void }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  // Close mobile menu on navigation
+  const handleNavClick = () => setMobileOpen(false)
+
+  return (
+    <nav
+      className="fixed top-0 z-50 w-full transition-all duration-300"
+      style={{
+        background: scrolled ? "var(--ld-nav-bg)" : "transparent",
+        backdropFilter: scrolled ? "blur(20px)" : "none",
+        borderBottom: scrolled ? "1px solid var(--ld-border-subtle)" : "1px solid transparent",
+      }}
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        {/* Logo */}
+        <a
+          href="#"
+          className="font-display flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg"
+          style={{ color: "var(--ld-text)" }}
+        >
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-lg"
+            style={{ background: "var(--ld-accent)", color: "#fff" }}
+          >
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <span className="hidden xs:inline">EventAI</span>
+        </a>
+
+        {/* Desktop Nav */}
+        <div className="font-display hidden items-center gap-1 md:flex">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-[var(--ld-surface-hover)]"
+              style={{ color: "var(--ld-text-secondary)" }}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+
+        {/* Right side */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={toggle}
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:scale-105"
+            style={{
+              background: "var(--ld-surface)",
+              border: "1px solid var(--ld-border)",
+              color: "var(--ld-text-secondary)",
+            }}
+            aria-label="Переключить тему"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+
+          {/* Desktop CTA */}
+          <a
+            href={BOT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-display hidden items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:shadow-lg sm:flex"
+            style={{
+              background: "var(--ld-accent)",
+              color: "#fff",
+              boxShadow: "0 2px 8px var(--ld-accent-glow)",
+            }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden lg:inline">Попробовать</span>
+            <span className="lg:hidden">Demo</span>
+          </a>
+
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 md:hidden"
+            style={{
+              background: "var(--ld-surface)",
+              border: "1px solid var(--ld-border)",
+              color: "var(--ld-text)",
+            }}
+            aria-label="Меню"
+          >
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <div
+        className={`overflow-hidden transition-all duration-300 md:hidden ${
+          mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
+        style={{ background: "var(--ld-surface)" }}
+      >
+        <div className="border-t px-4 py-3" style={{ borderColor: "var(--ld-border-subtle)" }}>
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={handleNavClick}
+              className="font-display block rounded-lg px-3 py-3 text-sm font-medium transition-colors"
+              style={{ color: "var(--ld-text)" }}
+            >
+              {link.label}
+            </a>
+          ))}
+          <a
+            href={BOT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleNavClick}
+            className="font-display mt-2 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium"
+            style={{ background: "var(--ld-accent)", color: "#fff" }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Попробовать Live Demo
+          </a>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+/* ============================================================
    Lead Capture Form
    ============================================================ */
 
@@ -668,77 +818,7 @@ export function Landing() {
       style={{ background: "var(--ld-bg)", color: "var(--ld-text)" }}
     >
       {/* ===================== NAV ===================== */}
-      <nav
-        className="fixed top-0 z-50 w-full backdrop-blur-xl"
-        style={{
-          background: "var(--ld-nav-bg)",
-          borderBottom: "1px solid var(--ld-border-subtle)",
-        }}
-      >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <a
-            href="#"
-            className="font-display flex items-center gap-2 text-base font-medium tracking-tight"
-            style={{ color: "var(--ld-text)" }}
-          >
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-md"
-              style={{ background: "var(--ld-accent)", color: "#fff" }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-            </div>
-            EventAI
-          </a>
-
-          <div
-            className="font-display hidden items-center gap-7 text-xs font-medium uppercase tracking-widest md:flex"
-          >
-            <a href="#problem" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-text-secondary)" }}>
-              Проблема
-            </a>
-            <a href="#features" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-text-secondary)" }}>
-              Платформа
-            </a>
-            <a href="#case" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-text-secondary)" }}>
-              Кейс
-            </a>
-            <a href="#how" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-text-secondary)" }}>
-              Как работает
-            </a>
-            <a href="#team" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-text-secondary)" }}>
-              Команда
-            </a>
-            <a href="/login" className="transition-colors hover:opacity-80" style={{ color: "var(--ld-accent)" }}>
-              Админка
-            </a>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggle}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 hover:scale-110"
-              style={{
-                background: "var(--ld-surface)",
-                border: "1px solid var(--ld-border)",
-                color: "var(--ld-text-secondary)",
-              }}
-              aria-label="Toggle theme"
-            >
-              {dark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </button>
-            <a
-              href={BOT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-display hidden items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.03] sm:flex"
-              style={{ background: "var(--ld-accent)", color: "#fff" }}
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Live Demo
-            </a>
-          </div>
-        </div>
-      </nav>
+      <NavBar dark={dark} toggle={toggle} />
 
       {/* ===================== HERO ===================== */}
       <section className="noise-overlay dot-grid relative flex min-h-screen flex-col items-center justify-center px-4 pt-20 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
@@ -1571,39 +1651,173 @@ export function Landing() {
 
       {/* ===================== FOOTER ===================== */}
       <footer
-        className="py-8 px-6"
-        style={{ borderTop: "1px solid var(--ld-border-subtle)" }}
+        className="py-10 px-6"
+        style={{
+          background: "var(--ld-bg-alt)",
+          borderTop: "1px solid var(--ld-border-subtle)",
+        }}
       >
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <div
-            className="font-display flex items-center gap-2 text-xs tracking-wider"
-            style={{ color: "var(--ld-text-muted)" }}
-          >
-            <Sparkles className="h-3 w-3" />
-            EventAI &copy; 2026
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand */}
+            <div className="sm:col-span-2 lg:col-span-1">
+              <a
+                href="#"
+                className="font-display inline-flex items-center gap-2 text-lg font-semibold"
+                style={{ color: "var(--ld-text)" }}
+              >
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ background: "var(--ld-accent)", color: "#fff" }}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                EventAI
+              </a>
+              <p
+                className="font-body mt-3 text-sm leading-relaxed"
+                style={{ color: "var(--ld-text-muted)" }}
+              >
+                AI-платформа для персонализации мероприятий с параллельными треками
+              </p>
+            </div>
+
+            {/* Links */}
+            <div>
+              <h4
+                className="font-display text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                Навигация
+              </h4>
+              <ul className="mt-3 space-y-2">
+                {NAV_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      className="font-body text-sm transition-colors hover:opacity-80"
+                      style={{ color: "var(--ld-text-muted)" }}
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h4
+                className="font-display text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                Ресурсы
+              </h4>
+              <ul className="mt-3 space-y-2">
+                <li>
+                  <a
+                    href={GITHUB_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-body inline-flex items-center gap-1.5 text-sm transition-colors hover:opacity-80"
+                    style={{ color: "var(--ld-text-muted)" }}
+                  >
+                    <Github className="h-3.5 w-3.5" />
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={BOT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-body inline-flex items-center gap-1.5 text-sm transition-colors hover:opacity-80"
+                    style={{ color: "var(--ld-text-muted)" }}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Telegram Bot
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/login"
+                    className="font-body inline-flex items-center gap-1.5 text-sm transition-colors hover:opacity-80"
+                    style={{ color: "var(--ld-text-muted)" }}
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    Админ-панель
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4
+                className="font-display text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                Контакт
+              </h4>
+              <ul className="mt-3 space-y-2">
+                <li>
+                  <a
+                    href="https://t.me/grbn_dima"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-body text-sm transition-colors hover:opacity-80"
+                    style={{ color: "var(--ld-text-muted)" }}
+                  >
+                    @grbn_dima
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#contact"
+                    className="font-body text-sm transition-colors hover:opacity-80"
+                    style={{ color: "var(--ld-text-muted)" }}
+                  >
+                    Оставить заявку
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
+
+          {/* Bottom */}
           <div
-            className="font-body flex items-center gap-6 text-xs"
-            style={{ color: "var(--ld-text-muted)" }}
+            className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row"
+            style={{ borderColor: "var(--ld-border-subtle)" }}
           >
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 transition-opacity hover:opacity-70"
+            <p
+              className="font-body text-xs"
+              style={{ color: "var(--ld-text-muted)" }}
             >
-              <Github className="h-3.5 w-3.5" />
-              GitHub
-            </a>
-            <a
-              href={BOT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 transition-opacity hover:opacity-70"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Telegram
-            </a>
+              &copy; 2026 EventAI. Открытый исходный код.
+            </p>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://itmo.ru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-opacity hover:opacity-70"
+              >
+                <img
+                  src="https://itmo.ru/file/pages/213/logo_na_plashke_russkiy_belyy.png"
+                  alt="ITMO"
+                  className="h-6 w-auto opacity-60 dark:invert"
+                />
+              </a>
+              <a
+                href="https://ai.itmo.ru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-display text-xs font-medium transition-opacity hover:opacity-70"
+                style={{ color: "var(--ld-text-muted)" }}
+              >
+                AI Talent Camp 2026
+              </a>
+            </div>
           </div>
         </div>
       </footer>
