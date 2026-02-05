@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     ClusteringRun,
+    Expert,
     ExpertRoomAssignment,
     ParticipationRequest,
     ParticipationStatus,
@@ -70,8 +71,12 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
         declined=max(0, declined_students),
     )
 
-    # Expert stats
-    # Get current clustering run
+    # Expert stats - count from Expert table
+    total_experts = await db.scalar(
+        select(func.count(Expert.id)).where(Expert.event_id == event_id)
+    ) or 0
+
+    # Get current clustering run for assignment stats
     from app.models import ClusteringRun
 
     current_clustering = await db.scalar(
@@ -82,34 +87,28 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     )
 
     if current_clustering:
-        total_experts = await db.scalar(
-            select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
-                ExpertRoomAssignment.clustering_run_id == current_clustering.id
-            )
-        )
-
         confirmed_experts = await db.scalar(
             select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
                 ExpertRoomAssignment.clustering_run_id == current_clustering.id,
                 ExpertRoomAssignment.status == "confirmed",
             )
-        )
+        ) or 0
 
         pending_experts = await db.scalar(
             select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
                 ExpertRoomAssignment.clustering_run_id == current_clustering.id,
                 ExpertRoomAssignment.status.in_(["proposed", "sent"]),
             )
-        )
+        ) or 0
 
         invited_experts = await db.scalar(
             select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
                 ExpertRoomAssignment.clustering_run_id == current_clustering.id,
                 ExpertRoomAssignment.status.in_(["sent", "confirmed"]),
             )
-        )
+        ) or 0
     else:
-        total_experts = confirmed_experts = pending_experts = invited_experts = 0
+        confirmed_experts = pending_experts = invited_experts = 0
 
     experts = ExpertStats(
         total=total_experts,
