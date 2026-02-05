@@ -81,7 +81,7 @@ export function Login() {
 
             {/* Dev hint */}
             <div className="p-3 text-xs text-muted-foreground bg-muted rounded-md">
-              <strong>Dev mode:</strong> логин/пароль для тестовой среды.
+              <strong>Demo:</strong> логин <code className="font-mono bg-background px-1 rounded">admin</code> / пароль <code className="font-mono bg-background px-1 rounded">admin</code>
             </div>
           </CardContent>
 
