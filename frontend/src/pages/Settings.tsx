@@ -276,6 +276,7 @@ function TagsSection() {
               onChange={(e) => {
                 setTagInput(e.target.value)
                 setTagError("")
+                setTagInfo(null)
               }}
               disabled={mutation.isPending}
             />

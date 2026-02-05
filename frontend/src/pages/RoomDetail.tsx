@@ -119,7 +119,10 @@ export function RoomDetail() {
               <Input
                 id="room-name"
                 value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
+                onChange={(e) => {
+                  setRoomName(e.target.value)
+                  setRoomMessage(null)
+                }}
                 disabled={updateMutation.isPending}
               />
             </div>
@@ -129,7 +132,10 @@ export function RoomDetail() {
                 id="room-theme"
                 className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={roomTheme}
-                onChange={(e) => setRoomTheme(e.target.value)}
+                onChange={(e) => {
+                  setRoomTheme(e.target.value)
+                  setRoomMessage(null)
+                }}
                 disabled={updateMutation.isPending}
               />
             </div>
