@@ -21,6 +21,25 @@ import {
   type UploadJobResponse,
 } from "../lib/api-client"
 
+// Helper to load from localStorage
+function loadFromStorage<T>(key: string): T | null {
+  try {
+    const stored = localStorage.getItem(key)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
+
+// Helper to save to localStorage
+function saveToStorage<T>(key: string, value: T | null) {
+  if (value) {
+    localStorage.setItem(key, JSON.stringify(value))
+  } else {
+    localStorage.removeItem(key)
+  }
+}
+
 export function DataImport() {
   const queryClient = useQueryClient()
 
@@ -35,7 +54,9 @@ export function DataImport() {
 
   // --- Projects ---
   const [projectFile, setProjectFile] = useState<File | null>(null)
-  const [projectResult, setProjectResult] = useState<UploadResult | null>(null)
+  const [projectResult, setProjectResult] = useState<UploadResult | null>(() =>
+    loadFromStorage<UploadResult>("import_project_result")
+  )
   const [projectConflict, setProjectConflict] = useState<UploadConflict | null>(null)
   const [projectJobId, setProjectJobId] = useState<string | null>(null)
   const [projectJobStatus, setProjectJobStatus] = useState<string | null>(null)
@@ -119,9 +140,16 @@ export function DataImport() {
 
   const isProjectJobRunning = projectJobId && (projectJobStatus === "pending" || projectJobStatus === "running")
 
+  // Save project result to localStorage
+  useEffect(() => {
+    saveToStorage("import_project_result", projectResult)
+  }, [projectResult])
+
   // --- Experts ---
   const [expertFile, setExpertFile] = useState<File | null>(null)
-  const [expertResult, setExpertResult] = useState<ExpertUploadResult | null>(null)
+  const [expertResult, setExpertResult] = useState<ExpertUploadResult | null>(() =>
+    loadFromStorage<ExpertUploadResult>("import_expert_result")
+  )
   const [expertConflict, setExpertConflict] = useState<ExpertUploadConflict | null>(null)
   const [expertError, setExpertError] = useState<string | null>(null)
 
@@ -164,10 +192,17 @@ export function DataImport() {
     expertMutation.mutate({ file: expertFile, confirmReplace: true })
   }
 
+  // Save expert result to localStorage
+  useEffect(() => {
+    saveToStorage("import_expert_result", expertResult)
+  }, [expertResult])
+
   // --- Guests ---
   const [guestFile, setGuestFile] = useState<File | null>(null)
   const [guestSubtype, setGuestSubtype] = useState<string>("")
-  const [guestResult, setGuestResult] = useState<GuestUploadResult | null>(null)
+  const [guestResult, setGuestResult] = useState<GuestUploadResult | null>(() =>
+    loadFromStorage<GuestUploadResult>("import_guest_result")
+  )
   const [guestConflict, setGuestConflict] = useState<GuestUploadConflict | null>(null)
   const [guestError, setGuestError] = useState<string | null>(null)
 
@@ -209,6 +244,11 @@ export function DataImport() {
     setGuestConflict(null)
     guestMutation.mutate({ file: guestFile, subtype: guestSubtype, confirmReplace: true })
   }
+
+  // Save guest result to localStorage
+  useEffect(() => {
+    saveToStorage("import_guest_result", guestResult)
+  }, [guestResult])
 
   return (
     <div className="grid gap-6">
