@@ -283,12 +283,14 @@ function TeamMember({
   tag,
   delay,
   telegram,
+  photo,
 }: {
   name: string
   role: string
   tag: string
   delay: number
   telegram?: string
+  photo?: string
 }) {
   return (
     <Reveal delay={delay}>
@@ -299,15 +301,23 @@ function TeamMember({
           border: "1px solid var(--ld-border-subtle)",
         }}
       >
-        <div
-          className="font-display flex h-11 w-11 items-center justify-center rounded-full text-xs font-medium uppercase tracking-wider"
-          style={{
-            background: "var(--ld-accent-soft)",
-            color: "var(--ld-accent)",
-          }}
-        >
-          {tag}
-        </div>
+        {photo ? (
+          <img
+            src={photo}
+            alt={name}
+            className="h-11 w-11 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className="font-display flex h-11 w-11 items-center justify-center rounded-full text-xs font-medium uppercase tracking-wider"
+            style={{
+              background: "var(--ld-accent-soft)",
+              color: "var(--ld-accent)",
+            }}
+          >
+            {tag}
+          </div>
+        )}
         <div className="flex-1">
           <div
             className="font-display text-sm font-medium"
@@ -1777,9 +1787,9 @@ export function Landing() {
 
           <Reveal delay={200}>
             <div className="mt-10 grid gap-3 sm:grid-cols-2">
-              <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} telegram="grbn_dima" />
-              <TeamMember name="Анастасия Гапеева" role="UX/UI, фронтенд" tag="AG" delay={80} />
-              <TeamMember name="Иван Александров" role="Разработка, бизнес-логика" tag="IA" delay={160} />
+              <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} telegram="grbn_dima" photo="/team/dima.jpg" />
+              <TeamMember name="Анастасия Гапеева" role="UX/UI, фронтенд" tag="AG" delay={80} photo="/team/nastya.jpg" />
+              <TeamMember name="Иван Александров" role="Разработка, бизнес-логика" tag="IA" delay={160} photo="/team/ivan.jpg" />
               <TeamMember name="Claude" role="AI-ассистент команды" tag="AI" delay={240} />
             </div>
           </Reveal>
