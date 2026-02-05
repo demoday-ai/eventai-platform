@@ -40,7 +40,7 @@ from app.bot.keyboards import (
 from app.database import async_session
 from app.models.role import ROLE_DISPLAY_NAMES, RoleCode
 from app.models.user import GUEST_SUBTYPE_DISPLAY, GuestSubtype
-from app.services import profiling_service, user_service
+from app.services import profiling_service, qa_service, user_service
 
 logger = logging.getLogger(__name__)
 
@@ -841,6 +841,13 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 chat_id=chat_id, text=msg, parse_mode="Markdown",
             )
 
+    # Send hint about features
+    hint = (
+        "Кликните на проект для подробностей. "
+        "Я также могу помочь подготовить вопросы для докладчика — просто спросите в чате."
+    )
+    await context.bot.send_message(chat_id=chat_id, text=hint)
+
     return VIEW_PROGRAM
 
 
@@ -863,6 +870,13 @@ async def _show_program_from_message(update: Update, context: ContextTypes.DEFAU
             )
         else:
             await update.message.reply_text(msg, parse_mode="Markdown")
+
+    # Send hint about features
+    hint = (
+        "Кликните на проект для подробностей. "
+        "Я также могу помочь подготовить вопросы для докладчика — просто спросите в чате."
+    )
+    await update.message.reply_text(hint)
 
     return VIEW_PROGRAM
 
@@ -1085,9 +1099,11 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     recs_data = context.user_data.get("recommendations", {})
     all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
     project_id = None
+    project_rank = None
     for rec in all_recs:
         if rec["project_id"].startswith(pid_short):
             project_id = _uuid.UUID(rec["project_id"])
+            project_rank = rec.get("rank")
             break
 
     if not project_id:
@@ -1109,25 +1125,29 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
     title = _escape_markdown(detail['title'])
-    description = _escape_markdown(_truncate(detail['description'], 1500))
-    author = _escape_markdown(detail.get('author', ''))
-    telegram_contact = _escape_markdown(detail.get('telegram_contact', 'н/д'))
+
+    # Use LLM summary as main description, fallback to truncated original
+    if detail.get("llm_summary"):
+        summary = _escape_markdown(detail['llm_summary'])
+    else:
+        summary = _escape_markdown(_truncate(detail['description'], 300))
 
     text = (
         f"*{title}*\n\n"
-        f"{description}\n\n"
+        f"{summary}\n\n"
         f"Теги: {tags_str}\n"
-        f"Автор: {author}\n"
         f"{room_info}\n"
-        f"Telegram: {telegram_contact}\n"
         f"Релевантность: {score_pct}%"
     )
 
-    if detail.get("llm_summary"):
-        llm_summary = _escape_markdown(detail['llm_summary'])
-        text += f"\n\n*Кратко:* {llm_summary}"
+    # Store project info for Q&A
+    context.user_data["current_project_id"] = str(project_id)
+    context.user_data["current_project_title"] = detail['title']
+    context.user_data["current_project_rank"] = project_rank
 
+    pid_short_btn = str(project_id)[:8]
     keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
         [contact_button(project_id)],
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])
@@ -1154,9 +1174,11 @@ async def _show_project_detail_from_text(
     recs_data = context.user_data.get("recommendations", {})
     all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
     project_id = None
+    project_rank = None
     for rec in all_recs:
         if rec["project_id"].startswith(pid_short):
             project_id = _uuid.UUID(rec["project_id"])
+            project_rank = rec.get("rank")
             break
 
     if not project_id:
@@ -1174,19 +1196,28 @@ async def _show_project_detail_from_text(
     tags_str = ", ".join(detail.get("tags", []))
     score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
+    # Use LLM summary as main description, fallback to truncated original
+    if detail.get("llm_summary"):
+        summary = detail['llm_summary']
+    else:
+        summary = _truncate(detail['description'], 300)
+
     text = (
-        f"*{detail['title']}*\n\n"
-        f"{_truncate(detail['description'], 1200)}\n\n"
+        f"*{_escape_markdown(detail['title'])}*\n\n"
+        f"{_escape_markdown(summary)}\n\n"
         f"Теги: {tags_str}\n"
-        f"Автор: {detail.get('author', 'н/д')}\n"
         f"{room_info}\n"
         f"Релевантность: {score_pct}%"
     )
 
-    if detail.get("llm_summary"):
-        text += f"\n\nКратко: {detail['llm_summary']}"
+    # Store project info for Q&A
+    context.user_data["current_project_id"] = str(project_id)
+    context.user_data["current_project_title"] = detail['title']
+    context.user_data["current_project_rank"] = project_rank
 
+    pid_short_btn = str(project_id)[:8]
     keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
         [contact_button(project_id)],
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])
@@ -1200,6 +1231,81 @@ async def back_to_program_callback(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     await query.answer()
     return await _show_program(update, context)
+
+
+async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle 'Prepare questions' button — generate Q&A suggestions for project."""
+    query = update.callback_query
+    await query.answer()
+
+    # Parse project_id from callback data (qa:prep:{pid_short})
+    pid_short = query.data.split(":")[-1]
+
+    # Find full project_id from recommendations
+    recs_data = context.user_data.get("recommendations", {})
+    all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
+    project_id = None
+    project_title = None
+    for rec in all_recs:
+        if rec["project_id"].startswith(pid_short):
+            project_id = _uuid.UUID(rec["project_id"])
+            project_title = rec.get("title", "Проект")
+            break
+
+    if not project_id:
+        await query.edit_message_text("Проект не найден.")
+        return VIEW_PROGRAM
+
+    await query.edit_message_text("Генерирую вопросы...")
+
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram_id(session, str(query.from_user.id))
+        if not user:
+            await query.edit_message_text("Пользователь не найден. Используйте /start.")
+            return VIEW_PROGRAM
+
+        # Get project
+        from sqlalchemy import select
+        from app.models.project import Project
+
+        result = await session.execute(
+            select(Project).where(Project.id == project_id)
+        )
+        project = result.scalar_one_or_none()
+
+        if not project:
+            await query.edit_message_text("Проект не найден.")
+            return VIEW_PROGRAM
+
+        # Get user profiles for context
+        guest_profile = await user_service.get_guest_profile(session, user.id)
+        business_profile = await user_service.get_business_profile(session, user.id)
+
+        # Generate questions
+        questions = await qa_service.generate_questions(
+            session, user, project, guest_profile, business_profile
+        )
+
+    # Format response
+    text = f"*Вопросы для проекта:*\n_{_escape_markdown(project_title)}_\n\n"
+    for i, q in enumerate(questions, 1):
+        text += f"{i}. {q}\n\n"
+
+    pid_short_btn = str(project_id)[:8]
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ещё вопросы", callback_data=f"qa:more:{pid_short_btn}")],
+        [InlineKeyboardButton("Назад к проекту", callback_data=f"pdetail:{pid_short_btn}")],
+        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+    ])
+
+    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    return VIEW_DETAIL
+
+
+async def qa_more_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle 'More questions' button — regenerate questions."""
+    # Reuse the same logic
+    return await qa_prep_callback(update, context)
 
 
 # =============================================================================
@@ -1530,6 +1636,9 @@ def get_onboarding_handler() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, view_program_text),
             ],
             VIEW_DETAIL: [
+                CallbackQueryHandler(qa_prep_callback, pattern=r"^qa:prep:"),
+                CallbackQueryHandler(qa_more_callback, pattern=r"^qa:more:"),
+                CallbackQueryHandler(view_program_callback, pattern=r"^pdetail:"),
                 CallbackQueryHandler(back_to_program_callback, pattern=r"^prof:back_program$"),
                 CallbackQueryHandler(contact_request_callback, pattern=r"^contact:req:"),
             ],
