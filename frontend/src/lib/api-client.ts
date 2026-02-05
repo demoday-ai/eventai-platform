@@ -18,14 +18,12 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-// Handle auth errors
+// Handle auth errors - don't redirect, let components handle 401
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("auth_token")
-      window.location.href = "/login"
-    }
+    // Just reject, don't auto-redirect on 401
+    // Auth is handled separately via useAuth hook
     return Promise.reject(error)
   }
 )
