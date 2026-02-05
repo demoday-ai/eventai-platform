@@ -10,7 +10,6 @@ import {
   Target,
   Brain,
   ArrowRight,
-  ArrowUpRight,
   Github,
   Sun,
   Moon,
