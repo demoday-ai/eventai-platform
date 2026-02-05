@@ -1,6 +1,7 @@
 # AI-агент-куратор DemoDay
 
 [![CI](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml)
+[![CD](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml)
 
 ![Demo Day Event](https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2000&auto=format&fit=crop)
 
