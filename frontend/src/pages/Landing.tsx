@@ -1778,7 +1778,7 @@ export function Landing() {
               style={{ color: "var(--ld-text-secondary)" }}
             >
               Откройте бота и пройдите демо-сценарий на данных реального Demo Day AI Talent Hub.
-              Бесплатно для образовательных мероприятий.
+              Свяжитесь для обсуждения внедрения.
             </p>
           </Reveal>
           <Reveal delay={200}>

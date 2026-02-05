@@ -1,48 +1,30 @@
-Business Source License 1.1
+Copyright (c) 2026 EventAI Team (AI Talent Camp 2026)
 
-Licensor:       EventAI Team (AI Talent Camp 2026)
-Licensed Work:  EventAI
-Change Date:    2029-02-05
-Change License: MIT
+All Rights Reserved.
 
------------------------------------------------------------------------------
+This software and associated documentation files (the "Software") are
+proprietary and confidential. Unauthorized copying, modification, distribution,
+or use of this Software, via any medium, is strictly prohibited.
 
-Terms
+Commercial License Required
 
-The Licensor hereby grants you the right to copy, modify, create derivative
-works, redistribute, and make non-production use of the Licensed Work.
+Any use of this Software requires a valid commercial license obtained from
+the Licensor. This includes, but is not limited to:
+- Deploying the Software for any event or organization
+- Modifying or creating derivative works
+- Integrating into other products or services
 
-Additional Use Grant:
+The source code is made available for transparency and review purposes only.
+Viewing the code does not grant any rights to use, copy, or distribute it.
 
-  You may use the Licensed Work free of charge for:
-  - Educational institutions (universities, schools, bootcamps)
-  - Non-commercial hackathons and student events
-  - Personal evaluation and learning purposes
-
-For any commercial use, you must obtain a commercial license from the Licensor.
-
-Commercial use includes, but is not limited to:
-  - Events with paid tickets or sponsorship revenue exceeding $1,000
-  - Providing paid services using the Licensed Work
-  - Integrating the Licensed Work into commercial products
-
-Contact for licensing: @grbn_dima (Telegram)
-
------------------------------------------------------------------------------
-
-On the Change Date (2029-02-05), this Licensed Work will become available
-under the MIT License, and the restrictions above will no longer apply.
-
------------------------------------------------------------------------------
+For licensing inquiries, contact: @grbn_dima (Telegram)
 
 DISCLAIMER
 
-THE LICENSED WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE LICENSED WORK OR THE USE OR OTHER DEALINGS
-IN THE LICENSED WORK.
-
-Copyright (c) 2026 EventAI Team
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
