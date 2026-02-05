@@ -28,7 +28,8 @@ from telegram.ext import (
     filters,
 )
 
-from app.bot.handlers.contact import contact_button, contact_request_callback
+# NOTE: contact/follow-up features temporarily disabled
+# from app.bot.handlers.contact import contact_button, contact_request_callback
 from app.bot.keyboards import (
     check_readiness_keyboard,
     confirm_nl_profile_keyboard,
@@ -611,19 +612,19 @@ async def _onb_agent_turn(
         result = {"action": "reply", "message": "Расскажите подробнее о ваших интересах."}
 
     if result["action"] == "profile":
-        # # Enforce at least one question before profile confirmation
-        # user_messages = [m for m in conversation if m.get("role") == "user"]
-        # assistant_messages = [m for m in conversation if m.get("role") == "assistant"]
-        # if len(user_messages) <= 1 and len(assistant_messages) == 0:
-        #     # First turn - force a follow-up question instead of immediate profile
-        #     fallback_question = "Отлично! А какую задачу ты хочешь решить или что хочешь узнать на Demo Day?"
-        #     _add_to_conversation(context, "assistant", fallback_question)
-        #     if not is_message:
-        #         await update.callback_query.edit_message_reply_markup(reply_markup=None)
-        #     await context.bot.send_message(
-        #         chat_id=update.effective_chat.id, text=fallback_question,
-        #     )
-        #     return ONBOARD_NL_PROFILE
+        # Enforce at least one question before profile confirmation
+        user_messages = [m for m in conversation if m.get("role") == "user"]
+        assistant_messages = [m for m in conversation if m.get("role") == "assistant"]
+        if len(user_messages) <= 1 and len(assistant_messages) == 0:
+            # First turn - force a follow-up question instead of immediate profile
+            fallback_question = "Отлично! А какую задачу ты хочешь решить или что хочешь узнать на Demo Day?"
+            _add_to_conversation(context, "assistant", fallback_question)
+            if not is_message:
+                await update.callback_query.edit_message_reply_markup(reply_markup=None)
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id, text=fallback_question,
+            )
+            return ONBOARD_NL_PROFILE
 
         # Agent decided we have enough info — show confirmation
         context.user_data["extracted_profile"] = result
@@ -1076,30 +1077,31 @@ AGENT_TOOLS = [
             },
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_followup",
-            "description": (
-                "Получить follow-up пакет — итоги после Demo Day: "
-                "список посещённых проектов, контакты авторов, шаблон письма. "
-                "Только для гостей."
-            ),
-            "parameters": {"type": "object", "properties": {}, "required": []},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_pipeline",
-            "description": (
-                "Показать бизнес-пайплайн — список проектов со статусами "
-                "(заинтересован, на связи, переговоры, сделка). "
-                "Только для бизнес-партнёров."
-            ),
-            "parameters": {"type": "object", "properties": {}, "required": []},
-        },
-    },
+    # NOTE: follow-up tools temporarily disabled (not ready for production)
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "get_followup",
+    #         "description": (
+    #             "Получить follow-up пакет — итоги после Demo Day: "
+    #             "список посещённых проектов, контакты авторов, шаблон письма. "
+    #             "Только для гостей."
+    #         ),
+    #         "parameters": {"type": "object", "properties": {}, "required": []},
+    #     },
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "get_pipeline",
+    #         "description": (
+    #             "Показать бизнес-пайплайн — список проектов со статусами "
+    #             "(заинтересован, на связи, переговоры, сделка). "
+    #             "Только для бизнес-партнёров."
+    #         ),
+    #         "parameters": {"type": "object", "properties": {}, "required": []},
+    #     },
+    # },
 ]
 
 
@@ -1452,15 +1454,8 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     role_code = context.user_data.get("pending_role_code", "")
     is_business = role_code == RoleCode.BUSINESS.value
 
+    # NOTE: follow-up tools temporarily disabled (not ready for production)
     role_tools = ""
-    if is_business:
-        role_tools = (
-            "- get_pipeline — показать бизнес-пайплайн (статусы проектов, прогресс сделок)\n"
-        )
-    else:
-        role_tools = (
-            "- get_followup — получить follow-up пакет (итоги, контакты авторов, шаблон письма)\n"
-        )
 
     system_prompt = (
         "Ты — AI-куратор Demo Day. Пользователь получил персональную программу проектов.\n"
@@ -1537,11 +1532,12 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                         update, context, tool_args, all_recs,
                     )
 
-                elif tool_name == "get_followup":
-                    reply = await _handle_get_followup(update, context)
-
-                elif tool_name == "get_pipeline":
-                    reply = await _handle_get_pipeline(update, context)
+                # NOTE: follow-up tools temporarily disabled
+                # elif tool_name == "get_followup":
+                #     reply = await _handle_get_followup(update, context)
+                #
+                # elif tool_name == "get_pipeline":
+                #     reply = await _handle_get_pipeline(update, context)
 
                 else:
                     reply = "Неизвестное действие."
@@ -1630,7 +1626,7 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     pid_short_btn = str(project_id)[:12]
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
-        [contact_button(project_id)],
+        # [contact_button(project_id)],  # temporarily disabled
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])
 
@@ -1700,7 +1696,7 @@ async def _show_project_detail_from_text(
     pid_short_btn = str(project_id)[:12]
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
-        [contact_button(project_id)],
+        # [contact_button(project_id)],  # temporarily disabled
         [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
     ])
 
@@ -2135,7 +2131,7 @@ def get_onboarding_handler() -> ConversationHandler:
                 CallbackQueryHandler(qa_more_callback, pattern=r"^qa:more:"),
                 CallbackQueryHandler(view_program_callback, pattern=r"^pdetail:"),
                 CallbackQueryHandler(back_to_program_callback, pattern=r"^prof:back_program$"),
-                CallbackQueryHandler(contact_request_callback, pattern=r"^contact:req:"),
+                # CallbackQueryHandler(contact_request_callback, pattern=r"^contact:req:"),  # temporarily disabled
             ],
             NL_REBUILD: [
                 CallbackQueryHandler(nl_rebuild_topic_callback, pattern=r"^reb_nl:"),
