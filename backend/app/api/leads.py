@@ -5,7 +5,7 @@ from datetime import datetime
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from app.config import settings
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/leads", tags=["leads"])
 
 class LeadCreate(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     telegram: str | None = None
     phone: str | None = None
     event_type: str
