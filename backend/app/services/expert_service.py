@@ -103,7 +103,10 @@ async def get_experts(
     query = (
         select(Expert)
         .where(Expert.event_id == event_id)
-        .options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
+        .options(
+            selectinload(Expert.tags).selectinload(ExpertTag.tag),
+            selectinload(Expert.assignments),
+        )
     )
 
     if search:
