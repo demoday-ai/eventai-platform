@@ -83,7 +83,12 @@ def decode_token(token: str) -> str:
 
 @router.post("/dev-login", response_model=AuthResponse)
 async def dev_login(telegram_id: str, session: AsyncSession = Depends(get_session)):
-    """Dev-only login endpoint. Accepts telegram_id without verification."""
+    """Dev-only login endpoint. Accepts telegram_id without verification.
+
+    Automatically assigns organizer role for admin panel access.
+    """
+    from app.models.role import RoleCode
+
     user = await user_service.upsert_user(
         session,
         telegram_user_id=telegram_id,
@@ -94,9 +99,12 @@ async def dev_login(telegram_id: str, session: AsyncSession = Depends(get_sessio
     event = await user_service.get_current_event(session)
     role_info = None
     if event:
-        role = await user_service.get_user_role_with_info(session, user.id, event.id)
-        if role:
-            role_info = RoleInfo(code=role.code, name=role.name)
+        # Auto-assign organizer role for dev login
+        organizer_role = await user_service.get_role_by_code(session, RoleCode.ORGANIZER)
+        if organizer_role:
+            await user_service.set_role(session, user.id, event.id, organizer_role)
+            await session.commit()
+            role_info = RoleInfo(code=organizer_role.code, name=organizer_role.name)
 
     token = create_access_token(telegram_id)
 
