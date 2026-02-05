@@ -40,7 +40,7 @@ from app.bot.keyboards import (
 from app.database import async_session
 from app.models.role import ROLE_DISPLAY_NAMES, RoleCode
 from app.models.user import GUEST_SUBTYPE_DISPLAY, GuestSubtype
-from app.services import profiling_service, qa_service, user_service
+from app.services import profiling_service, user_service
 
 logger = logging.getLogger(__name__)
 
@@ -769,19 +769,35 @@ async def confirm_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Run recommendation generation and display results (from callback)."""
+    from app.worker.tasks import generate_recommendations_task
+    from app.worker.utils import wait_for_task
+
     # Show typing indicator
     await context.bot.send_chat_action(
         chat_id=update.effective_chat.id, action=ChatAction.TYPING
     )
 
-    user_id = _uuid.UUID(context.user_data["profile_user_id"])
-    event_id = _uuid.UUID(context.user_data["profile_event_id"])
+    user_id = context.user_data["profile_user_id"]
+    event_id = context.user_data["profile_event_id"]
 
-    async with async_session() as session:
-        profile = await profiling_service.get_or_create_profile(session, user_id, event_id)
-        data = await profiling_service.generate_recommendations(session, profile)
+    # Submit task to Celery
+    task = generate_recommendations_task.delay(user_id, event_id)
+    logger.info("Submitted generate_recommendations_task: task_id=%s", task.id)
 
-    if not data or data["total"] == 0:
+    # Wait for result with timeout (30s for recommendation generation)
+    completed, data = await wait_for_task(task.id, timeout=30, poll_interval=1.0)
+
+    if not completed:
+        # Task still running - save task_id for later polling
+        context.user_data["pending_task_id"] = task.id
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Генерация программы занимает больше времени, чем обычно. "
+                 "Подождите немного и отправьте любое сообщение, чтобы проверить готовность.",
+        )
+        return VIEW_PROGRAM
+
+    if not data or data.get("total", 0) == 0:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start.",
@@ -789,30 +805,47 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ConversationHandler.END
 
     context.user_data["recommendations"] = data
+    context.user_data.pop("pending_task_id", None)
     return await _show_program(update, context)
 
 
 async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Run recommendation generation and display results (from message)."""
+    from app.worker.tasks import generate_recommendations_task
+    from app.worker.utils import wait_for_task
+
     # Show typing indicator
     await context.bot.send_chat_action(
         chat_id=update.effective_chat.id, action=ChatAction.TYPING
     )
 
-    user_id = _uuid.UUID(context.user_data["profile_user_id"])
-    event_id = _uuid.UUID(context.user_data["profile_event_id"])
+    user_id = context.user_data["profile_user_id"]
+    event_id = context.user_data["profile_event_id"]
 
-    async with async_session() as session:
-        profile = await profiling_service.get_or_create_profile(session, user_id, event_id)
-        data = await profiling_service.generate_recommendations(session, profile)
+    # Submit task to Celery
+    task = generate_recommendations_task.delay(user_id, event_id)
+    logger.info("Submitted generate_recommendations_task: task_id=%s", task.id)
 
-    if not data or data["total"] == 0:
+    # Wait for result with timeout (30s for recommendation generation)
+    completed, data = await wait_for_task(task.id, timeout=30, poll_interval=1.0)
+
+    if not completed:
+        # Task still running - save task_id for later polling
+        context.user_data["pending_task_id"] = task.id
+        await update.message.reply_text(
+            "Генерация программы занимает больше времени, чем обычно. "
+            "Подождите немного и отправьте любое сообщение, чтобы проверить готовность."
+        )
+        return VIEW_PROGRAM
+
+    if not data or data.get("total", 0) == 0:
         await update.message.reply_text(
             "Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start."
         )
         return ConversationHandler.END
 
     context.user_data["recommendations"] = data
+    context.user_data.pop("pending_task_id", None)
     return await _show_program_from_message(update, context)
 
 
@@ -971,7 +1004,30 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle text messages in VIEW_PROGRAM — LLM agent with tool calling."""
-    from app.services import llm_client
+    from app.worker.tasks import agent_chat_task
+    from app.worker.utils import get_task_status, wait_for_task
+
+    # Check for pending recommendation generation task
+    pending_task_id = context.user_data.get("pending_task_id")
+    if pending_task_id:
+        status = get_task_status(pending_task_id)
+        if status["ready"]:
+            if status.get("successful") and status.get("result"):
+                context.user_data["recommendations"] = status["result"]
+                context.user_data.pop("pending_task_id", None)
+                await update.message.reply_text("Программа готова!")
+                return await _show_program_from_message(update, context)
+            else:
+                context.user_data.pop("pending_task_id", None)
+                await update.message.reply_text(
+                    "Не удалось сгенерировать программу. Попробуйте /start заново."
+                )
+                return VIEW_PROGRAM
+        else:
+            await update.message.reply_text(
+                "Программа всё ещё генерируется. Пожалуйста, подождите..."
+            )
+            return VIEW_PROGRAM
 
     user_message = update.message.text
     recs_data = context.user_data.get("recommendations", {})
@@ -1038,45 +1094,49 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         chat_id=update.effective_chat.id, action=ChatAction.TYPING
     )
 
-    try:
-        response = await llm_client.send_chat_with_tools(
-            system_prompt=system_prompt,
-            messages=chat_history,
-            tools=AGENT_TOOLS,
-        )
+    # Submit agent chat to Celery
+    task = agent_chat_task.delay(system_prompt, chat_history, AGENT_TOOLS)
+    logger.info("Submitted agent_chat_task: task_id=%s", task.id)
 
-        if response["type"] == "tool_call":
-            tool_name = response["tool_name"]
-            tool_args = response.get("tool_args", {})
+    # Wait for result with shorter timeout (15s for chat responses)
+    completed, response = await wait_for_task(task.id, timeout=15, poll_interval=0.5)
 
-            if tool_name == "rebuild_profile":
-                # Reset chat and start NL profiling
-                context.user_data["program_chat"] = []
-                return await _restart_nl_profiling(update, context)
+    if not completed or response is None:
+        reply = "Обработка занимает больше времени. Попробуйте ещё раз через несколько секунд."
+    else:
+        try:
+            if response["type"] == "tool_call":
+                tool_name = response["tool_name"]
+                tool_args = response.get("tool_args", {})
 
-            elif tool_name == "show_project":
-                rank = tool_args.get("project_rank", 1)
-                # Find project by rank
-                for rec in all_recs:
-                    if rec["rank"] == rank:
-                        pid_short = rec["project_id"][:8]
-                        # Send confirmation then show detail
-                        await update.message.reply_text(f"Показываю проект #{rank}...")
-                        return await _show_project_detail_from_text(update, context, pid_short)
-                reply = f"Проект #{rank} не найден в рекомендациях."
+                if tool_name == "rebuild_profile":
+                    # Reset chat and start NL profiling
+                    context.user_data["program_chat"] = []
+                    return await _restart_nl_profiling(update, context)
 
-            elif tool_name == "show_profile":
-                reply = f"Ваш профиль:\n{profile_info}"
+                elif tool_name == "show_project":
+                    rank = tool_args.get("project_rank", 1)
+                    # Find project by rank
+                    for rec in all_recs:
+                        if rec["rank"] == rank:
+                            pid_short = rec["project_id"][:8]
+                            # Send confirmation then show detail
+                            await update.message.reply_text(f"Показываю проект #{rank}...")
+                            return await _show_project_detail_from_text(update, context, pid_short)
+                    reply = f"Проект #{rank} не найден в рекомендациях."
+
+                elif tool_name == "show_profile":
+                    reply = f"Ваш профиль:\n{profile_info}"
+
+                else:
+                    reply = "Неизвестное действие."
 
             else:
-                reply = "Неизвестное действие."
+                reply = response.get("content", "")
 
-        else:
-            reply = response.get("content", "")
-
-    except Exception:
-        logger.exception("Agent failed in VIEW_PROGRAM")
-        reply = "Произошла ошибка. Попробуйте ещё раз или используйте кнопки."
+        except Exception:
+            logger.exception("Agent failed in VIEW_PROGRAM")
+            reply = "Произошла ошибка. Попробуйте ещё раз или используйте кнопки."
 
     chat_history.append({"role": "assistant", "content": reply})
     context.user_data["program_chat"] = chat_history
@@ -1235,6 +1295,9 @@ async def back_to_program_callback(update: Update, context: ContextTypes.DEFAULT
 
 async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle 'Prepare questions' button — generate Q&A suggestions for project."""
+    from app.worker.tasks import generate_qa_questions_task
+    from app.worker.utils import wait_for_task
+
     query = update.callback_query
     await query.answer()
 
@@ -1248,7 +1311,7 @@ async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     project_title = None
     for rec in all_recs:
         if rec["project_id"].startswith(pid_short):
-            project_id = _uuid.UUID(rec["project_id"])
+            project_id = rec["project_id"]
             project_title = rec.get("title", "Проект")
             break
 
@@ -1258,33 +1321,23 @@ async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     await query.edit_message_text("Генерирую вопросы...")
 
+    # Get user_id from DB
     async with async_session() as session:
         user = await user_service.get_user_by_telegram_id(session, str(query.from_user.id))
         if not user:
             await query.edit_message_text("Пользователь не найден. Используйте /start.")
             return VIEW_PROGRAM
+        user_id = str(user.id)
 
-        # Get project
-        from sqlalchemy import select
-        from app.models.project import Project
+    # Submit Q&A generation to Celery
+    task = generate_qa_questions_task.delay(user_id, project_id)
+    logger.info("Submitted generate_qa_questions_task: task_id=%s", task.id)
 
-        result = await session.execute(
-            select(Project).where(Project.id == project_id)
-        )
-        project = result.scalar_one_or_none()
+    # Wait for result with timeout (20s for Q&A generation)
+    completed, questions = await wait_for_task(task.id, timeout=20, poll_interval=0.5)
 
-        if not project:
-            await query.edit_message_text("Проект не найден.")
-            return VIEW_PROGRAM
-
-        # Get user profiles for context
-        guest_profile = await user_service.get_guest_profile(session, user.id)
-        business_profile = await user_service.get_business_profile(session, user.id)
-
-        # Generate questions
-        questions = await qa_service.generate_questions(
-            session, user, project, guest_profile, business_profile
-        )
+    if not completed or questions is None:
+        questions = ["Не удалось сгенерировать вопросы. Попробуйте позже."]
 
     # Format response
     text = f"*Вопросы для проекта:*\n_{_escape_markdown(project_title)}_\n\n"

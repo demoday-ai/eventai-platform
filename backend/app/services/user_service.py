@@ -47,6 +47,12 @@ async def get_user_by_telegram_id(
     return result.scalar_one_or_none()
 
 
+async def get_user_by_id(
+    session: AsyncSession, user_id: uuid.UUID
+) -> User | None:
+    return await session.get(User, user_id)
+
+
 async def get_current_event(session: AsyncSession) -> Event | None:
     result = await session.execute(select(Event).order_by(Event.start_date.desc()).limit(1))
     return result.scalar_one_or_none()

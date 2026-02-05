@@ -12,7 +12,7 @@
 <h1 align="center">EventAI</h1>
 
 <p align="center">
-  <strong>Персональная программа каждому гостю за 2 минуты</strong><br>
+  <strong>Персональная программа каждому гостю за минуту</strong><br>
   <sub>Telegram-бот для конференций, Demo Day, хакатонов</sub>
 </p>
 
