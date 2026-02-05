@@ -948,7 +948,7 @@ export function Landing() {
               className="font-display mx-auto mt-6 text-xl font-medium sm:text-2xl md:text-3xl"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              за <span style={{ color: "var(--ld-accent)" }}>2 минуты</span> диалога с AI-ботом
+              за <span style={{ color: "var(--ld-accent)" }}>минуту</span> диалога с AI-ботом
             </p>
           </Reveal>
 
@@ -1008,8 +1008,8 @@ export function Landing() {
                     <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>залов</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-ember)" }}>2 мин</div>
-                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>на профиль</div>
+                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-ember)" }}>1 мин</div>
+                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>на подборку</div>
                   </div>
                 </div>
                 <div
