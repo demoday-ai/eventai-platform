@@ -138,9 +138,9 @@ function FeatureCard({
   index: number
 }) {
   return (
-    <Reveal delay={index * 80}>
+    <Reveal delay={index * 80} className="h-full">
       <div
-        className="group relative overflow-hidden rounded-xl p-6 transition-all duration-300 hover:-translate-y-1 cursor-default"
+        className="group relative h-full overflow-hidden rounded-xl p-6 transition-all duration-300 hover:-translate-y-1 cursor-default"
         style={{
           background: "var(--ld-surface)",
           border: "1px solid var(--ld-border)",
