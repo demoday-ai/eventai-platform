@@ -7,12 +7,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { APP_NAME } from "../lib/constants"
 
 export function Login() {
-  const [telegramId, setTelegramId] = useState("")
   const [adminUser, setAdminUser] = useState("")
   const [adminPassword, setAdminPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { login, loginWithPassword } = useAuth()
+  const { loginWithPassword } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: FormEvent) => {
@@ -20,10 +19,7 @@ export function Login() {
     setError("")
     setIsLoading(true)
 
-    const useAdminLogin = adminUser.trim() || adminPassword.trim()
-    const result = useAdminLogin
-      ? await loginWithPassword(adminUser, adminPassword)
-      : await login(telegramId)
+    const result = await loginWithPassword(adminUser, adminPassword)
 
     if (result.success) {
       navigate("/dashboard")
@@ -46,26 +42,8 @@ export function Login() {
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="telegram-id" className="text-sm font-medium">
-                Telegram ID
-              </label>
-              <Input
-                id="telegram-id"
-                type="text"
-                placeholder="Введите ваш Telegram ID"
-                value={telegramId}
-                onChange={(e) => setTelegramId(e.target.value)}
-                disabled={isLoading}
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">
-                Числовой ID вашего Telegram аккаунта
-              </p>
-            </div>
-
             <div className="rounded-md border border-muted p-3 space-y-3">
-              <p className="text-sm font-medium">Админ-вход (dev)</p>
+              <p className="text-sm font-medium">Админ-вход</p>
               <div className="grid gap-2">
                 <label htmlFor="admin-user" className="text-xs text-muted-foreground">
                   Логин
@@ -73,10 +51,11 @@ export function Login() {
                 <Input
                   id="admin-user"
                   type="text"
-                  placeholder="admin"
+                  placeholder="Введите логин"
                   value={adminUser}
                   onChange={(e) => setAdminUser(e.target.value)}
                   disabled={isLoading}
+                  autoFocus
                 />
               </div>
               <div className="grid gap-2">
@@ -86,7 +65,7 @@ export function Login() {
                 <Input
                   id="admin-password"
                   type="password"
-                  placeholder="admin"
+                  placeholder="Введите пароль"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   disabled={isLoading}
@@ -102,7 +81,7 @@ export function Login() {
 
             {/* Dev hint */}
             <div className="p-3 text-xs text-muted-foreground bg-muted rounded-md">
-              <strong>Dev mode:</strong> можно войти по Telegram ID или через admin/admin.
+              <strong>Dev mode:</strong> логин/пароль для тестовой среды.
             </div>
           </CardContent>
 
