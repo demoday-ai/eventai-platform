@@ -2,7 +2,7 @@
   <a href="https://ai.itmo.ru"><strong>AI Talent Hub</strong></a> ×
   <a href="https://itmo.ru"><strong>ИТМО</strong></a>
   <br>
-  <sub>AI Talent Camp 2026 · Проект #12</sub>
+  <sub>AI Talent Camp 2026 · Проект #10</sub>
 </p>
 
 <p align="center">
@@ -12,8 +12,8 @@
 <h1 align="center">EventAI</h1>
 
 <p align="center">
-  <strong>Персональная программа каждому гостю за минуту</strong><br>
-  <sub>Telegram-бот для конференций, Demo Day, хакатонов</sub>
+  <strong>AI-платформа для организаторов конференций</strong><br>
+  <sub>Бот + админка для Demo Day, конференций, хакатонов</sub>
 </p>
 
 <p align="center">
@@ -47,19 +47,18 @@
 ## Пример диалога
 
 ```
-Гость:  Интересуюсь NLP и рекомендательными системами,
-        ищу проекты для потенциального найма в команду
+Гость:  HR-директор, ищу AI в найме
 
-Бот:    Нашёл 12 проектов. Топ-3:
+Бот:    Нашёл 8 проектов. Топ-3:
 
-        1. AI Recruiter Assistant — 94%
-           Зал 2 · NLP, Agents
+        1. AI Interview Copilot — 94%
+           Зал 2 · HR, Agents
 
-        2. Resume Screening Engine — 87%
+        2. PD-Audit — 87%
            Зал 5 · NLP, HR
 
-        3. Interview Copilot — 82%
-           Зал 2 · LLM, Agents
+        3. ExamLab — 82%
+           Зал 3 · EdTech
 ```
 
 <br>
@@ -133,7 +132,7 @@ backend/
 
 > "Это пипец! Если вы упростите этот ужас, я буду благодарна." — организатор Demo Day
 
-5 интервью, одна боль: слишком много контента, слишком мало времени. Гости пропускают 80% интересного, эксперты идут вслепую, организаторы делают расписание за ночь до события.
+4 интервью, одна боль: слишком много контента, слишком мало времени. Гости пропускают 80% интересного, эксперты идут вслепую, организаторы делают расписание за ночь до события.
 
 [Lean Canvas](./docs/01-discovery/lean-canvas.md) · [RICE-матрица](./docs/01-discovery/rice-matrix.md) · [Интервью](./docs/01-discovery/)
 
