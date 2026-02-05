@@ -536,6 +536,4 @@ def get_clustering_handler() -> ConversationHandler:
             CommandHandler("cancel", cancel),
             MessageHandler(filters.Document.ALL, upload_in_wizard),
         ],
-        name="clustering",
-        persistent=True,
     )

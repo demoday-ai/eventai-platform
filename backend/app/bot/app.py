@@ -1,4 +1,4 @@
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, PicklePersistence
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
 from app.bot.handlers.briefing import get_briefing_handlers
 from app.bot.handlers.business_followup import get_business_followup_handlers
@@ -31,9 +31,7 @@ from app.config import settings
 
 
 def create_bot_app() -> Application:
-    # Use PicklePersistence to save ConversationHandler states across restarts
-    persistence = PicklePersistence(filepath="bot_persistence.pickle")
-    builder = Application.builder().token(settings.bot_token).persistence(persistence)
+    builder = Application.builder().token(settings.bot_token)
     application = builder.build()
 
     application.add_handler(get_onboarding_handler())
