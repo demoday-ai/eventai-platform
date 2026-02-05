@@ -23,16 +23,25 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = {"title", "description", "author"}
 DEFAULT_TAGS = [
+    # Технологии
     "NLP",
     "CV",
     "LLM",
     "Agents",
+    "RAG",
+    "Voice",
+    "RecSys",
+    # Области
     "EdTech",
     "FinTech",
     "MedTech",
-    "Security",
-    "ASR",
-    "TTS",
+    "HealthTech",
+    "HR",
+    "Retail",
+    "Analytics",
+    "SocialMedia",
+    "Documents",
+    "Automation",
 ]
 
 
