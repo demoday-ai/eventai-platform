@@ -80,6 +80,13 @@ services:
     volumes:
       - ./data:/app/data:ro
 
+  flower:
+    image: mher/flower:2.0
+    command: celery --broker=amqp://demoday:demoday@rabbitmq:5672// flower --port=5555 --url_prefix=flower
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -90,6 +97,7 @@ services:
       - "3000:80"
     depends_on:
       - backend
+      - flower
 
 volumes:
   pgdata:
