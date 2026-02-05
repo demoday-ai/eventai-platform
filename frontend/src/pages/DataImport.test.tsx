@@ -73,6 +73,7 @@ describe("DataImport", () => {
 
   it("handles successful project upload", async () => {
     const user = userEvent.setup()
+
     // Initial upload returns job_id
     mockUploadProjects.mockResolvedValue({
       job_id: "test-job-123",
@@ -102,10 +103,11 @@ describe("DataImport", () => {
     const uploadBtn = screen.getAllByText("Загрузить")[0]
     await user.click(uploadBtn)
 
+    // Wait for polling to complete (interval is 1000ms)
     await waitFor(() => {
       expect(screen.getByText("Результат импорта проектов")).toBeInTheDocument()
       expect(screen.getByText("10")).toBeInTheDocument()
-    })
+    }, { timeout: 3000 })
   })
 
   it("handles project upload 409 conflict", async () => {
