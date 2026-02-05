@@ -40,8 +40,8 @@ async def test_start_command(conv):
     # Clear any pending messages
     conv._pending_responses.clear()
 
-    sent = await conv.send_message("/start")
-    print(f"  Sent /start, waiting for response...")
+    await conv.send_message("/start")
+    print("  Sent /start, waiting for response...")
 
     try:
         msg = await asyncio.wait_for(conv.get_response(), timeout=15)

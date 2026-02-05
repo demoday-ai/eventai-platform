@@ -3,19 +3,19 @@
 Uses PTB's process_update to inject fake updates without Telegram API.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from telegram import Update, User, Chat, Message
-from telegram.ext import Application, ContextTypes
+import pytest
+from telegram import Chat, Message, Update, User
+from telegram.ext import ContextTypes
 
 from app.bot.handlers.guest_profiling import (
     AGENT_TOOLS,
     VIEW_PROGRAM,
-    view_program_text,
-    _format_recommendations,
     _format_if_time,
+    _format_recommendations,
+    view_program_text,
 )
 
 
