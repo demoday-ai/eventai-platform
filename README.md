@@ -35,9 +35,7 @@
 
 Сотни проектов в параллельных залах. Гости видят **менее 20%**. Telegram-бот профилирует интересы и составляет персональный топ.
 
-|  |  |  |
-|:---:|:---:|:---:|
-| **330** проектов | **10** залов | **2 мин** на профиль |
+**330** проектов · **10** залов · **2 мин** на профиль
 
 ---
 
@@ -100,11 +98,50 @@ Telegram-бот делает мероприятие персональным.
 
 | Метрика | Значение | Что это значит |
 |---------|----------|----------------|
-| **NDCG@15** | 0.82 | Релевантные проекты в топе списка |
-| **Precision@15** | 0.71 | 7 из 10 рекомендаций попадают в цель |
-| **Recall@15** | 0.78 | Находим 8 из 10 подходящих проектов |
+| NDCG@15 | 0.82 | Релевантные проекты в топе списка |
+| Precision@15 | 0.71 | 7 из 10 рекомендаций попадают в цель |
+| Recall@15 | 0.78 | Находим 8 из 10 подходящих проектов |
 
-Как измеряли: поиск по тегам → анализ текста профиля → AI-ранжирование (Claude/GPT) → сравнение с экспертными оценками.
+**Пайплайн:** поиск по тегам → TF-IDF скоринг → LLM re-ranking (Claude/GPT) → топ-15
+
+---
+
+## Архитектура
+
+```
+├── frontend/           React 19, TypeScript, Vite, Tailwind, shadcn/ui
+│   └── src/pages/      32 страницы (Landing, Dashboard, Clustering...)
+│
+├── backend/            Python 3.12, FastAPI, SQLAlchemy 2.0
+│   ├── app/api/        REST API (60+ endpoints)
+│   ├── app/bot/        Telegram handlers (python-telegram-bot 21.x)
+│   ├── app/services/   Бизнес-логика (кластеризация, рекомендации, Q&A)
+│   └── app/models/     34 SQLAlchemy модели
+│
+├── data/eval/          Оценка качества рекомендаций
+└── docs/               Спецификация, CustDev артефакты
+```
+
+**Ключевые сервисы:**
+- `profiling_service.py` — AI-профилирование через диалог
+- `clustering_service.py` — LLM-кластеризация проектов по залам
+- `matching_service.py` — подбор экспертов по тегам
+- `qa_service.py` — генерация Q&A вопросов
+
+---
+
+## API
+
+```
+POST /api/v1/leads              Форма заявки с лендинга
+POST /api/v1/profile            Создание/обновление профиля гостя
+POST /api/v1/recommendations    Генерация рекомендаций
+GET  /api/v1/projects           Список проектов
+POST /api/v1/clustering/run     Запуск AI-кластеризации
+GET  /api/v1/admin/dashboard    Метрики для организатора
+```
+
+Полная документация: `/api/v1/docs` (Swagger)
 
 ---
 
@@ -121,18 +158,19 @@ docker compose up -d --build
 docker compose exec backend alembic upgrade head
 ```
 
-Frontend: `localhost:3000` · Bot: polling mode
+Frontend: `localhost:3000` · Bot: polling mode · API: `localhost:8000/api/v1/docs`
 
 ---
 
 ## Стек
 
-| | |
-|---|---|
-| **Backend** | Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL 16 |
-| **Frontend** | React 19, TypeScript, Vite, Tailwind, shadcn/ui |
-| **AI** | OpenRouter API (Claude, GPT) |
-| **Infra** | Docker, Traefik, Yandex Cloud |
+**Backend:** Python 3.12, FastAPI, SQLAlchemy 2.0 (async), PostgreSQL 16, Alembic, APScheduler
+
+**Frontend:** React 19, TypeScript, Vite, TanStack Query, Tailwind CSS, shadcn/ui
+
+**AI:** OpenRouter API (Claude Sonnet, GPT-4), TF-IDF + LLM re-ranking
+
+**Infra:** Docker Compose, Traefik (SSL), Yandex Cloud VM
 
 ---
 
@@ -147,7 +185,7 @@ Frontend: `localhost:3000` · Bot: polling mode
 | Бизнес | Из 330 проектов уверен в релевантности 15-20 |
 | Гость | Посетила 5 из 330, пропустила самый интересный |
 
-[Lean Canvas](./docs/01-discovery/lean-canvas.md) · [RICE-матрица](./docs/01-discovery/rice-matrix.md) · [Транскрипты интервью](./docs/01-discovery/)
+[Lean Canvas](./docs/01-discovery/lean-canvas.md) · [RICE-матрица](./docs/01-discovery/rice-matrix.md) · [Транскрипты](./docs/01-discovery/)
 
 ---
 
@@ -155,11 +193,9 @@ Frontend: `localhost:3000` · Bot: polling mode
 
 **AI Talent Camp 2026 · Проект #10 · "ЯСНОПОНЯТНО"**
 
-| | |
-|---|---|
-| **Дмитрий Горбунов** | Тимлид, продукт · [@grbn_dima](https://t.me/grbn_dima) |
-| **Анастасия Гапеева** | UX/UI, фронтенд |
-| **Иван Александров** | Разработка, бизнес-логика |
+- **Дмитрий Горбунов** — тимлид, продукт · [@grbn_dima](https://t.me/grbn_dima)
+- **Анастасия Гапеева** — UX/UI, фронтенд
+- **Иван Александров** — разработка, бизнес-логика
 
 Автор идеи: **Дмитрий Ботов** ([@dmbotov](https://t.me/dmbotov)) — организатор Demo Day
 
@@ -167,6 +203,6 @@ Frontend: `localhost:3000` · Bot: polling mode
 
 ## Лицензия
 
-Все права защищены. Использование, копирование, модификация и распространение кода без письменного разрешения авторов запрещено.
+Все права защищены. Использование, копирование, модификация и распространение без письменного разрешения авторов запрещено.
 
-Для коммерческого использования или лицензирования: [@grbn_dima](https://t.me/grbn_dima)
+Для коммерческого использования: [@grbn_dima](https://t.me/grbn_dima)
