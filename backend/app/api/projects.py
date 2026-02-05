@@ -15,10 +15,16 @@ from app.schemas.project import (
     ProjectResponse,
     ReplaceConfirmation,
     RoomSummary,
-    UploadResult,
 )
 from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
-from app.services.background_jobs import JobStatus, get_active_job_by_type, get_job
+from app.services.background_jobs import (
+    JobStatus,
+    create_job,
+    get_active_job_by_type,
+    get_job,
+    update_job,
+    update_job_progress,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +51,16 @@ def _project_to_response(project) -> ProjectResponse:
     )
 
 
-@router.post("/projects/upload", response_model=UploadResult)
+@router.post("/projects/upload")
 async def upload_projects(
     file: UploadFile,
     replace: bool = False,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Upload projects from CSV or JSON file (organizer only)."""
+    """Upload projects from CSV or JSON file (organizer only). Returns job_id for polling."""
+    from app.database import async_session
+
     # Get current event
     event = await user_service.get_current_event(session)
     if not event:
@@ -62,6 +70,11 @@ async def upload_projects(
     role = await user_service.get_user_role_with_info(session, user.id, event.id)
     if not role or role.code != "organizer":
         raise HTTPException(status_code=403, detail="Только организатор может загружать проекты")
+
+    # Check for already running upload job
+    existing_job = get_active_job_by_type("project_upload")
+    if existing_job:
+        return {"job_id": existing_job.id, "status": existing_job.status.value}
 
     # Check file format
     filename = (file.filename or "").lower()
@@ -75,10 +88,7 @@ async def upload_projects(
     if not content:
         raise HTTPException(status_code=400, detail="Файл пуст")
 
-    file_hash = dedup_service.compute_file_hash(content)
-    dup_info = await dedup_service.check_recent_duplicate(session, file_hash, "upload_projects")
-
-    # Parse
+    # Parse and validate synchronously (fast operations)
     try:
         if filename.endswith(".csv"):
             rows = project_service.parse_csv(content)
@@ -90,8 +100,13 @@ async def upload_projects(
     if not rows:
         raise HTTPException(status_code=400, detail="Файл не содержит данных")
 
-    # Validate
     valid, errors, duplicate_titles = project_service.validate_rows(rows)
+
+    if not valid:
+        raise HTTPException(status_code=400, detail={
+            "message": "Нет валидных записей",
+            "errors": [e.model_dump() for e in errors[:20]],
+        })
 
     # Check for existing projects (replace flow)
     existing_count = await project_service.get_project_count(session, event.id)
@@ -105,31 +120,98 @@ async def upload_projects(
             ).model_dump(),
         )
 
-    # Replace existing if requested
-    if existing_count > 0 and replace:
-        await project_service.delete_all_projects(session, event.id)
-        # Invalidate old clustering when projects are replaced
-        await clustering_service.invalidate_clustering_runs(session, event.id)
+    # Capture data for background job
+    event_id = event.id
+    user_id = user.id
+    file_hash = dedup_service.compute_file_hash(content)
 
-    # Save valid projects
-    loaded = await project_service.save_projects(session, event.id, valid)
+    async def do_upload(job_id: str):
+        """Run upload in background with fresh DB session."""
+        async with async_session() as bg_session:
+            # Delete existing if replacing
+            if existing_count > 0 and replace:
+                update_job_progress(job_id, {"stage": "deleting", "current": 0, "total": existing_count})
+                await project_service.delete_all_projects(bg_session, event_id)
+                await clustering_service.invalidate_clustering_runs(bg_session, event_id)
 
-    logger.info("Upload: %d loaded, %d errors, %d duplicates", loaded, len(errors), len(duplicate_titles))
+            # Save projects with progress tracking
+            def progress_cb(progress):
+                update_job_progress(job_id, progress)
 
-    await audit_service.log_action(
-        session, user, "upload_projects",
-        entity_type="projects",
-        details={"loaded": loaded, "errors": len(errors), "duplicates": len(duplicate_titles), "file_hash": file_hash},
-    )
+            stats = await project_service.save_projects(
+                bg_session, event_id, valid, progress_callback=progress_cb
+            )
 
-    return UploadResult(
-        loaded=loaded,
-        errors=len(errors),
-        duplicates=len(duplicate_titles),
-        error_details=errors[:50],
-        duplicate_titles=duplicate_titles[:20],
-        duplicate_warning=dup_info["warning"] if dup_info else None,
-    )
+            # Log audit
+            bg_user = await bg_session.get(User, user_id)
+            if bg_user:
+                await audit_service.log_action(
+                    bg_session, bg_user, "upload_projects",
+                    entity_type="projects",
+                    details={
+                        "loaded": stats["loaded"],
+                        "tags_generated": stats["tags_generated"],
+                        "errors": len(errors),
+                        "duplicates": len(duplicate_titles),
+                        "file_hash": file_hash,
+                    },
+                )
+
+            return {
+                "loaded": stats["loaded"],
+                "tags_generated": stats["tags_generated"],
+                "errors": len(errors),
+                "duplicates": len(duplicate_titles),
+                "error_details": [e.model_dump() for e in errors[:50]],
+                "duplicate_titles": duplicate_titles[:20],
+            }
+
+    import asyncio
+
+    job = create_job(job_type="project_upload")
+    asyncio.create_task(_run_upload_job(job.id, do_upload))
+
+    return {
+        "job_id": job.id,
+        "status": job.status.value,
+        "total": len(valid),
+    }
+
+
+async def _run_upload_job(job_id: str, coro_factory):
+    """Helper to run upload job with job_id passed to the coroutine."""
+    update_job(job_id, JobStatus.RUNNING)
+    try:
+        result = await coro_factory(job_id)
+        update_job(job_id, JobStatus.COMPLETED, result=result)
+        logger.info(f"Upload job {job_id} completed successfully")
+    except Exception as e:
+        logger.exception(f"Upload job {job_id} failed: {e}")
+        update_job(job_id, JobStatus.FAILED, error=str(e))
+
+
+@router.get("/projects/upload/job/{job_id}")
+async def get_upload_job_status(
+    job_id: str,
+    user: User = Depends(get_current_user),
+):
+    """Get project upload job status for polling."""
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    response = {
+        "job_id": job.id,
+        "status": job.status.value,
+        "progress": job.progress,
+    }
+
+    if job.status == JobStatus.COMPLETED:
+        response["result"] = job.result
+    elif job.status == JobStatus.FAILED:
+        response["error"] = job.error
+
+    return response
 
 
 @router.get("/projects")

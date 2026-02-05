@@ -18,6 +18,7 @@ const mockUploadExperts = vi.fn()
 const mockUploadGuests = vi.fn()
 const mockGetDashboard = vi.fn()
 const mockGetProjects = vi.fn()
+const mockGetUploadJobStatus = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   uploadProjects: (...args: unknown[]) => mockUploadProjects(...args),
@@ -25,6 +26,7 @@ vi.mock("../lib/api-client", () => ({
   uploadGuests: (...args: unknown[]) => mockUploadGuests(...args),
   getDashboard: () => mockGetDashboard(),
   getProjects: () => mockGetProjects(),
+  getUploadJobStatus: (...args: unknown[]) => mockGetUploadJobStatus(...args),
 }))
 
 const createWrapper = () => {
@@ -71,12 +73,25 @@ describe("DataImport", () => {
 
   it("handles successful project upload", async () => {
     const user = userEvent.setup()
+
+    // Initial upload returns job_id
     mockUploadProjects.mockResolvedValue({
-      loaded: 10,
-      errors: 0,
-      duplicates: 0,
-      error_details: [],
-      duplicate_titles: [],
+      job_id: "test-job-123",
+      status: "pending",
+      total: 10,
+    })
+    // Poll returns completed status with result
+    mockGetUploadJobStatus.mockResolvedValue({
+      job_id: "test-job-123",
+      status: "completed",
+      result: {
+        loaded: 10,
+        tags_generated: 5,
+        errors: 0,
+        duplicates: 0,
+        error_details: [],
+        duplicate_titles: [],
+      },
     })
 
     render(<DataImport />, { wrapper: createWrapper() })
@@ -88,10 +103,11 @@ describe("DataImport", () => {
     const uploadBtn = screen.getAllByText("Загрузить")[0]
     await user.click(uploadBtn)
 
+    // Wait for polling to complete (interval is 1000ms)
     await waitFor(() => {
       expect(screen.getByText("Результат импорта проектов")).toBeInTheDocument()
       expect(screen.getByText("10")).toBeInTheDocument()
-    })
+    }, { timeout: 3000 })
   })
 
   it("handles project upload 409 conflict", async () => {
