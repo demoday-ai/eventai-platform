@@ -105,9 +105,18 @@ export function DataImport() {
         setProjectConflict(null)
       }
     },
-    onError: (error: AxiosError<UploadConflict>) => {
+    onError: (error: AxiosError<UploadConflict | { detail: string | { message: string; errors: unknown[] } }>) => {
       if (error.response?.status === 409 && error.response.data) {
-        setProjectConflict(error.response.data)
+        setProjectConflict(error.response.data as UploadConflict)
+      } else if (error.response?.data) {
+        const data = error.response.data as { detail: string | { message: string; errors: unknown[] } }
+        if (typeof data.detail === "string") {
+          setProjectError(data.detail)
+        } else if (data.detail?.message) {
+          setProjectError(data.detail.message)
+        } else {
+          setProjectError(error.message)
+        }
       } else {
         setProjectError(error.message)
       }
