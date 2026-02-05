@@ -144,8 +144,8 @@ backend/
 **"ЯСНОПОНЯТНО"** — AI Talent Camp 2026, проект #10
 
 - **Дмитрий Горбунов** — тимлид, продукт · [@grbn_dima](https://t.me/grbn_dima)
-- **Анастасия Гапеева** — UX/UI, фронтенд
-- **Иван Александров** — разработка
+- **Анастасия Гапеева** — UX/UI, фронтенд · [@agapeeva](https://t.me/agapeeva)
+- **Иван Александров** — разработка · [@ivanich_spb](https://t.me/ivanich_spb)
 
 Автор идеи: **Дмитрий Ботов** [@dmbotov](https://t.me/dmbotov)
 
