@@ -1373,32 +1373,66 @@ export function Landing() {
         <div className="mx-auto max-w-3xl">
           <div className="text-center">
             <Reveal>
-              <SectionTag>Команда</SectionTag>
+              <SectionTag>О проекте</SectionTag>
             </Reveal>
             <Reveal delay={100}>
-              <h2
-                className="font-display mt-6 text-2xl font-medium tracking-tight sm:text-3xl"
-                style={{ color: "var(--ld-text)" }}
-              >
-                ЯСНОПОНЯТНО
-              </h2>
+              <div className="mt-8 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10">
+                {/* ITMO Logo */}
+                <a
+                  href="https://itmo.ru"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 transition-opacity hover:opacity-80"
+                >
+                  <img
+                    src="https://itmo.ru/file/pages/213/logo_na_plashke_russkiy_belyy.png"
+                    alt="ITMO University"
+                    className="h-10 w-auto dark:invert"
+                  />
+                </a>
+                {/* AI Talent Hub Logo */}
+                <a
+                  href="https://aitalent.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 transition-opacity hover:opacity-80"
+                >
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-lg"
+                    style={{ background: "var(--ld-accent)", color: "#fff" }}
+                  >
+                    <Brain className="h-5 w-5" />
+                  </div>
+                  <span
+                    className="font-display text-lg font-semibold"
+                    style={{ color: "var(--ld-text)" }}
+                  >
+                    AI Talent Hub
+                  </span>
+                </a>
+              </div>
             </Reveal>
             <Reveal delay={150}>
               <p
-                className="font-body mx-auto mt-2"
-                style={{ color: "var(--ld-text-muted)" }}
+                className="font-body mx-auto mt-6 max-w-lg text-sm sm:text-base"
+                style={{ color: "var(--ld-text-secondary)" }}
               >
-                AI Talent Camp 2026 &middot; Проект #10
+                Разработано в рамках{" "}
+                <span style={{ color: "var(--ld-accent)" }}>AI Talent Camp 2026</span>
+                {" "}— интенсива магистратуры{" "}
+                <span style={{ color: "var(--ld-accent)" }}>«Искусственный интеллект» ИТМО</span>
               </p>
             </Reveal>
           </div>
 
-          <div className="mt-10 grid gap-3 sm:grid-cols-2">
-            <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} telegram="grbn_dima" />
-            <TeamMember name="Анастасия Гапеева" role="UX/UI, фронтенд" tag="AG" delay={80} />
-            <TeamMember name="Иван Александров" role="Разработка, бизнес-логика" tag="IA" delay={160} />
-            <TeamMember name="Claude" role="AI-ассистент команды" tag="AI" delay={240} />
-          </div>
+          <Reveal delay={200}>
+            <div className="mt-10 grid gap-3 sm:grid-cols-2">
+              <TeamMember name="Дмитрий Горбунов" role="Тимлид, продукт, UX/UI" tag="DG" delay={0} telegram="grbn_dima" />
+              <TeamMember name="Анастасия Гапеева" role="UX/UI, фронтенд" tag="AG" delay={80} />
+              <TeamMember name="Иван Александров" role="Разработка, бизнес-логика" tag="IA" delay={160} />
+              <TeamMember name="Claude" role="AI-ассистент команды" tag="AI" delay={240} />
+            </div>
+          </Reveal>
         </div>
       </section>
 
