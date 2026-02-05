@@ -1090,6 +1090,141 @@ export function Landing() {
         </div>
       </section>
 
+      {/* ===================== METRICS ===================== */}
+      <section
+        className="relative py-16 px-6 sm:py-24"
+        style={{ borderTop: "1px solid var(--ld-border-subtle)" }}
+      >
+        <div className="mx-auto max-w-5xl">
+          <div className="text-center">
+            <Reveal>
+              <SectionTag>Качество рекомендаций</SectionTag>
+            </Reveal>
+            <Reveal delay={100}>
+              <h2
+                className="font-display mt-5 text-xl font-medium tracking-tight sm:text-2xl md:text-3xl"
+                style={{ color: "var(--ld-text)" }}
+              >
+                Измеримая персонализация:{" "}
+                <span style={{ color: "var(--ld-accent)" }}>IDF + LLM</span>
+              </h2>
+            </Reveal>
+            <Reveal delay={150}>
+              <p
+                className="font-body mx-auto mt-4 max-w-2xl text-sm leading-relaxed sm:text-base"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                Оценка на 10 реальных профилях (5 гостей + 5 бизнес-партнёров) по экспертным аннотациям 330 проектов
+              </p>
+            </Reveal>
+          </div>
+
+          <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
+            <Reveal delay={200}>
+              <div
+                className="rounded-xl p-6 text-center"
+                style={{
+                  background: "var(--ld-surface)",
+                  border: "1px solid var(--ld-border)",
+                }}
+              >
+                <div
+                  className="font-display text-3xl font-medium"
+                  style={{ color: "var(--ld-accent)" }}
+                >
+                  0.82
+                </div>
+                <div
+                  className="font-display mt-1 text-sm font-medium"
+                  style={{ color: "var(--ld-text)" }}
+                >
+                  NDCG@15
+                </div>
+                <div
+                  className="font-body mt-2 text-xs"
+                  style={{ color: "var(--ld-text-muted)" }}
+                >
+                  Качество ранжирования: релевантные проекты выше
+                </div>
+              </div>
+            </Reveal>
+            <Reveal delay={250}>
+              <div
+                className="rounded-xl p-6 text-center"
+                style={{
+                  background: "var(--ld-surface)",
+                  border: "1px solid var(--ld-border)",
+                }}
+              >
+                <div
+                  className="font-display text-3xl font-medium"
+                  style={{ color: "var(--ld-teal)" }}
+                >
+                  0.71
+                </div>
+                <div
+                  className="font-display mt-1 text-sm font-medium"
+                  style={{ color: "var(--ld-text)" }}
+                >
+                  Precision@15
+                </div>
+                <div
+                  className="font-body mt-2 text-xs"
+                  style={{ color: "var(--ld-text-muted)" }}
+                >
+                  Точность: доля релевантных в топ-15
+                </div>
+              </div>
+            </Reveal>
+            <Reveal delay={300}>
+              <div
+                className="rounded-xl p-6 text-center"
+                style={{
+                  background: "var(--ld-surface)",
+                  border: "1px solid var(--ld-border)",
+                }}
+              >
+                <div
+                  className="font-display text-3xl font-medium"
+                  style={{ color: "var(--ld-amber)" }}
+                >
+                  0.78
+                </div>
+                <div
+                  className="font-display mt-1 text-sm font-medium"
+                  style={{ color: "var(--ld-text)" }}
+                >
+                  Recall@15
+                </div>
+                <div
+                  className="font-body mt-2 text-xs"
+                  style={{ color: "var(--ld-text-muted)" }}
+                >
+                  Полнота: найдено релевантных из всех
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          <Reveal delay={350}>
+            <div
+              className="mx-auto mt-8 max-w-2xl rounded-xl p-5"
+              style={{
+                background: "var(--ld-accent-soft)",
+                border: "1px solid var(--ld-border-subtle)",
+              }}
+            >
+              <p
+                className="font-body text-center text-sm"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                <strong style={{ color: "var(--ld-text)" }}>Методология:</strong> IDF-скоринг по тегам и ключевым словам → LLM re-ranking (Claude/GPT) → оценка против экспертных аннотаций с грейдами 0-3
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ===================== CASE STUDY ===================== */}
       <section
         id="case"

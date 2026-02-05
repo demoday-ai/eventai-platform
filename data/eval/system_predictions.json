@@ -1,0 +1,186 @@
+{
+  "business_cv": [
+    {
+      "rank": 1,
+      "project_index": 58,
+      "title": "Пайплайн синтеза данных в 3D-среде для дообучения нейроредактора изображений",
+      "score": 0.99
+    },
+    {
+      "rank": 2,
+      "project_index": 70,
+      "title": "Static Avatars",
+      "score": 0.98
+    },
+    {
+      "rank": 3,
+      "project_index": 61,
+      "title": "Doobучение VLM под задачу KIE на банковских документах",
+      "score": 0.95
+    },
+    {
+      "rank": 4,
+      "project_index": 89,
+      "title": "CV категоризация e-commerce товаров",
+      "score": 0.95
+    },
+    {
+      "rank": 5,
+      "project_index": 302,
+      "title": "OCR for egyptology",
+      "score": 0.95
+    },
+    {
+      "rank": 6,
+      "project_index": 144,
+      "title": "Генеративный сервис для дизайнеров",
+      "score": 0.9
+    },
+    {
+      "rank": 7,
+      "project_index": 74,
+      "title": "AI Media Producer",
+      "score": 0.85
+    },
+    {
+      "rank": 8,
+      "project_index": 155,
+      "title": "MODERA FASHION",
+      "score": 0.85
+    },
+    {
+      "rank": 9,
+      "project_index": 269,
+      "title": "Мультиагентная система обработки данных о здоровье",
+      "score": 0.85
+    },
+    {
+      "rank": 10,
+      "project_index": 199,
+      "title": "Ancient languages and AI in Archeology",
+      "score": 0.75
+    },
+    {
+      "rank": 11,
+      "project_index": 48,
+      "title": "Turbo Sorter: AI Security",
+      "score": 0.7
+    },
+    {
+      "rank": 12,
+      "project_index": 122,
+      "title": "Узнай город",
+      "score": 0.7
+    },
+    {
+      "rank": 13,
+      "project_index": 310,
+      "title": "Эмбеддеры низкой размерности в Visual Place Recognition в условиях городской среды.",
+      "score": 0.6
+    },
+    {
+      "rank": 14,
+      "project_index": 274,
+      "title": "Оцифровка и перевод тибетских рукописей",
+      "score": 0.6
+    },
+    {
+      "rank": 15,
+      "project_index": 195,
+      "title": "AI-ассистент для аварийного обслуживания оборудования",
+      "score": 0.5
+    }
+  ],
+  "business_security": [
+    {
+      "rank": 1,
+      "project_index": 48,
+      "title": "Turbo Sorter: AI Security",
+      "score": 0.99
+    },
+    {
+      "rank": 2,
+      "project_index": 50,
+      "title": "Разработка автономного тренажёра для обучения AI Security",
+      "score": 0.98
+    },
+    {
+      "rank": 3,
+      "project_index": 76,
+      "title": "HiveTrace - система мониторинга LLM-приложений",
+      "score": 0.97
+    },
+    {
+      "rank": 4,
+      "project_index": 241,
+      "title": "Генерация adversarial суффиксов для джейлбрейка LLM и атак на RAG системы",
+      "score": 0.96
+    },
+    {
+      "rank": 5,
+      "project_index": 286,
+      "title": "Система предобработки промптов от взломов, атак и фрода",
+      "score": 0.95
+    },
+    {
+      "rank": 6,
+      "project_index": 299,
+      "title": "Оценка устойчивости гардрейл-моделей к jailbreak-атакам, анализ переносимости уязвимостей между моделями, улучшение гардрейл–моделей",
+      "score": 0.94
+    },
+    {
+      "rank": 7,
+      "project_index": 78,
+      "title": "Безопасность агентских систем",
+      "score": 0.93
+    },
+    {
+      "rank": 8,
+      "project_index": 72,
+      "title": "Мониторинг уязвимостей агентных систем",
+      "score": 0.92
+    },
+    {
+      "rank": 9,
+      "project_index": 272,
+      "title": "Оптимальное управление портфеля в DeFi на базе ИИ агентов",
+      "score": 0.7
+    },
+    {
+      "rank": 10,
+      "project_index": 240,
+      "title": "Выявление ошибок в коде при помощи LLM агентов",
+      "score": 0.7
+    },
+    {
+      "rank": 11,
+      "project_index": 130,
+      "title": "AgentArea",
+      "score": 0.6
+    },
+    {
+      "rank": 12,
+      "project_index": 136,
+      "title": "ИИ-ассистент для фермеров",
+      "score": 0.5
+    },
+    {
+      "rank": 13,
+      "project_index": 19,
+      "title": "Агент small-talk",
+      "score": 0.5
+    },
+    {
+      "rank": 14,
+      "project_index": 38,
+      "title": "Прокопий",
+      "score": 0.4
+    },
+    {
+      "rank": 15,
+      "project_index": 17,
+      "title": "Lacmus Search",
+      "score": 0.3
+    }
+  ]
+}

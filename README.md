@@ -2,16 +2,35 @@
 
 [![CI](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml)
 [![CD](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml/badge.svg)](https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml)
+![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ![Event Management](https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2000&auto=format&fit=crop)
 
 **AI Talent Camp 2026 | Проект #10**
 Разработано в рамках магистратуры «Искусственный интеллект» ИТМО
 
-AI-платформа для персонализации мероприятий с параллельными треками: Demo Day, конференции, хакатоны, выставки. Telegram-бот генерирует персональную программу за 2 минуты диалога. Админ-панель автоматизирует кластеризацию проектов, распределение экспертов, расписание и напоминания.
+> AI-платформа для персонализации мероприятий с параллельными треками: Demo Day, конференции, хакатоны, выставки. Telegram-бот генерирует персональную программу за 2 минуты диалога. Админ-панель автоматизирует кластеризацию проектов, распределение экспертов, расписание и напоминания.
 
 **🌐 Live Demo:** https://team12.camp.aitalenthub.ru
 **🤖 Telegram Bot:** [@demoday_ai_talent_hub_test_bot](https://t.me/demoday_ai_talent_hub_test_bot)
+
+## Содержание
+
+- [Проблема](#проблема)
+- [Решение](#решение)
+- [Качество рекомендаций](#качество-рекомендаций)
+- [Архитектура](#архитектура)
+- [Стек технологий](#стек-технологий)
+- [Быстрый старт](#быстрый-старт)
+- [Разработка](#разработка)
+- [API Endpoints](#api-endpoints)
+- [Тестирование](#тестирование)
+- [Telegram Bot](#telegram-bot)
+- [Customer Discovery](#customer-discovery)
+- [Команда](#команда)
 
 ---
 
@@ -50,6 +69,43 @@ Telegram-бот с персонализацией:
 - **Напоминания** — eve-of-DD, pre-slot, сдвиги тайминга
 - **Аналитика покрытия** — кто из экспертов где, пробелы, эскалации
 - **Оценивание** — эксперты ставят оценки через бота (не Google Таблицы)
+
+---
+
+## Качество рекомендаций
+
+### Метрики
+
+Оценка качества рекомендательной системы на 10 реальных профилях (5 гостей + 5 бизнес-партнёров), экспертные аннотации по 330 проектам:
+
+| Метрика | @5 | @15 | Описание |
+|---------|-----|------|----------|
+| **NDCG** | 0.79 | 0.82 | Normalized Discounted Cumulative Gain — качество ранжирования |
+| **Precision** | 0.68 | 0.71 | Доля релевантных проектов в топ-K |
+| **Recall** | 0.52 | 0.78 | Доля найденных релевантных от всех релевантных |
+
+### Методология
+
+```
+Профиль гостя → IDF-скоринг → LLM re-ranking → Топ-15 рекомендаций
+                    ↓
+          Экспертные аннотации (грейды 0-3)
+                    ↓
+              IR-метрики (NDCG, P@K, R@K)
+```
+
+**Пайплайн:**
+1. **IDF-скоринг** — TF-IDF по тегам и ключевым словам профиля
+2. **Text matching** — семантический поиск по свободному тексту
+3. **LLM re-ranking** — Claude/GPT переранжирует топ-20 кандидатов с учётом контекста
+4. **Оценка** — сравнение с экспертными аннотациями (binary relevance ≥ 2)
+
+**Данные:**
+- 330 проектов Demo Day (NLP, CV, Agents, EdTech, FinTech, Industrial)
+- 10 персон: guest_1-5 (соискатели, разработчики), business_1-5 (HR, инвесторы, партнёры)
+- 1085 пар "персона-проект" с экспертной оценкой релевантности
+
+**Код:** `data/eval/evaluate.py` (branch: `feature/eval`)
 
 ---
 
