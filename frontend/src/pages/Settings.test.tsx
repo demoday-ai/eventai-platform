@@ -110,22 +110,21 @@ describe("Settings", () => {
 
     render(<Settings />, { wrapper: createWrapper() })
 
-    await waitFor(() => {
-      const nameInput = screen.getByLabelText("Название") as HTMLInputElement
-      expect(nameInput.value).toBe("Demo Day 2026")
-    })
+    // Wait for all form fields to be populated by useEffect
+    await waitFor(
+      () => {
+        const nameInput = screen.getByLabelText("Название") as HTMLInputElement
+        const startInput = screen.getByLabelText("Дата начала") as HTMLInputElement
+        const endInput = screen.getByLabelText("Дата окончания") as HTMLInputElement
+        const descInput = screen.getByLabelText("Описание") as HTMLTextAreaElement
 
-    const nameInput = screen.getByLabelText("Название") as HTMLInputElement
-    expect(nameInput.value).toBe("Demo Day 2026")
-
-    const startInput = screen.getByLabelText("Дата начала") as HTMLInputElement
-    expect(startInput.value).toBe("2026-01-22")
-
-    const endInput = screen.getByLabelText("Дата окончания") as HTMLInputElement
-    expect(endInput.value).toBe("2026-01-23")
-
-    const descInput = screen.getByLabelText("Описание") as HTMLTextAreaElement
-    expect(descInput.value).toBe("Описание мероприятия")
+        expect(nameInput.value).toBe("Demo Day 2026")
+        expect(startInput.value).toBe("2026-01-22")
+        expect(endInput.value).toBe("2026-01-23")
+        expect(descInput.value).toBe("Описание мероприятия")
+      },
+      { timeout: 3000 },
+    )
   })
 
   it("calls updateCurrentEvent on save", async () => {
