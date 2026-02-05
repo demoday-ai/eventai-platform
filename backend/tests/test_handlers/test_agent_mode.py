@@ -19,23 +19,27 @@ from app.bot.handlers.guest_profiling import (
 )
 
 
-def make_fake_message(text: str, user_id: int = 123456789) -> Message:
-    """Create a fake Telegram message."""
+def make_fake_message(text: str, user_id: int = 123456789) -> MagicMock:
+    """Create a fake Telegram message using MagicMock."""
     user = User(id=user_id, is_bot=False, first_name="Test")
     chat = Chat(id=user_id, type="private")
-    return Message(
-        message_id=1,
-        date=None,
-        chat=chat,
-        from_user=user,
-        text=text,
-    )
+    message = MagicMock(spec=Message)
+    message.message_id = 1
+    message.date = None
+    message.chat = chat
+    message.from_user = user
+    message.text = text
+    message.reply_text = AsyncMock()
+    return message
 
 
-def make_fake_update(text: str, user_id: int = 123456789) -> Update:
+def make_fake_update(text: str, user_id: int = 123456789) -> MagicMock:
     """Create a fake Telegram update with a message."""
     message = make_fake_message(text, user_id)
-    return Update(update_id=1, message=message)
+    update = MagicMock(spec=Update)
+    update.update_id = 1
+    update.message = message
+    return update
 
 
 class TestAgentTools:
@@ -185,9 +189,8 @@ class TestViewProgramText:
     async def test_view_program_text_calls_llm(self, mock_context):
         """Test that view_program_text calls LLM with tools."""
         update = make_fake_update("покажи мой профиль")
-        update.message.reply_text = AsyncMock()
 
-        with patch("app.bot.handlers.guest_profiling.llm_client") as mock_llm, \
+        with patch("app.services.llm_client") as mock_llm, \
              patch("app.bot.handlers.guest_profiling.async_session") as mock_session, \
              patch("app.bot.handlers.guest_profiling.profiling_service") as mock_prof:
 
@@ -224,9 +227,8 @@ class TestViewProgramText:
     async def test_view_program_text_tool_show_profile(self, mock_context):
         """Test show_profile tool execution."""
         update = make_fake_update("покажи профиль")
-        update.message.reply_text = AsyncMock()
 
-        with patch("app.bot.handlers.guest_profiling.llm_client") as mock_llm, \
+        with patch("app.services.llm_client") as mock_llm, \
              patch("app.bot.handlers.guest_profiling.async_session") as mock_session, \
              patch("app.bot.handlers.guest_profiling.profiling_service") as mock_prof:
 
