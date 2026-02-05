@@ -1309,6 +1309,7 @@ async def _handle_get_followup(
         package = await followup_service.get_or_create_package(
             session, _uuid.UUID(user_id), _uuid.UUID(event_id),
         )
+        await session.commit()
 
     if not package:
         return "Пока нет данных для follow-up. Сначала посетите проекты."
@@ -1362,6 +1363,7 @@ async def _handle_get_pipeline(
 
         profile = await business_followup_service.get_business_profile(session, user.id)
         text = business_followup_service.format_pipeline_message(followups, profile)
+        await session.commit()
 
     await safe_send_long_message(
         context.bot, update.effective_chat.id, text,

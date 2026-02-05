@@ -106,7 +106,7 @@ async def generate_package_content(
 
     return {
         "generated_at": datetime.now().isoformat(),
-        "interests": profile.interests if profile else [],
+        "interests": profile.selected_tags if profile else [],
         "projects": projects,
         "total_projects": len(projects),
         "projects_with_contacts": len([p for p in projects if p.get("contact")]),
@@ -181,8 +181,8 @@ def format_package_message(package: FollowupPackage) -> str:
     if not projects:
         return (
             "📭 *Follow-up пакет*\n\n"
-            "К сожалению, у вас нет сохранённых проектов.\n"
-            "Используйте /recommend для получения рекомендаций."
+            "К сожалению, у вас пока нет рекомендованных проектов.\n"
+            "Используйте /start для получения персональной программы."
         )
 
     lines = [
