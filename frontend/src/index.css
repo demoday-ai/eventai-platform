@@ -214,6 +214,12 @@
 .animate-cursor { animation: typewriter-cursor 1s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
 
+@keyframes slide-in-from-bottom {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in.slide-in-from-bottom { animation: slide-in-from-bottom 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
 /* ========== MOBILE OPTIMIZATIONS ========== */
 /* On mobile: disable CPU-heavy animations, keep it clean and fast */
 @media (max-width: 768px) {

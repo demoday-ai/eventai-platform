@@ -22,6 +22,7 @@ import {
   CheckCircle,
   Menu,
   X,
+  Shield,
 } from "lucide-react"
 
 const BOT_URL = "https://t.me/demoday_ai_talent_hub_test_bot"
@@ -865,6 +866,76 @@ function LeadCaptureForm() {
         Нажимая кнопку, вы соглашаетесь на обработку персональных данных
       </p>
     </form>
+  )
+}
+
+/* ============================================================
+   Consent Banner
+   ============================================================ */
+
+const CONSENT_KEY = "dd-pd-consent"
+
+function ConsentBanner() {
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem(CONSENT_KEY) !== "accepted"
+  })
+
+  const accept = useCallback(() => {
+    localStorage.setItem(CONSENT_KEY, "accepted")
+    setVisible(false)
+  }, [])
+
+  if (!visible) return null
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6 sm:pb-6 animate-in slide-in-from-bottom duration-500"
+    >
+      <div
+        className="mx-auto max-w-3xl rounded-2xl px-5 py-4 sm:px-6 sm:py-5"
+        style={{
+          background: "var(--ld-surface)",
+          border: "1px solid var(--ld-border)",
+          boxShadow: "0 -4px 32px rgba(0,0,0,0.12), 0 0 0 1px var(--ld-border-subtle)",
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+          <div
+            className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "var(--ld-accent-soft)", color: "var(--ld-accent)" }}
+          >
+            <Shield className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <p
+              className="font-body text-sm leading-relaxed"
+              style={{ color: "var(--ld-text-secondary)" }}
+            >
+              Мы обрабатываем персональные данные в соответствии с{" "}
+              <span style={{ color: "var(--ld-text)" }} className="font-medium">
+                Федеральным законом №152-ФЗ «О персональных данных»
+              </span>
+              . Продолжая использовать сайт, вы даёте согласие на обработку ваших данных.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={accept}
+              className="font-display w-full sm:w-auto rounded-xl px-6 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
+              style={{
+                background: "var(--ld-accent)",
+                color: "#fff",
+                boxShadow: "0 2px 8px var(--ld-accent-glow)",
+              }}
+            >
+              Принимаю
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1991,6 +2062,9 @@ export function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* ===================== CONSENT BANNER ===================== */}
+      <ConsentBanner />
     </div>
   )
 }
