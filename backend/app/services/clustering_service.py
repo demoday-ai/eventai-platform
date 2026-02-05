@@ -324,3 +324,22 @@ async def approve_clustering(
     await session.commit()
 
     return "approved"
+
+
+async def invalidate_clustering_runs(
+    session: AsyncSession, event_id: uuid.UUID
+) -> int:
+    """Invalidate all clustering runs for an event (when projects are replaced).
+
+    Returns count of invalidated runs.
+    """
+    result = await session.execute(
+        update(ClusteringRun)
+        .where(
+            ClusteringRun.event_id == event_id,
+            ClusteringRun.status.in_(["draft", "approved"]),
+        )
+        .values(status="superseded")
+    )
+    await session.commit()
+    return result.rowcount or 0

@@ -108,6 +108,8 @@ async def upload_projects(
     # Replace existing if requested
     if existing_count > 0 and replace:
         await project_service.delete_all_projects(session, event.id)
+        # Invalidate old clustering when projects are replaced
+        await clustering_service.invalidate_clustering_runs(session, event.id)
 
     # Save valid projects
     loaded = await project_service.save_projects(session, event.id, valid)

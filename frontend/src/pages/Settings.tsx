@@ -8,6 +8,7 @@ import { APP_NAME } from "../lib/constants"
 import {
   getCurrentEvent, updateCurrentEvent, getAuditLog,
   getOrganizers, addOrganizer, removeOrganizer,
+  getTags, addTags,
   type Event, type EventUpdateRequest, type AuditLogItem,
   type OrganizerItem,
 } from "../lib/api-client"
@@ -176,10 +177,120 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      <TagsSection />
+
       <OrganizersSection />
 
       <AuditLogSection />
     </div>
+  )
+}
+
+function TagsSection() {
+  const queryClient = useQueryClient()
+  const [tagInput, setTagInput] = useState("")
+  const [tagError, setTagError] = useState("")
+  const [tagInfo, setTagInfo] = useState<string | null>(null)
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["tags"],
+    queryFn: getTags,
+  })
+
+  const mutation = useMutation({
+    mutationFn: (tags: string[]) => addTags(tags),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] })
+      setTagInput("")
+      const added = result.added.length
+      const skipped = result.skipped.length
+      if (added > 0) {
+        setTagInfo(`Добавлено: ${added}. Уже были: ${skipped}.`)
+      } else {
+        setTagInfo(`Новых тегов нет. Уже были: ${skipped}.`)
+      }
+      setTagError("")
+    },
+    onError: (err) => {
+      setTagError(err instanceof Error ? err.message : "Не удалось добавить теги")
+    },
+  })
+
+  const tags = data?.tags ?? []
+
+  const parseTags = (raw: string) => {
+    return raw
+      .split(/[,\\n]+/g)
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const parsed = parseTags(tagInput)
+    if (parsed.length === 0) {
+      setTagError("Введите хотя бы один тег")
+      return
+    }
+    setTagInfo(null)
+    mutation.mutate(parsed)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Теги конференции</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Теги помогают в автокластеризации и подборе экспертов.
+        </p>
+
+        {isLoading && <p className="text-muted-foreground">Загрузка...</p>}
+        {error && (
+          <p className="text-sm text-red-500">
+            Ошибка загрузки: {error instanceof Error ? error.message : "Неизвестная ошибка"}
+          </p>
+        )}
+
+        {tags.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span key={tag} className="px-3 py-1 bg-muted text-sm rounded-full">
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Теги пока не добавлены.</p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="tag-input">Добавить теги</Label>
+            <textarea
+              id="tag-input"
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              placeholder="Например: NLP, CV, Финтех"
+              value={tagInput}
+              onChange={(e) => {
+                setTagInput(e.target.value)
+                setTagError("")
+              }}
+              disabled={mutation.isPending}
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Добавление..." : "Добавить"}
+            </Button>
+            {tagInfo && <span className="text-sm text-green-600">{tagInfo}</span>}
+            {tagError && <span className="text-sm text-red-500">{tagError}</span>}
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 

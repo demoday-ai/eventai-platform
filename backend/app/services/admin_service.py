@@ -420,7 +420,12 @@ async def get_room_detail(db: AsyncSession, event_id: UUID, room_id: UUID) -> Ro
         uncovered_topics = sorted(project_tags - expert_tags)
 
     return RoomDetailResponse(
-        room=RoomInfo(id=str(room.id), name=room.name, description=room.description or ""),
+        room=RoomInfo(
+            id=str(room.id),
+            name=room.name,
+            description=room.theme_rationale or "",
+            theme_rationale=room.theme_rationale,
+        ),
         experts=experts_list,
         projects=projects_list,
         uncovered_topics=uncovered_topics,

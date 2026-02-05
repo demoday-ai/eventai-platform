@@ -89,6 +89,7 @@ class RoomInfo(BaseModel):
     id: str
     name: str
     description: str
+    theme_rationale: str | None = None
 
 
 class ExpertInfo(BaseModel):

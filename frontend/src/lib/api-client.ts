@@ -102,6 +102,7 @@ export interface RoomInfo {
   id: string
   name: string
   description: string
+  theme_rationale?: string | null
 }
 
 export interface ExpertInfo {
@@ -143,6 +144,26 @@ export interface ProjectsListParams {
   room_id?: string
   status?: string
   search?: string
+}
+
+export interface RoomUpdateRequest {
+  name?: string | null
+  theme_rationale?: string | null
+}
+
+export interface RoomUpdateResponse {
+  id: string
+  name: string
+  theme_rationale: string
+}
+
+export interface TagListResponse {
+  tags: string[]
+}
+
+export interface TagUpsertResponse {
+  added: string[]
+  skipped: string[]
 }
 
 // --- Expert list types ---
@@ -229,6 +250,7 @@ export interface GuestUploadConflict {
 export interface ClusteringRequest {
   num_rooms: number
   feedback?: string | null
+  room_themes?: string[] | null
 }
 
 export interface ClusteringProject {
@@ -690,6 +712,24 @@ export const getCoverage = async (): Promise<RoomCoverage[]> => {
 
 export const getRoomDetail = async (roomId: string): Promise<RoomDetailData> => {
   const { data } = await apiClient.get<RoomDetailData>(`/admin/rooms/${roomId}`)
+  return data
+}
+
+export const updateRoom = async (
+  roomId: string,
+  body: RoomUpdateRequest
+): Promise<RoomUpdateResponse> => {
+  const { data } = await apiClient.patch<RoomUpdateResponse>(`/admin/rooms/${roomId}`, body)
+  return data
+}
+
+export const getTags = async (): Promise<TagListResponse> => {
+  const { data } = await apiClient.get<TagListResponse>("/admin/tags")
+  return data
+}
+
+export const addTags = async (tags: string[]): Promise<TagUpsertResponse> => {
+  const { data } = await apiClient.post<TagUpsertResponse>("/admin/tags", { tags })
   return data
 }
 
