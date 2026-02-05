@@ -1145,7 +1145,7 @@ export function Landing() {
                   className="font-body mt-2 text-xs"
                   style={{ color: "var(--ld-text-muted)" }}
                 >
-                  Качество ранжирования: релевантные проекты выше
+                  Релевантные проекты в топе списка
                 </div>
               </div>
             </Reveal>
@@ -1173,7 +1173,7 @@ export function Landing() {
                   className="font-body mt-2 text-xs"
                   style={{ color: "var(--ld-text-muted)" }}
                 >
-                  Точность: доля релевантных в топ-15
+                  7 из 10 в подборке — действительно интересны
                 </div>
               </div>
             </Reveal>
@@ -1201,7 +1201,7 @@ export function Landing() {
                   className="font-body mt-2 text-xs"
                   style={{ color: "var(--ld-text-muted)" }}
                 >
-                  Полнота: найдено релевантных из всех
+                  Находим 8 из 10 подходящих проектов
                 </div>
               </div>
             </Reveal>
