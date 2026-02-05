@@ -451,144 +451,163 @@ export function Landing() {
       </nav>
 
       {/* ===================== HERO ===================== */}
-      <section className="dot-grid relative flex min-h-screen flex-col items-center justify-center px-6 pt-24 pb-16">
-        {/* Simplified gradient background - static on mobile */}
+      <section className="noise-overlay dot-grid relative flex min-h-screen flex-col items-center justify-center px-4 pt-20 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
+        {/* Gradient background - animated on desktop, static on mobile */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {/* Primary gradient blob */}
           <div
-            className="animate-hero-gradient absolute -left-20 -top-20 h-[400px] w-[400px] rounded-full opacity-25 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[100px]"
+            className="animate-hero-gradient absolute -left-32 -top-32 h-[600px] w-[600px] rounded-full opacity-30 blur-[120px]"
             style={{ background: "var(--ld-hero-gradient-1)" }}
           />
+          {/* Secondary gradient blob */}
           <div
-            className="animate-hero-gradient absolute -right-10 top-1/3 h-[300px] w-[300px] rounded-full opacity-15 blur-[60px] sm:h-[400px] sm:w-[400px] sm:blur-[80px]"
+            className="animate-hero-gradient absolute -right-20 top-1/4 h-[500px] w-[500px] rounded-full opacity-20 blur-[100px]"
             style={{ background: "var(--ld-hero-gradient-2)", animationDelay: "-7s" }}
+          />
+          {/* Accent gradient blob */}
+          <div
+            className="animate-hero-gradient absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full opacity-15 blur-[80px]"
+            style={{ background: "var(--ld-hero-gradient-3)", animationDelay: "-14s" }}
           />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-4xl text-center">
-          {/* Target audience badge */}
+        <div className="relative z-10 mx-auto max-w-5xl text-center">
+          {/* Target audience badge - PROMINENT */}
           <Reveal>
-            <div className="mb-6 inline-flex items-center gap-2">
-              <span
-                className="font-body inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+            <div className="mb-8 flex justify-center">
+              <div
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold sm:px-6 sm:py-3 sm:text-base"
                 style={{
-                  background: "var(--ld-accent-soft)",
-                  color: "var(--ld-accent-text)",
-                  border: "1px solid var(--ld-border-subtle)",
+                  background: "var(--ld-accent)",
+                  color: "#fff",
+                  boxShadow: "0 4px 24px var(--ld-accent-glow)",
                 }}
               >
-                <Users className="h-3.5 w-3.5" />
+                <Target className="h-4 w-4 sm:h-5 sm:w-5" />
                 Для организаторов конференций и Demo Day
-              </span>
+              </div>
             </div>
           </Reveal>
 
-          {/* Main headline - clear value prop */}
+          {/* Main headline */}
           <Reveal delay={100}>
-            <h1 className="font-display text-3xl font-medium leading-[1.15] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+            <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
               <span style={{ color: "var(--ld-text)" }}>
                 Персональная программа
               </span>
-              <br />
+              <br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>
               <span
+                className="bg-clip-text text-transparent"
                 style={{
-                  background: `linear-gradient(135deg, var(--ld-hero-gradient-1), var(--ld-hero-gradient-2))`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
+                  backgroundImage: `linear-gradient(135deg, var(--ld-hero-gradient-1) 0%, var(--ld-hero-gradient-2) 50%, var(--ld-hero-gradient-3) 100%)`,
                 }}
               >
-                каждому гостю за 2 минуты
+                каждому гостю
               </span>
             </h1>
           </Reveal>
 
-          {/* Problem statement - concrete numbers */}
-          <Reveal delay={200}>
+          {/* Subheadline with key metric */}
+          <Reveal delay={150}>
             <p
-              className="font-body mx-auto mt-5 max-w-xl text-base leading-relaxed sm:text-lg"
+              className="font-display mx-auto mt-6 text-xl font-medium sm:text-2xl md:text-3xl"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              На вашем мероприятии{" "}
-              <strong style={{ color: "var(--ld-ember)" }}>сотни проектов в параллельных залах</strong>.
-              {" "}Гости физически успевают увидеть менее 20%.
-              {" "}Telegram-бот составит каждому персональный топ за диалог.
+              за <span style={{ color: "var(--ld-accent)" }}>2 минуты</span> диалога с AI-ботом
             </p>
           </Reveal>
 
-          {/* Single primary CTA */}
+          {/* Problem statement */}
+          <Reveal delay={200}>
+            <p
+              className="font-body mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg"
+              style={{ color: "var(--ld-text-muted)" }}
+            >
+              Сотни проектов в параллельных залах. Гости видят{" "}
+              <span className="font-semibold" style={{ color: "var(--ld-ember)" }}>менее 20%</span>.
+              {" "}Telegram-бот профилирует интересы и составляет персональный топ.
+            </p>
+          </Reveal>
+
+          {/* CTA Buttons */}
           <Reveal delay={300}>
-            <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-5">
               <a
                 href={BOT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-display group flex items-center gap-2.5 rounded-xl px-8 py-4 text-base font-medium transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                className="font-display group inline-flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl active:scale-[0.98] sm:w-auto sm:text-lg"
                 style={{
                   background: "var(--ld-accent)",
                   color: "#fff",
-                  boxShadow: `0 4px 20px var(--ld-accent-glow)`,
+                  boxShadow: "0 8px 32px var(--ld-accent-glow)",
                 }}
               >
-                <MessageCircle className="h-5 w-5" />
-                Попробовать на реальных данных
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+                Попробовать Live Demo
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 sm:h-6 sm:w-6" />
               </a>
-              <div className="flex items-center gap-4">
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-body flex items-center gap-1.5 text-sm transition-opacity hover:opacity-70"
-                  style={{ color: "var(--ld-text-muted)" }}
-                >
-                  <Github className="h-4 w-4" />
-                  Open Source
-                </a>
-                <span style={{ color: "var(--ld-border)" }}>•</span>
-                <span
-                  className="font-body text-sm"
-                  style={{ color: "var(--ld-text-muted)" }}
-                >
-                  Бесплатно для некоммерческих
-                </span>
-              </div>
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-display inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-medium transition-all duration-200 hover:scale-[1.02] sm:w-auto"
+                style={{
+                  background: "var(--ld-surface)",
+                  color: "var(--ld-text)",
+                  border: "2px solid var(--ld-border)",
+                }}
+              >
+                <Github className="h-5 w-5" />
+                Open Source
+              </a>
             </div>
           </Reveal>
 
-          {/* Social proof - concrete case */}
+          {/* Social proof stats */}
           <Reveal delay={400}>
-            <div
-              className="mx-auto mt-12 max-w-md rounded-xl p-4"
-              style={{
-                background: "var(--ld-surface)",
-                border: "1px solid var(--ld-border-subtle)",
-              }}
-            >
-              <div className="flex items-center justify-center gap-6 sm:gap-8">
-                <div className="text-center">
-                  <div className="font-display text-2xl font-medium" style={{ color: "var(--ld-accent)" }}>330</div>
-                  <div className="font-body text-[11px] uppercase tracking-wide" style={{ color: "var(--ld-text-muted)" }}>проектов</div>
+            <div className="mx-auto mt-14 max-w-xl">
+              <div
+                className="rounded-2xl p-6 sm:p-8"
+                style={{
+                  background: "var(--ld-surface)",
+                  border: "1px solid var(--ld-border)",
+                  boxShadow: "var(--ld-card-shadow)",
+                }}
+              >
+                <div className="grid grid-cols-3 gap-4 sm:gap-8">
+                  <div className="text-center">
+                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-accent)" }}>330</div>
+                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>проектов</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-teal)" }}>10</div>
+                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>залов</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-ember)" }}>2 мин</div>
+                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>на профиль</div>
+                  </div>
                 </div>
-                <div className="h-8 w-px" style={{ background: "var(--ld-border)" }} />
-                <div className="text-center">
-                  <div className="font-display text-2xl font-medium" style={{ color: "var(--ld-accent)" }}>10</div>
-                  <div className="font-body text-[11px] uppercase tracking-wide" style={{ color: "var(--ld-text-muted)" }}>залов</div>
+                <div
+                  className="font-body mt-5 flex items-center justify-center gap-2 text-xs sm:text-sm"
+                  style={{ color: "var(--ld-text-secondary)" }}
+                >
+                  <Sparkles className="h-4 w-4" style={{ color: "var(--ld-accent)" }} />
+                  Проверено на Demo Day AI Talent Hub ИТМО
                 </div>
-                <div className="h-8 w-px" style={{ background: "var(--ld-border)" }} />
-                <div className="text-center">
-                  <div className="font-display text-2xl font-medium" style={{ color: "var(--ld-accent)" }}>2 мин</div>
-                  <div className="font-body text-[11px] uppercase tracking-wide" style={{ color: "var(--ld-text-muted)" }}>на профиль</div>
-                </div>
-              </div>
-              <div className="font-body mt-3 text-center text-xs" style={{ color: "var(--ld-text-muted)" }}>
-                Протестировано на Demo Day AI Talent Hub ИТМО
               </div>
             </div>
           </Reveal>
         </div>
 
-        <Reveal delay={500} className="absolute bottom-6 hidden sm:block">
-          <a href="#problem" className="flex flex-col items-center transition-opacity hover:opacity-70">
+        {/* Scroll indicator - desktop only */}
+        <Reveal delay={600} className="absolute bottom-8 hidden md:block">
+          <a href="#problem" className="group flex flex-col items-center gap-2 transition-opacity hover:opacity-70">
+            <span className="font-body text-xs uppercase tracking-widest" style={{ color: "var(--ld-text-muted)" }}>
+              Узнать больше
+            </span>
             <ChevronDown className="h-5 w-5 animate-float" style={{ color: "var(--ld-text-muted)" }} />
           </a>
         </Reveal>

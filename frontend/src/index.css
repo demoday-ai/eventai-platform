@@ -200,19 +200,59 @@
 .animate-cursor { animation: typewriter-cursor 1s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
 
-/* Disable heavy animations on mobile and reduced-motion */
-@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+/* ========== MOBILE OPTIMIZATIONS ========== */
+/* On mobile: disable CPU-heavy animations, keep it clean and fast */
+@media (max-width: 768px) {
+  /* Stop gradient rotation - use static positioned blobs */
   .animate-hero-gradient {
     animation: none !important;
-    transform: scale(1.2);
+    transform: scale(1) !important;
   }
+
+  /* Disable shimmer animation */
   .animate-shimmer {
     animation: none !important;
     background-position: center;
   }
+
+  /* Disable floating animation */
   .animate-float {
     animation: none !important;
   }
+
+  /* Hide noise overlay - major performance gain */
+  .noise-overlay::before {
+    display: none !important;
+  }
+
+  /* Simplify dot-grid on mobile */
+  .dot-grid {
+    background-size: 48px 48px;
+  }
+
+  /* Reduce blur intensity significantly */
+  [class*="blur-[120px]"],
+  [class*="blur-[100px]"],
+  [class*="blur-[80px]"] {
+    filter: blur(40px) !important;
+    opacity: 0.4 !important;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-gradient,
+  .animate-shimmer,
+  .animate-float,
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-left,
+  .animate-cursor,
+  .animate-pulse-ring {
+    animation: none !important;
+  }
+
   .noise-overlay::before {
     display: none !important;
   }
@@ -259,15 +299,17 @@ html {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
 }
 
-/* GPU acceleration for heavy elements */
-.animate-hero-gradient {
-  will-change: transform;
-  backface-visibility: hidden;
-}
+/* ========== DESKTOP ENHANCEMENTS ========== */
+/* On desktop: enable GPU acceleration for smooth animations */
+@media (min-width: 769px) {
+  .animate-hero-gradient {
+    will-change: transform;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
 
-/* Reduce blur intensity on mobile for performance */
-@media (max-width: 768px) {
-  .blur-\[120px\] { filter: blur(60px); }
-  .blur-\[100px\] { filter: blur(50px); }
-  .blur-\[80px\] { filter: blur(40px); }
+  /* Smoother hover transitions on desktop */
+  .group:hover .group-hover\:translate-x-1 {
+    transition: transform 0.2s ease-out;
+  }
 }
