@@ -108,7 +108,13 @@ services:
 
   worker:
     build: ./backend
-    command: celery -A app.worker.celery_app worker --loglevel=info
+    command: >
+      celery -A app.worker.celery_app worker
+      --loglevel=info
+      --hostname=worker-default@%h
+      --queues=default
+      --concurrency=2
+      --max-tasks-per-child=50
     env_file: ./backend/.env
     environment:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-demoday}:${RABBITMQ_PASS:-demoday}@rabbitmq:5672//
@@ -124,6 +130,40 @@ services:
         condition: service_healthy
     networks:
       - internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: unless-stopped
+
+  worker-heavy:
+    build: ./backend
+    command: >
+      celery -A app.worker.celery_app worker
+      --loglevel=info
+      --hostname=worker-heavy@%h
+      --queues=heavy
+      --concurrency=1
+      --max-tasks-per-child=20
+    env_file: ./backend/.env
+    environment:
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-demoday}:${RABBITMQ_PASS:-demoday}@rabbitmq:5672//
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 384M
     restart: unless-stopped
 
   frontend:

@@ -1,7 +1,7 @@
 """Celery tasks for async LLM operations.
 
 Each task wraps an async service function to run in Celery's sync worker.
-Tasks create their own event loop and database session.
+DB engine is initialized once per worker process via Celery signals.
 """
 
 import asyncio
@@ -9,9 +9,50 @@ import logging
 import uuid
 from typing import Any
 
+from celery.signals import worker_process_init, worker_process_shutdown
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.config import settings
 from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+# Singleton DB engine — initialized per worker process
+_engine = None
+_async_session_factory = None
+
+
+@worker_process_init.connect
+def _init_db_engine(**kwargs):
+    """Create shared DB engine when worker process starts."""
+    global _engine, _async_session_factory
+    _engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        pool_size=3,
+        max_overflow=2,
+        pool_recycle=600,
+        pool_pre_ping=True,
+    )
+    _async_session_factory = async_sessionmaker(
+        _engine, class_=AsyncSession, expire_on_commit=False
+    )
+    logger.info("Worker DB engine initialized (pool_size=3, max_overflow=2)")
+
+
+@worker_process_shutdown.connect
+def _shutdown_db_engine(**kwargs):
+    """Dispose DB engine when worker process shuts down."""
+    global _engine, _async_session_factory
+    if _engine is not None:
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(_engine.dispose())
+        finally:
+            loop.close()
+        logger.info("Worker DB engine disposed")
+    _engine = None
+    _async_session_factory = None
 
 
 def run_async(coro):
@@ -25,14 +66,13 @@ def run_async(coro):
 
 
 async def _get_session():
-    """Create async database session for worker."""
-    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-    from app.config import settings
-
+    """Get async database session from shared engine."""
+    if _async_session_factory is not None:
+        return _async_session_factory()
+    # Fallback for tests or when signals haven't fired
     engine = create_async_engine(settings.database_url, echo=False)
-    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    return async_session()
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return factory()
 
 
 # =============================================================================
