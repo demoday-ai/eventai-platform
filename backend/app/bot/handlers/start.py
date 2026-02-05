@@ -610,7 +610,7 @@ async def _onb_agent_turn(
             if is_message:
                 await update.message.reply_text(fallback_question)
             else:
-                await update.callback_query.edit_message_text(fallback_question)
+                await update.callback_query.edit_message_text(fallback_question, reply_markup=None)
             return ONBOARD_NL_PROFILE
 
         # Agent decided we have enough info — show confirmation
@@ -624,7 +624,7 @@ async def _onb_agent_turn(
     if is_message:
         await update.message.reply_text(reply_text)
     else:
-        await update.callback_query.edit_message_text(reply_text)
+        await update.callback_query.edit_message_text(reply_text, reply_markup=None)
 
     return ONBOARD_NL_PROFILE
 
