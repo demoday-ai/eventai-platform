@@ -123,7 +123,7 @@ backend/
 | Admin Panel | [team12.camp.aitalenthub.ru](https://team12.camp.aitalenthub.ru) | Панель организатора |
 | RabbitMQ | [/rabbitmq/](https://team12.camp.aitalenthub.ru/rabbitmq/) | Очередь задач |
 | Flower | [/flower/](https://team12.camp.aitalenthub.ru/flower/) | Мониторинг Celery воркеров |
-| API Docs | [/api/v1/docs](https://team12.camp.aitalenthub.ru/api/v1/docs) | Swagger UI |
+| API Docs | [/docs](https://team12.camp.aitalenthub.ru/docs) | Swagger UI |
 
 Логин/пароль для RabbitMQ и Flower: `demoday` / `demoday`
 
