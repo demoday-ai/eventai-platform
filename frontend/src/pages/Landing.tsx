@@ -981,7 +981,7 @@ export function Landing() {
                 }}
               >
                 <Github className="h-5 w-5" />
-                Open Source
+                GitHub
               </a>
             </div>
           </Reveal>
@@ -1778,7 +1778,7 @@ export function Landing() {
               style={{ color: "var(--ld-text-secondary)" }}
             >
               Откройте бота и пройдите демо-сценарий на данных реального Demo Day AI Talent Hub.
-              Open source — разворачивайте на своих мероприятиях.
+              Бесплатно для образовательных мероприятий.
             </p>
           </Reveal>
           <Reveal delay={200}>
@@ -1810,7 +1810,7 @@ export function Landing() {
                 }}
               >
                 <Github className="h-4 w-4" />
-                Развернуть у себя
+                Документация
               </a>
             </div>
           </Reveal>
@@ -1956,7 +1956,7 @@ export function Landing() {
               className="font-body text-xs"
               style={{ color: "var(--ld-text-muted)" }}
             >
-              &copy; 2026 EventAI. Открытый исходный код.
+              &copy; 2026 EventAI
             </p>
             <div className="flex items-center gap-4">
               <a
