@@ -53,15 +53,16 @@ async def create_lead(lead: LeadCreate) -> LeadResponse:
 
     text += f"\n🕐 {datetime.now().strftime('%d.%m.%Y %H:%M')}"
 
-    # Send to Telegram
-    if not settings.bot_token or not settings.team_chat_id:
+    # Send to Telegram (use team_bot_token if available, otherwise fall back to bot_token)
+    bot_token = settings.team_bot_token or settings.bot_token
+    if not bot_token or not settings.team_chat_id:
         logger.warning("Lead received but Telegram not configured: %s", lead.email)
         return LeadResponse(success=True, message="Lead saved (Telegram not configured)")
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"https://api.telegram.org/bot{settings.bot_token}/sendMessage",
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
                 json={
                     "chat_id": settings.team_chat_id,
                     "text": text,
