@@ -948,35 +948,8 @@ export function Landing() {
               className="font-display mx-auto mt-6 text-xl font-medium sm:text-2xl md:text-3xl"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              за <span style={{ color: "var(--ld-accent)" }}>минуту</span> диалога с AI-ботом
+              за <span style={{ color: "var(--ld-accent)" }}>2 минуты</span> диалога с AI-ботом
             </p>
-          </Reveal>
-
-          {/* Problem statement */}
-          <Reveal delay={200}>
-            <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row sm:justify-center sm:gap-6">
-              <div
-                className="flex items-center justify-center gap-2 rounded-lg px-4 py-2.5"
-                style={{ background: "var(--ld-surface)", border: "1px solid var(--ld-border)" }}
-              >
-                <span className="font-display text-xl font-bold sm:text-2xl" style={{ color: "var(--ld-ember)" }}>100+</span>
-                <span className="font-body text-sm sm:text-base" style={{ color: "var(--ld-text-secondary)" }}>проектов</span>
-              </div>
-              <div
-                className="flex items-center justify-center gap-2 rounded-lg px-4 py-2.5"
-                style={{ background: "var(--ld-surface)", border: "1px solid var(--ld-border)" }}
-              >
-                <span className="font-display text-xl font-bold sm:text-2xl" style={{ color: "var(--ld-amber)" }}>&lt;20%</span>
-                <span className="font-body text-sm sm:text-base" style={{ color: "var(--ld-text-secondary)" }}>видит гость</span>
-              </div>
-              <div
-                className="flex items-center justify-center gap-2 rounded-lg px-4 py-2.5"
-                style={{ background: "var(--ld-surface)", border: "1px solid var(--ld-border)" }}
-              >
-                <span className="font-display text-xl font-bold sm:text-2xl" style={{ color: "var(--ld-teal)" }}>1 мин</span>
-                <span className="font-body text-sm sm:text-base" style={{ color: "var(--ld-text-secondary)" }}>на подборку</span>
-              </div>
-            </div>
           </Reveal>
 
           {/* CTA Buttons */}
