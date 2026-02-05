@@ -118,9 +118,11 @@ describe("DataImport", () => {
       headers: {},
       config: { headers: new AxiosHeaders() },
       data: {
-        message: "Заменить предыдущие данные (5 проектов) новыми (10 проектов)?",
-        existing_count: 5,
-        new_count: 10,
+        detail: {
+          message: "Заменить предыдущие данные (5 проектов) новыми (10 проектов)?",
+          existing_count: 5,
+          new_count: 10,
+        },
       },
     })
     mockUploadProjects.mockRejectedValue(error)

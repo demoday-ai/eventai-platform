@@ -378,24 +378,9 @@ export function Clustering() {
                 {clusteringResult.rooms.reduce((sum, r) => sum + r.project_count, 0)}
               </p>
               {isApproved ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-green-600 font-medium">
-                    Кластеризация одобрена
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setClusteringResult(null)
-                        setCurrentStep(0)
-                        queryClient.invalidateQueries({ queryKey: ["clustering"] })
-                      }}
-                      className="w-full sm:w-auto"
-                    >
-                      Перезапустить кластеризацию
-                    </Button>
-                  </div>
-                </div>
+                <p className="text-sm text-green-600 font-medium">
+                  Кластеризация одобрена
+                </p>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button

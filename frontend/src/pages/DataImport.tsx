@@ -105,15 +105,15 @@ export function DataImport() {
         setProjectConflict(null)
       }
     },
-    onError: (error: AxiosError<UploadConflict | { detail: string | { message: string; errors: unknown[] } }>) => {
-      if (error.response?.status === 409 && error.response.data) {
-        setProjectConflict(error.response.data as UploadConflict)
-      } else if (error.response?.data) {
-        const data = error.response.data as { detail: string | { message: string; errors: unknown[] } }
-        if (typeof data.detail === "string") {
-          setProjectError(data.detail)
-        } else if (data.detail?.message) {
-          setProjectError(data.detail.message)
+    onError: (error: AxiosError<{ detail: UploadConflict | string | { message: string; errors: unknown[] } }>) => {
+      const detail = error.response?.data?.detail
+      if (error.response?.status === 409 && detail && typeof detail === "object" && "message" in detail) {
+        setProjectConflict(detail as UploadConflict)
+      } else if (detail) {
+        if (typeof detail === "string") {
+          setProjectError(detail)
+        } else if ("message" in detail) {
+          setProjectError(detail.message)
         } else {
           setProjectError(error.message)
         }
