@@ -16,13 +16,49 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-demoday}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-demoday}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build: ./backend
     env_file: ./backend/.env
+    environment:
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-demoday}:${RABBITMQ_PASS:-demoday}@rabbitmq:5672//
+      - REDIS_URL=redis://redis:6379/0
     volumes:
       - ./data:/app/data:ro
     depends_on:
       db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - internal
@@ -32,6 +68,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    restart: unless-stopped
+
+  worker:
+    build: ./backend
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    env_file: ./backend/.env
+    environment:
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-demoday}:${RABBITMQ_PASS:-demoday}@rabbitmq:5672//
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - internal
     restart: unless-stopped
 
   frontend:
@@ -79,3 +135,5 @@ networks:
 
 volumes:
   pgdata:
+  redis_data:
+  rabbitmq_data:
