@@ -17,6 +17,7 @@ vi.mock("../hooks/useAuth", () => ({
 // Mock API client
 vi.mock("../lib/api-client", () => ({
   getRoomDetail: vi.fn(),
+  updateRoom: vi.fn(),
 }))
 
 const mockRoomData = {
@@ -24,6 +25,7 @@ const mockRoomData = {
     id: "room-1",
     name: "Зал 1: NLP",
     description: "Зал для проектов по обработке естественного языка",
+    theme_rationale: "NLP проекты",
   },
   experts: [
     {
@@ -107,9 +109,8 @@ describe("RoomDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Зал 1: NLP")).toBeInTheDocument()
-      expect(
-        screen.getByText("Зал для проектов по обработке естественного языка")
-      ).toBeInTheDocument()
+      const themeInput = screen.getByLabelText("Тематика зала") as HTMLTextAreaElement
+      expect(themeInput.value).toBe("NLP проекты")
     })
   })
 

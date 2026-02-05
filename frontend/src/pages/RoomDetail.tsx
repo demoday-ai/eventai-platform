@@ -1,21 +1,69 @@
-import { useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useParams, useNavigate } from "react-router-dom"
-import { getRoomDetail, type ExpertInfo, type ProjectInfo } from "../lib/api-client"
+import { getRoomDetail, updateRoom, type ExpertInfo, type ProjectInfo } from "../lib/api-client"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
+import { Input } from "../components/ui/input"
+import { Label } from "../components/ui/label"
 import { APP_NAME } from "../lib/constants"
 
 export function RoomDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-
+  const queryClient = useQueryClient()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["roomDetail", id],
     queryFn: () => getRoomDetail(id!),
     enabled: !!id,
   })
+
+  const [roomName, setRoomName] = useState("")
+  const [roomTheme, setRoomTheme] = useState("")
+  const [roomMessage, setRoomMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (data?.room) {
+      setRoomName(data.room.name || "")
+      setRoomTheme(data.room.theme_rationale ?? data.room.description ?? "")
+    }
+  }, [data?.room])
+
+  const updateMutation = useMutation({
+    mutationFn: (body: { name?: string | null; theme_rationale?: string | null }) =>
+      updateRoom(id!, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roomDetail", id] })
+      setRoomMessage("Сохранено")
+    },
+    onError: (err) => {
+      setRoomMessage(err instanceof Error ? err.message : "Не удалось сохранить")
+    },
+  })
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!data?.room) return
+    const body: { name?: string | null; theme_rationale?: string | null } = {}
+    const trimmedName = roomName.trim()
+    const trimmedTheme = roomTheme.trim()
+    const currentTheme = data.room.theme_rationale ?? data.room.description ?? ""
+
+    if (trimmedName && trimmedName !== data.room.name) {
+      body.name = trimmedName
+    }
+    if (trimmedTheme && trimmedTheme !== currentTheme) {
+      body.theme_rationale = trimmedTheme
+    }
+
+    if (!body.name && !body.theme_rationale) {
+      setRoomMessage("Нет изменений")
+      return
+    }
+    setRoomMessage(null)
+    updateMutation.mutate(body)
+  }
 
   // Set page title
   useEffect(() => {
@@ -59,15 +107,53 @@ export function RoomDetail() {
           ← Назад
         </Button>
       </div>
-          {/* Room info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{data.room.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{data.room.description}</p>
-            </CardContent>
-          </Card>
+      {/* Room info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{data.room.name}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="room-name">Название зала</Label>
+              <Input
+                id="room-name"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                disabled={updateMutation.isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="room-theme">Тематика зала</Label>
+              <textarea
+                id="room-theme"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={roomTheme}
+                onChange={(e) => setRoomTheme(e.target.value)}
+                disabled={updateMutation.isPending}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Сохранение..." : "Сохранить"}
+              </Button>
+              {roomMessage && (
+                <span
+                  className={`text-sm ${
+                    roomMessage === "Сохранено"
+                      ? "text-green-600"
+                      : roomMessage === "Нет изменений"
+                        ? "text-muted-foreground"
+                        : "text-red-500"
+                  }`}
+                >
+                  {roomMessage}
+                </span>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
           {/* Experts */}
           <Card>

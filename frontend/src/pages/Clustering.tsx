@@ -23,6 +23,8 @@ export function Clustering() {
   const [currentStep, setCurrentStep] = useState(0)
   const [numRooms, setNumRooms] = useState(6)
   const [feedback, setFeedback] = useState("")
+  const [roomThemesInput, setRoomThemesInput] = useState("")
+  const [roomThemesError, setRoomThemesError] = useState("")
   const [moveDialog, setMoveDialog] = useState<{
     projectId: string
     projectTitle: string
@@ -91,11 +93,18 @@ export function Clustering() {
     return () => clearInterval(interval)
   }, [jobId, jobStatus, queryClient])
 
+  const parseRoomThemes = (raw: string) =>
+    raw
+      .split(/\n+/g)
+      .map((item) => item.trim())
+      .filter(Boolean)
+
   const runMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (params: { roomThemes: string[] | null }) =>
       runClustering({
         num_rooms: numRooms,
         feedback: feedback || null,
+        room_themes: params.roomThemes,
       }),
     onSuccess: (data) => {
       setJobId(data.job_id)
@@ -136,6 +145,17 @@ export function Clustering() {
 
   const isApproved = !!clusteringResult?.approved_at
   const isJobRunning = jobId && (jobStatus === "pending" || jobStatus === "running")
+  const handleRun = () => {
+    const themes = parseRoomThemes(roomThemesInput)
+    if (themes.length > 0 && themes.length !== numRooms) {
+      setRoomThemesError(
+        `Количество тем (${themes.length}) должно совпадать с числом залов (${numRooms}).`
+      )
+      return
+    }
+    setRoomThemesError("")
+    runMutation.mutate({ roomThemes: themes.length > 0 ? themes : null })
+  }
 
   return (
     <div className="grid gap-6">
@@ -160,7 +180,10 @@ export function Clustering() {
                 min={2}
                 max={20}
                 value={numRooms}
-                onChange={(e) => setNumRooms(Number(e.target.value))}
+                onChange={(e) => {
+                  setNumRooms(Number(e.target.value))
+                  setRoomThemesError("")
+                }}
                 disabled={!!isJobRunning}
               />
             </div>
@@ -175,8 +198,28 @@ export function Clustering() {
                 disabled={!!isJobRunning}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="room-themes">Тематики залов (опционально)</Label>
+              <textarea
+                id="room-themes"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder={"По одному на строке. Например:\nAI в медицине\nФинтех\nEdTech"}
+                value={roomThemesInput}
+                onChange={(e) => {
+                  setRoomThemesInput(e.target.value)
+                  setRoomThemesError("")
+                }}
+                disabled={!!isJobRunning}
+              />
+              <p className="text-xs text-muted-foreground">
+                Если заполнено — количество тем должно совпадать с числом залов.
+              </p>
+              {roomThemesError && (
+                <p className="text-sm text-red-500">{roomThemesError}</p>
+              )}
+            </div>
             <Button
-              onClick={() => runMutation.mutate()}
+              onClick={handleRun}
               disabled={runMutation.isPending || !!isJobRunning}
               className="w-full sm:w-auto"
             >

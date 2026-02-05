@@ -20,6 +20,8 @@ vi.mock("../lib/api-client", () => ({
   getOrganizers: vi.fn(),
   addOrganizer: vi.fn(),
   removeOrganizer: vi.fn(),
+  getTags: vi.fn(),
+  addTags: vi.fn(),
 }))
 
 const mockEvent: apiClient.Event = {
@@ -92,6 +94,7 @@ describe("Settings", () => {
     vi.clearAllMocks()
     vi.mocked(apiClient.getAuditLog).mockResolvedValue(mockAuditLog)
     vi.mocked(apiClient.getOrganizers).mockResolvedValue(mockOrganizers)
+    vi.mocked(apiClient.getTags).mockResolvedValue({ tags: ["NLP", "CV", "Agents"] })
   })
 
   it("renders title and loading state", () => {
@@ -318,7 +321,10 @@ describe("Settings", () => {
     await userEvent.type(screen.getByLabelText("Username"), "new_org")
     await userEvent.type(screen.getByLabelText("Имя"), "Новый Организатор")
 
-    await userEvent.click(screen.getByRole("button", { name: "Добавить" }))
+    // Click the submit button within the organizer form (has type="submit")
+    const submitButtons = screen.getAllByRole("button", { name: "Добавить" })
+    // The organizer form submit button is the last one
+    await userEvent.click(submitButtons[submitButtons.length - 1])
 
     await waitFor(() => {
       expect(apiClient.addOrganizer).toHaveBeenCalled()
