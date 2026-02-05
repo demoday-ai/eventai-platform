@@ -349,6 +349,17 @@ export interface InviteConfirmResult {
 
 // --- Schedule types ---
 
+export interface RoomTimeOverride {
+  room_id: string
+  start_time: string  // "HH:MM"
+  end_time: string    // "HH:MM"
+}
+
+export interface BreakTime {
+  start_time: string  // "HH:MM"
+  end_time: string    // "HH:MM"
+}
+
 export interface ScheduleGenerateRequest {
   clustering_run_id?: string | null
   day1_start?: string | null
@@ -356,6 +367,8 @@ export interface ScheduleGenerateRequest {
   day2_start?: string | null
   day2_end?: string | null
   slot_duration_minutes?: number
+  room_overrides?: RoomTimeOverride[]
+  breaks?: BreakTime[]
 }
 
 export interface ScheduleRoomSummary {

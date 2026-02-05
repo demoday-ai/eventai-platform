@@ -17,6 +17,7 @@ const mockGetSchedule = vi.fn()
 const mockApproveSchedule = vi.fn()
 const mockUpdateSlot = vi.fn()
 const mockGetScheduleChanges = vi.fn()
+const mockGetCurrentClustering = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   generateSchedule: (...args: unknown[]) => mockGenerateSchedule(...args),
@@ -24,6 +25,7 @@ vi.mock("../lib/api-client", () => ({
   approveSchedule: (...args: unknown[]) => mockApproveSchedule(...args),
   updateSlot: (...args: unknown[]) => mockUpdateSlot(...args),
   getScheduleChanges: (...args: unknown[]) => mockGetScheduleChanges(...args),
+  getCurrentClustering: (...args: unknown[]) => mockGetCurrentClustering(...args),
 }))
 
 const createWrapper = () => {
@@ -78,11 +80,37 @@ const mockScheduleResponse = {
   ],
 }
 
+const mockClusteringResult = {
+  id: "run-1",
+  status: "approved",
+  num_rooms: 2,
+  feedback: null,
+  rooms: [
+    {
+      id: "room-1",
+      name: "Зал 1: NLP",
+      theme_rationale: "",
+      project_count: 5,
+      projects: [],
+    },
+    {
+      id: "room-2",
+      name: "Зал 2: CV",
+      theme_rationale: "",
+      project_count: 3,
+      projects: [],
+    },
+  ],
+  created_at: "2026-02-01T00:00:00",
+  approved_at: "2026-02-02T00:00:00",
+}
+
 describe("Schedule", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetSchedule.mockRejectedValue(new Error("Not found"))
     mockGetScheduleChanges.mockResolvedValue({ total: 0, items: [] })
+    mockGetCurrentClustering.mockResolvedValue(mockClusteringResult)
   })
 
   it("renders generate step initially", () => {
@@ -209,6 +237,75 @@ describe("Schedule", () => {
     await waitFor(() => {
       expect(screen.getByText("История изменений")).toBeInTheDocument()
       expect(screen.getByText("time_change")).toBeInTheDocument()
+    })
+  })
+
+  it("shows per-room time fields from clustering", async () => {
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Время по залам")).toBeInTheDocument()
+      expect(screen.getByLabelText("Начало Зал 1: NLP")).toBeInTheDocument()
+      expect(screen.getByLabelText("Конец Зал 1: NLP")).toBeInTheDocument()
+      expect(screen.getByLabelText("Начало Зал 2: CV")).toBeInTheDocument()
+      expect(screen.getByLabelText("Конец Зал 2: CV")).toBeInTheDocument()
+    })
+  })
+
+  it("adds and removes breaks", async () => {
+    const user = userEvent.setup()
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    const addBtn = await screen.findByText("Добавить перерыв")
+    await user.click(addBtn)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Начало перерыва 1")).toBeInTheDocument()
+      expect(screen.getByLabelText("Конец перерыва 1")).toBeInTheDocument()
+      expect(screen.getByLabelText("Удалить перерыв 1")).toBeInTheDocument()
+    })
+
+    // Remove the break
+    await user.click(screen.getByLabelText("Удалить перерыв 1"))
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Начало перерыва 1")).not.toBeInTheDocument()
+    })
+  })
+
+  it("passes room_overrides and breaks to generateSchedule", async () => {
+    const user = userEvent.setup()
+    mockGenerateSchedule.mockResolvedValue({
+      total_slots: 10,
+      rooms: [{ room_id: "room-1", room_name: "Зал 1", slot_count: 10, first_slot: null, last_slot: null }],
+    })
+    // Keep schedule empty so we stay on step 0
+    mockGetSchedule.mockRejectedValue(new Error("Not found"))
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    // Wait for rooms to load
+    await waitFor(() => {
+      expect(screen.getByText("Время по залам")).toBeInTheDocument()
+    })
+
+    // Add a break
+    await user.click(screen.getByText("Добавить перерыв"))
+
+    // Click generate
+    await user.click(screen.getByText("Сгенерировать"))
+
+    await waitFor(() => {
+      expect(mockGenerateSchedule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          slot_duration_minutes: 15,
+          room_overrides: expect.arrayContaining([
+            expect.objectContaining({ room_id: "room-1", start_time: "10:30", end_time: "19:30" }),
+            expect.objectContaining({ room_id: "room-2", start_time: "10:30", end_time: "19:30" }),
+          ]),
+          breaks: [{ start_time: "13:00", end_time: "14:00" }],
+        })
+      )
     })
   })
 })

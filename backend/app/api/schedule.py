@@ -59,6 +59,8 @@ async def generate_schedule(
             day2_start=request.day2_start if request else None,
             day2_end=request.day2_end if request else None,
             slot_duration_minutes=request.slot_duration_minutes if request else 15,
+            room_overrides=request.room_overrides if request else None,
+            breaks=request.breaks if request else None,
         )
         await audit_service.log_action(
             db, current_user, "schedule_generate",

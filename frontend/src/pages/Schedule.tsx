@@ -12,10 +12,13 @@ import {
   approveSchedule,
   updateSlot,
   getScheduleChanges,
+  getCurrentClustering,
   type ScheduleGenerateResult,
   type ScheduleApproveResult,
   type ScheduleSlotResponse,
   type SlotUpdateRequest,
+  type RoomTimeOverride,
+  type BreakTime,
 } from "../lib/api-client"
 
 const STEPS = ["Генерация", "Просмотр", "Одобрение"]
@@ -28,10 +31,30 @@ export function Schedule() {
   const [approveResult, setApproveResult] = useState<ScheduleApproveResult | null>(null)
   const [editingSlot, setEditingSlot] = useState<ScheduleSlotResponse | null>(null)
   const [editForm, setEditForm] = useState<SlotUpdateRequest>({})
+  const [roomOverrides, setRoomOverrides] = useState<Record<string, { start_time: string; end_time: string }>>({})
+  const [breaks, setBreaks] = useState<{ start_time: string; end_time: string }[]>([])
 
   useEffect(() => {
     document.title = `${APP_NAME} - Расписание`
   }, [])
+
+  // Load clustering rooms for per-room time overrides
+  const { data: clusteringData } = useQuery({
+    queryKey: ["clustering"],
+    queryFn: () => getCurrentClustering(),
+    retry: false,
+  })
+
+  // Initialize roomOverrides from clustering rooms
+  useEffect(() => {
+    if (clusteringData?.rooms && Object.keys(roomOverrides).length === 0) {
+      const initial: Record<string, { start_time: string; end_time: string }> = {}
+      for (const room of clusteringData.rooms) {
+        initial[room.id] = { start_time: "10:30", end_time: "19:30" }
+      }
+      setRoomOverrides(initial)
+    }
+  }, [clusteringData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Try to load existing schedule
   const { data: existingSchedule } = useQuery({
@@ -54,8 +77,17 @@ export function Schedule() {
   })
 
   const generateMutation = useMutation({
-    mutationFn: () =>
-      generateSchedule({ slot_duration_minutes: slotDuration }),
+    mutationFn: () => {
+      const roomOverridesList: RoomTimeOverride[] = Object.entries(roomOverrides).map(
+        ([room_id, times]) => ({ room_id, ...times })
+      )
+      const breaksList: BreakTime[] = breaks.filter(b => b.start_time && b.end_time)
+      return generateSchedule({
+        slot_duration_minutes: slotDuration,
+        room_overrides: roomOverridesList.length > 0 ? roomOverridesList : undefined,
+        breaks: breaksList.length > 0 ? breaksList : undefined,
+      })
+    },
     onSuccess: (data) => {
       setGenerateResult(data)
       setCurrentStep(1)
@@ -154,6 +186,107 @@ export function Schedule() {
                 onChange={(e) => setSlotDuration(Number(e.target.value))}
               />
             </div>
+
+            {/* Per-room time overrides */}
+            {clusteringData?.rooms && clusteringData.rooms.length > 0 && (
+              <div className="space-y-2">
+                <Label>Время по залам</Label>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="py-2 pr-4">Зал</th>
+                        <th className="py-2 pr-4">Начало</th>
+                        <th className="py-2">Конец</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clusteringData.rooms.map((room) => (
+                        <tr key={room.id} className="border-b">
+                          <td className="py-2 pr-4">{room.name}</td>
+                          <td className="py-2 pr-4">
+                            <Input
+                              type="time"
+                              value={roomOverrides[room.id]?.start_time || "10:30"}
+                              onChange={(e) =>
+                                setRoomOverrides((prev) => ({
+                                  ...prev,
+                                  [room.id]: { ...prev[room.id], start_time: e.target.value },
+                                }))
+                              }
+                              className="w-32"
+                              aria-label={`Начало ${room.name}`}
+                            />
+                          </td>
+                          <td className="py-2">
+                            <Input
+                              type="time"
+                              value={roomOverrides[room.id]?.end_time || "19:30"}
+                              onChange={(e) =>
+                                setRoomOverrides((prev) => ({
+                                  ...prev,
+                                  [room.id]: { ...prev[room.id], end_time: e.target.value },
+                                }))
+                              }
+                              className="w-32"
+                              aria-label={`Конец ${room.name}`}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Breaks */}
+            <div className="space-y-2">
+              <Label>Перерывы</Label>
+              {breaks.map((brk, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={brk.start_time}
+                    onChange={(e) => {
+                      const updated = [...breaks]
+                      updated[idx] = { ...updated[idx], start_time: e.target.value }
+                      setBreaks(updated)
+                    }}
+                    className="w-32"
+                    aria-label={`Начало перерыва ${idx + 1}`}
+                  />
+                  <span className="text-muted-foreground">—</span>
+                  <Input
+                    type="time"
+                    value={brk.end_time}
+                    onChange={(e) => {
+                      const updated = [...breaks]
+                      updated[idx] = { ...updated[idx], end_time: e.target.value }
+                      setBreaks(updated)
+                    }}
+                    className="w-32"
+                    aria-label={`Конец перерыва ${idx + 1}`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBreaks(breaks.filter((_, i) => i !== idx))}
+                    aria-label={`Удалить перерыв ${idx + 1}`}
+                  >
+                    Удалить
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBreaks([...breaks, { start_time: "13:00", end_time: "14:00" }])}
+              >
+                Добавить перерыв
+              </Button>
+            </div>
+
             <Button
               onClick={() => generateMutation.mutate()}
               disabled={generateMutation.isPending}

@@ -23,6 +23,17 @@ class ScheduleSlotResponse(BaseModel):
         from_attributes = True
 
 
+class RoomTimeOverride(BaseModel):
+    room_id: UUID
+    start_time: str  # "HH:MM"
+    end_time: str    # "HH:MM"
+
+
+class BreakTime(BaseModel):
+    start_time: str  # "HH:MM"
+    end_time: str    # "HH:MM"
+
+
 class ScheduleGenerateRequest(BaseModel):
     clustering_run_id: UUID | None = None
     day1_start: datetime | None = None
@@ -30,6 +41,8 @@ class ScheduleGenerateRequest(BaseModel):
     day2_start: datetime | None = None
     day2_end: datetime | None = None
     slot_duration_minutes: int = 15
+    room_overrides: list[RoomTimeOverride] = []
+    breaks: list[BreakTime] = []
 
 
 class RoomSummary(BaseModel):

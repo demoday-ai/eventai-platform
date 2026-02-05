@@ -20,9 +20,11 @@ from app.models import (
     SlotStatus,
 )
 from app.schemas.schedule import (
+    BreakTime,
     DaySchedule,
     RoomSchedule,
     RoomSummary,
+    RoomTimeOverride,
     ScheduleGenerateResult,
     ScheduleResponse,
     ScheduleSlotResponse,
@@ -46,6 +48,27 @@ async def get_approved_clustering(
     return result.scalars().first()
 
 
+def _parse_hm(hm: str) -> tuple[int, int]:
+    """Parse 'HH:MM' string into (hour, minute) tuple."""
+    parts = hm.split(":")
+    return int(parts[0]), int(parts[1])
+
+
+def _advance_past_breaks(
+    current_time: datetime,
+    slot_duration: timedelta,
+    break_ranges: list[tuple[datetime, datetime]],
+) -> datetime:
+    """If the slot overlaps any break, advance current_time past the break end."""
+    slot_end = current_time + slot_duration
+    for brk_start, brk_end in break_ranges:
+        # Slot overlaps break if it starts before break ends and ends after break starts
+        if current_time < brk_end and slot_end > brk_start:
+            current_time = brk_end
+            slot_end = current_time + slot_duration
+    return current_time
+
+
 async def generate_schedule(
     session: AsyncSession,
     event_id: UUID,
@@ -55,6 +78,8 @@ async def generate_schedule(
     day2_start: datetime | None = None,
     day2_end: datetime | None = None,
     slot_duration_minutes: int = 15,
+    room_overrides: list[RoomTimeOverride] | None = None,
+    breaks: list[BreakTime] | None = None,
 ) -> ScheduleGenerateResult:
     """
     Generate schedule slots from approved clustering.
@@ -114,6 +139,12 @@ async def generate_schedule(
     if not day2_end and event_end != event_start:
         day2_end = MSK.localize(datetime.combine(event_end, datetime.min.time().replace(hour=19, minute=30)))
 
+    # Build per-room override map
+    overrides_map: dict[UUID, tuple[tuple[int, int], tuple[int, int]]] = {}
+    if room_overrides:
+        for ov in room_overrides:
+            overrides_map[ov.room_id] = (_parse_hm(ov.start_time), _parse_hm(ov.end_time))
+
     # Get rooms and their projects
     rooms = clustering.rooms
     room_summaries = []
@@ -132,9 +163,36 @@ async def generate_schedule(
         if not room_projects:
             continue
 
+        # Per-room start/end override
+        if room.id in overrides_map:
+            start_hm, end_hm = overrides_map[room.id]
+            room_day1_start = MSK.localize(datetime.combine(
+                event_start, datetime.min.time().replace(hour=start_hm[0], minute=start_hm[1])
+            ))
+            room_day1_end = MSK.localize(datetime.combine(
+                event_start, datetime.min.time().replace(hour=end_hm[0], minute=end_hm[1])
+            ))
+        else:
+            room_day1_start = day1_start
+            room_day1_end = day1_end
+
+        # Build break ranges for this day
+        break_ranges_day1: list[tuple[datetime, datetime]] = []
+        if breaks:
+            for brk in breaks:
+                bstart_hm = _parse_hm(brk.start_time)
+                bend_hm = _parse_hm(brk.end_time)
+                brk_start = MSK.localize(datetime.combine(
+                    event_start, datetime.min.time().replace(hour=bstart_hm[0], minute=bstart_hm[1])
+                ))
+                brk_end = MSK.localize(datetime.combine(
+                    event_start, datetime.min.time().replace(hour=bend_hm[0], minute=bend_hm[1])
+                ))
+                break_ranges_day1.append((brk_start, brk_end))
+
         # Distribute projects across available time
-        current_time = day1_start
-        day1_limit = day1_end
+        current_time = room_day1_start
+        day1_limit = room_day1_end
         day2_available = day2_start is not None
 
         first_slot_time = None
@@ -143,6 +201,9 @@ async def generate_schedule(
         display_order = 0
 
         for rp in room_projects:
+            # Advance past breaks
+            current_time = _advance_past_breaks(current_time, slot_duration, break_ranges_day1)
+
             # Check if we need to move to day 2
             if current_time + slot_duration > day1_limit:
                 if day2_available and current_time < day2_start:
