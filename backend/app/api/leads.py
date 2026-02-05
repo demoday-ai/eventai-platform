@@ -16,6 +16,8 @@ router = APIRouter(prefix="/leads", tags=["leads"])
 class LeadCreate(BaseModel):
     name: str
     email: EmailStr
+    telegram: str | None = None
+    phone: str | None = None
     event_type: str
     message: str = ""
 
@@ -45,11 +47,18 @@ async def create_lead(lead: LeadCreate) -> LeadResponse:
         f"🎯 <b>Новая заявка с лендинга</b>\n\n"
         f"👤 <b>Имя:</b> {lead.name}\n"
         f"📧 <b>Email:</b> {lead.email}\n"
-        f"📅 <b>Тип события:</b> {event_label}\n"
     )
 
+    if lead.telegram:
+        text += f"💬 <b>Telegram:</b> {lead.telegram}\n"
+
+    if lead.phone:
+        text += f"📞 <b>Телефон:</b> {lead.phone}\n"
+
+    text += f"📅 <b>Тип события:</b> {event_label}\n"
+
     if lead.message:
-        text += f"💬 <b>Сообщение:</b>\n{lead.message}\n"
+        text += f"💭 <b>Сообщение:</b>\n{lead.message}\n"
 
     text += f"\n🕐 {datetime.now().strftime('%d.%m.%Y %H:%M')}"
 

@@ -547,6 +547,8 @@ function LeadCaptureForm() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    telegram: "",
+    phone: "",
     eventType: "",
     message: "",
   })
@@ -562,6 +564,8 @@ function LeadCaptureForm() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          telegram: formData.telegram || undefined,
+          phone: formData.phone || undefined,
           event_type: formData.eventType,
           message: formData.message,
         }),
@@ -715,6 +719,59 @@ function LeadCaptureForm() {
               color: "var(--ld-text)",
             }}
             placeholder="email@company.com"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label
+            htmlFor="telegram"
+            className="font-display mb-1.5 block text-xs font-medium uppercase tracking-wider"
+            style={{ color: "var(--ld-text-muted)" }}
+          >
+            Telegram
+            <span className="font-body ml-1 normal-case tracking-normal" style={{ color: "var(--ld-text-muted)" }}>
+              (опционально)
+            </span>
+          </label>
+          <input
+            type="text"
+            id="telegram"
+            value={formData.telegram}
+            onChange={(e) => setFormData({ ...formData, telegram: e.target.value })}
+            className="font-body w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2"
+            style={{
+              background: "var(--ld-bg)",
+              border: "1px solid var(--ld-border)",
+              color: "var(--ld-text)",
+            }}
+            placeholder="@username"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="phone"
+            className="font-display mb-1.5 block text-xs font-medium uppercase tracking-wider"
+            style={{ color: "var(--ld-text-muted)" }}
+          >
+            Телефон
+            <span className="font-body ml-1 normal-case tracking-normal" style={{ color: "var(--ld-text-muted)" }}>
+              (опционально)
+            </span>
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            className="font-body w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2"
+            style={{
+              background: "var(--ld-bg)",
+              border: "1px solid var(--ld-border)",
+              color: "var(--ld-text)",
+            }}
+            placeholder="+7 (999) 123-45-67"
           />
         </div>
       </div>
