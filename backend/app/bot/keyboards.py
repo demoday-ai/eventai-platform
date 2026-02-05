@@ -37,8 +37,12 @@ def confirm_change_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def nl_topic_buttons() -> InlineKeyboardMarkup:
-    """Quick-pick topic buttons for NL profiling — all seed tags."""
+def nl_topic_buttons(prefix: str = "nl") -> InlineKeyboardMarkup:
+    """Quick-pick topic buttons for NL profiling — all seed tags.
+
+    Args:
+        prefix: Callback data prefix. Use "onb_nl" for onboarding, "reb_nl" for rebuild.
+    """
     # (DB tag name, display label) — keys match tags table
     topics = [
         ("NLP", "NLP"),
@@ -62,21 +66,25 @@ def nl_topic_buttons() -> InlineKeyboardMarkup:
     buttons = []
     row = []
     for tag_key, label in topics:
-        row.append(InlineKeyboardButton(label, callback_data=f"nl:topic:{tag_key}"))
+        row.append(InlineKeyboardButton(label, callback_data=f"{prefix}:topic:{tag_key}"))
         if len(row) == 3:
             buttons.append(row)
             row = []
     if row:
         buttons.append(row)
-    buttons.append([InlineKeyboardButton("Готово →", callback_data="nl:done")])
+    buttons.append([InlineKeyboardButton("Готово →", callback_data=f"{prefix}:done")])
     return InlineKeyboardMarkup(buttons)
 
 
-def confirm_nl_profile_keyboard() -> InlineKeyboardMarkup:
-    """Confirm or re-enter NL profile."""
+def confirm_nl_profile_keyboard(prefix: str = "nlconf") -> InlineKeyboardMarkup:
+    """Confirm or re-enter NL profile.
+
+    Args:
+        prefix: Callback data prefix. Use "onb_nlconf" for onboarding, "reb_nlconf" for rebuild.
+    """
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✓ Всё верно", callback_data="nlconf:yes")],
-        [InlineKeyboardButton("✎ Ввести заново", callback_data="nlconf:retry")],
+        [InlineKeyboardButton("✓ Всё верно", callback_data=f"{prefix}:yes")],
+        [InlineKeyboardButton("✎ Ввести заново", callback_data=f"{prefix}:retry")],
     ])
 
 

@@ -21,7 +21,6 @@ from app.bot.handlers.expert_assignment import (
 )
 from app.bot.handlers.feedback import get_feedback_handlers
 from app.bot.handlers.followup import get_followup_handlers
-from app.bot.handlers.guest_profiling import get_profiling_handler
 from app.bot.handlers.qa import get_qa_handlers
 from app.bot.handlers.reminder import get_reminder_handlers
 from app.bot.handlers.schedule import get_schedule_handler, get_schedule_preview_handlers
@@ -38,7 +37,6 @@ def create_bot_app() -> Application:
     application.add_handler(get_clustering_handler())
     application.add_handler(get_expert_assignment_handler())
     application.add_handler(get_schedule_handler())
-    application.add_handler(get_profiling_handler())
 
     # Standalone callbacks for expert invite responses (outside conversation)
     application.add_handler(CallbackQueryHandler(expert_invite_callback, pattern=r"^einv:"))
