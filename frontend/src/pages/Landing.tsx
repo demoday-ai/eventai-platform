@@ -910,7 +910,7 @@ export function Landing() {
           <Reveal>
             <div className="mb-8 flex justify-center">
               <div
-                className="font-display inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold sm:px-6 sm:py-3 sm:text-base"
+                className="font-display inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold sm:gap-2 sm:px-6 sm:py-3 sm:text-sm"
                 style={{
                   background: "var(--ld-accent)",
                   color: "#fff",
@@ -925,7 +925,7 @@ export function Landing() {
 
           {/* Main headline */}
           <Reveal delay={100}>
-            <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            <h1 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
               <span style={{ color: "var(--ld-text)" }}>
                 Персональная программа
               </span>
@@ -945,7 +945,7 @@ export function Landing() {
           {/* Subheadline with key metric */}
           <Reveal delay={150}>
             <p
-              className="font-display mx-auto mt-6 text-xl font-medium sm:text-2xl md:text-3xl"
+              className="font-display mx-auto mt-6 text-lg font-medium sm:text-xl md:text-2xl"
               style={{ color: "var(--ld-text-secondary)" }}
             >
               за <span style={{ color: "var(--ld-accent)" }}>минуту</span> диалога с AI-ботом
@@ -989,37 +989,18 @@ export function Landing() {
 
           {/* Social proof stats */}
           <Reveal delay={400}>
-            <div className="mx-auto mt-14 max-w-xl">
-              <div
-                className="rounded-2xl p-6 sm:p-8"
-                style={{
-                  background: "var(--ld-surface)",
-                  border: "1px solid var(--ld-border)",
-                  boxShadow: "var(--ld-card-shadow)",
-                }}
-              >
-                <div className="grid grid-cols-3 gap-4 sm:gap-8">
-                  <div className="text-center">
-                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-accent)" }}>330</div>
-                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>проектов</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-teal)" }}>10</div>
-                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>залов</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-display text-3xl font-bold sm:text-4xl" style={{ color: "var(--ld-ember)" }}>1 мин</div>
-                    <div className="font-body mt-1 text-xs uppercase tracking-wider sm:text-sm" style={{ color: "var(--ld-text-muted)" }}>на подборку</div>
-                  </div>
-                </div>
-                <div
-                  className="font-body mt-5 flex items-center justify-center gap-2 text-xs sm:text-sm"
-                  style={{ color: "var(--ld-text-secondary)" }}
-                >
-                  <Sparkles className="h-4 w-4" style={{ color: "var(--ld-accent)" }} />
-                  Проверено на Demo Day AI Talent Hub ИТМО
-                </div>
-              </div>
+            <div className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm sm:text-base">
+              <span style={{ color: "var(--ld-text-secondary)" }}>
+                <span className="font-display font-bold" style={{ color: "var(--ld-accent)" }}>330</span> проектов
+              </span>
+              <span style={{ color: "var(--ld-border)" }}>•</span>
+              <span style={{ color: "var(--ld-text-secondary)" }}>
+                <span className="font-display font-bold" style={{ color: "var(--ld-teal)" }}>10</span> залов
+              </span>
+              <span style={{ color: "var(--ld-border)" }}>•</span>
+              <span style={{ color: "var(--ld-text-secondary)" }}>
+                <span className="font-display font-bold" style={{ color: "var(--ld-ember)" }}>1 мин</span> на подборку
+              </span>
             </div>
           </Reveal>
         </div>
