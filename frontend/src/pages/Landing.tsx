@@ -19,6 +19,8 @@ import {
   Calendar,
   Building2,
   Clapperboard,
+  Mail,
+  CheckCircle,
 } from "lucide-react"
 
 const BOT_URL = "https://t.me/demoday_ai_talent_hub_test_bot"
@@ -381,6 +383,210 @@ function ChatBubble({
         </div>
       </div>
     </Reveal>
+  )
+}
+
+/* ============================================================
+   Lead Capture Form
+   ============================================================ */
+
+function LeadCaptureForm() {
+  const [formState, setFormState] = useState<"idle" | "sending" | "success" | "error">("idle")
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    eventType: "",
+    message: "",
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormState("sending")
+
+    // Simulate sending (replace with actual API call)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    // For now, just log and show success
+    console.log("Lead captured:", formData)
+    setFormState("success")
+  }
+
+  if (formState === "success") {
+    return (
+      <div
+        className="mt-8 rounded-2xl p-8 text-center"
+        style={{
+          background: "var(--ld-surface)",
+          border: "1px solid var(--ld-border)",
+          boxShadow: "var(--ld-card-shadow)",
+        }}
+      >
+        <div
+          className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+          style={{ background: "var(--ld-teal-soft)" }}
+        >
+          <CheckCircle className="h-8 w-8" style={{ color: "var(--ld-teal)" }} />
+        </div>
+        <h3
+          className="font-display text-xl font-medium"
+          style={{ color: "var(--ld-text)" }}
+        >
+          Заявка отправлена
+        </h3>
+        <p
+          className="font-body mt-2 text-sm"
+          style={{ color: "var(--ld-text-secondary)" }}
+        >
+          Свяжемся с вами в течение 24 часов
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mt-8 rounded-2xl p-6 sm:p-8"
+      style={{
+        background: "var(--ld-surface)",
+        border: "1px solid var(--ld-border)",
+        boxShadow: "var(--ld-card-shadow)",
+      }}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label
+            htmlFor="name"
+            className="font-display mb-1.5 block text-xs font-medium uppercase tracking-wider"
+            style={{ color: "var(--ld-text-muted)" }}
+          >
+            Имя
+          </label>
+          <input
+            type="text"
+            id="name"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="font-body w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2"
+            style={{
+              background: "var(--ld-bg)",
+              border: "1px solid var(--ld-border)",
+              color: "var(--ld-text)",
+            }}
+            placeholder="Как к вам обращаться"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="email"
+            className="font-display mb-1.5 block text-xs font-medium uppercase tracking-wider"
+            style={{ color: "var(--ld-text-muted)" }}
+          >
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="font-body w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2"
+            style={{
+              background: "var(--ld-bg)",
+              border: "1px solid var(--ld-border)",
+              color: "var(--ld-text)",
+            }}
+            placeholder="email@company.com"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <label
+          htmlFor="eventType"
+          className="font-display mb-1.5 block text-xs font-medium uppercase tracking-wider"
+          style={{ color: "var(--ld-text-muted)" }}
+        >
+          Тип мероприятия
+        </label>
+        <select
+          id="eventType"
+          required
+          value={formData.eventType}
+          onChange={(e) => setFormData({ ...formData, eventType: e.target.value })}
+          className="font-body w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2"
+          style={{
+            background: "var(--ld-bg)",
+            border: "1px solid var(--ld-border)",
+            color: formData.eventType ? "var(--ld-text)" : "var(--ld-text-muted)",
+          }}
+        >
+          <option value="">Выберите тип</option>
+          <option value="demoday">Demo Day / Pitch Day</option>
+          <option value="conference">Конференция</option>
+          <option value="hackathon">Хакатон</option>
+          <option value="exhibition">Выставка / Ярмарка</option>
+          <option value="other">Другое</option>
+        </select>
+      </div>
+
+      <div className="mt-4">
+        <label
+          htmlFor="message"
+          className="font-display mb-1.5 block text-xs font-medium uppercase tracking-wider"
+          style={{ color: "var(--ld-text-muted)" }}
+        >
+          Расскажите о мероприятии
+          <span className="font-body ml-1 normal-case tracking-normal" style={{ color: "var(--ld-text-muted)" }}>
+            (опционально)
+          </span>
+        </label>
+        <textarea
+          id="message"
+          rows={3}
+          value={formData.message}
+          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          className="font-body w-full resize-none rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2"
+          style={{
+            background: "var(--ld-bg)",
+            border: "1px solid var(--ld-border)",
+            color: "var(--ld-text)",
+          }}
+          placeholder="Сколько участников, проектов, залов? Какие задачи хотите решить?"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={formState === "sending"}
+        className="font-display mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-medium transition-all duration-200 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+        style={{
+          background: "var(--ld-accent)",
+          color: "#fff",
+          boxShadow: "0 4px 16px var(--ld-accent-glow)",
+        }}
+      >
+        {formState === "sending" ? (
+          <>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            Отправляем...
+          </>
+        ) : (
+          <>
+            <Mail className="h-4 w-4" />
+            Оставить заявку
+          </>
+        )}
+      </button>
+
+      <p
+        className="font-body mt-4 text-center text-xs"
+        style={{ color: "var(--ld-text-muted)" }}
+      >
+        Нажимая кнопку, вы соглашаетесь на обработку персональных данных
+      </p>
+    </form>
   )
 }
 
@@ -1083,7 +1289,7 @@ export function Landing() {
               },
               {
                 q: "Сколько это стоит?",
-                a: "Зависит от масштаба мероприятия. Базовый тариф — от 15 000 ₽ за событие (до 100 проектов). Для университетов и некоммерческих — специальные условия. Напишите @grbn_dima для расчёта.",
+                a: "Гибкая модель: оплата за событие (от $199) или годовая подписка для регулярных мероприятий. Для университетов, акселераторов и крупных конференций — индивидуальные условия. Оставьте контакт ниже — обсудим ваш кейс.",
               },
             ].map((item, i) => (
               <Reveal key={i} delay={i * 60}>
@@ -1117,13 +1323,51 @@ export function Landing() {
         </div>
       </section>
 
+      {/* ===================== LEAD CAPTURE ===================== */}
+      <section
+        id="contact"
+        className="relative py-20 px-6"
+        style={{
+          borderTop: "1px solid var(--ld-border-subtle)",
+          background: "var(--ld-bg-alt)",
+        }}
+      >
+        <div className="mx-auto max-w-2xl">
+          <div className="text-center">
+            <Reveal>
+              <SectionTag>Контакт</SectionTag>
+            </Reveal>
+            <Reveal delay={100}>
+              <h2
+                className="font-display mt-6 text-2xl font-medium tracking-tight sm:text-3xl"
+                style={{ color: "var(--ld-text)" }}
+              >
+                Обсудим ваше мероприятие
+              </h2>
+            </Reveal>
+            <Reveal delay={150}>
+              <p
+                className="font-body mx-auto mt-3 max-w-lg text-sm sm:text-base"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                Оставьте контакт — свяжемся в течение 24 часов и расскажем, как платформа решит задачи вашего события
+              </p>
+            </Reveal>
+          </div>
+
+          <Reveal delay={200}>
+            <LeadCaptureForm />
+          </Reveal>
+        </div>
+      </section>
+
       {/* ===================== TEAM ===================== */}
       <section
         id="team"
         className="relative py-24 px-6"
         style={{
           borderTop: "1px solid var(--ld-border-subtle)",
-          background: "var(--ld-bg-alt)",
+          background: "var(--ld-bg)",
         }}
       >
         <div className="mx-auto max-w-3xl">
