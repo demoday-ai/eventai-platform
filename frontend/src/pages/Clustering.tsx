@@ -8,6 +8,7 @@ import { Stepper } from "../components/ui/stepper"
 import { APP_NAME } from "../lib/constants"
 import {
   runClustering,
+  getClusteringJobStatus,
   getCurrentClustering,
   moveProject,
   approveClustering,
@@ -27,6 +28,11 @@ export function Clustering() {
     projectTitle: string
     sourceRoomId: string
   } | null>(null)
+
+  // Background job state
+  const [jobId, setJobId] = useState<string | null>(null)
+  const [jobStatus, setJobStatus] = useState<string | null>(null)
+  const [jobError, setJobError] = useState<string | null>(null)
 
   useEffect(() => {
     document.title = `${APP_NAME} - Кластеризация`
@@ -53,6 +59,38 @@ export function Clustering() {
     }
   }, [existingClustering, clusteringResult])
 
+  // Poll job status
+  useEffect(() => {
+    if (!jobId || jobStatus === "completed" || jobStatus === "failed") {
+      return
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const status = await getClusteringJobStatus(jobId)
+        setJobStatus(status.status)
+
+        if (status.status === "completed" && status.result?.run_id) {
+          // Fetch the actual clustering result
+          const result = await getCurrentClustering()
+          setClusteringResult(result)
+          setJobId(null)
+          setJobStatus(null)
+          setFeedback("")
+          setCurrentStep(1)
+          queryClient.invalidateQueries({ queryKey: ["clustering"] })
+        } else if (status.status === "failed") {
+          setJobError(status.error || "Неизвестная ошибка")
+          setJobId(null)
+        }
+      } catch (err) {
+        console.error("Failed to poll job status:", err)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    return () => clearInterval(interval)
+  }, [jobId, jobStatus, queryClient])
+
   const runMutation = useMutation({
     mutationFn: () =>
       runClustering({
@@ -60,10 +98,12 @@ export function Clustering() {
         feedback: feedback || null,
       }),
     onSuccess: (data) => {
-      setClusteringResult(data)
-      setFeedback("")
-      setCurrentStep(1)
-      queryClient.invalidateQueries({ queryKey: ["clustering"] })
+      setJobId(data.job_id)
+      setJobStatus(data.status)
+      setJobError(null)
+    },
+    onError: (err) => {
+      setJobError(err instanceof Error ? err.message : "Неизвестная ошибка")
     },
   })
 
@@ -95,6 +135,7 @@ export function Clustering() {
   })
 
   const isApproved = !!clusteringResult?.approved_at
+  const isJobRunning = jobId && (jobStatus === "pending" || jobStatus === "running")
 
   return (
     <div className="grid gap-6">
@@ -120,6 +161,7 @@ export function Clustering() {
                 max={20}
                 value={numRooms}
                 onChange={(e) => setNumRooms(Number(e.target.value))}
+                disabled={!!isJobRunning}
               />
             </div>
             <div className="space-y-2">
@@ -130,16 +172,36 @@ export function Clustering() {
                 placeholder="Пожелания к кластеризации..."
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
+                disabled={!!isJobRunning}
               />
             </div>
             <Button
               onClick={() => runMutation.mutate()}
-              disabled={runMutation.isPending}
+              disabled={runMutation.isPending || !!isJobRunning}
               className="w-full sm:w-auto"
             >
-              {runMutation.isPending ? "Кластеризация..." : "Запустить"}
+              {isJobRunning ? "Кластеризация..." : runMutation.isPending ? "Запуск..." : "Запустить"}
             </Button>
-            {runMutation.isError && (
+
+            {/* Job status indicator */}
+            {isJobRunning && (
+              <div className="p-3 bg-blue-50 rounded-md">
+                <p className="text-sm text-blue-800">
+                  Кластеризация выполняется... Статус: {jobStatus}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Это может занять несколько минут. Не закрывайте страницу.
+                </p>
+              </div>
+            )}
+
+            {jobError && (
+              <p className="text-sm text-red-500">
+                Ошибка: {jobError}
+              </p>
+            )}
+
+            {runMutation.isError && !jobError && (
               <p className="text-sm text-red-500">
                 Ошибка: {runMutation.error instanceof Error ? runMutation.error.message : "Неизвестная ошибка"}
               </p>

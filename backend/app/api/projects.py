@@ -18,6 +18,7 @@ from app.schemas.project import (
     UploadResult,
 )
 from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
+from app.services.background_jobs import JobStatus, get_job, start_background_job
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,9 @@ async def run_clustering(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Run AI clustering (organizer only)."""
+    """Run AI clustering (organizer only). Returns job_id for polling."""
+    from app.database import async_session
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=400, detail="Нет активного события")
@@ -164,14 +167,44 @@ async def run_clustering(
     if not role or role.code != "organizer":
         raise HTTPException(status_code=403, detail="Только организатор может запускать кластеризацию")
 
-    try:
-        run = await clustering_service.run_clustering(
-            session, event.id, request.num_rooms, request.feedback
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # Capture params for background job
+    event_id = event.id
+    num_rooms = request.num_rooms
+    feedback = request.feedback
 
-    return _clustering_to_response(run)
+    async def do_clustering():
+        """Run clustering in background with fresh DB session."""
+        async with async_session() as bg_session:
+            run = await clustering_service.run_clustering(
+                bg_session, event_id, num_rooms, feedback
+            )
+            return {"run_id": str(run.id)}
+
+    job = start_background_job(do_clustering())
+    return {"job_id": job.id, "status": job.status.value}
+
+
+@router.get("/clustering/job/{job_id}")
+async def get_clustering_job_status(
+    job_id: str,
+    user: User = Depends(get_current_user),
+):
+    """Get clustering job status for polling."""
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    response = {
+        "job_id": job.id,
+        "status": job.status.value,
+    }
+
+    if job.status == JobStatus.COMPLETED:
+        response["result"] = job.result
+    elif job.status == JobStatus.FAILED:
+        response["error"] = job.error
+
+    return response
 
 
 @router.get("/clustering/current")

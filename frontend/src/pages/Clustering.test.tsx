@@ -14,12 +14,14 @@ vi.mock("../hooks/useAuth", () => ({
 
 const mockRunClustering = vi.fn()
 const mockGetCurrentClustering = vi.fn()
+const mockGetClusteringJobStatus = vi.fn()
 const mockMoveProject = vi.fn()
 const mockApproveClustering = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   runClustering: (...args: unknown[]) => mockRunClustering(...args),
   getCurrentClustering: (...args: unknown[]) => mockGetCurrentClustering(...args),
+  getClusteringJobStatus: (...args: unknown[]) => mockGetClusteringJobStatus(...args),
   moveProject: (...args: unknown[]) => mockMoveProject(...args),
   approveClustering: (...args: unknown[]) => mockApproveClustering(...args),
 }))
@@ -82,7 +84,16 @@ describe("Clustering", () => {
 
   it("runs clustering and shows results", async () => {
     const user = userEvent.setup()
-    mockRunClustering.mockResolvedValue(mockClusteringResult)
+    // New background job flow: runClustering returns job_id
+    mockRunClustering.mockResolvedValue({ job_id: "job-1", status: "pending" })
+    // Job status polling returns completed with run_id
+    mockGetClusteringJobStatus.mockResolvedValue({
+      job_id: "job-1",
+      status: "completed",
+      result: { run_id: "run-1" },
+    })
+    // getCurrentClustering called after job completes
+    mockGetCurrentClustering.mockResolvedValue(mockClusteringResult)
 
     render(<Clustering />, { wrapper: createWrapper() })
 
@@ -94,7 +105,7 @@ describe("Clustering", () => {
       expect(screen.getByText("Зал 2: CV")).toBeInTheDocument()
       expect(screen.getByText("Чатбот")).toBeInTheDocument()
       expect(screen.getByText("Детектор")).toBeInTheDocument()
-    })
+    }, { timeout: 5000 })
   })
 
   it("loads existing clustering and shows results", async () => {

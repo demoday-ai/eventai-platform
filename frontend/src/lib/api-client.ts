@@ -712,8 +712,20 @@ export const uploadProjects = async (file: File, replace: boolean): Promise<Uplo
 
 // --- Clustering ---
 
-export const runClustering = async (params: ClusteringRequest): Promise<ClusteringResult> => {
-  const { data } = await apiClient.post<ClusteringResult>("/clustering/run", params)
+export interface ClusteringJobResponse {
+  job_id: string
+  status: "pending" | "running" | "completed" | "failed"
+  result?: { run_id: string }
+  error?: string
+}
+
+export const runClustering = async (params: ClusteringRequest): Promise<ClusteringJobResponse> => {
+  const { data } = await apiClient.post<ClusteringJobResponse>("/clustering/run", params)
+  return data
+}
+
+export const getClusteringJobStatus = async (jobId: string): Promise<ClusteringJobResponse> => {
+  const { data } = await apiClient.get<ClusteringJobResponse>(`/clustering/job/${jobId}`)
   return data
 }
 
