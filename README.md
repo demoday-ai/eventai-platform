@@ -12,7 +12,8 @@
 <h1 align="center">EventAI</h1>
 
 <p align="center">
-  <strong>Персональная программа каждому гостю за 2 минуты</strong>
+  <strong>Персональная программа каждому гостю за 2 минуты</strong><br>
+  <sub>Telegram-бот для конференций, Demo Day, хакатонов</sub>
 </p>
 
 <p align="center">
@@ -29,180 +30,116 @@
   <a href="./docs">Документация</a>
 </p>
 
----
+<br>
 
-## Для организаторов конференций и Demo Day
+Сотни проектов в параллельных залах. Гости видят менее 20%. EventAI профилирует интересы через AI-диалог и составляет персональный топ проектов с рейтингом релевантности.
 
-Сотни проектов в параллельных залах. Гости видят **менее 20%**. Telegram-бот профилирует интересы и составляет персональный топ.
+<br>
 
-**330** проектов · **10** залов · **2 мин** на профиль
+## Возможности
 
----
+**Для гостей и партнёров** — персональный топ проектов, Q&A-помощник с вопросами под профиль, сравнение проектов, контакт с авторами через бота.
 
-## Проблема
+**Для организаторов** — AI-кластеризация проектов по залам, автораспределение экспертов, генерация расписания, напоминания.
 
-> "Это пипец! Если вы упростите этот ужас, я буду благодарна."
-> — Инна, организатор Demo Day
+<br>
 
-Чем больше проектов — тем меньше видят гости:
-- Гости не знают, куда идти
-- Бизнес-партнёры не находят нужные проекты
-- Эксперты перегружены
-- Организаторы составляют расписание вручную за ночь до события
-
----
-
-## Решение
-
-Telegram-бот делает мероприятие персональным.
-
-**Для гостей и партнёров**
-- Персональный топ проектов с рейтингом релевантности
-- Q&A-помощник — вопросы к проекту под ваш профиль
-- Сравнение проектов — таблица отличий
-- Контакт с авторами — через бота с согласия
-
-**Для организаторов**
-- AI-кластеризация проектов по залам
-- Автораспределение экспертов по тегам
-- Генерация расписания без конфликтов
-- Напоминания и уведомления
-
----
-
-## Как это выглядит
+## Пример диалога
 
 ```
-Гость: Интересуюсь NLP и рекомендательными системами,
-       ищу проекты для потенциального найма в команду
+Гость:  Интересуюсь NLP и рекомендательными системами,
+        ищу проекты для потенциального найма в команду
 
-  Бот: Нашёл 12 проектов по вашему профилю. Топ-3:
+Бот:    Нашёл 12 проектов. Топ-3:
 
-       1. AI Recruiter Assistant (94% релевантности)
-          Зал 2 · NLP, Agents
+        1. AI Recruiter Assistant — 94%
+           Зал 2 · NLP, Agents
 
-       2. Resume Screening Engine (87%)
-          Зал 5 · NLP, HR
+        2. Resume Screening Engine — 87%
+           Зал 5 · NLP, HR
 
-       3. Interview Copilot (82%)
-          Зал 2 · LLM, Agents
-
-       Показать Q&A вопросы к проектам?
+        3. Interview Copilot — 82%
+           Зал 2 · LLM, Agents
 ```
 
----
+<br>
 
 ## Качество рекомендаций
 
-Проверено на 10 реальных профилях × 330 проектов с экспертной разметкой:
+Оценка на 10 профилях × 330 проектов с экспертной разметкой:
 
-| Метрика | Значение | Что это значит |
-|---------|----------|----------------|
-| NDCG@15 | 0.82 | Релевантные проекты в топе списка |
-| Precision@15 | 0.71 | 7 из 10 рекомендаций попадают в цель |
-| Recall@15 | 0.78 | Находим 8 из 10 подходящих проектов |
+| Метрика | Значение | Описание |
+|:--------|:--------:|:---------|
+| NDCG@15 | 0.82 | Релевантные проекты в топе |
+| Precision@15 | 0.71 | 7 из 10 попадают в цель |
+| Recall@15 | 0.78 | Находим 8 из 10 подходящих |
 
-**Пайплайн:** поиск по тегам → TF-IDF скоринг → LLM re-ranking (Claude/GPT) → топ-15
+Пайплайн: TF-IDF по тегам → LLM re-ranking (Claude/GPT) → топ-15
 
----
-
-## Архитектура
-
-```
-├── frontend/           React 19, TypeScript, Vite, Tailwind, shadcn/ui
-│   └── src/pages/      32 страницы (Landing, Dashboard, Clustering...)
-│
-├── backend/            Python 3.12, FastAPI, SQLAlchemy 2.0
-│   ├── app/api/        REST API (60+ endpoints)
-│   ├── app/bot/        Telegram handlers (python-telegram-bot 21.x)
-│   ├── app/services/   Бизнес-логика (кластеризация, рекомендации, Q&A)
-│   └── app/models/     34 SQLAlchemy модели
-│
-├── data/eval/          Оценка качества рекомендаций
-└── docs/               Спецификация, CustDev артефакты
-```
-
-**Ключевые сервисы:**
-- `profiling_service.py` — AI-профилирование через диалог
-- `clustering_service.py` — LLM-кластеризация проектов по залам
-- `matching_service.py` — подбор экспертов по тегам
-- `qa_service.py` — генерация Q&A вопросов
-
----
-
-## API
-
-```
-POST /api/v1/leads              Форма заявки с лендинга
-POST /api/v1/profile            Создание/обновление профиля гостя
-POST /api/v1/recommendations    Генерация рекомендаций
-GET  /api/v1/projects           Список проектов
-POST /api/v1/clustering/run     Запуск AI-кластеризации
-GET  /api/v1/admin/dashboard    Метрики для организатора
-```
-
-Полная документация: `/api/v1/docs` (Swagger)
-
----
+<br>
 
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/AI-Talent-Camp-2026/demoday-ai.git
-cd demoday-ai
-
-cp backend/.env.example backend/.env
-# Заполнить BOT_TOKEN и OPENROUTER_API_KEY
-
+git clone https://github.com/AI-Talent-Camp-2026/demoday-ai.git && cd demoday-ai
+cp backend/.env.example backend/.env  # заполнить BOT_TOKEN, OPENROUTER_API_KEY
 docker compose up -d --build
 docker compose exec backend alembic upgrade head
 ```
 
-Frontend: `localhost:3000` · Bot: polling mode · API: `localhost:8000/api/v1/docs`
+Frontend `localhost:3000` · API docs `localhost:8000/api/v1/docs`
 
----
+<br>
+
+## Архитектура
+
+```
+frontend/          React 19, TypeScript, Vite, Tailwind, shadcn/ui
+backend/
+├── app/api/       REST API, 60+ endpoints
+├── app/bot/       Telegram handlers
+├── app/services/  profiling, clustering, matching, qa
+└── app/models/    34 SQLAlchemy модели
+```
+
+<br>
 
 ## Стек
 
-**Backend:** Python 3.12, FastAPI, SQLAlchemy 2.0 (async), PostgreSQL 16, Alembic, APScheduler
+**Backend** — Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL 16, APScheduler, python-telegram-bot 21.x
 
-**Frontend:** React 19, TypeScript, Vite, TanStack Query, Tailwind CSS, shadcn/ui
+**Frontend** — React 19, TypeScript, Vite, TanStack Query, Tailwind, shadcn/ui
 
-**AI:** OpenRouter API (Claude Sonnet, GPT-4), TF-IDF + LLM re-ranking
+**AI** — OpenRouter (Claude, GPT), TF-IDF + LLM re-ranking
 
-**Infra:** Docker Compose, Traefik (SSL), Yandex Cloud VM
+**Infra** — Docker Compose, Traefik, Yandex Cloud
 
----
+<br>
 
 ## Customer Discovery
 
-5 интервью показали общую боль: **слишком много контента, слишком мало времени**.
+> "Это пипец! Если вы упростите этот ужас, я буду благодарна." — организатор Demo Day
 
-| Сегмент | Инсайт |
-|---------|--------|
-| Организатор | 80 студентов не попали в расписание за ночь до DD |
-| Эксперт | Идёт вслепую, нужен контекст за 1-2 дня |
-| Бизнес | Из 330 проектов уверен в релевантности 15-20 |
-| Гость | Посетила 5 из 330, пропустила самый интересный |
+5 интервью, одна боль: слишком много контента, слишком мало времени. Гости пропускают 80% интересного, эксперты идут вслепую, организаторы делают расписание за ночь до события.
 
-[Lean Canvas](./docs/01-discovery/lean-canvas.md) · [RICE-матрица](./docs/01-discovery/rice-matrix.md) · [Транскрипты](./docs/01-discovery/)
+[Lean Canvas](./docs/01-discovery/lean-canvas.md) · [RICE-матрица](./docs/01-discovery/rice-matrix.md) · [Интервью](./docs/01-discovery/)
 
----
+<br>
 
 ## Команда
 
-**AI Talent Camp 2026 · Проект #10 · "ЯСНОПОНЯТНО"**
+**"ЯСНОПОНЯТНО"** — AI Talent Camp 2026, проект #10
 
 - **Дмитрий Горбунов** — тимлид, продукт · [@grbn_dima](https://t.me/grbn_dima)
 - **Анастасия Гапеева** — UX/UI, фронтенд
-- **Иван Александров** — разработка, бизнес-логика
+- **Иван Александров** — разработка
 
-Автор идеи: **Дмитрий Ботов** ([@dmbotov](https://t.me/dmbotov)) — организатор Demo Day
+Автор идеи: **Дмитрий Ботов** [@dmbotov](https://t.me/dmbotov)
 
----
+<br>
 
 ## Лицензия
 
-Все права защищены. Использование, копирование, модификация и распространение без письменного разрешения авторов запрещено.
+Проприетарная. Использование без письменного разрешения запрещено.
 
-Для коммерческого использования: [@grbn_dima](https://t.me/grbn_dima)
+Контакт: [@grbn_dima](https://t.me/grbn_dima)
