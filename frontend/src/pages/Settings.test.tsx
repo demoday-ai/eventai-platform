@@ -139,8 +139,10 @@ describe("Settings", () => {
 
     render(<Settings />, { wrapper: createWrapper() })
 
+    // Wait for data to load into input
     await waitFor(() => {
-      expect(screen.getByLabelText("Название")).toBeInTheDocument()
+      const input = screen.getByLabelText("Название") as HTMLInputElement
+      expect(input.value).toBe("Demo Day 2026")
     })
 
     const nameInput = screen.getByLabelText("Название")
