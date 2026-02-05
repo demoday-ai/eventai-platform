@@ -287,19 +287,30 @@ async def run_matching_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(check_organizer),
 ):
-
-
+    """Run expert-room matching. Uses Celery for async LLM processing."""
     from app.services import user_service
+    from app.worker.tasks import run_matching_task
+    from app.worker.utils import wait_for_task
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
 
     use_adjacent = body.use_adjacent_tags if body else True
 
-    try:
-        result = await matching_service.run_matching(session, event.id, use_adjacent_tags=use_adjacent)
-    except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    # Submit to Celery and wait
+    task = run_matching_task.delay(str(event.id), use_adjacent)
+    completed, result = await wait_for_task(task.id, timeout=60, poll_interval=0.5)
+
+    if not completed:
+        raise HTTPException(status_code=504, detail="Matching timed out. Try again later.")
+
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to run matching.")
+
+    # Check for error in result
+    if isinstance(result, dict) and result.get("error"):
+        raise HTTPException(status_code=409, detail=result["error"])
 
     return result
 

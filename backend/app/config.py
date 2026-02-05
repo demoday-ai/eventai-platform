@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     openrouter_model: str = "openai/gpt-4.1"
     team_chat_id: str = ""  # Telegram chat ID for lead notifications
     team_bot_token: str = ""  # Separate bot token for team notifications (optional)
+    rabbitmq_url: str = "amqp://demoday:demoday@localhost:5672//"
+    redis_url: str = "redis://localhost:6379/0"
 
     @property
     def organizer_ids(self) -> set[str]:

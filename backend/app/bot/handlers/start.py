@@ -542,16 +542,33 @@ async def _onb_agent_turn(
     is_message: bool = False,
 ) -> int:
     """Send conversation to LLM agent, handle reply or profile extraction."""
+    from app.worker.tasks import chat_for_profile_task
+    from app.worker.utils import wait_for_task
+
     selected_tags = list(context.user_data.get("nl_topics", set()))
     role_code = context.user_data.get("pending_role_code")
     guest_subtype = context.user_data.get("guest_subtype")
     custom_subtype = context.user_data.get("custom_subtype")
-    result = await profiling_service.chat_for_profile(
+
+    # Show typing indicator
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id, action=ChatAction.TYPING
+    )
+
+    # Submit to Celery
+    task = chat_for_profile_task.delay(
         conversation, selected_tags,
         role_code=role_code,
         guest_subtype=guest_subtype,
         custom_subtype=custom_subtype,
     )
+
+    # Wait for result (short timeout for chat)
+    completed, result = await wait_for_task(task.id, timeout=15, poll_interval=0.5)
+
+    if not completed or result is None:
+        # Fallback response
+        result = {"action": "reply", "message": "Расскажите подробнее о ваших интересах."}
 
     if result["action"] == "profile":
         # Enforce at least one question before profile confirmation
@@ -1508,12 +1525,27 @@ async def _rebuild_agent_turn(
     is_message: bool = False,
 ) -> int:
     """Process NL rebuild conversation with LLM."""
+    from app.worker.tasks import chat_for_profile_task
+    from app.worker.utils import wait_for_task
+
     selected_tags = list(context.user_data.get("rebuild_topics", set()))
     role_code = context.user_data.get("pending_role_code")
 
-    result = await profiling_service.chat_for_profile(
+    # Show typing indicator
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id, action=ChatAction.TYPING
+    )
+
+    # Submit to Celery
+    task = chat_for_profile_task.delay(
         conversation, selected_tags, role_code=role_code,
     )
+
+    # Wait for result
+    completed, result = await wait_for_task(task.id, timeout=15, poll_interval=0.5)
+
+    if not completed or result is None:
+        result = {"action": "reply", "message": "Расскажите подробнее о ваших интересах."}
 
     if result["action"] == "profile":
         context.user_data["rebuild_profile"] = result

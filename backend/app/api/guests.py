@@ -89,21 +89,27 @@ async def create_or_update_profile(
     session: AsyncSession = Depends(get_session),
 ):
     """Create or update guest profile. Extracts interests from raw_text if provided."""
+    from app.worker.tasks import extract_interests_from_text_task
+    from app.worker.utils import wait_for_task
+
     profile = await profiling_service.get_or_create_profile(
         session, req.user_id, req.event_id
     )
 
-    # Extract interests from text if provided
+    # Extract interests from text if provided (via Celery)
     extracted_tags = []
     keywords = []
     if req.raw_text:
         available = await profiling_service.get_available_tags(session, req.event_id)
         available_names = [t[0] for t in available]
-        result = await profiling_service.extract_interests_from_text(
-            req.raw_text, available_names
-        )
-        extracted_tags = result.get("tags", [])
-        keywords = result.get("keywords", [])
+
+        # Submit to Celery and wait
+        task = extract_interests_from_text_task.delay(req.raw_text, available_names)
+        completed, result = await wait_for_task(task.id, timeout=15, poll_interval=0.3)
+
+        if completed and result:
+            extracted_tags = result.get("tags", [])
+            keywords = result.get("keywords", [])
 
     all_tags = list(dict.fromkeys(req.selected_tags + extracted_tags))
     profile = await profiling_service.save_profile(
@@ -129,10 +135,15 @@ async def generate_recommendations(
     event_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
 ):
-    """Generate personalized project recommendations for guest."""
+    """Generate personalized project recommendations for guest.
+
+    This is a heavy operation (10-30 sec). Uses Celery for async processing.
+    """
     from sqlalchemy import select
 
     from app.models.guest_profile import GuestProfile
+    from app.worker.tasks import generate_recommendations_task
+    from app.worker.utils import wait_for_task
 
     result = await session.execute(
         select(GuestProfile)
@@ -143,7 +154,16 @@ async def generate_recommendations(
     if not profile:
         raise HTTPException(status_code=400, detail="Profile not found. Create profile first.")
 
-    data = await profiling_service.generate_recommendations(session, profile)
+    # Submit to Celery and wait
+    task = generate_recommendations_task.delay(str(user_id), str(event_id))
+    completed, data = await wait_for_task(task.id, timeout=60, poll_interval=0.5)
+
+    if not completed:
+        raise HTTPException(status_code=504, detail="Recommendation generation timed out. Try again later.")
+
+    if not data:
+        raise HTTPException(status_code=500, detail="Failed to generate recommendations.")
+
     return data
 
 

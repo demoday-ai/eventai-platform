@@ -114,24 +114,43 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 async def _run_matching(query, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Run matching algorithm."""
-    await query.edit_message_text("Запускаю матчинг экспертов по комнатам...")
+    from app.worker.tasks import run_matching_task
+    from app.worker.utils import wait_for_task
 
+    await query.edit_message_text("⏳ Запускаю матчинг экспертов по комнатам...")
+
+    # Get event_id first
     async with async_session() as session:
         event = await user_service.get_current_event(session)
         if not event:
             await query.edit_message_text("Нет активного события.")
             return MENU
+        event_id = str(event.id)
 
-        try:
-            result = await matching_service.run_matching(session, event.id)
-        except ValueError as e:
-            await query.edit_message_text(f"Ошибка: {e}")
-            return MENU
+    # Submit to Celery
+    task = run_matching_task.delay(event_id)
+
+    # Wait for result
+    completed, result = await wait_for_task(task.id, timeout=60, poll_interval=1.0)
+
+    if not completed:
+        await query.edit_message_text(
+            "Матчинг занимает больше времени. Попробуйте позже."
+        )
+        return MENU
+
+    if result is None:
+        await query.edit_message_text("❌ Ошибка матчинга.")
+        return MENU
+
+    if "error" in result:
+        await query.edit_message_text(f"Ошибка: {result['error']}")
+        return MENU
 
     context.user_data["matching_result"] = result
 
     text = (
-        f"Матчинг завершён!\n\n"
+        f"✅ Матчинг завершён!\n\n"
         f"Всего экспертов: {result['total_experts']}\n"
         f"Распределено: {result['matched_experts']}\n"
         f"Без тегов: {result['unmatched_experts']}\n\n"

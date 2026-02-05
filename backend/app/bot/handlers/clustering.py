@@ -222,7 +222,11 @@ async def cluster_params_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 async def _run_clustering(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Execute clustering and show results."""
-    event_id = uuid.UUID(context.user_data["event_id"])
+    from app.bot.keyboards import rooms_overview_keyboard_from_dict
+    from app.worker.tasks import cluster_projects_task
+    from app.worker.utils import wait_for_task
+
+    event_id = context.user_data["event_id"]
     num_rooms = context.user_data.get("num_rooms", 6)
     feedback = context.user_data.pop("clustering_feedback", None)
 
@@ -230,32 +234,39 @@ async def _run_clustering(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     target = query if query else update.message
     send = target.edit_message_text if query else target.reply_text
 
-    try:
-        async with async_session() as session:
-            run = await clustering_service.run_clustering(
-                session, event_id, num_rooms, feedback
-            )
+    await send("⏳ Запускаю кластеризацию... Это может занять 1-2 минуты.")
 
-            # Build overview
-            text = "Кластеризация завершена!\n\n"
-            text += f"Статус: {run.status}\n"
-            text += f"Залов: {len(run.rooms)}\n\n"
+    # Submit to Celery
+    task = cluster_projects_task.delay(event_id, num_rooms, feedback)
 
-            rooms_info = []
-            for room in sorted(run.rooms, key=lambda r: r.display_order):
-                proj_count = len(room.project_assignments)
-                rooms_info.append((room, proj_count))
-                text += f"Зал {room.display_order + 1}: {room.name} ({proj_count} проектов)\n"
+    # Wait with longer timeout (clustering is heavy)
+    completed, result = await wait_for_task(task.id, timeout=120, poll_interval=2.0)
 
-            context.user_data["clustering_run_id"] = str(run.id)
-
-        await send(text, reply_markup=rooms_overview_keyboard(rooms_info))
-        return VIEW_RESULT
-
-    except Exception as e:
-        logger.exception("Clustering failed")
-        await send(f"Ошибка кластеризации: {e}\n\nПопробуйте снова или /cancel.")
+    if not completed:
+        # Task still running, save for later check
+        context.user_data["pending_clustering_task"] = task.id
+        await send(
+            "Кластеризация занимает больше времени. "
+            "Отправьте /status чтобы проверить готовность."
+        )
         return CLUSTER_PARAMS
+
+    if result is None:
+        await send("❌ Ошибка кластеризации. Попробуйте снова или /cancel.")
+        return CLUSTER_PARAMS
+
+    # Build overview from result
+    text = "✅ Кластеризация завершена!\n\n"
+    text += f"Статус: {result['status']}\n"
+    text += f"Залов: {result['num_rooms']}\n\n"
+
+    for room in result["rooms"]:
+        text += f"Зал {room['display_order'] + 1}: {room['name']} ({room['project_count']} проектов)\n"
+
+    context.user_data["clustering_run_id"] = result["run_id"]
+
+    await send(text, reply_markup=rooms_overview_keyboard_from_dict(result["rooms"]))
+    return VIEW_RESULT
 
 
 async def _render_room_detail(

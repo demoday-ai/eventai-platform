@@ -127,6 +127,20 @@ def rooms_overview_keyboard(rooms_info: list) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
+def rooms_overview_keyboard_from_dict(rooms: list[dict]) -> InlineKeyboardMarkup:
+    """rooms: list of dicts with id, name, display_order, project_count."""
+    buttons = []
+    for room in rooms:
+        label = f"Зал {room['display_order'] + 1}: {room['name'][:20]} ({room['project_count']})"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"room:{room['id']}")])
+
+    buttons.append([
+        InlineKeyboardButton("Перегенерировать", callback_data="action:regenerate"),
+        InlineKeyboardButton("Утвердить", callback_data="action:approve"),
+    ])
+    return InlineKeyboardMarkup(buttons)
+
+
 def room_detail_keyboard(
     room_id, page: int, total_pages: int, project_count: int
 ) -> InlineKeyboardMarkup:

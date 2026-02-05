@@ -18,7 +18,7 @@ from app.schemas.project import (
     UploadResult,
 )
 from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
-from app.services.background_jobs import JobStatus, get_active_job_by_type, get_job, start_background_job
+from app.services.background_jobs import JobStatus, get_active_job_by_type, get_job
 
 logger = logging.getLogger(__name__)
 
@@ -158,8 +158,11 @@ async def run_clustering(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Run AI clustering (organizer only). Returns job_id for polling."""
-    from app.database import async_session
+    """Run AI clustering (organizer only). Returns job_id for polling.
+
+    Uses Celery for distributed task processing.
+    """
+    from app.worker.tasks import cluster_projects_task
 
     event = await user_service.get_current_event(session)
     if not event:
@@ -169,33 +172,26 @@ async def run_clustering(
     if not role or role.code != "organizer":
         raise HTTPException(status_code=403, detail="Только организатор может запускать кластеризацию")
 
-    # Check for already running clustering job
+    # Check for already running clustering job (legacy check)
     existing_job = get_active_job_by_type("clustering")
     if existing_job:
         return {"job_id": existing_job.id, "status": existing_job.status.value}
 
-    # Capture params for background job
-    event_id = event.id
-    num_rooms = request.num_rooms
-    feedback = request.feedback
-    room_themes = request.room_themes
-
-    if room_themes is not None and len(room_themes) != num_rooms:
+    if request.room_themes is not None and len(request.room_themes) != request.num_rooms:
         raise HTTPException(
             status_code=422,
             detail="room_themes length must match num_rooms",
         )
 
-    async def do_clustering():
-        """Run clustering in background with fresh DB session."""
-        async with async_session() as bg_session:
-            run = await clustering_service.run_clustering(
-                bg_session, event_id, num_rooms, feedback, room_themes=room_themes
-            )
-            return {"run_id": str(run.id)}
+    # Submit to Celery
+    task = cluster_projects_task.delay(
+        str(event.id),
+        request.num_rooms,
+        request.feedback,
+        request.room_themes,
+    )
 
-    job = start_background_job(do_clustering(), job_type="clustering")
-    return {"job_id": job.id, "status": job.status.value}
+    return {"job_id": task.id, "status": "pending"}
 
 
 @router.get("/clustering/job/{job_id}")
@@ -203,20 +199,39 @@ async def get_clustering_job_status(
     job_id: str,
     user: User = Depends(get_current_user),
 ):
-    """Get clustering job status for polling."""
+    """Get clustering job status for polling.
+
+    Supports both legacy background jobs and Celery tasks.
+    """
+    from app.worker.utils import get_task_status
+
+    # First try legacy background job system
     job = get_job(job_id)
-    if not job:
+    if job:
+        response = {
+            "job_id": job.id,
+            "status": job.status.value,
+        }
+        if job.status == JobStatus.COMPLETED:
+            response["result"] = job.result
+        elif job.status == JobStatus.FAILED:
+            response["error"] = job.error
+        return response
+
+    # Try Celery task
+    celery_status = get_task_status(job_id)
+    if celery_status["status"] == "unknown":
         raise HTTPException(status_code=404, detail="Job not found")
 
     response = {
-        "job_id": job.id,
-        "status": job.status.value,
+        "job_id": job_id,
+        "status": celery_status["status"],
     }
 
-    if job.status == JobStatus.COMPLETED:
-        response["result"] = job.result
-    elif job.status == JobStatus.FAILED:
-        response["error"] = job.error
+    if celery_status["status"] == "completed":
+        response["result"] = celery_status.get("result")
+    elif celery_status["status"] == "failed":
+        response["error"] = celery_status.get("error")
 
     return response
 

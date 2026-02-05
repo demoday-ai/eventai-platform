@@ -125,6 +125,9 @@ async def questions_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle project selection for questions."""
+    from app.worker.tasks import generate_qa_questions_task
+    from app.worker.utils import wait_for_task
+
     query = update.callback_query
     await query.answer()
 
@@ -133,6 +136,7 @@ async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_
 
     await query.edit_message_text("⏳ Генерирую вопросы...")
 
+    # Get user_id and project title
     async with async_session() as session:
         user, guest_profile, business_profile = await _get_user_with_profiles(
             session, query.from_user.id
@@ -142,7 +146,7 @@ async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_
             await query.edit_message_text("❌ Ошибка: пользователь не найден")
             return
 
-        # Get project
+        # Get project title for display
         from sqlalchemy import select
 
         from app.models.project import Project
@@ -155,30 +159,41 @@ async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_
             await query.edit_message_text("❌ Проект не найден")
             return
 
-        # Generate questions
-        questions = await qa_service.generate_questions(
-            session, user, project, guest_profile, business_profile
-        )
+        project_title = project.title
+        user_id = str(user.id)
 
-        # Format response
-        text = f"❓ *Вопросы для проекта:*\n_{project.title}_\n\n"
-        for i, q in enumerate(questions, 1):
-            text += f"{i}. {q}\n\n"
+    # Submit to Celery
+    task = generate_qa_questions_task.delay(user_id, project_id)
 
-        await query.edit_message_text(
-            text,
-            reply_markup=questions_keyboard(project_id),
-            parse_mode="Markdown",
-        )
+    # Wait for result
+    completed, questions = await wait_for_task(task.id, timeout=20, poll_interval=0.5)
+
+    if not completed or questions is None:
+        questions = ["Не удалось сгенерировать вопросы. Попробуйте позже."]
+
+    # Format response
+    text = f"❓ *Вопросы для проекта:*\n_{project_title}_\n\n"
+    for i, q in enumerate(questions, 1):
+        text += f"{i}. {q}\n\n"
+
+    await query.edit_message_text(
+        text,
+        reply_markup=questions_keyboard(project_id),
+        parse_mode="Markdown",
+    )
 
 
 async def more_questions_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle 'more questions' button."""
+    from app.worker.tasks import generate_qa_questions_task
+    from app.worker.utils import wait_for_task
+
     query = update.callback_query
     await query.answer("Генерирую новые вопросы...")
 
     project_id = query.data.split(":")[-1]
 
+    # Delete cache and get user info
     async with async_session() as session:
         user, guest_profile, business_profile = await _get_user_with_profiles(
             session, query.from_user.id
@@ -199,6 +214,9 @@ async def more_questions_callback(update: Update, context: ContextTypes.DEFAULT_
         if not project:
             await query.edit_message_text("❌ Проект не найден")
             return
+
+        project_title = project.title
+        user_id = str(user.id)
 
         # Delete cached questions to force regeneration
         from app.models.qa_suggestion import QASuggestion
@@ -214,20 +232,24 @@ async def more_questions_callback(update: Update, context: ContextTypes.DEFAULT_
             await session.delete(cached)
             await session.commit()
 
-        # Generate fresh questions
-        questions = await qa_service.generate_questions(
-            session, user, project, guest_profile, business_profile
-        )
+    # Submit to Celery
+    task = generate_qa_questions_task.delay(user_id, project_id)
 
-        text = f"❓ *Новые вопросы для проекта:*\n_{project.title}_\n\n"
-        for i, q in enumerate(questions, 1):
-            text += f"{i}. {q}\n\n"
+    # Wait for result
+    completed, questions = await wait_for_task(task.id, timeout=20, poll_interval=0.5)
 
-        await query.edit_message_text(
-            text,
-            reply_markup=questions_keyboard(project_id),
-            parse_mode="Markdown",
-        )
+    if not completed or questions is None:
+        questions = ["Не удалось сгенерировать вопросы. Попробуйте позже."]
+
+    text = f"❓ *Новые вопросы для проекта:*\n_{project_title}_\n\n"
+    for i, q in enumerate(questions, 1):
+        text += f"{i}. {q}\n\n"
+
+    await query.edit_message_text(
+        text,
+        reply_markup=questions_keyboard(project_id),
+        parse_mode="Markdown",
+    )
 
 
 async def back_to_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -354,6 +376,9 @@ async def compare_select_callback(update: Update, context: ContextTypes.DEFAULT_
 
 async def compare_done_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate and display comparison matrix."""
+    from app.worker.tasks import generate_comparison_matrix_task
+    from app.worker.utils import wait_for_task
+
     query = update.callback_query
     await query.answer()
 
@@ -364,6 +389,7 @@ async def compare_done_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     await query.edit_message_text("⏳ Генерирую матрицу сравнения...")
 
+    # Get user and criteria
     async with async_session() as session:
         user, _, business_profile = await _get_user_with_profiles(
             session, query.from_user.id
@@ -373,31 +399,31 @@ async def compare_done_callback(update: Update, context: ContextTypes.DEFAULT_TY
             await query.edit_message_text("❌ Ошибка")
             return
 
-        # Get selected projects
-        from sqlalchemy import select
-
-        from app.models.project import Project
-        result = await session.execute(
-            select(Project).where(Project.id.in_([UUID(pid) for pid in selected]))
-        )
-        projects = list(result.scalars().all())
-
-        # Get criteria and generate matrix
+        user_id = str(user.id)
         criteria = qa_service.get_default_criteria(user, business_profile)
-        matrix = await qa_service.generate_comparison_matrix(session, projects, criteria)
 
-        # Format and display
-        text = qa_service.format_matrix_text(matrix, criteria)
+    # Submit to Celery
+    project_ids = list(selected)
+    task = generate_comparison_matrix_task.delay(user_id, project_ids, criteria)
 
-        # Store for adding criteria
-        context.user_data["cmp_matrix"] = matrix
-        context.user_data["cmp_criteria"] = criteria
+    # Wait for result
+    completed, matrix = await wait_for_task(task.id, timeout=25, poll_interval=0.5)
 
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("➕ Добавить критерий", callback_data="cmp:add")],
-        ])
+    if not completed or matrix is None:
+        matrix = {"error": "Не удалось сгенерировать матрицу. Попробуйте позже."}
 
-        await query.edit_message_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    # Format and display
+    text = qa_service.format_matrix_text(matrix, criteria)
+
+    # Store for adding criteria
+    context.user_data["cmp_matrix"] = matrix
+    context.user_data["cmp_criteria"] = criteria
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ Добавить критерий", callback_data="cmp:add")],
+    ])
+
+    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="Markdown")
 
 
 async def add_criterion_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
