@@ -15,11 +15,35 @@ vi.mock("../hooks/useAuth", () => ({
 const mockPreviewMessaging = vi.fn()
 const mockSendMessaging = vi.fn()
 const mockGetCoverage = vi.fn()
+const mockGetNotificationDashboard = vi.fn()
+const mockGetNotifications = vi.fn()
+const mockGetScheduleReminderPreview = vi.fn()
+const mockSendReminders = vi.fn()
+const mockCancelReminders = vi.fn()
+const mockGetReminderBatches = vi.fn()
+const mockGetReminderBatchDetail = vi.fn()
+const mockBroadcastParticipation = vi.fn()
+const mockGetParticipationSummary = vi.fn()
+const mockGetUnacknowledged = vi.fn()
+const mockGetBriefingPreview = vi.fn()
+const mockSendBriefing = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   previewMessaging: (...args: unknown[]) => mockPreviewMessaging(...args),
   sendMessaging: (...args: unknown[]) => mockSendMessaging(...args),
   getCoverage: (...args: unknown[]) => mockGetCoverage(...args),
+  getNotificationDashboard: (...args: unknown[]) => mockGetNotificationDashboard(...args),
+  getNotifications: (...args: unknown[]) => mockGetNotifications(...args),
+  getScheduleReminderPreview: (...args: unknown[]) => mockGetScheduleReminderPreview(...args),
+  sendReminders: (...args: unknown[]) => mockSendReminders(...args),
+  cancelReminders: (...args: unknown[]) => mockCancelReminders(...args),
+  getReminderBatches: (...args: unknown[]) => mockGetReminderBatches(...args),
+  getReminderBatchDetail: (...args: unknown[]) => mockGetReminderBatchDetail(...args),
+  broadcastParticipation: (...args: unknown[]) => mockBroadcastParticipation(...args),
+  getParticipationSummary: (...args: unknown[]) => mockGetParticipationSummary(...args),
+  getUnacknowledged: (...args: unknown[]) => mockGetUnacknowledged(...args),
+  getBriefingPreview: (...args: unknown[]) => mockGetBriefingPreview(...args),
+  sendBriefing: (...args: unknown[]) => mockSendBriefing(...args),
 }))
 
 const createWrapper = () => {
@@ -36,20 +60,49 @@ const createWrapper = () => {
 describe("Messaging", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetNotificationDashboard.mockResolvedValue({
+      summary: { total: 0, sent: 0, failed: 0, pending: 0 },
+      by_role: [],
+      by_type: [],
+      unreachable: [],
+    })
+    mockGetNotifications.mockResolvedValue({ items: [], total: 0 })
+    mockGetReminderBatches.mockResolvedValue({ batches: [] })
+    mockGetParticipationSummary.mockResolvedValue({
+      total: 0, acknowledged: 0, pending: 0, unregistered: 0, by_room: [],
+    })
+    mockGetUnacknowledged.mockResolvedValue({ items: [] })
   })
 
-  it("renders page title and role checkboxes", () => {
+  it("renders page title and tabs", () => {
     render(<Messaging />, { wrapper: createWrapper() })
 
-    expect(screen.getByText("Рассылка сообщений")).toBeInTheDocument()
+    expect(screen.getByText("Рассылки")).toBeInTheDocument()
+    expect(screen.getByText("Обзор")).toBeInTheDocument()
+    expect(screen.getByText("Рассылка")).toBeInTheDocument()
+    expect(screen.getAllByText("Напоминания").length).toBeGreaterThan(0)
+    expect(screen.getByText("Участие")).toBeInTheDocument()
+    expect(screen.getByText("Брифинг")).toBeInTheDocument()
+  })
+
+  it("shows broadcast tab with role checkboxes", async () => {
+    const user = userEvent.setup()
+    render(<Messaging />, { wrapper: createWrapper() })
+
+    // Switch to Рассылка tab
+    await user.click(screen.getByText("Рассылка"))
+
     expect(screen.getByText("Студенты")).toBeInTheDocument()
     expect(screen.getByText("Эксперты")).toBeInTheDocument()
     expect(screen.getByText("Гости")).toBeInTheDocument()
     expect(screen.getByText("Бизнес-партнёры")).toBeInTheDocument()
   })
 
-  it("preview button disabled when no roles selected", () => {
+  it("preview button disabled when no roles selected", async () => {
+    const user = userEvent.setup()
     render(<Messaging />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("Рассылка"))
 
     const previewButton = screen.getByRole("button", { name: "Предпросмотр" })
     expect(previewButton).toBeDisabled()
@@ -58,6 +111,8 @@ describe("Messaging", () => {
   it("preview button disabled when template empty", async () => {
     const user = userEvent.setup()
     render(<Messaging />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("Рассылка"))
 
     // Select a role but leave template empty
     await user.click(screen.getByText("Студенты"))
@@ -70,7 +125,8 @@ describe("Messaging", () => {
     const user = userEvent.setup()
     render(<Messaging />, { wrapper: createWrapper() })
 
-    // Guest subtype should not be visible initially
+    await user.click(screen.getByText("Рассылка"))
+
     expect(screen.queryByLabelText("Подтип гостей")).not.toBeInTheDocument()
 
     await user.click(screen.getByText("Гости"))
@@ -86,7 +142,8 @@ describe("Messaging", () => {
 
     render(<Messaging />, { wrapper: createWrapper() })
 
-    // Room filter should not be visible initially
+    await user.click(screen.getByText("Рассылка"))
+
     expect(screen.queryByLabelText("Зал")).not.toBeInTheDocument()
 
     await user.click(screen.getByText("Эксперты"))
@@ -107,6 +164,8 @@ describe("Messaging", () => {
     })
 
     render(<Messaging />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("Рассылка"))
 
     // Select role and type template
     await user.click(screen.getByText("Студенты"))
@@ -138,6 +197,8 @@ describe("Messaging", () => {
     })
 
     render(<Messaging />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("Рассылка"))
 
     // Select role and type template
     await user.click(screen.getByText("Студенты"))
