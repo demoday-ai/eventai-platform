@@ -20,6 +20,7 @@ from app.bot.handlers.contact import contact_button, contact_request_callback
 from app.bot.keyboards import (
     confirm_interests_keyboard,
     generate_program_keyboard,
+    nl_topic_buttons,
     program_recommendation_keyboard,
     start_profiling_keyboard,
     tag_selection_keyboard,
@@ -39,7 +40,9 @@ logger = logging.getLogger(__name__)
     GENERATE_PROGRAM,
     VIEW_PROGRAM,
     VIEW_DETAIL,
-) = range(6)
+    NL_REBUILD,  # NL profiling restart from agent
+    NL_REBUILD_CONFIRM,  # Confirm rebuilt profile
+) = range(8)
 
 MAX_MESSAGE_LEN = 4096
 
@@ -109,45 +112,42 @@ def _format_recommendations(data: dict) -> list[str]:
     """Format must-visit recommendations into message parts (respecting 4096 char limit)."""
     messages = []
 
-    must_text = "🎯 *Обязательно посетить:*\n\n"
+    must_text = "*Топ-рекомендации:*\n\n"
     for rec in data.get("must_visit", []):
         title = _escape_markdown(rec["title"])
-        summary = _escape_markdown(_truncate(rec["summary"], 200) if rec["summary"] else "")
-        author = _escape_markdown(rec.get("author", ""))
-        room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
-        tags_str = ", ".join(rec.get("tags", [])[:4])
+        summary = _escape_markdown(_truncate(rec["summary"], 150) if rec["summary"] else "")
+        room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
+        tags_str = ", ".join(rec.get("tags", [])[:3])
         conflict = ""
         if rec.get("conflict_rooms"):
-            conflict = f" ⚠️ Параллельно с Зал {', '.join(str(r) for r in rec['conflict_rooms'][:3])}"
+            conflict = f" (пересекается с залом {', '.join(str(r) for r in rec['conflict_rooms'][:2])})"
 
         score = int(rec.get("relevance_score", 0))
         entry = (
-            f"*{rec['rank']}. {title}* ({score}%)\n"
+            f"*{rec['rank']}. {title}* — {score}%\n"
             f"{summary}\n"
-            f"📍 {room_info} · {tags_str} · {author}{conflict}\n\n"
+            f"{room_info} · {tags_str}{conflict}\n\n"
         )
         must_text += entry
 
     # Split long must-visit into multiple messages
     if len(must_text) > MAX_MESSAGE_LEN:
-        # Rough split by half of entries
         must_recs = data.get("must_visit", [])
         mid = len(must_recs) // 2
-        part1 = "🎯 *Обязательно посетить:*\n\n"
+        part1 = "*Топ-рекомендации:*\n\n"
         part2 = ""
         for i, rec in enumerate(must_recs):
             title = _escape_markdown(rec["title"])
-            summary = _escape_markdown(_truncate(rec["summary"], 200) if rec["summary"] else "")
-            author = _escape_markdown(rec.get("author", ""))
-            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
-            tags_str = ", ".join(rec.get("tags", [])[:4])
+            summary = _escape_markdown(_truncate(rec["summary"], 150) if rec["summary"] else "")
+            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
+            tags_str = ", ".join(rec.get("tags", [])[:3])
             conflict = ""
             if rec.get("conflict_rooms"):
-                conflict = f" ⚠️ Параллельно с Зал {', '.join(str(r) for r in rec['conflict_rooms'][:3])}"
+                conflict = f" (пересекается с залом {', '.join(str(r) for r in rec['conflict_rooms'][:2])})"
             entry = (
                 f"*{rec['rank']}. {title}*\n"
                 f"{summary}\n"
-                f"📍 {room_info} · {tags_str} · {author}{conflict}\n\n"
+                f"{room_info} · {tags_str}{conflict}\n\n"
             )
             if i < mid:
                 part1 += entry
@@ -165,35 +165,35 @@ def _format_recommendations(data: dict) -> list[str]:
 def _format_if_time(data: dict) -> list[str]:
     """Format if-time recommendations into message parts."""
     messages = []
-    if_time_text = "⏰ *Если останется время:*\n\n"
+    if_time_text = "*Дополнительно:*\n\n"
     for rec in data.get("if_time", []):
         title = _escape_markdown(rec["title"])
-        summary = _escape_markdown(_truncate(rec["summary"], 180) if rec["summary"] else "")
-        room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
+        summary = _escape_markdown(_truncate(rec["summary"], 150) if rec["summary"] else "")
+        room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
         tags_str = ", ".join(rec.get("tags", [])[:3])
 
         score = int(rec.get("relevance_score", 0))
         entry = (
-            f"*{rec['rank']}. {title}* ({score}%)\n"
+            f"*{rec['rank']}. {title}* — {score}%\n"
             f"{summary}\n"
-            f"📍 {room_info} · {tags_str}\n\n"
+            f"{room_info} · {tags_str}\n\n"
         )
         if_time_text += entry
 
     if len(if_time_text) > MAX_MESSAGE_LEN:
         if_recs = data.get("if_time", [])
         mid = len(if_recs) // 2
-        part1 = "⏰ *Если останется время:*\n\n"
+        part1 = "*Дополнительно:*\n\n"
         part2 = ""
         for i, rec in enumerate(if_recs):
             title = _escape_markdown(rec["title"])
-            summary = _escape_markdown(_truncate(rec["summary"], 180) if rec["summary"] else "")
-            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else "Зал: н/д"
+            summary = _escape_markdown(_truncate(rec["summary"], 150) if rec["summary"] else "")
+            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
             tags_str = ", ".join(rec.get("tags", [])[:3])
             entry = (
                 f"*{rec['rank']}. {title}*\n"
                 f"{summary}\n"
-                f"📍 {room_info} · {tags_str}\n\n"
+                f"{room_info} · {tags_str}\n\n"
             )
             if i < mid:
                 part1 += entry
@@ -206,6 +206,250 @@ def _format_if_time(data: dict) -> list[str]:
         messages.append(if_time_text)
 
     return messages
+
+
+# --- NL Profiling restart (from agent mode) ---
+
+
+async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Restart NL profiling flow from agent mode without role change."""
+    tg_user = update.effective_user
+    telegram_user_id = str(tg_user.id)
+
+    auth = await _check_guest_or_business(telegram_user_id)
+    if not auth:
+        await update.message.reply_text(
+            "Сначала выберите роль через /start"
+        )
+        return VIEW_PROGRAM
+
+    user, event, role_code = auth
+
+    # Reset profiling state
+    context.user_data["profile_user_id"] = str(user.id)
+    context.user_data["profile_event_id"] = str(event.id)
+    context.user_data["rebuild_topics"] = set()
+    context.user_data["rebuild_conversation"] = []
+    context.user_data["pending_role_code"] = role_code
+    context.user_data.pop("recommendations", None)
+    context.user_data.pop("program_chat", None)
+
+    await update.message.reply_text(
+        "Пересобираем профиль.\n\n"
+        "Что вас интересует на Demo Day?\n"
+        "Напишите текстом или выберите темы:",
+        reply_markup=nl_topic_buttons(),
+    )
+
+    return NL_REBUILD
+
+
+async def nl_rebuild_topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle topic toggles in NL_REBUILD state."""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+
+    if data == "nl:done":
+        topics = context.user_data.get("rebuild_topics", set())
+        conv = context.user_data.get("rebuild_conversation", [])
+
+        if not topics and not conv:
+            await query.edit_message_text(
+                "Укажите хотя бы одну тему или напишите, что вас интересует.",
+                reply_markup=nl_topic_buttons(),
+            )
+            return NL_REBUILD
+
+        if topics:
+            topic_msg = f"Меня интересуют: {', '.join(topics)}"
+            conv.append({"role": "user", "content": topic_msg})
+            context.user_data["rebuild_conversation"] = conv
+
+        return await _rebuild_agent_turn(update, context, conv)
+
+    # Toggle topic
+    _, _, topic_key = data.split(":", 2)
+    topics = context.user_data.get("rebuild_topics", set())
+    if topic_key in topics:
+        topics.discard(topic_key)
+    else:
+        topics.add(topic_key)
+    context.user_data["rebuild_topics"] = topics
+
+    await query.edit_message_reply_markup(
+        reply_markup=_nl_topic_buttons_with_selection(topics)
+    )
+    return NL_REBUILD
+
+
+def _nl_topic_buttons_with_selection(selected: set[str]):
+    """Rebuild NL topic buttons with checkmarks."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+    topics = [
+        ("NLP", "NLP"), ("CV", "CV"), ("LLM", "LLM"), ("Agents", "Агенты"),
+        ("EdTech", "EdTech"), ("FinTech", "FinTech"), ("MedTech", "MedTech"),
+        ("Security", "Security"), ("ASR", "ASR"), ("Industrial", "Industrial"),
+    ]
+    buttons = []
+    row = []
+    for tag_key, display in topics:
+        prefix = "* " if tag_key in selected else ""
+        row.append(InlineKeyboardButton(
+            f"{prefix}{display}", callback_data=f"nl:topic:{tag_key}",
+        ))
+        if len(row) == 3:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+    buttons.append([InlineKeyboardButton("Готово", callback_data="nl:done")])
+    return InlineKeyboardMarkup(buttons)
+
+
+async def nl_rebuild_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle free text in NL_REBUILD state."""
+    user_text = update.message.text
+    conv = context.user_data.get("rebuild_conversation", [])
+    conv.append({"role": "user", "content": user_text})
+    context.user_data["rebuild_conversation"] = conv
+    return await _rebuild_agent_turn(update, context, conv, is_message=True)
+
+
+async def _rebuild_agent_turn(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    conversation: list[dict],
+    is_message: bool = False,
+) -> int:
+    """Process NL rebuild conversation with LLM."""
+    selected_tags = list(context.user_data.get("rebuild_topics", set()))
+    role_code = context.user_data.get("pending_role_code")
+
+    result = await profiling_service.chat_for_profile(
+        conversation, selected_tags, role_code=role_code,
+    )
+
+    if result["action"] == "profile":
+        context.user_data["rebuild_profile"] = result
+        return await _show_rebuild_confirmation(update, context, result, is_message)
+
+    # Continue conversation
+    reply_text = result["message"]
+    conversation.append({"role": "assistant", "content": reply_text})
+    context.user_data["rebuild_conversation"] = conversation
+
+    if is_message:
+        await update.message.reply_text(reply_text, reply_markup=nl_topic_buttons())
+    else:
+        await update.callback_query.edit_message_text(reply_text, reply_markup=nl_topic_buttons())
+
+    return NL_REBUILD
+
+
+async def _show_rebuild_confirmation(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    profile_data: dict,
+    is_message: bool = False,
+) -> int:
+    """Show rebuilt profile for confirmation."""
+    from app.bot.keyboards import confirm_nl_profile_keyboard
+
+    summary = profile_data.get("summary", "")
+    interests = profile_data.get("interests", [])
+    goals = profile_data.get("goals", [])
+
+    button_tags = list(context.user_data.get("rebuild_topics", set()))
+    all_tags = list(dict.fromkeys(button_tags + interests))
+
+    parts = []
+    if summary:
+        parts.append(summary)
+    if all_tags:
+        parts.append(f"Теги: {', '.join(all_tags)}")
+    if goals:
+        parts.append(f"Цели: {', '.join(goals)}")
+    if not parts:
+        parts.append("Общий интерес к Demo Day")
+
+    text = "Новый профиль:\n\n" + "\n".join(parts) + "\n\nВсё верно?"
+
+    if is_message:
+        await update.message.reply_text(text, reply_markup=confirm_nl_profile_keyboard())
+    else:
+        await update.callback_query.edit_message_text(text, reply_markup=confirm_nl_profile_keyboard())
+
+    return NL_REBUILD_CONFIRM
+
+
+async def nl_rebuild_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle rebuild profile confirmation."""
+    query = update.callback_query
+    await query.answer()
+
+    _, choice = query.data.split(":", 1)
+
+    if choice == "retry":
+        context.user_data["rebuild_topics"] = set()
+        context.user_data["rebuild_conversation"] = []
+        await query.edit_message_text(
+            "Давайте заново.\n\nЧто вас интересует на Demo Day?",
+            reply_markup=nl_topic_buttons(),
+        )
+        return NL_REBUILD
+
+    # Save profile and regenerate recommendations
+    import uuid as _uuid
+    tg_user = query.from_user
+    telegram_user_id = str(tg_user.id)
+    profile_data = context.user_data.get("rebuild_profile", {})
+    interests = profile_data.get("interests", [])
+    button_tags = list(context.user_data.get("rebuild_topics", set()))
+
+    conversation = context.user_data.get("rebuild_conversation", [])
+    raw_text = "\n".join(
+        f"{'Гость' if m['role'] == 'user' else 'Куратор'}: {m['content']}"
+        for m in conversation
+    )
+
+    all_tags = list(dict.fromkeys(button_tags + interests))
+
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
+        event = await user_service.get_current_event(session)
+
+        if not user or not event:
+            await query.edit_message_text("Ошибка. Попробуйте /start заново.")
+            return ConversationHandler.END
+
+        extra_data = {}
+        summary = profile_data.get("summary")
+        if summary:
+            extra_data["nl_summary"] = summary
+        if not extra_data:
+            extra_data = None
+
+        profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
+        await profiling_service.save_profile(
+            session, profile,
+            selected_tags=all_tags,
+            keywords=profile_data.get("goals", []),
+            raw_text=raw_text or None,
+            extra_data=extra_data,
+        )
+        context.user_data["profile_id"] = str(profile.id)
+        context.user_data["profile_user_id"] = str(user.id)
+        context.user_data["profile_event_id"] = str(event.id)
+
+    logger.info("Profile rebuilt: tg_id=%s tags=%s", telegram_user_id, all_tags)
+
+    await query.edit_message_text("Профиль обновлён. Генерирую новые рекомендации...")
+
+    # Generate new recommendations
+    return await _do_generate(update, context)
 
 
 # --- Entry point ---
@@ -580,20 +824,6 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 chat_id=chat_id, text=msg, parse_mode="Markdown",
             )
 
-    # Agent capabilities hint
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=(
-            "💡 *Я могу помочь:*\n"
-            "— Подготовить вопросы к проекту: «вопросы к #3»\n"
-            "— Сравнить проекты: «сравни #1 и #5»\n"
-            "— Показать профиль: «мой профиль»\n"
-            "— Спланировать маршрут по залам\n\n"
-            "Просто напишите текстом."
-        ),
-        parse_mode="Markdown",
-    )
-
     return VIEW_PROGRAM
 
 
@@ -657,8 +887,45 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     return VIEW_PROGRAM
 
 
+AGENT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "rebuild_profile",
+            "description": "Перезапустить профилирование — пользователь хочет изменить свои интересы, пересобрать профиль, начать заново, или получить другие рекомендации на основе новых интересов",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "show_project",
+            "description": "Показать детали конкретного проекта по его номеру в рекомендациях",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "project_rank": {
+                        "type": "integer",
+                        "description": "Номер проекта в списке рекомендаций (1, 2, 3...)",
+                    },
+                },
+                "required": ["project_rank"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "show_profile",
+            "description": "Показать текущий профиль пользователя (теги, интересы, цели)",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+]
+
+
 async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle text messages in VIEW_PROGRAM — LLM-powered Q&A about recommendations."""
+    """Handle text messages in VIEW_PROGRAM — LLM agent with tool calling."""
     from app.services import llm_client
 
     user_message = update.message.text
@@ -693,40 +960,33 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     recs_summary = ""
     all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
     for rec in all_recs:
-        category = "must_visit" if rec.get("relevance_score", 0) >= 80 else "if_time"
         recs_summary += (
-            f"#{rec['rank']} [{category}, score={rec.get('relevance_score', 0)}%] "
-            f"{rec['title']} | tags={rec.get('tags', [])} | "
+            f"#{rec['rank']} {rec['title']} — {rec.get('relevance_score', 0)}% | "
+            f"tags: {', '.join(rec.get('tags', [])[:3])} | "
             f"Зал {rec.get('room_number', '?')} | "
-            f"{(rec.get('summary') or '')[:200]}\n"
+            f"{(rec.get('summary') or '')[:150]}\n"
         )
 
     system_prompt = (
-        "Ты — AI-куратор Demo Day. Пользователь уже получил персональную программу.\n"
-        "Отвечай кратко (2-5 предложений), по делу, на русском языке.\n\n"
+        "Ты — AI-куратор Demo Day. Пользователь получил персональную программу проектов.\n"
+        "Отвечай кратко, по делу, на русском. Без эмодзи.\n\n"
         "ТВОИ ВОЗМОЖНОСТИ:\n"
-        "1. ПРОФИЛЬ — Покажи профиль пользователя по запросу (теги, ключевые слова, описание).\n"
-        "2. Q&A-ПОМОЩНИК — Подготовь 3-5 умных вопросов к конкретному проекту из рекомендаций. "
-        "Учитывай профиль пользователя и описание проекта. Вопросы должны быть конкретными, "
-        "не общими.\n"
-        "3. МАТРИЦА СРАВНЕНИЯ — Сравни 2-5 проектов в виде текстовой таблицы по критериям: "
-        "тема, зал, релевантность, ключевые особенности. Используй простой текстовый формат.\n"
-        "4. КОНТАКТ С АВТОРОМ — Объясни, что можно нажать кнопку «📞 Связаться с автором» "
-        "в карточке проекта, автор получит запрос и решит, делиться ли контактом.\n"
-        "5. МАРШРУТ — Помоги спланировать переходы между залами. "
-        "Учитывай, что параллельные проекты в разных залах нельзя посетить одновременно.\n"
-        "6. НАВИГАЦИЯ — Объясни, как пользоваться кнопками: "
-        "номера проектов → детали, «Ещё рекомендации» → дополнительные, "
-        "«Обновить профиль» → изменить интересы и пересгенерировать.\n\n"
-        "Если просят что-то не связанное с Demo Day — мягко верни к теме.\n\n"
-        f"ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:\n{profile_info}\n\n"
+        "- Отвечать на вопросы о проектах из рекомендаций\n"
+        "- Готовить вопросы для Q&A к конкретному проекту\n"
+        "- Сравнивать проекты между собой\n"
+        "- Помогать планировать маршрут по залам\n"
+        "- Показывать профиль пользователя (tool: show_profile)\n"
+        "- Показывать детали проекта (tool: show_project)\n"
+        "- Перезапускать профилирование если пользователь хочет изменить интересы (tool: rebuild_profile)\n\n"
+        "ВАЖНО: Если пользователь хочет изменить интересы, пересобрать профиль, "
+        "получить другие рекомендации, начать заново — ОБЯЗАТЕЛЬНО вызови tool rebuild_profile.\n\n"
+        f"ПРОФИЛЬ:\n{profile_info}\n\n"
         f"РЕКОМЕНДАЦИИ ({len(all_recs)} проектов):\n{recs_summary}"
     )
 
-    # Maintain conversation history in user_data
+    # Maintain conversation history
     chat_history = context.user_data.get("program_chat", [])
     chat_history.append({"role": "user", "content": user_message})
-    # Keep last 10 exchanges to fit context
     if len(chat_history) > 20:
         chat_history = chat_history[-20:]
 
@@ -735,26 +995,111 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
     try:
-        response = await llm_client.send_chat_completion(
+        response = await llm_client.send_chat_with_tools(
             system_prompt=system_prompt,
-            user_prompt="",
             messages=chat_history,
-            json_mode=False,
+            tools=AGENT_TOOLS,
         )
-        reply = response if isinstance(response, str) else str(response)
+
+        if response["type"] == "tool_call":
+            tool_name = response["tool_name"]
+            tool_args = response.get("tool_args", {})
+
+            if tool_name == "rebuild_profile":
+                # Reset chat and start NL profiling
+                context.user_data["program_chat"] = []
+                return await _restart_nl_profiling(update, context)
+
+            elif tool_name == "show_project":
+                rank = tool_args.get("project_rank", 1)
+                # Find project by rank
+                for rec in all_recs:
+                    if rec["rank"] == rank:
+                        pid_short = rec["project_id"][:8]
+                        # Send confirmation then show detail
+                        await update.message.reply_text(f"Показываю проект #{rank}...")
+                        # We need to simulate callback for detail view
+                        context.user_data["show_project_pid"] = pid_short
+                        return await _show_project_detail_from_text(update, context, pid_short)
+                reply = f"Проект #{rank} не найден в рекомендациях."
+
+            elif tool_name == "show_profile":
+                reply = f"Ваш профиль:\n{profile_info}"
+
+            else:
+                reply = "Неизвестное действие."
+
+        else:
+            reply = response.get("content", "")
+
     except Exception:
-        logger.exception("LLM chat failed in VIEW_PROGRAM")
-        reply = (
-            f"Ваш профиль: {profile_info}\n"
-            f"Рекомендаций: {len(all_recs)}\n\n"
-            "Используйте кнопки выше для просмотра проектов."
-        )
+        logger.exception("Agent failed in VIEW_PROGRAM")
+        reply = "Произошла ошибка. Попробуйте ещё раз или используйте кнопки."
 
     chat_history.append({"role": "assistant", "content": reply})
     context.user_data["program_chat"] = chat_history
 
     await update.message.reply_text(reply)
     return VIEW_PROGRAM
+
+
+async def _show_project_detail_from_text(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, pid_short: str
+) -> int:
+    """Show project detail triggered from text message (not callback)."""
+    import uuid as _uuid
+
+    profile_id_str = context.user_data.get("profile_id", "")
+    if not profile_id_str:
+        await update.message.reply_text("Профиль не найден. Используйте /profile.")
+        return VIEW_PROGRAM
+
+    profile_id = _uuid.UUID(profile_id_str)
+
+    # Find full project_id from recommendations
+    recs_data = context.user_data.get("recommendations", {})
+    all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
+    project_id = None
+    for rec in all_recs:
+        if rec["project_id"].startswith(pid_short):
+            project_id = _uuid.UUID(rec["project_id"])
+            break
+
+    if not project_id:
+        await update.message.reply_text("Проект не найден.")
+        return VIEW_PROGRAM
+
+    async with async_session() as session:
+        detail = await profiling_service.get_project_detail(session, profile_id, project_id)
+
+    if not detail:
+        await update.message.reply_text("Проект не найден в подборке.")
+        return VIEW_PROGRAM
+
+    room_info = f"Зал {detail['room_number']}: {detail['room_name']}" if detail.get("room_number") else ""
+    tags_str = ", ".join(detail.get("tags", []))
+    score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
+
+    text = (
+        f"*{detail['title']}*\n\n"
+        f"{_truncate(detail['description'], 1200)}\n\n"
+        f"Теги: {tags_str}\n"
+        f"Автор: {detail.get('author', 'н/д')}\n"
+        f"{room_info}\n"
+        f"Релевантность: {score_pct}%"
+    )
+
+    if detail.get("llm_summary"):
+        text += f"\n\nКратко: {detail['llm_summary']}"
+
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    keyboard = InlineKeyboardMarkup([
+        [contact_button(project_id)],
+        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+    ])
+
+    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    return VIEW_DETAIL
 
 
 # --- VIEW_DETAIL state (T028, T030) ---
@@ -800,18 +1145,18 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     telegram_contact = _escape_markdown(detail.get('telegram_contact', 'н/д'))
 
     text = (
-        f"📋 *{title}*\n\n"
+        f"*{title}*\n\n"
         f"{description}\n\n"
-        f"🏷 Теги: {tags_str}\n"
-        f"👤 Автор: {author}\n"
-        f"📍 {room_info}\n"
-        f"📱 Telegram: {telegram_contact}\n"
-        f"📊 Релевантность: {score_pct}%"
+        f"Теги: {tags_str}\n"
+        f"Автор: {author}\n"
+        f"{room_info}\n"
+        f"Telegram: {telegram_contact}\n"
+        f"Релевантность: {score_pct}%"
     )
 
     if detail.get("llm_summary"):
         llm_summary = _escape_markdown(detail['llm_summary'])
-        text += f"\n\n💡 *Кратко:* {llm_summary}"
+        text += f"\n\n*Кратко:* {llm_summary}"
 
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     keyboard = InlineKeyboardMarkup([
@@ -876,6 +1221,13 @@ def get_profiling_handler() -> ConversationHandler:
             VIEW_DETAIL: [
                 CallbackQueryHandler(back_to_program_callback, pattern=r"^prof:back_program$"),
                 CallbackQueryHandler(contact_request_callback, pattern=r"^contact:req:"),
+            ],
+            NL_REBUILD: [
+                CallbackQueryHandler(nl_rebuild_topic_callback, pattern=r"^nl:"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nl_rebuild_text),
+            ],
+            NL_REBUILD_CONFIRM: [
+                CallbackQueryHandler(nl_rebuild_confirm_callback, pattern=r"^nlconf:"),
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
