@@ -1,4 +1,11 @@
 <p align="center">
+  <a href="https://ai.itmo.ru"><strong>AI Talent Hub</strong></a> ×
+  <a href="https://itmo.ru"><strong>ИТМО</strong></a>
+  <br>
+  <sub>AI Talent Camp 2026 · Проект #10</sub>
+</p>
+
+<p align="center">
   <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=800&auto=format&fit=crop" alt="EventAI" width="600">
 </p>
 
@@ -13,6 +20,7 @@
   <a href="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml"><img src="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml/badge.svg" alt="CD"></a>
   <img src="https://img.shields.io/badge/python-3.12+-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/license-proprietary-red" alt="License">
 </p>
 
 <p align="center">
@@ -157,9 +165,8 @@ Frontend: `localhost:3000` · Bot: polling mode
 
 ---
 
-<p align="center">
-  <a href="https://ai.itmo.ru">AI Talent Hub</a> ×
-  <a href="https://itmo.ru">ИТМО</a>
-  <br>
-  <sub>MIT License</sub>
-</p>
+## Лицензия
+
+Все права защищены. Использование, копирование, модификация и распространение кода без письменного разрешения авторов запрещено.
+
+Для коммерческого использования или лицензирования: [@grbn_dima](https://t.me/grbn_dima)
