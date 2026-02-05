@@ -7,324 +7,152 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap');
 
     :root {
-      --accent: #6366f1;
-      --accent-light: #818cf8;
-      --teal: #14b8a6;
-      --ember: #f97316;
-      --amber: #f59e0b;
-      --bg: #0f0f14;
-      --surface: #1a1a24;
-      --text: #f5f5f7;
-      --text-muted: #9ca3af;
+      --accent: #009688;
+      --accent-light: #4DD0E1;
+      --orange: #FF5722;
+      --amber: #FFAB40;
+      --bg: #212121;
+      --surface: #303030;
+      --text: #FFFFFF;
+      --text-muted: #ADADAD;
     }
 
-    .reveal {
-      font-family: 'Inter', sans-serif;
-    }
-
+    .reveal { font-family: 'Inter Tight', sans-serif; }
     .reveal h1, .reveal h2, .reveal h3 {
-      font-weight: 600;
-      text-transform: none;
-      letter-spacing: -0.02em;
+      font-family: 'Inter Tight', sans-serif;
+      font-weight: 600; text-transform: none; letter-spacing: -0.02em; color: var(--text);
     }
+    .reveal h1 { font-size: 2.4em; margin-bottom: 0.15em; }
+    .reveal h2 { font-size: 1.5em; margin-bottom: 0.35em; }
+    .reveal p, .reveal li { font-weight: 400; line-height: 1.4; }
+    .reveal .slides section { background: var(--bg); padding: 20px 40px; }
 
-    .reveal h1 { font-size: 2.2em; }
-    .reveal h2 { font-size: 1.6em; margin-bottom: 0.6em; }
-
-    .reveal p, .reveal li {
-      font-weight: 400;
-      line-height: 1.5;
-    }
-
-    .accent { color: var(--accent-light); }
-    .teal { color: var(--teal); }
-    .ember { color: var(--ember); }
+    .accent { color: var(--accent); }
+    .accent-light { color: var(--accent-light); }
+    .ember { color: var(--orange); }
     .amber { color: var(--amber); }
     .muted { color: var(--text-muted); }
 
     .tag {
-      display: inline-block;
-      background: rgba(99, 102, 241, 0.2);
-      color: var(--accent-light);
-      padding: 0.25em 0.7em;
-      border-radius: 999px;
-      font-size: 0.45em;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 0.4em;
+      display: inline-block; background: rgba(0,150,136,0.2); color: var(--accent-light);
+      padding: 0.2em 0.6em; border-radius: 999px; font-size: 0.5em; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.15em;
     }
 
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1em;
-      margin-top: 0.8em;
+    /* Logos bar */
+    .logos-bar {
+      display: flex; align-items: center; justify-content: center; gap: 20px;
+      position: absolute; bottom: 15px; left: 0; right: 0;
     }
+    .logos-bar img, .logos-bar svg { height: 22px; opacity: 0.4; }
+    .logos-bar .itmo-logo { filter: invert(1); }
+    .claude-logo-svg { display: inline-block; vertical-align: middle; }
 
-    .stat-box {
-      background: var(--surface);
-      border-radius: 0.8em;
-      padding: 1em;
-      text-align: center;
-    }
+    .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 10px; }
+    .stat-box { background: var(--surface); border-radius: 10px; padding: 12px 8px; text-align: center; }
+    .stat-value { font-size: 1.8em; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 0.5em; color: var(--text-muted); margin-top: 4px; }
 
-    .stat-value {
-      font-size: 2em;
-      font-weight: 700;
-      line-height: 1;
-    }
+    .feature-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 8px; text-align: left; }
+    .feature-card { background: var(--surface); border-radius: 8px; padding: 8px 10px; }
+    .feature-card h4 { font-size: 0.7em; font-weight: 600; margin: 0 0 2px 0; color: var(--text); }
+    .feature-card p { font-size: 0.5em; color: var(--text-muted); margin: 0; line-height: 1.25; }
 
-    .stat-label {
-      font-size: 0.55em;
-      color: var(--text-muted);
-      margin-top: 0.4em;
-    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .three-col { display: grid; grid-template-columns: 5fr 4fr auto; gap: 14px; align-items: start; }
 
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.8em;
-      margin-top: 0.8em;
-      text-align: left;
-    }
+    .chat-mockup { background: var(--surface); border-radius: 10px; padding: 8px; text-align: left; font-size: 0.55em; }
+    .chat-msg { margin: 3px 0; padding: 5px 8px; border-radius: 6px; max-width: 92%; }
+    .chat-msg.bot { background: rgba(0,150,136,0.15); color: var(--text); }
+    .chat-msg.user { background: var(--accent); color: white; margin-left: auto; }
 
-    .feature-card {
-      background: var(--surface);
-      border-radius: 0.6em;
-      padding: 0.8em;
-    }
-
-    .feature-card h4 {
-      font-size: 0.8em;
-      font-weight: 600;
-      margin: 0 0 0.2em 0;
-      color: var(--text);
-    }
-
-    .feature-card p {
-      font-size: 0.6em;
-      color: var(--text-muted);
-      margin: 0;
-      line-height: 1.3;
-    }
-
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5em;
-      align-items: start;
-    }
-
-    .chat-mockup {
-      background: var(--surface);
-      border-radius: 0.8em;
-      padding: 0.8em;
-      text-align: left;
-      font-size: 0.65em;
-    }
-
-    .chat-msg {
-      margin: 0.4em 0;
-      padding: 0.5em 0.7em;
-      border-radius: 0.6em;
-      max-width: 90%;
-    }
-
-    .chat-msg.bot {
-      background: rgba(99, 102, 241, 0.15);
-      color: var(--text);
-    }
-
-    .chat-msg.user {
-      background: var(--accent);
-      color: white;
-      margin-left: auto;
-    }
-
-    .list-check {
-      text-align: left;
-      list-style: none;
-      padding: 0;
-    }
-
-    .list-check li {
-      margin: 0.5em 0;
-      padding-left: 1.3em;
-      position: relative;
-      font-size: 0.85em;
-    }
-
-    .list-check li::before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: var(--teal);
-      font-weight: bold;
-    }
-
-    .list-x li::before {
-      content: "×";
-      color: var(--ember);
-    }
-
-    .list-arrow li::before {
-      content: "→";
-      color: var(--accent-light);
-    }
+    .list-check { text-align: left; list-style: none; padding: 0; margin: 0; }
+    .list-check li { margin: 4px 0; padding-left: 1.1em; position: relative; font-size: 0.65em; }
+    .list-check li::before { content: "\2713"; position: absolute; left: 0; color: var(--accent); font-weight: bold; }
+    .list-x li::before { content: "\00D7"; color: var(--orange); }
+    .list-arrow li::before { content: "\2192"; color: var(--accent-light); }
 
     .cta-box {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(20, 184, 166, 0.15));
-      border-radius: 0.8em;
-      padding: 1em;
-      margin-top: 0.8em;
+      background: linear-gradient(135deg, rgba(0,150,136,0.2), rgba(77,208,225,0.1));
+      border-radius: 10px; padding: 12px; margin-top: 8px;
     }
 
-    .small { font-size: 0.75em; }
-    .smaller { font-size: 0.65em; }
-    .tiny { font-size: 0.55em; }
+    .small { font-size: 0.7em; }
+    .smaller { font-size: 0.6em; }
+    .tiny { font-size: 0.5em; }
 
-    .oneliner {
-      font-size: 1.3em;
-      font-weight: 500;
-      line-height: 1.4;
-      margin: 1em 0;
-    }
+    .oneliner { font-size: 1.15em; font-weight: 500; line-height: 1.35; margin: 0.4em 0; }
 
     .highlight-box {
-      background: var(--surface);
-      border-left: 3px solid var(--accent);
-      padding: 0.8em 1em;
-      margin: 0.8em 0;
-      text-align: left;
+      background: var(--surface); border-left: 3px solid var(--accent);
+      padding: 6px 10px; margin: 6px 0; text-align: left; border-radius: 0 6px 6px 0;
     }
 
-    .number-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.8em;
-      margin-top: 0.8em;
-    }
+    .number-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 10px; }
+    .number-box { background: var(--surface); border-radius: 8px; padding: 10px 6px; text-align: center; }
+    .number-box .value { font-size: 1.5em; font-weight: 700; }
+    .number-box .label { font-size: 0.45em; color: var(--text-muted); margin-top: 3px; }
 
-    .number-box {
-      background: var(--surface);
-      border-radius: 0.6em;
-      padding: 0.8em;
-      text-align: center;
-    }
+    .hypothesis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .hypothesis-card { background: var(--surface); border-radius: 8px; padding: 8px 10px; text-align: left; }
+    .hypothesis-card.confirmed { border-left: 3px solid var(--accent); }
+    .hypothesis-card.rejected { border-left: 3px solid var(--orange); }
+    .hypothesis-card h4 { font-size: 0.6em; font-weight: 600; margin: 0 0 3px 0; }
+    .hypothesis-card p { font-size: 0.5em; color: var(--text-muted); margin: 0; }
 
-    .number-box .value {
-      font-size: 1.8em;
-      font-weight: 700;
-    }
-
-    .number-box .label {
-      font-size: 0.5em;
-      color: var(--text-muted);
-      margin-top: 0.3em;
-    }
-
-    .hypothesis-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.8em;
-      margin-top: 0.8em;
-    }
-
-    .hypothesis-card {
-      background: var(--surface);
-      border-radius: 0.6em;
-      padding: 0.8em;
-      text-align: left;
-    }
-
-    .hypothesis-card.confirmed {
-      border-left: 3px solid var(--teal);
-    }
-
-    .hypothesis-card.rejected {
-      border-left: 3px solid var(--ember);
-    }
-
-    .hypothesis-card h4 {
-      font-size: 0.7em;
-      font-weight: 600;
-      margin: 0 0 0.3em 0;
-    }
-
-    .hypothesis-card p {
-      font-size: 0.6em;
-      color: var(--text-muted);
-      margin: 0;
-    }
-
-    .team-row {
-      display: flex;
-      justify-content: center;
-      gap: 1.2em;
-      margin-top: 1em;
-      flex-wrap: wrap;
-    }
-
-    .team-card {
-      background: var(--surface);
-      border-radius: 0.8em;
-      padding: 0.6em;
-      text-align: center;
-      width: 140px;
-    }
-
-    .team-card img {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 0.5em;
-    }
-
-    .team-card img.dima {
-      object-position: center 20%;
-    }
-
-    .team-card img.nastya {
-      object-position: center 15%;
-    }
-
-    .team-card img.ivan {
-      object-position: center 25%;
-    }
-
-    .team-card .name {
-      font-weight: 600;
-      font-size: 0.75em;
-    }
-
-    .team-card .role {
-      font-size: 0.55em;
-      color: var(--text-muted);
-    }
-
-    .team-card.ai-card {
-      border: 1px solid var(--accent);
-    }
-
+    .team-row { display: flex; justify-content: center; gap: 14px; margin-top: 10px; }
+    .team-card { background: var(--surface); border-radius: 10px; padding: 8px; text-align: center; width: 120px; }
+    .team-card img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 4px; }
+    .team-card img.dima { object-position: center 20%; }
+    .team-card img.nastya { object-position: center 15%; }
+    .team-card img.ivan { object-position: center 25%; }
+    .team-card .name { font-weight: 600; font-size: 0.6em; }
+    .team-card .role { font-size: 0.45em; color: var(--text-muted); }
+    .team-card.ai-card { border: 1px solid var(--accent); }
     .team-card.ai-card .avatar {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--teal));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 0.5em;
-      font-size: 2em;
+      width: 70px; height: 70px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 4px; font-size: 1.8em;
     }
 
     .reveal .progress { color: var(--accent); }
-    .reveal .controls button { color: var(--accent); }
+    .reveal .controls button { color: var(--accent-light); }
+
+    .market-pill {
+      display: inline-block; background: rgba(0,150,136,0.15); color: var(--accent-light);
+      padding: 2px 8px; border-radius: 999px; font-size: 0.7em; font-weight: 600;
+    }
+
+    .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .platform-card { background: var(--surface); border-radius: 8px; padding: 8px 10px; text-align: left; }
+    .platform-card h4 { font-size: 0.65em; font-weight: 600; margin: 0 0 4px 0; }
+    .platform-card ul { list-style: none; padding: 0; margin: 0; }
+    .platform-card li { font-size: 0.5em; color: var(--text-muted); margin: 2px 0; padding-left: 0.8em; position: relative; }
+    .platform-card li::before { content: "\2022"; position: absolute; left: 0; color: var(--accent-light); }
+
+    .tam-bar {
+      background: var(--surface); border-radius: 6px; padding: 5px 10px; margin: 4px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tam-bar .bar-label { font-size: 0.6em; font-weight: 600; min-width: 2.5em; }
+    .tam-bar .bar-fill { height: 5px; border-radius: 999px; flex-shrink: 0; }
+    .tam-bar .bar-value { font-size: 0.55em; color: var(--text-muted); }
+
+    .qr-img { border-radius: 8px; background: white; padding: 4px; }
+    .qr-row { display: flex; gap: 16px; justify-content: center; align-items: center; margin-top: 6px; }
+    .qr-item { text-align: center; }
+    .qr-item .qr-label { font-size: 0.45em; color: var(--text-muted); margin-top: 3px; }
+
+    /* Title slide logo block */
+    .title-logos {
+      display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 10px;
+    }
+    .title-logos .eventai-icon { height: 48px; }
+    .title-logos .hub-logo { height: 24px; filter: invert(1); opacity: 0.5; }
   </style>
 </head>
 <body>
@@ -332,219 +160,254 @@
     <div class="slides">
 
       <!-- Slide 1: Title + One-liner -->
-      <section data-background-gradient="linear-gradient(135deg, #0f0f14 0%, #1a1a2e 100%)">
-        <div class="tag">AI Talent Camp 2026 · Команда ЯСНОПОНЯТНО</div>
-        <h1>Event<span class="accent">AI</span></h1>
+      <section data-background-color="#212121">
+        <div class="tag">AI Product Camp 2026 · Команда ЯСНОПОНЯТНО</div>
+        <h1>
+          <img src="bot/compass-01-minimal.svg" alt="" style="height:1.1em; vertical-align:middle; margin-right:0.1em;">
+          Event<span class="accent">AI</span>
+        </h1>
         <p class="oneliner">
-          Telegram-бот для <span class="accent">организаторов конференций</span>,<br>
-          который даёт каждому гостю персональную программу<br>
-          <span class="teal">за минуту</span> AI-диалога
+          AI-платформа для <span class="accent">организаторов конференций</span>:<br>
+          бот + админка, которые автоматизируют расписание<br>
+          и дают каждому гостю персональную программу <span class="accent-light">за минуту</span>
         </p>
-        <p class="muted tiny" style="margin-top: 1.5em;">
-          team12.camp.aitalenthub.ru · @demoday_ai_talent_hub_test_bot
-        </p>
+        <div class="qr-row" style="margin-top: 12px;">
+          <div class="qr-item">
+            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:110px; height:110px;">
+            <div class="qr-label">Telegram-бот</div>
+          </div>
+          <div class="qr-item">
+            <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:110px; height:110px;">
+            <div class="qr-label">Лендинг</div>
+          </div>
+        </div>
+        <div class="logos-bar">
+          <img src="ai-talent-hub-logo.svg" alt="AI Talent Hub" class="itmo-logo" style="height:18px;">
+          <img src="claude-logo.png" alt="Claude" style="height:22px;opacity:0.4;">
+        </div>
       </section>
 
       <!-- Slide 2: Проблема и ICP -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">Проблема и ICP</div>
         <h2>Кто и когда страдает</h2>
+        <p class="smaller muted" style="margin-bottom:6px;">
+          <span class="market-pill">500+ IT-конференций/год в России</span> · 100+ хакатонов · десятки Demo Day
+        </p>
         <div class="two-col">
           <div>
-            <p class="small" style="text-align: left; margin-bottom: 0.5em;"><strong>ICP: Организаторы</strong> Demo Day, конференций, хакатонов</p>
-            <ul class="list-check list-x small">
-              <li>Расписание вручную <span class="ember">за ночь до DD</span></li>
+            <p class="smaller" style="text-align:left; margin-bottom:4px;"><strong>ICP: Организатор</strong> с 30+ проектами</p>
+            <ul class="list-check list-x">
+              <li>Расписание вручную — <span class="ember">2 рабочих дня</span></li>
               <li>80 студентов не попали в расписание</li>
               <li>Нужно 60 экспертов, активных — 30</li>
               <li>Нет аналитики и follow-up</li>
             </ul>
           </div>
           <div>
-            <p class="small" style="text-align: left; margin-bottom: 0.5em;"><strong>Боль гостей</strong> (партнёры, HR, инвесторы)</p>
-            <ul class="list-check list-x small">
+            <p class="smaller" style="text-align:left; margin-bottom:4px;"><strong>Боль гостей</strong> (партнёры, HR, инвесторы)</p>
+            <ul class="list-check list-x">
               <li>330 проектов в 10 залах</li>
               <li>Видят <span class="ember">&lt;20%</span> контента</li>
-              <li>Пропускают <span class="ember">68%</span> релевантного</li>
+              <li>Эксперт пропускает <span class="ember">80%</span> по теме</li>
               <li>Нет персонализации</li>
             </ul>
           </div>
         </div>
-        <div class="highlight-box smaller" style="margin-top: 1em;">
-          <strong>Цена боли:</strong> организатор тратит 8+ часов на расписание, гость уходит разочарованным, бизнес-партнёр не находит нужный проект → потерянные контакты и сделки
+        <div class="highlight-box tiny" style="margin-top:6px;">
+          <strong>Примеры:</strong> AI Talent Camp (33 проекта, 15 экспертов) · DD ИТМО (330 проектов, 10 залов)
         </div>
       </section>
 
-      <!-- Slide 3: Решение (почему не ChatGPT) -->
-      <section>
+      <!-- Slide 3: Решение -->
+      <section data-background-color="#212121">
         <div class="tag">Решение</div>
-        <h2>Почему нельзя просто спросить ChatGPT?</h2>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <h4><span class="ember">×</span> Нет данных</h4>
-            <p>ChatGPT не знает ваши 330 проектов, залы, расписание</p>
+        <h2>Платформа, а не просто чат-бот</h2>
+        <div class="platform-grid">
+          <div class="platform-card" style="border-left:3px solid var(--accent);">
+            <h4><span class="accent">Telegram-бот</span> · 5 ролей</h4>
+            <ul>
+              <li>Персональная программа за минуту</li>
+              <li>Q&A-помощник под профиль гостя</li>
+              <li>Напоминания и подтверждения</li>
+              <li>Follow-up пакет после DD</li>
+            </ul>
           </div>
-          <div class="feature-card">
-            <h4><span class="ember">×</span> Нет действий</h4>
-            <p>Не может отправить напоминание, записать на слот, запросить контакт</p>
-          </div>
-          <div class="feature-card">
-            <h4><span class="ember">×</span> Нет стабильности</h4>
-            <p>Каждый запрос — новый контекст, нет памяти профиля гостя</p>
-          </div>
-          <div class="feature-card">
-            <h4><span class="ember">×</span> Нет контроля</h4>
-            <p>Организатор не видит аналитику, не управляет контентом</p>
+          <div class="platform-card" style="border-left:3px solid var(--accent-light);">
+            <h4><span class="accent-light">Веб-админка</span> · организаторы</h4>
+            <ul>
+              <li>Импорт проектов и экспертов</li>
+              <li>AI-кластеризация по залам</li>
+              <li>Автоматическое расписание</li>
+              <li>Рассылки и мониторинг</li>
+            </ul>
           </div>
         </div>
-        <p class="muted smaller" style="margin-top: 1em;">
-          <span class="teal">EventAI</span> = специализированный агент с данными события + действиями + памятью + админкой
-        </p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4><span class="ember">ChatGPT:</span> нет данных</h4>
+            <p>Не знает ваши проекты, залы, расписание</p>
+          </div>
+          <div class="feature-card">
+            <h4><span class="ember">ChatGPT:</span> нет действий</h4>
+            <p>Не отправит напоминание, не запишет на слот</p>
+          </div>
+        </div>
       </section>
 
       <!-- Slide 4: MVP-демо -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">MVP Demo</div>
         <h2>Сценарий: гость → программа</h2>
-        <div class="two-col">
+        <div class="three-col">
           <div class="chat-mockup">
-            <div class="chat-msg bot">Расскажите, что вас интересует на Demo Day?</div>
+            <div class="chat-msg bot">Что вас интересует на Demo Day?</div>
             <div class="chat-msg user">HR-директор, ищу AI в найме</div>
-            <div class="chat-msg bot" style="white-space: pre-line;">Ваш топ-3:
-
-1. AI Recruiter Assistant <span class="teal">(94%)</span>
-   📍 Зал 2 · HR, Agents
-
-2. Resume Screening <span class="teal">(87%)</span>
-   📍 Зал 5 · NLP, HR
-
-3. Interview Copilot <span class="teal">(82%)</span>
-   📍 Зал 2 · LLM</div>
+            <div class="chat-msg bot" style="white-space:pre-line;">Ваш топ-3:
+1. AI Interview Copilot <span class="accent-light">(94%)</span>
+   Зал 2 · HR, Agents
+2. PD-Audit <span class="accent-light">(87%)</span>
+   Зал 5 · NLP, HR
+3. ExamLab <span class="accent-light">(82%)</span>
+   Зал 3 · EdTech</div>
             <div class="chat-msg user">Вопросы к #1?</div>
-            <div class="chat-msg bot" style="white-space: pre-line;">1. Какой % ложноположительных?
-2. Как учитываете soft skills?
-3. Какие ATS поддерживаете?</div>
+            <div class="chat-msg bot" style="white-space:pre-line;">1. Адаптация под позиции?
+2. % корректных оценок?
+3. Интеграция с HR-платформами?</div>
           </div>
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.8em;"><strong>Что попробовать:</strong></p>
-            <ul class="list-check list-arrow smaller">
-              <li>Открыть бота → /start</li>
-              <li>Выбрать роль "Гость"</li>
-              <li>Описать интересы</li>
-              <li>Получить топ проектов</li>
-              <li>Попросить вопросы / сравнить</li>
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;"><strong>Реальные проекты кэмпа</strong></p>
+            <ul class="list-check list-arrow">
+              <li>17 проектов в системе</li>
+              <li>Кластеризация работает</li>
+              <li>Рекомендации и Q&A — live</li>
             </ul>
-            <div class="cta-box" style="margin-top: 1em; text-align: center;">
-              <p class="smaller" style="margin: 0;">
-                <strong>@demoday_ai_talent_hub_test_bot</strong><br>
-                <span class="muted tiny">team12.camp.aitalenthub.ru</span>
-              </p>
-            </div>
+            <p class="smaller muted" style="margin-top:8px;margin-bottom:3px;"><strong>+ Веб-админка:</strong></p>
+            <ul class="list-check list-arrow">
+              <li>Импорт, кластеризация</li>
+              <li>Рассылки, мониторинг</li>
+            </ul>
+          </div>
+          <div style="text-align:center;">
+            <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:120px;height:120px;">
+            <div class="tiny muted" style="margin-top:3px;">Попробуйте!</div>
+            <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:80px;height:80px;margin-top:8px;">
+            <div class="tiny muted" style="margin-top:2px;">Лендинг</div>
           </div>
         </div>
       </section>
 
       <!-- Slide 5: Технология -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">Технология</div>
         <h2>Где AI даёт ценность</h2>
-        <div class="two-col" style="font-size: 0.85em;">
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.5em;">Пайплайн рекомендаций</p>
-            <ul class="list-check list-arrow smaller">
+        <div class="two-col">
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;">Пайплайн рекомендаций</p>
+            <ul class="list-check list-arrow">
               <li><strong>TF-IDF</strong> — быстрый отбор по тегам</li>
-              <li><strong>LLM re-ranking</strong> — Claude/GPT переранжирует топ-20 с учётом контекста профиля</li>
-              <li><strong>Tool-calling</strong> — агент вызывает инструменты (поиск, Q&A, сравнение)</li>
+              <li><strong>LLM re-ranking</strong> — переранжировка топ-20</li>
+              <li><strong>Tool-calling</strong> — агент вызывает инструменты</li>
+              <li><strong>AI-кластеризация</strong> — автораспределение по залам</li>
             </ul>
           </div>
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.5em;">Стек</p>
-            <ul class="list-check smaller">
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;">Стек</p>
+            <ul class="list-check">
               <li>python-telegram-bot 21.x</li>
               <li>FastAPI + PostgreSQL</li>
+              <li>Celery + RabbitMQ (async)</li>
               <li>OpenRouter (Claude 3.5, GPT-4o)</li>
               <li>React 19 + TanStack Query</li>
             </ul>
           </div>
         </div>
-        <div class="highlight-box smaller" style="margin-top: 0.8em;">
-          <strong>Ключевое:</strong> LLM понимает <em>почему</em> гостю интересен проект (контекст, задачи), а не просто совпадение тегов
+        <div class="highlight-box tiny" style="margin-top:8px;">
+          <strong>Ключевое:</strong> LLM понимает <em>почему</em> гостю интересен проект, а не просто совпадение тегов.
+          <strong class="accent">Автокластеризация</strong> — ключевая AI-ценность для организаторов.
         </div>
       </section>
 
       <!-- Slide 6: Evaluation -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">Evaluation</div>
         <h2>Как проверяли качество</h2>
-        <p class="small muted">10 профилей × 330 проектов × экспертная разметка (0-3 релевантность)</p>
+        <p class="tiny muted">10 профилей × 330 проектов × экспертная разметка</p>
         <div class="stat-grid">
           <div class="stat-box">
-            <div class="stat-value accent">0.82</div>
-            <div class="stat-label">NDCG@15<br>релевантные в топе</div>
+            <div class="stat-value accent">~11</div>
+            <div class="stat-label">из 15 рекомендаций<br>попали в цель</div>
+            <div class="tiny muted" style="margin-top:2px;">Precision@15 = 0.71</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value teal">0.71</div>
-            <div class="stat-label">Precision@15<br>7 из 10 в цель</div>
+            <div class="stat-value accent-light">8/10</div>
+            <div class="stat-label">подходящих проектов<br>находим</div>
+            <div class="tiny muted" style="margin-top:2px;">Recall@15 = 0.78</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value amber">0.78</div>
-            <div class="stat-label">Recall@15<br>находим 8 из 10</div>
+            <div class="stat-value amber">Топ-3</div>
+            <div class="stat-label">самые релевантные<br>в первой тройке</div>
+            <div class="tiny muted" style="margin-top:2px;">NDCG@15 = 0.82</div>
           </div>
         </div>
-        <div class="two-col smaller" style="margin-top: 1em;">
-          <div class="highlight-box" style="border-color: var(--teal);">
-            <strong class="teal">Сильные стороны:</strong> точный топ-5, хорошо работает на чётких интересах (NLP, HR)
+        <div class="two-col" style="margin-top:8px;">
+          <div class="highlight-box tiny" style="border-color:var(--accent);">
+            <strong class="accent">Сильные стороны:</strong> точный топ-5, чёткие интересы (NLP, HR)
           </div>
-          <div class="highlight-box" style="border-color: var(--ember);">
-            <strong class="ember">Слабые места:</strong> размытые запросы ("что-нибудь интересное"), редкие теги
+          <div class="highlight-box tiny" style="border-color:var(--orange);">
+            <strong class="ember">Слабые места:</strong> размытые запросы ("что-нибудь интересное")
           </div>
         </div>
       </section>
 
       <!-- Slide 7: Traction -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">Traction</div>
         <h2>Результаты и фидбэк</h2>
         <div class="number-grid">
           <div class="number-box">
-            <div class="value accent">330</div>
-            <div class="label">проектов<br>загружено</div>
-          </div>
-          <div class="number-box">
-            <div class="value teal">60+</div>
-            <div class="label">API<br>endpoints</div>
-          </div>
-          <div class="number-box">
-            <div class="value amber">5</div>
-            <div class="label">ролей<br>в системе</div>
-          </div>
-          <div class="number-box">
-            <div class="value">4</div>
+            <div class="value accent">4</div>
             <div class="label">CustDev<br>интервью</div>
           </div>
+          <div class="number-box">
+            <div class="value accent-light">17</div>
+            <div class="label">проектов кэмпа<br>в системе</div>
+          </div>
+          <div class="number-box">
+            <div class="value amber">E2E</div>
+            <div class="label">бот + админка +<br>кластеризация</div>
+          </div>
+          <div class="number-box">
+            <div class="value" style="color:var(--orange);">6 фев</div>
+            <div class="label">пилот на DD<br>AI Talent Camp</div>
+          </div>
         </div>
-        <div class="two-col smaller" style="margin-top: 1em;">
-          <div class="highlight-box">
+        <div class="highlight-box tiny" style="margin-top:8px;">
+          <strong>End-to-end:</strong> бот (5 ролей) + веб-админка + AI-кластеризация + расписание + рассылки
+        </div>
+        <div class="two-col" style="margin-top:6px;">
+          <div class="highlight-box tiny">
             <strong>Фидбэк организатора:</strong><br>
             "Это пипец! Если вы упростите этот ужас [с расписанием], я буду благодарна"
           </div>
-          <div class="highlight-box">
-            <strong>Вывод:</strong><br>
-            Главная боль — не гости, а <span class="accent">организаторы</span>. Пивот на автоматизацию расписания
+          <div class="highlight-box tiny">
+            <strong>Пилот:</strong><br>
+            Demo Day AI Talent Camp — 33 проекта, 15 экспертов, <span class="accent">6 февраля</span>
           </div>
         </div>
       </section>
 
       <!-- Slide 8: Гипотезы и пивоты -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">Гипотезы и пивоты</div>
         <h2>Что подтвердилось, что нет</h2>
         <div class="hypothesis-grid">
           <div class="hypothesis-card confirmed">
-            <h4><span class="teal">✓</span> Гости хотят персонализацию</h4>
+            <h4><span class="accent">✓</span> Гости хотят персонализацию</h4>
             <p>Tinder-механика Demo-Hero медленная, топ с рейтингом — быстрее</p>
           </div>
           <div class="hypothesis-card confirmed">
-            <h4><span class="teal">✓</span> Организаторам нужна автоматизация</h4>
+            <h4><span class="accent">✓</span> Организаторам нужна автоматизация</h4>
             <p>Расписание вручную — главная боль, важнее чем гостевой бот</p>
           </div>
           <div class="hypothesis-card rejected">
@@ -552,45 +415,55 @@
             <p>CustDev: "Эксперт сам знает, что спросить". Q&A — для гостей и бизнеса</p>
           </div>
           <div class="hypothesis-card confirmed">
-            <h4><span class="teal">✓</span> 5 ролей = 5 разных UX</h4>
+            <h4><span class="accent">✓</span> 5 ролей = 5 разных UX</h4>
             <p>Организатор, студент, эксперт, гость, бизнес — разные потребности</p>
           </div>
         </div>
-        <p class="muted smaller" style="margin-top: 0.8em;">
+        <p class="muted tiny" style="margin-top:6px;">
           <strong>Главный пивот:</strong> фокус сместился с гостей на организаторов (автокластеризация, расписание)
         </p>
       </section>
 
       <!-- Slide 9: Экономика -->
-      <section>
+      <section data-background-color="#212121">
         <div class="tag">Экономика</div>
         <h2>Кто платит и за что</h2>
-        <div class="two-col" style="font-size: 0.85em;">
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.5em;">Модель</p>
-            <ul class="list-check smaller">
+        <div class="two-col">
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;">Модель: B2B</p>
+            <ul class="list-check">
               <li><strong>B2B</strong> — организаторы платят за событие</li>
-              <li>От <span class="accent">100 000 ₽</span> за мероприятие</li>
-              <li>Годовая подписка для регулярных</li>
-              <li>Enterprise — индивидуально</li>
+              <li>От <span class="accent">100 000 &#8381;</span> за мероприятие</li>
+              <li>Cost на событие: ~3-5K &#8381;</li>
+              <li>Маржа: <span class="accent">>90%</span></li>
             </ul>
           </div>
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.5em;">Unit-экономика</p>
-            <ul class="list-check smaller">
-              <li>Cost на гостя: ~5-10 ₽ (LLM API)</li>
-              <li>Cost на событие: ~3-5K ₽</li>
-              <li>Маржа: <span class="teal">>90%</span></li>
-            </ul>
-            <p class="tiny muted" style="margin-top: 0.5em;">
-              Снижение: кэширование, локальные модели, batch-запросы
-            </p>
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;">Размер рынка</p>
+            <div class="tam-bar">
+              <span class="bar-label accent">TAM</span>
+              <div class="bar-fill" style="width:100%;background:var(--accent);"></div>
+              <span class="bar-value">500 × 100K = <strong>50M&#8381;/год</strong></span>
+            </div>
+            <div class="tam-bar">
+              <span class="bar-label accent-light">SAM</span>
+              <div class="bar-fill" style="width:40%;background:var(--accent-light);"></div>
+              <span class="bar-value">100 событий = <strong>10M&#8381;</strong></span>
+            </div>
+            <div class="tam-bar">
+              <span class="bar-label amber">SOM</span>
+              <div class="bar-fill" style="width:10%;background:var(--amber);"></div>
+              <span class="bar-value">10% SAM = <strong>5M&#8381; на старте</strong></span>
+            </div>
           </div>
+        </div>
+        <div class="highlight-box tiny" style="margin-top:6px;">
+          <strong>500+ IT-конференций/год.</strong> 10% — наши клиенты = 50 событий × 100K&#8381; = <span class="accent">5M&#8381;/год</span>
         </div>
       </section>
 
-      <!-- Slide 10: Команда и agentic-процесс -->
-      <section>
+      <!-- Slide 10: Команда -->
+      <section data-background-color="#212121">
         <div class="tag">Команда</div>
         <h2>ЯСНОПОНЯТНО + Claude</h2>
         <div class="team-row">
@@ -610,51 +483,72 @@
             <div class="role">Backend, логика</div>
           </div>
           <div class="team-card ai-card">
-            <div class="avatar">🤖</div>
+            <div class="avatar">
+              <img src="claude-logo.png" alt="Claude" style="width:36px;height:36px;">
+            </div>
             <div class="name accent">Claude</div>
             <div class="role">AI-ассистент</div>
           </div>
         </div>
-        <div class="highlight-box smaller" style="margin-top: 1em;">
+        <div class="highlight-box tiny" style="margin-top:10px;">
           <strong>Agentic-процесс:</strong> Claude Code в чате команды → код, тесты, документация, деплой.
-          <span class="accent">100%</span> кода написано с AI. Ускорение: ревью за секунды, рефакторинг на лету,
-          TDD с автогенерацией тестов.
+          <span class="accent">100%</span> кода написано с AI.
         </div>
-        <div class="highlight-box smaller" style="margin-top: 0.5em; border-color: var(--teal);">
-          <strong class="teal">Best practice:</strong> Несколько Claude-сессий в разных папках (копиях репо) —
-          параллельная работа над фичами без конфликтов при пуше в одну ветку.
+        <div class="highlight-box tiny" style="margin-top:4px; border-color:var(--accent-light);">
+          <strong class="accent-light">Ускорение:</strong>
+          Фича от идеи до деплоя за <span class="accent">2 часа</span> ·
+          <span class="accent">153 теста</span> автоматически ·
+          Параллельные Claude-сессии
         </div>
       </section>
 
-      <!-- Slide 11: Что дальше -->
-      <section data-background-gradient="linear-gradient(135deg, #1a1a2e 0%, #0f0f14 100%)">
+      <!-- Slide 11: Что дальше + QR -->
+      <section data-background-color="#212121">
         <div class="tag">Roadmap</div>
         <h2>Что дальше и чем помочь</h2>
-        <div class="two-col" style="font-size: 0.85em;">
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.5em;">Ближайший план</p>
-            <ul class="list-check list-arrow smaller">
-              <li>Пилот на Demo Day AI Talent Camp</li>
+        <div class="two-col">
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;">Ближайший план</p>
+            <ul class="list-check list-arrow">
+              <li>Пилот на DD AI Talent Camp (6 фев)</li>
               <li>Фидбэк → итерация</li>
               <li>Автокластеризация v2</li>
-              <li>Мобильное приложение</li>
+              <li>Готовы к пилоту на DD ИТМО</li>
             </ul>
           </div>
-          <div style="text-align: left;">
-            <p class="small muted" style="margin-bottom: 0.5em;">Запрос к экспертам</p>
-            <ul class="list-check smaller">
-              <li>Контакты организаторов конференций</li>
+          <div style="text-align:left;">
+            <p class="smaller muted" style="margin-bottom:4px;">Запрос к экспертам</p>
+            <ul class="list-check">
+              <li>Контакты организаторов</li>
               <li>Фидбэк по UX бота</li>
               <li>Советы по B2B-продажам</li>
               <li>Менторство по продукту</li>
             </ul>
           </div>
         </div>
-        <div class="cta-box" style="margin-top: 1em; text-align: center;">
-          <p style="margin: 0; font-size: 0.9em;">
-            <strong class="accent">Попробуйте:</strong> @demoday_ai_talent_hub_test_bot<br>
-            <span class="muted smaller">Web: team12.camp.aitalenthub.ru · Контакт: @grbn_dima</span>
-          </p>
+        <div class="cta-box" style="text-align:center;">
+          <div class="qr-row" style="margin:0;">
+            <div class="qr-item">
+              <img src="bot-qr.png" alt="QR бота" class="qr-img" style="width:100px;height:100px;">
+              <div class="qr-label">Telegram-бот</div>
+            </div>
+            <div style="text-align:center;">
+              <p style="margin:0;font-size:0.75em;">
+                <strong class="accent">Попробуйте!</strong><br>
+                <span class="muted tiny">@demoday_ai_talent_hub_test_bot</span><br>
+                <span class="muted tiny">team12.camp.aitalenthub.ru · @grbn_dima</span>
+              </p>
+            </div>
+            <div class="qr-item">
+              <img src="landing-qr.png" alt="QR лендинга" class="qr-img" style="width:100px;height:100px;">
+              <div class="qr-label">Лендинг</div>
+            </div>
+          </div>
+        </div>
+        <div class="logos-bar" style="position:static;margin-top:8px;">
+          <img src="bot/compass-01-minimal.svg" alt="EventAI" style="height:20px;opacity:0.5;">
+          <img src="claude-logo.png" alt="Claude" style="height:22px;opacity:0.5;">
+          <img src="ai-talent-hub-logo.svg" alt="AI Talent Hub" class="itmo-logo" style="height:16px;">
         </div>
       </section>
 
@@ -670,6 +564,11 @@
       center: true,
       transition: 'slide',
       backgroundTransition: 'fade',
+      width: 960,
+      height: 700,
+      margin: 0.04,
+      minScale: 0.5,
+      maxScale: 2.0,
     });
   </script>
 </body>

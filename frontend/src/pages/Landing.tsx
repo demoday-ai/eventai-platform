@@ -1048,8 +1048,9 @@ export function Landing() {
               className="font-body mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed sm:text-base"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              Гости не знают, куда идти. Бизнес-партнёры не находят нужные проекты.
-              Эксперты перегружены. Организаторы составляют расписание вручную за ночь до события.
+              Организатор тратит <span style={{ color: "var(--ld-ember)" }}>2 рабочих дня</span> на расписание вручную.
+              80 студентов не попали в расписание за ночь до DD.
+              Гости видят &lt;20% проектов. Эксперты пропускают 80% по своей теме.
             </p>
           </Reveal>
         </div>
@@ -1074,8 +1075,14 @@ export function Landing() {
                 className="font-display mt-5 text-xl font-medium tracking-tight sm:text-2xl md:text-3xl"
                 style={{ color: "var(--ld-text)" }}
               >
-                Telegram-бот делает мероприятие персональным
+                Платформа, а не просто чат-бот
               </h2>
+              <p
+                className="font-body mx-auto mt-3 max-w-lg text-sm sm:text-base"
+                style={{ color: "var(--ld-text-secondary)" }}
+              >
+                Telegram-бот для 5 ролей + веб-админка для организаторов
+              </p>
             </Reveal>
           </div>
 
@@ -1163,19 +1170,19 @@ export function Landing() {
                   className="font-display text-3xl font-medium"
                   style={{ color: "var(--ld-accent)" }}
                 >
-                  0.82
+                  Топ-3
                 </div>
                 <div
                   className="font-display mt-1 text-sm font-medium"
                   style={{ color: "var(--ld-text)" }}
                 >
-                  NDCG@15
+                  самые релевантные — в первой тройке
                 </div>
                 <div
                   className="font-body mt-2 text-xs"
                   style={{ color: "var(--ld-text-muted)" }}
                 >
-                  Релевантные проекты в топе списка
+                  NDCG@15 = 0.82
                 </div>
               </div>
             </Reveal>
@@ -1191,19 +1198,19 @@ export function Landing() {
                   className="font-display text-3xl font-medium"
                   style={{ color: "var(--ld-teal)" }}
                 >
-                  0.71
+                  ~11/15
                 </div>
                 <div
                   className="font-display mt-1 text-sm font-medium"
                   style={{ color: "var(--ld-text)" }}
                 >
-                  Precision@15
+                  рекомендаций попали в цель
                 </div>
                 <div
                   className="font-body mt-2 text-xs"
                   style={{ color: "var(--ld-text-muted)" }}
                 >
-                  7 из 10 в подборке — действительно интересны
+                  Precision@15 = 0.71
                 </div>
               </div>
             </Reveal>
@@ -1219,19 +1226,19 @@ export function Landing() {
                   className="font-display text-3xl font-medium"
                   style={{ color: "var(--ld-amber)" }}
                 >
-                  0.78
+                  8/10
                 </div>
                 <div
                   className="font-display mt-1 text-sm font-medium"
                   style={{ color: "var(--ld-text)" }}
                 >
-                  Recall@15
+                  подходящих проектов находим
                 </div>
                 <div
                   className="font-body mt-2 text-xs"
                   style={{ color: "var(--ld-text-muted)" }}
                 >
-                  Находим 8 из 10 подходящих проектов
+                  Recall@15 = 0.78
                 </div>
               </div>
             </Reveal>
@@ -1361,13 +1368,13 @@ export function Landing() {
                   <ChatBubble side="user" text="Я HR-директор, ищу проекты по автоматизации найма и AI в HR" delay={500} />
                   <ChatBubble
                     side="bot"
-                    text={"Нашёл 8 проектов. Ваш топ-3:\n\n1. AI Recruiter Assistant (94%)\n   📍 Зал 2 · HR, Agents\n\n2. Resume Screening Engine (87%)\n   📍 Зал 5 · NLP, HR\n\n3. Interview Copilot (82%)\n   📍 Зал 2 · LLM, Agents"}
+                    text={"Нашёл 8 проектов. Ваш топ-3:\n\n1. AI Interview Copilot (94%)\n   📍 Зал 2 · HR, Agents\n\n2. PD-Audit (87%)\n   📍 Зал 5 · NLP, HR\n\n3. ExamLab (82%)\n   📍 Зал 3 · EdTech"}
                     delay={700}
                   />
                   <ChatBubble side="user" text="Подготовь вопросы к проекту #1" delay={900} />
                   <ChatBubble
                     side="bot"
-                    text={"Вопросы к AI Recruiter Assistant:\n\n1. Какой % ложноположительных отсевов?\n2. Как система учитывает soft skills?\n3. Какие ATS поддерживаете?"}
+                    text={"Вопросы к AI Interview Copilot:\n\n1. Адаптация под разные позиции?\n2. Какой % корректных оценок?\n3. Интеграция с HR-платформами?"}
                     delay={1100}
                   />
                 </div>
