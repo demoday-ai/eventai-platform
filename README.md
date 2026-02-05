@@ -21,7 +21,7 @@
   <a href="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml"><img src="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml/badge.svg" alt="CD"></a>
   <img src="https://img.shields.io/badge/python-3.12+-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=white" alt="React">
-  <img src="https://img.shields.io/badge/license-proprietary-red" alt="License">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-BSL--1.1-blue" alt="License"></a>
 </p>
 
 <p align="center">
@@ -140,6 +140,6 @@ backend/
 
 ## Лицензия
 
-Проприетарная. Использование без письменного разрешения запрещено.
+[BSL 1.1](./LICENSE) — бесплатно для образовательных мероприятий, коммерческое использование требует лицензии. С 2029 года — MIT.
 
 Контакт: [@grbn_dima](https://t.me/grbn_dima)
