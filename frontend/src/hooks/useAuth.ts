@@ -11,6 +11,7 @@ interface AuthState {
 
 interface UseAuthReturn extends AuthState {
   login: (telegramId: string) => Promise<{ success: boolean; error?: string }>
+  loginWithPassword: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
 }
 
@@ -23,6 +24,15 @@ function getStoredAuth(): AuthState {
       return {
         telegramId: parsed.telegramId,
         isAuthenticated: true,
+      }
+    }
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (parsed.devBypass) {
+        return {
+          telegramId: parsed.telegramId,
+          isAuthenticated: true,
+        }
       }
     }
   } catch {
@@ -68,6 +78,29 @@ export function useAuth(): UseAuthReturn {
     }
   }, [])
 
+  const loginWithPassword = useCallback(async (username: string, password: string) => {
+    const trimmedUser = username.trim()
+    const trimmedPass = password.trim()
+
+    if (!trimmedUser || !trimmedPass) {
+      return { success: false, error: "Введите логин и пароль" }
+    }
+
+    if (trimmedUser !== "admin" || trimmedPass !== "admin") {
+      return { success: false, error: "Неверный логин или пароль" }
+    }
+
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ telegramId: "admin", devBypass: true }))
+    localStorage.removeItem(TOKEN_KEY)
+
+    setState({
+      telegramId: "admin",
+      isAuthenticated: true,
+    })
+
+    return { success: true }
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem(AUTH_KEY)
     localStorage.removeItem(TOKEN_KEY)
@@ -77,6 +110,7 @@ export function useAuth(): UseAuthReturn {
   return {
     ...state,
     login,
+    loginWithPassword,
     logout,
   }
 }

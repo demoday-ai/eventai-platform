@@ -8,9 +8,11 @@ import { APP_NAME } from "../lib/constants"
 
 export function Login() {
   const [telegramId, setTelegramId] = useState("")
+  const [adminUser, setAdminUser] = useState("")
+  const [adminPassword, setAdminPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, loginWithPassword } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: FormEvent) => {
@@ -18,7 +20,10 @@ export function Login() {
     setError("")
     setIsLoading(true)
 
-    const result = await login(telegramId)
+    const useAdminLogin = adminUser.trim() || adminPassword.trim()
+    const result = useAdminLogin
+      ? await loginWithPassword(adminUser, adminPassword)
+      : await login(telegramId)
 
     if (result.success) {
       navigate("/dashboard")
@@ -59,6 +64,36 @@ export function Login() {
               </p>
             </div>
 
+            <div className="rounded-md border border-muted p-3 space-y-3">
+              <p className="text-sm font-medium">Админ-вход (dev)</p>
+              <div className="grid gap-2">
+                <label htmlFor="admin-user" className="text-xs text-muted-foreground">
+                  Логин
+                </label>
+                <Input
+                  id="admin-user"
+                  type="text"
+                  placeholder="admin"
+                  value={adminUser}
+                  onChange={(e) => setAdminUser(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="admin-password" className="text-xs text-muted-foreground">
+                  Пароль
+                </label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  placeholder="admin"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
                 {error}
@@ -67,7 +102,7 @@ export function Login() {
 
             {/* Dev hint */}
             <div className="p-3 text-xs text-muted-foreground bg-muted rounded-md">
-              <strong>Dev mode:</strong> Введите любой числовой Telegram ID
+              <strong>Dev mode:</strong> можно войти по Telegram ID или через admin/admin.
             </div>
           </CardContent>
 
