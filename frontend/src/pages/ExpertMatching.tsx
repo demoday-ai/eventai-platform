@@ -172,6 +172,10 @@ export function ExpertMatching() {
               </div>
             )}
 
+            {matchingResult && (
+              <Button variant="outline" onClick={() => setCurrentStep(1)}>Далее</Button>
+            )}
+
             {matchingError && (
               <p className="text-sm text-red-500">
                 Ошибка: {matchingError}

@@ -244,6 +244,10 @@ export function Clustering() {
               </p>
             )}
 
+            {clusteringResult && !isJobRunning && (
+              <Button variant="outline" onClick={() => setCurrentStep(1)}>Далее</Button>
+            )}
+
             {runMutation.isError && !jobError && (
               <p className="text-sm text-red-500">
                 Ошибка: {runMutation.error instanceof Error ? runMutation.error.message : "Неизвестная ошибка"}

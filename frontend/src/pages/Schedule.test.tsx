@@ -273,6 +273,36 @@ describe("Schedule", () => {
     })
   })
 
+  it("shows 'Далее' button on step 0 when schedule exists", async () => {
+    const user = userEvent.setup()
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    // Auto-advance takes us to step 1, go back to step 0
+    await waitFor(() => {
+      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+    })
+
+    // Click "Перегенерировать" to go back to step 0
+    await user.click(screen.getByText("Перегенерировать"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Генерация расписания")).toBeInTheDocument()
+    })
+
+    // "Далее" button should be visible since schedule exists
+    const nextBtn = screen.getByText("Далее")
+    expect(nextBtn).toBeInTheDocument()
+
+    // Click "Далее" to go to step 1
+    await user.click(nextBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+    })
+  })
+
   it("passes room_overrides and breaks to generateSchedule", async () => {
     const user = userEvent.setup()
     mockGenerateSchedule.mockResolvedValue({

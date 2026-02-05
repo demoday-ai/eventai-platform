@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
@@ -63,11 +63,13 @@ export function Schedule() {
     retry: false,
   })
 
+  const hasAutoAdvanced = useRef(false)
   useEffect(() => {
-    if (existingSchedule && existingSchedule.days.length > 0 && currentStep === 0) {
+    if (existingSchedule && existingSchedule.days.length > 0 && !hasAutoAdvanced.current) {
+      hasAutoAdvanced.current = true
       setCurrentStep(1)
     }
-  }, [existingSchedule, currentStep])
+  }, [existingSchedule])
 
   // Change log query
   const { data: changeLog } = useQuery({
@@ -287,12 +289,17 @@ export function Schedule() {
               </Button>
             </div>
 
-            <Button
-              onClick={() => generateMutation.mutate()}
-              disabled={generateMutation.isPending}
-            >
-              {generateMutation.isPending ? "Генерация..." : "Сгенерировать"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => generateMutation.mutate()}
+                disabled={generateMutation.isPending}
+              >
+                {generateMutation.isPending ? "Генерация..." : "Сгенерировать"}
+              </Button>
+              {existingSchedule && existingSchedule.days.length > 0 && (
+                <Button variant="outline" onClick={() => setCurrentStep(1)}>Далее</Button>
+              )}
+            </div>
             {generateMutation.isError && (
               <p className="text-sm text-red-500">
                 Ошибка:{" "}
