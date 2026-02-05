@@ -156,7 +156,7 @@ services:
       - "traefik.http.services.demoday-frontend.loadbalancer.healthcheck.path=/health"
       - "traefik.http.services.demoday-frontend.loadbalancer.healthcheck.interval=30s"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
