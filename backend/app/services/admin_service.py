@@ -655,13 +655,8 @@ async def replace_tags(db: AsyncSession, tags: list[str]) -> dict:
     removed = []
     for name in sorted(to_remove):
         tag_id = existing_map[name]
-        # Check if tag is used by any project
-        usage_count = await db.scalar(
-            select(func.count(ProjectTag.id)).where(ProjectTag.tag_id == tag_id)
-        )
-        if usage_count and usage_count > 0:
-            # Tag is in use — keep it but note it
-            continue
+        # Remove project-tag associations first, then the tag itself
+        await db.execute(delete(ProjectTag).where(ProjectTag.tag_id == tag_id))
         await db.execute(delete(Tag).where(Tag.id == tag_id))
         removed.append(name)
 
