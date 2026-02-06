@@ -1,4 +1,4 @@
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from app.bot.handlers.briefing import get_briefing_handlers
 from app.bot.handlers.clustering import get_clustering_handler
@@ -21,7 +21,7 @@ from app.bot.handlers.feedback import get_feedback_handlers
 from app.bot.handlers.reminder import get_reminder_handlers
 from app.bot.handlers.schedule import get_schedule_handler, get_schedule_preview_handlers
 from app.bot.handlers.scoring import get_scoring_handlers
-from app.bot.handlers.start import get_onboarding_handler
+from app.bot.handlers.start import get_onboarding_handler, orphan_text_handler
 from app.config import settings
 
 
@@ -77,5 +77,11 @@ def create_bot_app() -> Application:
     # EPIC-013: Expert Scoring handlers
     for handler in get_scoring_handlers():
         application.add_handler(handler)
+
+    # Catch-all: text messages from users not in any ConversationHandler
+    # (e.g. after container restart when in-memory state is lost)
+    application.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, orphan_text_handler)
+    )
 
     return application

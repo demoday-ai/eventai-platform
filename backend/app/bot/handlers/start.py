@@ -2089,6 +2089,56 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 # =============================================================================
+# Orphan message handler (after container restart, conversation state is lost)
+# =============================================================================
+
+
+async def orphan_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Catch text messages from users not in any ConversationHandler.
+
+    After a container restart the in-memory conversation state is wiped.
+    If the user has a profile we silently re-enter them into the agent;
+    otherwise we ask them to /start.
+    """
+    tg_user = update.effective_user
+    if not tg_user:
+        return
+
+    telegram_user_id = str(tg_user.id)
+
+    async with async_session() as session:
+        user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
+        event = await user_service.get_current_event(session)
+
+        if not user or not event:
+            await update.message.reply_text(
+                "Отправьте /start для начала работы с ботом."
+            )
+            return
+
+        role = await user_service.get_user_role_with_info(session, user.id, event.id)
+        if not role:
+            await update.message.reply_text(
+                "Отправьте /start для начала работы с ботом."
+            )
+            return
+
+        profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
+        has_profile = bool(profile.selected_tags)
+
+    if not has_profile:
+        await update.message.reply_text(
+            "Отправьте /start для продолжения."
+        )
+        return
+
+    # User has a profile — tell them to /start to restore session
+    await update.message.reply_text(
+        "Сессия была перезапущена. Отправьте /start — я восстановлю вашу программу."
+    )
+
+
+# =============================================================================
 # Handler factory
 # =============================================================================
 
@@ -2143,4 +2193,5 @@ def get_onboarding_handler() -> ConversationHandler:
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         per_message=False,
+        allow_reentry=True,
     )
