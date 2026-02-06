@@ -28,11 +28,11 @@ async def get_invite_preview(session: AsyncSession, event_id) -> dict | None:
     if not clustering:
         return None
 
-    # Check if any approved/invite_ready assignments exist
+    # Check if any proposed/approved/invite_ready assignments exist
     count_result = await session.execute(
         select(func.count(ExpertRoomAssignment.id))
         .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
-        .where(ExpertRoomAssignment.status.in_(["approved", "invite_ready"]))
+        .where(ExpertRoomAssignment.status.in_(["proposed", "approved", "invite_ready"]))
     )
     total = count_result.scalar() or 0
     if total == 0:
@@ -42,7 +42,7 @@ async def get_invite_preview(session: AsyncSession, event_id) -> dict | None:
     assignments = await session.execute(
         select(ExpertRoomAssignment)
         .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
-        .where(ExpertRoomAssignment.status.in_(["approved", "invite_ready"]))
+        .where(ExpertRoomAssignment.status.in_(["proposed", "approved", "invite_ready"]))
         .options(
             selectinload(ExpertRoomAssignment.expert),
             selectinload(ExpertRoomAssignment.room),
@@ -73,12 +73,15 @@ async def get_invite_preview(session: AsyncSession, event_id) -> dict | None:
             f"Перейдите по ссылке для подтверждения."
         )
 
+    has_unapproved = any(a.status == "proposed" for a in all_assignments)
+
     return {
         "total_experts": len(all_assignments),
         "with_telegram": with_tg,
         "without_telegram": without_tg,
         "sample_message": sample_message,
         "bot_link": bot_link,
+        "has_unapproved": has_unapproved,
     }
 
 

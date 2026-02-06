@@ -18,7 +18,7 @@ import {
   type InviteConfirmResult,
 } from "../lib/api-client"
 
-const STEPS = ["Запуск", "Результат", "Перемещение", "Одобрение", "Приглашения"]
+const STEPS = ["Матчинг", "Результат и корректировка", "Одобрение и приглашения"]
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -28,6 +28,17 @@ function getErrorMessage(error: unknown): string {
   }
   if (error instanceof Error) return error.message
   return "Неизвестная ошибка"
+}
+
+function detectStep(matching: MatchingResult | null | undefined): number {
+  if (!matching) return 0
+  // Check if any assignments are approved or invite_ready
+  const hasApproved = matching.rooms.some((r) =>
+    r.experts.some((e) => "status" in e && ((e as Record<string, unknown>).status === "approved" || (e as Record<string, unknown>).status === "invite_ready"))
+  )
+  if (hasApproved) return 2
+  // Has matching data → step 1
+  return 1
 }
 
 export function ExpertMatching() {
@@ -41,7 +52,9 @@ export function ExpertMatching() {
     sourceRoomId: string
   } | null>(null)
   const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const [inviteResult, setInviteResult] = useState<InviteConfirmResult | null>(null)
+  const [stepDetected, setStepDetected] = useState(false)
 
   useEffect(() => {
     document.title = `${APP_NAME} - Эксперты`
@@ -56,12 +69,15 @@ export function ExpertMatching() {
 
   const [matchingResult, setMatchingResult] = useState<MatchingResult | null>(null)
 
+  // Auto-detect current step based on existing data
   useEffect(() => {
-    if (existingMatching && !matchingResult) {
+    if (existingMatching && !stepDetected) {
       setMatchingResult(existingMatching)
-      setCurrentStep(1)
+      const detected = detectStep(existingMatching)
+      setCurrentStep(detected)
+      setStepDetected(true)
     }
-  }, [existingMatching, matchingResult])
+  }, [existingMatching, stepDetected])
 
   const runMutation = useMutation({
     mutationFn: () => runMatching({ use_adjacent_tags: useAdjacentTags }),
@@ -69,6 +85,7 @@ export function ExpertMatching() {
       setMatchingResult(data)
       setMatchingError(null)
       setCurrentStep(1)
+      setStepDetected(true)
       queryClient.invalidateQueries({ queryKey: ["matching"] })
     },
     onError: (error) => {
@@ -101,8 +118,9 @@ export function ExpertMatching() {
   const approveMutation = useMutation({
     mutationFn: approveMatching,
     onSuccess: () => {
-      setCurrentStep(4)
       queryClient.invalidateQueries({ queryKey: ["matching"] })
+      // After approval, reload invite preview
+      previewMutation.mutate()
     },
   })
 
@@ -110,6 +128,15 @@ export function ExpertMatching() {
     mutationFn: getInvitePreview,
     onSuccess: (data) => {
       setInvitePreview(data)
+      setPreviewError(null)
+    },
+    onError: (error) => {
+      const detail = getErrorMessage(error)
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        setPreviewError(detail || "Нет данных для предпросмотра. Запустите матчинг.")
+      } else {
+        setPreviewError(detail || "Ошибка сервера. Попробуйте обновить страницу.")
+      }
     },
   })
 
@@ -119,6 +146,14 @@ export function ExpertMatching() {
       setInviteResult(data)
     },
   })
+
+  // Auto-load invite preview when entering step 2
+  useEffect(() => {
+    if (currentStep === 2 && !invitePreview && !previewMutation.isPending && !previewError) {
+      previewMutation.mutate()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep])
 
   // Rooms for move target selection
   const allRooms = matchingResult?.rooms || []
@@ -134,7 +169,7 @@ export function ExpertMatching() {
 
       <Stepper steps={STEPS} currentStep={currentStep} />
 
-      {/* Step 0: Run */}
+      {/* Step 0: Run matching */}
       {currentStep === 0 && (
         <Card>
           <CardHeader>
@@ -185,7 +220,7 @@ export function ExpertMatching() {
         </Card>
       )}
 
-      {/* Step 1: Results */}
+      {/* Step 1: Results + Move (merged) */}
       {currentStep === 1 && matchingResult && (
         <div className="space-y-4">
           <Card>
@@ -207,6 +242,10 @@ export function ExpertMatching() {
             </CardContent>
           </Card>
 
+          <p className="text-sm text-muted-foreground">
+            Нажмите &quot;Переместить&quot; рядом с экспертом, чтобы перенести его в другой зал.
+          </p>
+
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {matchingResult.rooms.map((room) => (
               <Card key={room.room_id}>
@@ -224,9 +263,25 @@ export function ExpertMatching() {
                       <li key={exp.expert_id} className="text-sm border rounded px-2 py-1">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{exp.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {(exp.match_score * 100).toFixed(0)}%
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">
+                              {(exp.match_score * 100).toFixed(0)}%
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() =>
+                                setMoveDialog({
+                                  assignmentId: exp.expert_id,
+                                  expertName: exp.name,
+                                  sourceRoomId: room.room_id,
+                                })
+                              }
+                            >
+                              Переместить
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {exp.matching_tags.map((tag) => (
@@ -238,53 +293,6 @@ export function ExpertMatching() {
                       </li>
                     ))}
                   </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
-              Назад
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Move experts */}
-      {currentStep === 2 && matchingResult && (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Нажмите &quot;Переместить&quot; рядом с экспертом, чтобы перенести его в другой зал.
-          </p>
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {matchingResult.rooms.map((room) => (
-              <Card key={room.room_id}>
-                <CardHeader>
-                  <CardTitle className="text-base">{room.room_name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {room.experts.map((exp) => (
-                      <div key={exp.expert_id} className="flex items-center justify-between text-sm border rounded px-2 py-1">
-                        <span className="truncate flex-1 mr-2">{exp.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setMoveDialog({
-                              assignmentId: exp.expert_id,
-                              expertName: exp.name,
-                              sourceRoomId: room.room_id,
-                            })
-                          }
-                        >
-                          Переместить
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -323,68 +331,78 @@ export function ExpertMatching() {
                   Отмена
                 </Button>
                 {moveMutation.isError && (
-                  <p className="text-sm text-red-500">Ошибка перемещения</p>
+                  <p className="text-sm text-red-500">Ошибка перемещения: {getErrorMessage(moveMutation.error)}</p>
                 )}
               </CardContent>
             </Card>
           )}
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setCurrentStep(3)} className="w-full sm:w-auto">Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
+            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
+              Далее
+            </Button>
+            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
               Назад
             </Button>
           </div>
         </div>
       )}
 
-      {/* Step 3: Approve */}
-      {currentStep === 3 && matchingResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Одобрение матчинга</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">
-              Всего экспертов: {matchingResult.total_experts}, назначены: {matchingResult.matched_experts}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                onClick={() => approveMutation.mutate()}
-                disabled={approveMutation.isPending}
-                className="w-full sm:w-auto"
-              >
-                {approveMutation.isPending ? "Одобрение..." : "Одобрить"}
-              </Button>
-              <Button variant="outline" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
-                Назад
-              </Button>
-            </div>
-            {approveMutation.isError && (
-              <p className="text-sm text-red-500">Ошибка одобрения: {getErrorMessage(approveMutation.error)}</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 4: Invites */}
-      {currentStep === 4 && (
+      {/* Step 2: Approve + Invites (merged) */}
+      {currentStep === 2 && (
         <div className="space-y-4">
-          {!invitePreview && !inviteResult && (
+          {matchingResult && (
             <Card>
               <CardHeader>
-                <CardTitle>Приглашения экспертам</CardTitle>
+                <CardTitle>Одобрение и приглашения</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => previewMutation.mutate()}
-                  disabled={previewMutation.isPending}
-                >
-                  {previewMutation.isPending ? "Загрузка..." : "Предпросмотр приглашений"}
-                </Button>
-                {previewMutation.isError && (
-                  <p className="text-sm text-red-500 mt-2">Ошибка загрузки превью</p>
+              <CardContent className="space-y-3">
+                <p className="text-sm">
+                  Всего экспертов: {matchingResult.total_experts}, назначены: {matchingResult.matched_experts}
+                </p>
+
+                {!approveMutation.isSuccess && (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      onClick={() => approveMutation.mutate()}
+                      disabled={approveMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {approveMutation.isPending ? "Одобрение..." : "Одобрить матчинг"}
+                    </Button>
+                  </div>
                 )}
+
+                {approveMutation.isSuccess && (
+                  <p className="text-sm text-green-600">Матчинг одобрён</p>
+                )}
+
+                {approveMutation.isError && (
+                  <p className="text-sm text-red-500">Ошибка одобрения: {getErrorMessage(approveMutation.error)}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Invite preview — auto-loads */}
+          {previewMutation.isPending && (
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Загрузка предпросмотра приглашений...</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {previewError && !invitePreview && (
+            <Card>
+              <CardContent className="pt-4 space-y-2">
+                <p className="text-sm text-red-500">{previewError}</p>
+                <Button variant="outline" size="sm" onClick={() => {
+                  setPreviewError(null)
+                  previewMutation.mutate()
+                }}>
+                  Повторить
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -395,6 +413,14 @@ export function ExpertMatching() {
                 <CardTitle>Предпросмотр приглашений</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {invitePreview.has_unapproved && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      Матчинг ещё не одобрён. Одобрите матчинг перед отправкой приглашений.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Всего экспертов</p>
@@ -420,12 +446,12 @@ export function ExpertMatching() {
                 </p>
                 <Button
                   onClick={() => confirmMutation.mutate()}
-                  disabled={confirmMutation.isPending}
+                  disabled={confirmMutation.isPending || invitePreview.has_unapproved}
                 >
                   {confirmMutation.isPending ? "Отправка..." : "Отправить приглашения"}
                 </Button>
                 {confirmMutation.isError && (
-                  <p className="text-sm text-red-500 mt-2">Ошибка отправки</p>
+                  <p className="text-sm text-red-500 mt-2">Ошибка отправки: {getErrorMessage(confirmMutation.error)}</p>
                 )}
               </CardContent>
             </Card>
@@ -447,6 +473,10 @@ export function ExpertMatching() {
               </CardContent>
             </Card>
           )}
+
+          <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
+            Назад
+          </Button>
         </div>
       )}
     </div>

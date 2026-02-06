@@ -339,6 +339,7 @@ export interface InvitePreview {
   without_telegram: number
   sample_message: string
   bot_link: string
+  has_unapproved: boolean
 }
 
 export interface InviteConfirmResult {

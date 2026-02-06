@@ -470,7 +470,10 @@ async def invite_preview_endpoint(
 
     preview = await invite_service.get_invite_preview(session, event.id)
     if not preview:
-        raise HTTPException(status_code=404, detail="No approved matching to preview")
+        raise HTTPException(
+            status_code=404,
+            detail="Нет матчинга для предпросмотра. Сначала запустите матчинг экспертов.",
+        )
     return preview
 
 
