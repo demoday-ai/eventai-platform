@@ -8,7 +8,7 @@ import { APP_NAME } from "../lib/constants"
 import {
   getCurrentEvent, updateCurrentEvent, getAuditLog,
   getOrganizers, addOrganizer, removeOrganizer,
-  getTags, addTags, suggestTags, replaceTags,
+  getTags, addTags, suggestTags, replaceTags, deleteTag,
   type Event, type EventUpdateRequest, type AuditLogItem,
   type OrganizerItem,
 } from "../lib/api-client"
@@ -256,6 +256,16 @@ function TagsSection() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteTag,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] })
+    },
+    onError: (err) => {
+      setTagError(err instanceof Error ? err.message : "Не удалось удалить тег")
+    },
+  })
+
   const tags = data?.tags ?? []
 
   const parseTags = (raw: string) => {
@@ -317,8 +327,17 @@ function TagsSection() {
         {tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <span key={tag} className="px-3 py-1 bg-muted text-sm rounded-full">
+              <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 bg-muted text-sm rounded-full">
                 {tag}
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate(tag)}
+                  disabled={deleteMutation.isPending}
+                  className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                  title="Удалить тег"
+                >
+                  x
+                </button>
               </span>
             ))}
           </div>

@@ -191,6 +191,24 @@ async def add_tags(
     return TagUpsertResponse(added=added, skipped=skipped)
 
 
+@router.delete("/tags/{tag_name}", status_code=204)
+async def delete_tag(
+    tag_name: str,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a single tag and its project associations."""
+    deleted = await admin_service.delete_tag(db, tag_name)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+
+    await audit_service.log_action(
+        db, current_user, "tags_delete",
+        entity_type="tags",
+        details={"deleted": tag_name},
+    )
+
+
 @router.post("/tags/suggest", response_model=TagSuggestResponse)
 async def suggest_tags(
     db: AsyncSession = Depends(get_session),

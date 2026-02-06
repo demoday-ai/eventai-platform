@@ -27,6 +27,7 @@ vi.mock("../lib/api-client", async (importOriginal) => {
     addTags: vi.fn(),
     suggestTags: vi.fn(),
     replaceTags: vi.fn(),
+    deleteTag: vi.fn(),
   }
 })
 

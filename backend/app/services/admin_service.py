@@ -669,6 +669,17 @@ async def replace_tags(db: AsyncSession, tags: list[str]) -> dict:
     return {"final_tags": final_tags, "added": added, "removed": removed}
 
 
+async def delete_tag(db: AsyncSession, tag_name: str) -> bool:
+    """Delete a single tag and its project associations. Returns True if found."""
+    tag = await db.scalar(select(Tag).where(Tag.name == tag_name))
+    if not tag:
+        return False
+    await db.execute(delete(ProjectTag).where(ProjectTag.tag_id == tag.id))
+    await db.execute(delete(Tag).where(Tag.id == tag.id))
+    await db.commit()
+    return True
+
+
 async def list_guests(
     db: AsyncSession,
     event_id: UUID,

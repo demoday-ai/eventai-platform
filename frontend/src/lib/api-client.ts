@@ -768,6 +768,10 @@ export const replaceTags = async (tags: string[]): Promise<TagReplaceResponse> =
   return data
 }
 
+export const deleteTag = async (tagName: string): Promise<void> => {
+  await apiClient.delete(`/admin/tags/${encodeURIComponent(tagName)}`)
+}
+
 export const getProjects = async (params?: ProjectsListParams): Promise<ProjectListItem[]> => {
   const { data } = await apiClient.get<ProjectListItem[]>("/admin/projects", { params })
   return data
