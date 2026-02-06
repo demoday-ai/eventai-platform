@@ -979,6 +979,19 @@ export const approveSchedule = async (): Promise<ScheduleApproveResult> => {
   return data
 }
 
+export const exportScheduleICS = async (): Promise<void> => {
+  const { data } = await apiClient.get<string>("/schedule/export.ics", {
+    responseType: "blob" as never,
+  })
+  const blob = new Blob([data], { type: "text/calendar" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "demoday-schedule.ics"
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // --- Coverage ---
 
 export const getCoverageSummary = async (): Promise<CoverageSummaryData> => {

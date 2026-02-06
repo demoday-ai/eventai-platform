@@ -13,6 +13,7 @@ import {
   updateSlot,
   getScheduleChanges,
   getCurrentClustering,
+  exportScheduleICS,
   type ScheduleGenerateResult,
   type ScheduleApproveResult,
   type ScheduleSlotResponse,
@@ -463,6 +464,13 @@ export function Schedule() {
             <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
             <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
               Перегенерировать
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => exportScheduleICS()}
+            >
+              Экспорт в календарь (.ics)
             </Button>
           </div>
 

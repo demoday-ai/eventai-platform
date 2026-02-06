@@ -4,6 +4,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -92,6 +93,63 @@ async def get_schedule(
     return await schedule_service.get_schedule(
         db, event.id, room_id=room_id, day=day, status=status
     )
+
+
+@router.get("/schedule/export.ics")
+async def export_schedule_ics(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Export schedule as iCalendar (.ics) file for Google Calendar import."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=400, detail="No active event")
+
+    schedule = await schedule_service.get_schedule(db, event.id)
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//DemoDay AI//Schedule//RU",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        f"X-WR-CALNAME:{_ics_escape(schedule.event_name)} — Расписание",
+    ]
+
+    for day in schedule.days:
+        for room in day.rooms:
+            for slot in room.slots:
+                if slot.status == "cancelled":
+                    continue
+                dtstart = slot.start_time.strftime("%Y%m%dT%H%M%S")
+                dtend = slot.end_time.strftime("%Y%m%dT%H%M%S")
+                summary = slot.project_title
+                description = f"Автор: {slot.project_author}" if slot.project_author else ""
+                location = room.room_name
+
+                lines.append("BEGIN:VEVENT")
+                lines.append(f"UID:{slot.id}@demoday-ai")
+                lines.append(f"DTSTART:{dtstart}")
+                lines.append(f"DTEND:{dtend}")
+                lines.append(f"SUMMARY:{_ics_escape(summary)}")
+                if description:
+                    lines.append(f"DESCRIPTION:{_ics_escape(description)}")
+                lines.append(f"LOCATION:{_ics_escape(location)}")
+                lines.append("END:VEVENT")
+
+    lines.append("END:VCALENDAR")
+
+    ics_content = "\r\n".join(lines) + "\r\n"
+    return Response(
+        content=ics_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=demoday-schedule.ics"},
+    )
+
+
+def _ics_escape(text: str) -> str:
+    """Escape special characters for iCalendar text values."""
+    return text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
 @router.post("/schedule/approve", response_model=ScheduleApproveResult)
