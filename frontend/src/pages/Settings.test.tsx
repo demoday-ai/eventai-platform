@@ -13,17 +13,22 @@ vi.mock("../hooks/useAuth", () => ({
   }),
 }))
 
-vi.mock("../lib/api-client", () => ({
-  getCurrentEvent: vi.fn(),
-  updateCurrentEvent: vi.fn(),
-  getAuditLog: vi.fn(),
-  getOrganizers: vi.fn(),
-  addOrganizer: vi.fn(),
-  removeOrganizer: vi.fn(),
-  getTags: vi.fn(),
-  addTags: vi.fn(),
-  suggestTags: vi.fn(),
-}))
+vi.mock("../lib/api-client", async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    getCurrentEvent: vi.fn(),
+    updateCurrentEvent: vi.fn(),
+    getAuditLog: vi.fn(),
+    getOrganizers: vi.fn(),
+    addOrganizer: vi.fn(),
+    removeOrganizer: vi.fn(),
+    getTags: vi.fn(),
+    addTags: vi.fn(),
+    suggestTags: vi.fn(),
+    replaceTags: vi.fn(),
+  }
+})
 
 const mockEvent: apiClient.Event = {
   id: "event-1",
