@@ -14,7 +14,7 @@ vi.mock("../hooks/useAuth", () => ({
 }))
 
 vi.mock("../lib/api-client", async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof import("../lib/api-client")>()
   return {
     ...actual,
     getCurrentEvent: vi.fn(),
