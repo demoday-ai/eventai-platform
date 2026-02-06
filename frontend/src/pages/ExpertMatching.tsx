@@ -53,10 +53,7 @@ export function ExpertMatching() {
     expertName: string
     sourceRoomId: string
   } | null>(null)
-  const [assignDialog, setAssignDialog] = useState<{
-    expertId: string
-    expertName: string
-  } | null>(null)
+  const [assigningExpertId, setAssigningExpertId] = useState<string | null>(null)
   const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [inviteResult, setInviteResult] = useState<InviteConfirmResult | null>(null)
@@ -111,7 +108,7 @@ export function ExpertMatching() {
     mutationFn: ({ expertId, roomId }: { expertId: string; roomId: string }) =>
       assignExpert(expertId, roomId),
     onSuccess: () => {
-      setAssignDialog(null)
+      setAssigningExpertId(null)
       queryClient.invalidateQueries({ queryKey: ["matching"] })
     },
   })
@@ -272,7 +269,7 @@ export function ExpertMatching() {
             </div>
           )}
 
-          {/* Unmatched experts — always show if there are any */}
+          {/* Unmatched experts — inline assign */}
           {matchingResult.unmatched && matchingResult.unmatched.length > 0 && (
             <Card>
               <CardHeader>
@@ -282,72 +279,63 @@ export function ExpertMatching() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {matchingResult.unmatched.map((exp) => (
-                    <div key={exp.expert_id} className="flex items-center justify-between text-sm border rounded px-3 py-2">
-                      <div className="flex-1 min-w-0 mr-2">
-                        <span className="font-medium">{exp.name}</span>
-                        {exp.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {exp.tags.map((tag) => (
-                              <span key={tag} className="px-1.5 py-0.5 bg-muted text-xs rounded">
-                                {tag}
-                              </span>
+                  {matchingResult.unmatched.map((exp) => {
+                    const isExpanded = assigningExpertId === exp.expert_id
+                    return (
+                      <div key={exp.expert_id} className="text-sm border rounded px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0 mr-2">
+                            <span className="font-medium">{exp.name}</span>
+                            {exp.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {exp.tags.map((tag) => (
+                                  <span key={tag} className="px-1.5 py-0.5 bg-muted text-xs rounded">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {exp.tags.length === 0 && (
+                              <span className="text-xs text-muted-foreground ml-2">нет тегов</span>
+                            )}
+                          </div>
+                          <Button
+                            variant={isExpanded ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setAssigningExpertId(isExpanded ? null : exp.expert_id)}
+                          >
+                            {isExpanded ? "Отмена" : "Назначить"}
+                          </Button>
+                        </div>
+                        {isExpanded && (
+                          <div className="mt-2 pt-2 border-t flex flex-wrap gap-2">
+                            {allRooms.map((room) => (
+                              <Button
+                                key={room.room_id}
+                                variant="outline"
+                                size="sm"
+                                disabled={assignMutation.isPending}
+                                onClick={() =>
+                                  assignMutation.mutate({
+                                    expertId: exp.expert_id,
+                                    roomId: room.room_id,
+                                  })
+                                }
+                              >
+                                {room.room_name} ({room.expert_count})
+                              </Button>
                             ))}
+                            {assignMutation.isError && assignMutation.variables?.expertId === exp.expert_id && (
+                              <p className="text-sm text-red-500 w-full">
+                                {getErrorMessage(assignMutation.error)}
+                              </p>
+                            )}
                           </div>
                         )}
-                        {exp.tags.length === 0 && (
-                          <span className="text-xs text-muted-foreground ml-2">нет тегов</span>
-                        )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAssignDialog({ expertId: exp.expert_id, expertName: exp.name })}
-                      >
-                        Назначить
-                      </Button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Assign dialog */}
-          {assignDialog && (
-            <Card className="border-primary">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Назначить в зал: {assignDialog.expertName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {allRooms.map((room) => (
-                    <Button
-                      key={room.room_id}
-                      variant="outline"
-                      size="sm"
-                      disabled={assignMutation.isPending}
-                      onClick={() =>
-                        assignMutation.mutate({
-                          expertId: assignDialog.expertId,
-                          roomId: room.room_id,
-                        })
-                      }
-                    >
-                      {room.room_name} ({room.expert_count})
-                    </Button>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setAssignDialog(null)}>
-                  Отмена
-                </Button>
-                {assignMutation.isError && (
-                  <p className="text-sm text-red-500">
-                    {getErrorMessage(assignMutation.error)}
-                  </p>
-                )}
               </CardContent>
             </Card>
           )}
