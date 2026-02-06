@@ -1220,6 +1220,71 @@ export const removeOrganizer = async (id: string): Promise<void> => {
   await apiClient.delete(`/admin/organizers/${id}`)
 }
 
+// --- Guest list types ---
+
+export interface GuestListItem {
+  id: string
+  full_name: string
+  username: string | null
+  telegram_user_id: string
+  guest_subtype: string | null
+  tags: string[]
+  keywords: string[]
+  profile_summary: string | null
+  raw_text: string | null
+  recommendations_count: number
+  contact_requests_count: number
+  has_business_profile: boolean
+  created_at: string
+}
+
+export interface GuestProfileInfo {
+  selected_tags: string[]
+  keywords: string[]
+  raw_text: string | null
+  interests: string[]
+  goals: string[]
+  summary: string | null
+  company: string | null
+  position: string | null
+  partner_status: string | null
+  business_objectives: string[]
+}
+
+export interface GuestRecommendationItem {
+  project_title: string
+  relevance_score: number
+  rank: number
+  category: string
+}
+
+export interface GuestContactRequestItem {
+  project_title: string
+  student_name: string
+  status: string
+  created_at: string
+}
+
+export interface GuestDetailResponse {
+  guest: GuestListItem
+  profile: GuestProfileInfo | null
+  business_profile: Record<string, unknown> | null
+  recommendations: GuestRecommendationItem[]
+  contact_requests: GuestContactRequestItem[]
+}
+
+// --- Guest list API ---
+
+export const getGuests = async (params?: { search?: string; subtype?: string }): Promise<GuestListItem[]> => {
+  const { data } = await apiClient.get<GuestListItem[]>("/admin/guests", { params })
+  return data
+}
+
+export const getGuestDetail = async (id: string): Promise<GuestDetailResponse> => {
+  const { data } = await apiClient.get<GuestDetailResponse>(`/admin/guests/${id}`)
+  return data
+}
+
 // --- Messaging ---
 
 export const previewMessaging = async (

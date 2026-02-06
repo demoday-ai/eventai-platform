@@ -8,6 +8,7 @@ import { DataImport } from "./pages/DataImport"
 import { Clustering } from "./pages/Clustering"
 import { ExpertMatching } from "./pages/ExpertMatching"
 import { ExpertList } from "./pages/ExpertList"
+import { GuestList } from "./pages/GuestList"
 import { Schedule } from "./pages/Schedule"
 import { Coverage } from "./pages/Coverage"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
@@ -38,6 +39,7 @@ function App() {
           <Route path="/coverage/rooms/:roomId" element={<CoverageRoomDetail />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/messaging" element={<Messaging />} />
+          <Route path="/guests" element={<GuestList />} />
           <Route path="/projects" element={<ProjectsList />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
           <Route path="/settings" element={<Settings />} />

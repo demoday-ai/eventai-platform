@@ -4,6 +4,7 @@ import {
   Upload,
   Layers,
   Users,
+  UserCheck,
   Calendar,
   FolderOpen,
   ShieldCheck,
@@ -40,6 +41,7 @@ const navGroups = [
     items: [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/coverage", label: "Покрытие", icon: ShieldCheck },
+      { to: "/guests", label: "Гости", icon: UserCheck },
     ],
   },
 ]

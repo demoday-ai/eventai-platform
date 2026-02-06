@@ -304,3 +304,67 @@ class TagReplaceResponse(BaseModel):
     final_tags: list[str]
     added: list[str]
     removed: list[str]
+
+
+# --- Guest list schemas ---
+
+
+class GuestRecommendationItem(BaseModel):
+    """Single recommendation for a guest."""
+
+    project_title: str
+    relevance_score: float
+    rank: int
+    category: str
+
+
+class GuestContactRequestItem(BaseModel):
+    """Single contact request from a guest."""
+
+    project_title: str
+    student_name: str
+    status: str
+    created_at: datetime
+
+
+class GuestListItem(BaseModel):
+    """Guest list item for admin panel."""
+
+    id: str
+    full_name: str
+    username: str | None = None
+    telegram_user_id: str
+    guest_subtype: str | None = None
+    tags: list[str] = []
+    keywords: list[str] = []
+    profile_summary: str | None = None
+    raw_text: str | None = None
+    recommendations_count: int = 0
+    contact_requests_count: int = 0
+    has_business_profile: bool = False
+    created_at: datetime
+
+
+class GuestProfileInfo(BaseModel):
+    """Guest profile details from bot profiling."""
+
+    selected_tags: list[str] = []
+    keywords: list[str] = []
+    raw_text: str | None = None
+    interests: list[str] = []
+    goals: list[str] = []
+    summary: str | None = None
+    company: str | None = None
+    position: str | None = None
+    partner_status: str | None = None
+    business_objectives: list[str] = []
+
+
+class GuestDetailResponse(BaseModel):
+    """Detailed guest profile for admin panel."""
+
+    guest: GuestListItem
+    profile: GuestProfileInfo | None = None
+    business_profile: dict | None = None
+    recommendations: list[GuestRecommendationItem] = []
+    contact_requests: list[GuestContactRequestItem] = []

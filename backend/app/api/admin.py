@@ -24,6 +24,8 @@ from app.schemas.admin import (
     BriefingSendResult,
     DashboardResponse,
     EventUpdateRequest,
+    GuestDetailResponse,
+    GuestListItem,
     GuestUploadResult,
     MessagingPreviewRequest,
     MessagingPreviewResponse,
@@ -284,6 +286,42 @@ async def update_current_event(
     await db.commit()
     await db.refresh(event)
     return event
+
+
+@router.get("/guests", response_model=list[GuestListItem])
+async def list_guests(
+    search: str | None = None,
+    subtype: str | None = None,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """List all guests with profile summaries."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    return await admin_service.list_guests(db, event.id, search, subtype)
+
+
+@router.get("/guests/{user_id}", response_model=GuestDetailResponse)
+async def get_guest_detail(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get detailed guest profile."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    try:
+        return await admin_service.get_guest_detail(db, event.id, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.post("/admin/guests/upload", response_model=GuestUploadResult)
