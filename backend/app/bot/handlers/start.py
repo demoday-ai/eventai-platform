@@ -859,7 +859,7 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     logger.info("Submitted generate_recommendations_task: task_id=%s", task.id)
 
     # Wait for result with timeout (30s for recommendation generation)
-    completed, data = await wait_for_task(task.id, timeout=30, poll_interval=1.0)
+    completed, data = await wait_for_task(task.id, timeout=40, poll_interval=1.0)
 
     if not completed:
         # Task still running - save task_id for later polling
@@ -902,7 +902,7 @@ async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAUL
     logger.info("Submitted generate_recommendations_task: task_id=%s", task.id)
 
     # Wait for result with timeout (30s for recommendation generation)
-    completed, data = await wait_for_task(task.id, timeout=30, poll_interval=1.0)
+    completed, data = await wait_for_task(task.id, timeout=40, poll_interval=1.0)
 
     if not completed:
         # Task still running - save task_id for later polling
