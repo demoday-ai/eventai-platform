@@ -1231,6 +1231,7 @@ export interface GuestListItem {
   full_name: string
   username: string | null
   telegram_user_id: string
+  role: string
   guest_subtype: string | null
   tags: string[]
   keywords: string[]
@@ -1279,7 +1280,7 @@ export interface GuestDetailResponse {
 
 // --- Guest list API ---
 
-export const getGuests = async (params?: { search?: string; subtype?: string }): Promise<GuestListItem[]> => {
+export const getGuests = async (params?: { search?: string; subtype?: string; role?: string }): Promise<GuestListItem[]> => {
   const { data } = await apiClient.get<GuestListItem[]>("/admin/guests", { params })
   return data
 }

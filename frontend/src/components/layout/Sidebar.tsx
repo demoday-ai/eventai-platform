@@ -41,7 +41,7 @@ const navGroups = [
     items: [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/coverage", label: "Покрытие", icon: ShieldCheck },
-      { to: "/guests", label: "Гости", icon: UserCheck },
+      { to: "/guests", label: "Гости и партнёры", icon: UserCheck },
     ],
   },
 ]

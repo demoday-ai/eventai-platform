@@ -334,6 +334,7 @@ class GuestListItem(BaseModel):
     full_name: str
     username: str | None = None
     telegram_user_id: str
+    role: str = "guest"  # "guest" or "business"
     guest_subtype: str | None = None
     tags: list[str] = []
     keywords: list[str] = []

@@ -685,10 +685,28 @@ async def list_guests(
     event_id: UUID,
     search: str | None = None,
     subtype: str | None = None,
+    role_filter: str | None = None,
 ) -> list[GuestListItem]:
-    """List all guests for an event with profile summaries."""
+    """List all guests and business partners for an event."""
+    # Fetch both guest and business roles
     guest_role = await db.scalar(select(Role).where(Role.code == RoleCode.GUEST.value))
-    if not guest_role:
+    business_role = await db.scalar(select(Role).where(Role.code == RoleCode.BUSINESS.value))
+
+    role_ids = []
+    if role_filter == "business":
+        if business_role:
+            role_ids = [business_role.id]
+    elif role_filter == "guest":
+        if guest_role:
+            role_ids = [guest_role.id]
+    else:
+        # Both roles
+        if guest_role:
+            role_ids.append(guest_role.id)
+        if business_role:
+            role_ids.append(business_role.id)
+
+    if not role_ids:
         return []
 
     # Subqueries for counts
@@ -719,17 +737,24 @@ async def list_guests(
         select(
             User,
             GuestProfile,
+            BusinessProfile,
+            Role.code.label("role_code"),
             rec_count_sq.label("rec_count"),
             contact_count_sq.label("contact_count"),
             has_business_sq.label("biz_count"),
         )
         .select_from(UserRole)
         .join(User, UserRole.user_id == User.id)
+        .join(Role, UserRole.role_id == Role.id)
         .outerjoin(
             GuestProfile,
             (GuestProfile.user_id == User.id) & (GuestProfile.event_id == event_id),
         )
-        .where(UserRole.event_id == event_id, UserRole.role_id == guest_role.id)
+        .outerjoin(
+            BusinessProfile,
+            (BusinessProfile.user_id == User.id) & (BusinessProfile.event_id == event_id),
+        )
+        .where(UserRole.event_id == event_id, UserRole.role_id.in_(role_ids))
     )
 
     if search:
@@ -746,18 +771,32 @@ async def list_guests(
     rows = result.all()
 
     items = []
-    for user, profile, rec_count, contact_count, biz_count in rows:
-        tags = []
-        keywords = []
-        profile_summary = None
-        raw_text = None
+    for user, guest_prof, biz_prof, role_code, rec_count, contact_count, biz_count in rows:
+        tags: list[str] = []
+        keywords: list[str] = []
+        profile_summary: str | None = None
+        raw_text: str | None = None
 
-        if profile:
-            tags = (profile.selected_tags or []) + (profile.extracted_tags or [])
-            keywords = profile.keywords or []
-            raw_text = profile.raw_text
-            extra = profile.extra_data or {}
+        # Pull from GuestProfile if exists
+        if guest_prof:
+            tags = (guest_prof.selected_tags or []) + (guest_prof.extracted_tags or [])
+            keywords = guest_prof.keywords or []
+            raw_text = guest_prof.raw_text
+            extra = guest_prof.extra_data or {}
             profile_summary = extra.get("summary")
+
+        # Pull from BusinessProfile if exists and no guest summary
+        if biz_prof and not profile_summary:
+            parts = []
+            if biz_prof.objective:
+                parts.append(biz_prof.objective.value)
+            if biz_prof.industries:
+                parts.append(", ".join(biz_prof.industries))
+            if biz_prof.collaboration_format:
+                parts.append(biz_prof.collaboration_format)
+            profile_summary = " | ".join(parts) if parts else None
+            if not raw_text:
+                raw_text = biz_prof.free_text_raw
 
         items.append(
             GuestListItem(
@@ -765,6 +804,7 @@ async def list_guests(
                 full_name=user.full_name or f"User {user.telegram_user_id}",
                 username=user.username,
                 telegram_user_id=user.telegram_user_id,
+                role=role_code,
                 guest_subtype=user.guest_subtype.value if user.guest_subtype else None,
                 tags=tags,
                 keywords=keywords,

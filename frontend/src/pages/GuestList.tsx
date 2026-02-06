@@ -11,16 +11,20 @@ import {
   type GuestDetailResponse,
 } from "../lib/api-client"
 
+const ROLE_LABELS: Record<string, string> = {
+  guest: "Гость",
+  business: "Партнёр",
+}
+
+const ROLE_STYLES: Record<string, string> = {
+  guest: "bg-blue-100 text-blue-800",
+  business: "bg-amber-100 text-amber-800",
+}
+
 const SUBTYPE_LABELS: Record<string, string> = {
   student: "Студент",
   applicant: "Абитуриент",
   other: "Другой",
-}
-
-const SUBTYPE_STYLES: Record<string, string> = {
-  student: "bg-blue-100 text-blue-800",
-  applicant: "bg-purple-100 text-purple-800",
-  other: "bg-gray-100 text-gray-700",
 }
 
 const CONTACT_STATUS_LABELS: Record<string, string> = {
@@ -30,13 +34,15 @@ const CONTACT_STATUS_LABELS: Record<string, string> = {
   expired: "Истёк",
 }
 
-function SubtypeBadge({ subtype }: { subtype: string | null }) {
-  if (!subtype) return <span className="text-xs text-muted-foreground">—</span>
+function RoleBadge({ role, subtype }: { role: string; subtype: string | null }) {
+  const style = ROLE_STYLES[role] || "bg-gray-100 text-gray-700"
+  let label = ROLE_LABELS[role] || role
+  if (role === "guest" && subtype) {
+    label = SUBTYPE_LABELS[subtype] || subtype
+  }
   return (
-    <span
-      className={`px-1.5 py-0.5 text-xs rounded ${SUBTYPE_STYLES[subtype] || "bg-gray-100 text-gray-700"}`}
-    >
-      {SUBTYPE_LABELS[subtype] || subtype}
+    <span className={`px-1.5 py-0.5 text-xs rounded ${style}`}>
+      {label}
     </span>
   )
 }
@@ -100,6 +106,12 @@ function GuestDetailPanel({ guestId }: { guestId: string }) {
             {Array.isArray(business_profile.tech_stack) && (
               <p><span className="text-muted-foreground">Стек:</span> {(business_profile.tech_stack as string[]).join(", ")}</p>
             )}
+            {Array.isArray(business_profile.project_stages) && (
+              <p><span className="text-muted-foreground">Стадии:</span> {(business_profile.project_stages as string[]).join(", ")}</p>
+            )}
+            {business_profile.collaboration_format != null && (
+              <p><span className="text-muted-foreground">Формат:</span> {String(business_profile.collaboration_format)}</p>
+            )}
           </div>
         </div>
       )}
@@ -145,34 +157,33 @@ function GuestDetailPanel({ guestId }: { guestId: string }) {
 
 export function GuestList() {
   const [search, setSearch] = useState("")
-  const [subtypeFilter, setSubtypeFilter] = useState<string>("")
+  const [roleFilter, setRoleFilter] = useState<string>("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = `${APP_NAME} - Гости`
+    document.title = `${APP_NAME} - Гости и партнёры`
   }, [])
 
   const { data: guests, isLoading, isError } = useQuery({
-    queryKey: ["guests", search, subtypeFilter],
+    queryKey: ["guests", search, roleFilter],
     queryFn: () =>
       getGuests({
         ...(search ? { search } : {}),
-        ...(subtypeFilter ? { subtype: subtypeFilter } : {}),
+        ...(roleFilter ? { role: roleFilter } : {}),
       }),
   })
 
-  const subtypeOptions = [
+  const filterOptions = [
     { value: "", label: "Все" },
-    { value: "student", label: "Студенты" },
-    { value: "applicant", label: "Абитуриенты" },
-    { value: "other", label: "Другие" },
+    { value: "business", label: "Партнёры" },
+    { value: "guest", label: "Гости" },
   ]
 
   return (
     <div className="grid gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold">
-          Гости {guests && <span className="text-muted-foreground text-lg font-normal">({guests.length})</span>}
+          Гости и партнёры {guests && <span className="text-muted-foreground text-lg font-normal">({guests.length})</span>}
         </h2>
       </div>
 
@@ -184,12 +195,12 @@ export function GuestList() {
           className="sm:max-w-sm"
         />
         <div className="flex gap-1">
-          {subtypeOptions.map((opt) => (
+          {filterOptions.map((opt) => (
             <Button
               key={opt.value}
-              variant={subtypeFilter === opt.value ? "default" : "outline"}
+              variant={roleFilter === opt.value ? "default" : "outline"}
               size="sm"
-              onClick={() => setSubtypeFilter(opt.value)}
+              onClick={() => setRoleFilter(opt.value)}
             >
               {opt.label}
             </Button>
@@ -213,7 +224,7 @@ export function GuestList() {
                   <tr className="border-b text-left">
                     <th className="pb-2 font-medium">Имя</th>
                     <th className="pb-2 font-medium">Telegram</th>
-                    <th className="pb-2 font-medium">Тип</th>
+                    <th className="pb-2 font-medium">Роль</th>
                     <th className="pb-2 font-medium">Профиль</th>
                     <th className="pb-2 font-medium">Теги</th>
                     <th className="pb-2 font-medium text-center">Рек.</th>
@@ -228,21 +239,12 @@ export function GuestList() {
                         className="border-b last:border-0 cursor-pointer hover:bg-muted/50"
                         onClick={() => setExpandedId(expandedId === guest.id ? null : guest.id)}
                       >
-                        <td className="py-2">
-                          <div className="flex items-center gap-1">
-                            {guest.full_name}
-                            {guest.has_business_profile && (
-                              <span className="px-1 py-0.5 text-[10px] bg-amber-100 text-amber-800 rounded">
-                                бизнес
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                        <td className="py-2">{guest.full_name}</td>
                         <td className="py-2 text-muted-foreground">
                           {guest.username ? `@${guest.username}` : "—"}
                         </td>
                         <td className="py-2">
-                          <SubtypeBadge subtype={guest.guest_subtype} />
+                          <RoleBadge role={guest.role} subtype={guest.guest_subtype} />
                         </td>
                         <td className="py-2 text-muted-foreground max-w-[200px] truncate">
                           {guest.profile_summary || "—"}

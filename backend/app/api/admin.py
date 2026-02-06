@@ -310,17 +310,18 @@ async def update_current_event(
 async def list_guests(
     search: str | None = None,
     subtype: str | None = None,
+    role: str | None = None,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """List all guests with profile summaries."""
+    """List all guests and business partners with profile summaries."""
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
         )
 
-    return await admin_service.list_guests(db, event.id, search, subtype)
+    return await admin_service.list_guests(db, event.id, search, subtype, role)
 
 
 @router.get("/guests/{user_id}", response_model=GuestDetailResponse)
