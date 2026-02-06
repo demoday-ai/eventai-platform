@@ -308,11 +308,18 @@ export interface RoomMatchSummary {
   experts: RoomMatchExpert[]
 }
 
+export interface UnmatchedExpert {
+  expert_id: string
+  name: string
+  tags: string[]
+}
+
 export interface MatchingResult {
   clustering_run_id: string
   total_experts: number
   matched_experts: number
   unmatched_experts: number
+  unmatched: UnmatchedExpert[]
   rooms: RoomMatchSummary[]
 }
 
@@ -917,6 +924,17 @@ export const moveExpert = async (
 ): Promise<MoveExpertResult> => {
   const { data } = await apiClient.post<MoveExpertResult>(`/matching/${assignmentId}/move`, {
     target_room_id: targetRoomId,
+  })
+  return data
+}
+
+export const assignExpert = async (
+  expertId: string,
+  roomId: string
+): Promise<MoveExpertResult> => {
+  const { data } = await apiClient.post<MoveExpertResult>("/matching/assign", {
+    expert_id: expertId,
+    room_id: roomId,
   })
   return data
 }

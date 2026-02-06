@@ -10,6 +10,7 @@ import {
   runMatching,
   getCurrentMatching,
   moveExpert,
+  assignExpert,
   approveMatching,
   getInvitePreview,
   confirmInvites,
@@ -32,12 +33,13 @@ function getErrorMessage(error: unknown): string {
 
 function detectStep(matching: MatchingResult | null | undefined): number {
   if (!matching) return 0
-  // Check if any assignments are approved or invite_ready
+  // No assigned experts → stay on step 1 to show results (user can manually assign)
+  if (matching.matched_experts === 0) return 1
+  // Some are approved/invite_ready → step 2
   const hasApproved = matching.rooms.some((r) =>
     r.experts.some((e) => "status" in e && ((e as Record<string, unknown>).status === "approved" || (e as Record<string, unknown>).status === "invite_ready"))
   )
   if (hasApproved) return 2
-  // Has matching data → step 1
   return 1
 }
 
@@ -50,6 +52,10 @@ export function ExpertMatching() {
     assignmentId: string
     expertName: string
     sourceRoomId: string
+  } | null>(null)
+  const [assignDialog, setAssignDialog] = useState<{
+    expertId: string
+    expertName: string
   } | null>(null)
   const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -73,8 +79,7 @@ export function ExpertMatching() {
   useEffect(() => {
     if (existingMatching && !stepDetected) {
       setMatchingResult(existingMatching)
-      const detected = detectStep(existingMatching)
-      setCurrentStep(detected)
+      setCurrentStep(detectStep(existingMatching))
       setStepDetected(true)
     }
   }, [existingMatching, stepDetected])
@@ -102,24 +107,32 @@ export function ExpertMatching() {
     },
   })
 
-  // Refetch matching after move
+  const assignMutation = useMutation({
+    mutationFn: ({ expertId, roomId }: { expertId: string; roomId: string }) =>
+      assignExpert(expertId, roomId),
+    onSuccess: () => {
+      setAssignDialog(null)
+      queryClient.invalidateQueries({ queryKey: ["matching"] })
+    },
+  })
+
+  // Refetch matching after move or assign
   const { data: refreshedMatching } = useQuery({
     queryKey: ["matching"],
     queryFn: getCurrentMatching,
-    enabled: moveMutation.isSuccess,
+    enabled: moveMutation.isSuccess || assignMutation.isSuccess,
   })
 
   useEffect(() => {
-    if (refreshedMatching && moveMutation.isSuccess) {
+    if (refreshedMatching && (moveMutation.isSuccess || assignMutation.isSuccess)) {
       setMatchingResult(refreshedMatching)
     }
-  }, [refreshedMatching, moveMutation.isSuccess])
+  }, [refreshedMatching, moveMutation.isSuccess, assignMutation.isSuccess])
 
   const approveMutation = useMutation({
     mutationFn: approveMatching,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matching"] })
-      // After approval, reload invite preview
       previewMutation.mutate()
     },
   })
@@ -147,16 +160,16 @@ export function ExpertMatching() {
     },
   })
 
-  // Auto-load invite preview when entering step 2
+  // Auto-load invite preview when entering step 2 (only if there are matched experts)
   useEffect(() => {
-    if (currentStep === 2 && !invitePreview && !previewMutation.isPending && !previewError) {
+    if (currentStep === 2 && !invitePreview && !previewMutation.isPending && !previewError && matchingResult && matchingResult.matched_experts > 0) {
       previewMutation.mutate()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
 
-  // Rooms for move target selection
   const allRooms = matchingResult?.rooms || []
+  const hasMatched = matchingResult ? matchingResult.matched_experts > 0 : false
 
   return (
     <div className="grid gap-6">
@@ -220,9 +233,10 @@ export function ExpertMatching() {
         </Card>
       )}
 
-      {/* Step 1: Results + Move (merged) */}
+      {/* Step 1: Results + Move + Assign (merged) */}
       {currentStep === 1 && matchingResult && (
         <div className="space-y-4">
+          {/* Stats */}
           <Card>
             <CardContent className="pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
@@ -242,62 +256,200 @@ export function ExpertMatching() {
             </CardContent>
           </Card>
 
-          <p className="text-sm text-muted-foreground">
-            Нажмите &quot;Переместить&quot; рядом с экспертом, чтобы перенести его в другой зал.
-          </p>
+          {/* Warning when 0 matched */}
+          {!hasMatched && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md space-y-2">
+              <p className="text-sm font-medium text-yellow-800">
+                Автоматический матчинг не смог назначить экспертов — теги не совпали с тематиками залов.
+              </p>
+              <p className="text-sm text-yellow-700">
+                Назначьте экспертов вручную из списка ниже, или{" "}
+                <Link to="/experts/list" className="underline font-medium">
+                  проверьте теги экспертов
+                </Link>{" "}
+                и перезапустите матчинг.
+              </p>
+            </div>
+          )}
 
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {matchingResult.rooms.map((room) => (
-              <Card key={room.room_id}>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {room.room_name}{" "}
-                    <span className="text-muted-foreground font-normal">
-                      ({room.expert_count})
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {room.experts.map((exp) => (
-                      <li key={exp.expert_id} className="text-sm border rounded px-2 py-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{exp.name}</span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">
-                              {(exp.match_score * 100).toFixed(0)}%
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={() =>
-                                setMoveDialog({
-                                  assignmentId: exp.expert_id,
-                                  expertName: exp.name,
-                                  sourceRoomId: room.room_id,
-                                })
-                              }
-                            >
-                              Переместить
-                            </Button>
+          {/* Unmatched experts — always show if there are any */}
+          {matchingResult.unmatched && matchingResult.unmatched.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Не назначены ({matchingResult.unmatched.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {matchingResult.unmatched.map((exp) => (
+                    <div key={exp.expert_id} className="flex items-center justify-between text-sm border rounded px-3 py-2">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <span className="font-medium">{exp.name}</span>
+                        {exp.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {exp.tags.map((tag) => (
+                              <span key={tag} className="px-1.5 py-0.5 bg-muted text-xs rounded">
+                                {tag}
+                              </span>
+                            ))}
                           </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {exp.matching_tags.map((tag) => (
-                            <span key={tag} className="px-1.5 py-0.5 bg-muted text-xs rounded">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                        )}
+                        {exp.tags.length === 0 && (
+                          <span className="text-xs text-muted-foreground ml-2">нет тегов</span>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAssignDialog({ expertId: exp.expert_id, expertName: exp.name })}
+                      >
+                        Назначить
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
+          {/* Assign dialog */}
+          {assignDialog && (
+            <Card className="border-primary">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Назначить в зал: {assignDialog.expertName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {allRooms.map((room) => (
+                    <Button
+                      key={room.room_id}
+                      variant="outline"
+                      size="sm"
+                      disabled={assignMutation.isPending}
+                      onClick={() =>
+                        assignMutation.mutate({
+                          expertId: assignDialog.expertId,
+                          roomId: room.room_id,
+                        })
+                      }
+                    >
+                      {room.room_name} ({room.expert_count})
+                    </Button>
+                  ))}
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setAssignDialog(null)}>
+                  Отмена
+                </Button>
+                {assignMutation.isError && (
+                  <p className="text-sm text-red-500">
+                    {getErrorMessage(assignMutation.error)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Room cards with experts */}
+          {hasMatched && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Нажмите &quot;Переместить&quot; чтобы перенести эксперта в другой зал.
+              </p>
+
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {matchingResult.rooms.map((room) => (
+                  <Card key={room.room_id}>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        {room.room_name}{" "}
+                        <span className="text-muted-foreground font-normal">
+                          ({room.expert_count})
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {room.experts.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Нет экспертов</p>
+                      )}
+                      <ul className="space-y-2">
+                        {room.experts.map((exp) => (
+                          <li key={exp.expert_id} className="text-sm border rounded px-2 py-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{exp.name}</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground">
+                                  {exp.is_manual ? "вручную" : `${(exp.match_score * 100).toFixed(0)}%`}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() =>
+                                    setMoveDialog({
+                                      assignmentId: exp.expert_id,
+                                      expertName: exp.name,
+                                      sourceRoomId: room.room_id,
+                                    })
+                                  }
+                                >
+                                  Переместить
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {exp.matching_tags.map((tag) => (
+                                <span key={tag} className="px-1.5 py-0.5 bg-muted text-xs rounded">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Room list (compact) when 0 auto-matched — so user sees available rooms */}
+          {!hasMatched && allRooms.length > 0 && (
+            <>
+              <p className="text-sm text-muted-foreground font-medium">Доступные залы:</p>
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {allRooms.map((room) => (
+                  <Card key={room.room_id}>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        {room.room_name}{" "}
+                        <span className="text-muted-foreground font-normal">
+                          ({room.expert_count} экспертов)
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    {room.experts.length > 0 && (
+                      <CardContent>
+                        <ul className="space-y-1">
+                          {room.experts.map((exp) => (
+                            <li key={exp.expert_id} className="text-sm flex items-center justify-between border rounded px-2 py-1">
+                              <span>{exp.name}</span>
+                              <span className="text-xs text-muted-foreground">вручную</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Move dialog */}
           {moveDialog && (
             <Card className="border-primary">
               <CardHeader>
@@ -331,18 +483,23 @@ export function ExpertMatching() {
                   Отмена
                 </Button>
                 {moveMutation.isError && (
-                  <p className="text-sm text-red-500">Ошибка перемещения: {getErrorMessage(moveMutation.error)}</p>
+                  <p className="text-sm text-red-500">{getErrorMessage(moveMutation.error)}</p>
                 )}
               </CardContent>
             </Card>
           )}
 
+          {/* Navigation */}
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
+            <Button
+              onClick={() => setCurrentStep(2)}
+              disabled={!hasMatched}
+              className="w-full sm:w-auto"
+            >
               Далее
             </Button>
             <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
-              Назад
+              Перезапустить матчинг
             </Button>
           </div>
         </div>
@@ -362,15 +519,13 @@ export function ExpertMatching() {
                 </p>
 
                 {!approveMutation.isSuccess && (
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      onClick={() => approveMutation.mutate()}
-                      disabled={approveMutation.isPending}
-                      className="w-full sm:w-auto"
-                    >
-                      {approveMutation.isPending ? "Одобрение..." : "Одобрить матчинг"}
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => approveMutation.mutate()}
+                    disabled={approveMutation.isPending || !hasMatched}
+                    className="w-full sm:w-auto"
+                  >
+                    {approveMutation.isPending ? "Одобрение..." : "Одобрить матчинг"}
+                  </Button>
                 )}
 
                 {approveMutation.isSuccess && (

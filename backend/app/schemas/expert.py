@@ -97,6 +97,11 @@ class MoveExpertRequest(BaseModel):
     target_room_id: uuid.UUID
 
 
+class AssignExpertRequest(BaseModel):
+    expert_id: uuid.UUID
+    room_id: uuid.UUID
+
+
 class ApproveResult(BaseModel):
     approved_count: int
     message: str

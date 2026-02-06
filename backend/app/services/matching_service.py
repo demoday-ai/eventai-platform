@@ -313,6 +313,53 @@ async def approve_matching(session: AsyncSession, clustering_run_id) -> int:
     return count
 
 
+async def assign_expert_to_room(
+    session: AsyncSession, event_id, expert_id, room_id
+) -> ExpertRoomAssignment | None:
+    """Manually assign an unmatched expert to a room."""
+    clustering = await get_approved_clustering(session, event_id)
+    if not clustering:
+        return None
+
+    # Check expert exists
+    expert = await session.get(Expert, expert_id)
+    if not expert:
+        return None
+
+    # Check room belongs to this clustering
+    room = await session.get(Room, room_id)
+    if not room or room.clustering_run_id != clustering.id:
+        return None
+
+    # Check not already assigned
+    existing = await session.execute(
+        select(ExpertRoomAssignment)
+        .where(ExpertRoomAssignment.expert_id == expert_id)
+        .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
+    )
+    if existing.scalars().first():
+        return None
+
+    assignment = ExpertRoomAssignment(
+        expert_id=expert_id,
+        room_id=room_id,
+        clustering_run_id=clustering.id,
+        match_score=0.0,
+        is_manual=True,
+        status="proposed",
+    )
+    session.add(assignment)
+    await session.commit()
+
+    # Reload with room
+    result = await session.execute(
+        select(ExpertRoomAssignment)
+        .where(ExpertRoomAssignment.id == assignment.id)
+        .options(selectinload(ExpertRoomAssignment.room))
+    )
+    return result.scalars().first()
+
+
 async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
     """Get current matching result for the approved clustering."""
     clustering = await get_approved_clustering(session, event_id)
@@ -360,15 +407,29 @@ async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
             "experts": sorted(experts, key=lambda x: x["match_score"], reverse=True),
         })
 
-    total_experts_result = await session.execute(
-        select(func.count(Expert.id)).where(Expert.event_id == event_id)
+    # Get all experts and find unmatched ones
+    all_experts_result = await session.execute(
+        select(Expert)
+        .where(Expert.event_id == event_id)
+        .options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
     )
-    total = total_experts_result.scalar() or 0
+    all_experts = all_experts_result.scalars().all()
+    matched_ids = {a.expert_id for a in assignments}
+
+    unmatched = []
+    for expert in all_experts:
+        if expert.id not in matched_ids:
+            unmatched.append({
+                "expert_id": str(expert.id),
+                "name": expert.name,
+                "tags": [et.tag.name for et in expert.tags] if expert.tags else [],
+            })
 
     return {
         "clustering_run_id": str(clustering.id),
-        "total_experts": total,
+        "total_experts": len(all_experts),
         "matched_experts": len(assignments),
-        "unmatched_experts": total - len(assignments),
+        "unmatched_experts": len(unmatched),
+        "unmatched": sorted(unmatched, key=lambda x: x["name"]),
         "rooms": sorted(rooms_result, key=lambda r: r["room_name"]),
     }
