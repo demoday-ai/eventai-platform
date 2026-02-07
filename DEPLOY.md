@@ -23,7 +23,7 @@ ssh -J bastion.camp.aitalenthub.ru team10.camp.aitalenthub.ru
 
 # Клонировать репозиторий (если еще не сделано)
 cd ~
-git clone https://github.com/AI-Talent-Camp-2026/demoday-ai.git
+git clone https://github.com/demoday-ai/demoday-core.git
 cd demoday-ai
 
 # Создать production .env файлы
@@ -258,5 +258,5 @@ Internet → Traefik (Edge VM) → Frontend (nginx) → Backend (FastAPI) → Po
 
 - Team VM: `team10.camp.aitalenthub.ru`
 - Bastion: `bastion.camp.aitalenthub.ru`
-- Repository: https://github.com/AI-Talent-Camp-2026/demoday-ai
+- Repository: https://github.com/demoday-ai/demoday-core
 - Infrastructure: https://github.com/AI-Talent-Camp-2026/ai-talent-camp-2026-infra

@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml"><img src="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml"><img src="https://github.com/AI-Talent-Camp-2026/demoday-ai/actions/workflows/cd.yml/badge.svg" alt="CD"></a>
+  <a href="https://github.com/demoday-ai/demoday-core/actions/workflows/ci.yml"><img src="https://github.com/demoday-ai/demoday-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/demoday-ai/demoday-core/actions/workflows/cd.yml"><img src="https://github.com/demoday-ai/demoday-core/actions/workflows/cd.yml/badge.svg" alt="CD"></a>
   <img src="https://img.shields.io/badge/python-3.12+-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=white" alt="React">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-proprietary-red" alt="License"></a>
@@ -80,7 +80,7 @@
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/AI-Talent-Camp-2026/demoday-ai.git && cd demoday-ai
+git clone https://github.com/demoday-ai/demoday-core.git && cd demoday-core
 cp backend/.env.example backend/.env  # заполнить BOT_TOKEN, OPENROUTER_API_KEY
 docker compose up -d --build
 docker compose exec backend alembic upgrade head

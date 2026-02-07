@@ -41,7 +41,7 @@ jobs:
         run: |
           ssh team12 << 'DEPLOY'
             set -e
-            cd ~/workspace/demoday-ai
+            cd ~/workspace/demoday-core
             git fetch origin main
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml pull 2>/dev/null || true
