@@ -15,22 +15,12 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.JUMP_KEY_B64 }}" | base64 -d > ~/.ssh/jump-key
           echo "${{ secrets.DEPLOY_KEY_B64 }}" | base64 -d > ~/.ssh/deploy-key
-          chmod 600 ~/.ssh/jump-key ~/.ssh/deploy-key
+          chmod 600 ~/.ssh/deploy-key
           cat >> ~/.ssh/config << 'EOF'
-          Host bastion
-            HostName bastion.camp.aitalenthub.ru
-            User jump
-            IdentityFile ~/.ssh/jump-key
-            IdentitiesOnly yes
-            StrictHostKeyChecking no
-            UserKnownHostsFile /dev/null
-
-          Host team12
-            HostName 10.20.0.4
-            User team12
-            ProxyJump bastion
+          Host evt-ai
+            HostName 84.252.139.24
+            User dpgorbunov
             IdentityFile ~/.ssh/deploy-key
             IdentitiesOnly yes
             StrictHostKeyChecking no
@@ -39,12 +29,12 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh team12 << 'DEPLOY'
+          ssh evt-ai << 'DEPLOY'
             set -e
             cd ~/workspace/demoday-core
             git fetch origin main
             git reset --hard origin/main
-            docker compose -f docker-compose.prod.yml pull 2>/dev/null || true
-            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml --env-file .env.prod pull 2>/dev/null || true
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
             docker compose -f docker-compose.prod.yml ps
           DEPLOY

@@ -9,7 +9,6 @@ import {
   Target,
   Brain,
   ArrowRight,
-  Github,
   Sun,
   Moon,
   Send,
@@ -26,7 +25,6 @@ import {
 } from "lucide-react"
 
 const BOT_URL = "https://t.me/demoday_ai_talent_hub_test_bot"
-const GITHUB_URL = "https://github.com/AI-Talent-Camp-2026/demoday-ai"
 
 /* ============================================================
    Theme
@@ -1040,20 +1038,6 @@ export function Landing() {
                 Попробовать Live Demo
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 sm:h-6 sm:w-6" />
               </a>
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-medium transition-all duration-200 hover:scale-[1.02] sm:w-auto"
-                style={{
-                  background: "var(--ld-surface)",
-                  color: "var(--ld-text)",
-                  border: "2px solid var(--ld-border)",
-                }}
-              >
-                <Github className="h-5 w-5" />
-                GitHub
-              </a>
             </div>
           </Reveal>
 
@@ -1061,11 +1045,11 @@ export function Landing() {
           <Reveal delay={400}>
             <div className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm sm:text-base">
               <span style={{ color: "var(--ld-text-secondary)" }}>
-                <span className="font-display font-bold" style={{ color: "var(--ld-accent)" }}>330</span> проектов
+                до <span className="font-display font-bold" style={{ color: "var(--ld-accent)" }}>500+</span> докладов
               </span>
               <span style={{ color: "var(--ld-border)" }}>•</span>
               <span style={{ color: "var(--ld-text-secondary)" }}>
-                <span className="font-display font-bold" style={{ color: "var(--ld-teal)" }}>10</span> залов
+                до <span className="font-display font-bold" style={{ color: "var(--ld-teal)" }}>10</span> параллельных залов
               </span>
               <span style={{ color: "var(--ld-border)" }}>•</span>
               <span style={{ color: "var(--ld-text-secondary)" }}>
@@ -1119,9 +1103,9 @@ export function Landing() {
               className="font-body mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed sm:text-base"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              Организатор тратит <span style={{ color: "var(--ld-ember)" }}>2 рабочих дня</span> на расписание вручную.
-              80 студентов не попали в расписание за ночь до DD.
-              Гости видят &lt;20% проектов. Эксперты пропускают 80% по своей теме.
+              На HighLoad++ — 140+ докладов в 10 залах. На Стачке — 250+ докладов в 30 секциях.
+              Организатор тратит <span style={{ color: "var(--ld-ember)" }}>дни</span> на расписание.
+              Гости видят &lt;20% программы. Эксперты пропускают 80% по своей теме.
             </p>
           </Reveal>
         </div>
@@ -1585,24 +1569,24 @@ export function Landing() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2">
             {[
               {
-                icon: Clapperboard,
-                title: "Demo Day / Pitch Day",
-                desc: "Студенческие проекты, стартап-питчи, инвестиционные дни. Сотни проектов — каждый гость видит свой топ.",
+                icon: Calendar,
+                title: "IT-конференции",
+                desc: "HighLoad++ (3 800 участников, 10 залов), Стачка (250+ докладов), Merge, DevOpsConf. Персональное расписание вместо 20-страничной программы.",
               },
               {
-                icon: Calendar,
-                title: "Конференции",
-                desc: "Научные и индустриальные конференции с параллельными секциями. Персональное расписание вместо 20-страничной программы.",
+                icon: Clapperboard,
+                title: "Demo Day / Pitch Day",
+                desc: "Стартап-питчи, инвестиционные дни, акселераторы. Сотни проектов — каждый гость видит свой топ.",
               },
               {
                 icon: Brain,
-                title: "Хакатоны",
-                desc: "Финальные презентации: жюри и менторы получают подборку проектов под свою экспертизу и готовые вопросы.",
+                title: "Хакатоны и форумы",
+                desc: "Финальные презентации: жюри и менторы получают подборку проектов под свою экспертизу и готовые вопросы для Q&A.",
               },
               {
                 icon: Building2,
-                title: "Выставки и ярмарки",
-                desc: "Промышленные выставки, карьерные ярмарки. Маршрут по стендам, контакт с экспонентами через бота.",
+                title: "Выставки и ивенты",
+                desc: "Промышленные выставки, карьерные ярмарки, корпоративные мероприятия. Маршрут по стендам, контакт с экспонентами через бота.",
               },
             ].map((uc, i) => (
               <Reveal key={i} delay={i * 80}>
@@ -1660,7 +1644,7 @@ export function Landing() {
             {[
               {
                 q: "Для каких мероприятий подходит платформа?",
-                a: "Любые события с параллельными треками: Demo Day, конференции, хакатоны, питч-сессии, научные симпозиумы, карьерные ярмарки. Масштаб — от 50 до 500+ проектов/докладов.",
+                a: "IT-конференции (HighLoad++, Стачка, Merge, TeamLead Conf), Demo Day, хакатоны, питч-сессии, форумы, научные симпозиумы, карьерные ярмарки — любые события с параллельными треками от 50 до 500+ докладов.",
               },
               {
                 q: "Как это работает для организатора?",
@@ -1671,8 +1655,8 @@ export function Landing() {
                 a: "Telegram-бот: минута диалога → AI понимает интересы → персональный топ проектов с рейтингом релевантности → Q&A-подсказки → уведомления о сдвигах тайминга → follow-up после события.",
               },
               {
-                q: "Чем лучше Google-таблицы или Notion?",
-                a: "Таблица не масштабируется: при 100+ проектах в 6 залах гость видит менее 20%. Нет персонализации, нет напоминаний, нет аналитики. Наш бот решает навигацию за минуту вместо часа ручного поиска.",
+                q: "Чем лучше Google-таблицы или конференц-приложений?",
+                a: "Таблицы не масштабируются: при 100+ докладах в 10 залах гость видит менее 20%. Обычные приложения показывают расписание, но не персонализируют. EventAI подбирает программу под интересы конкретного гостя за минуту.",
               },
               {
                 q: "Откуда берутся данные о проектах?",
@@ -1855,8 +1839,8 @@ export function Landing() {
               className="font-body mx-auto mt-4 max-w-md"
               style={{ color: "var(--ld-text-secondary)" }}
             >
-              Откройте бота и пройдите демо-сценарий на данных реального Demo Day AI Talent Hub.
-              Свяжитесь для обсуждения внедрения.
+              Откройте бота и пройдите демо-сценарий на данных реальной конференции.
+              Свяжитесь для обсуждения внедрения на вашем мероприятии.
             </p>
           </Reveal>
           <Reveal delay={200}>
@@ -1875,20 +1859,6 @@ export function Landing() {
                 <MessageCircle className="h-5 w-5" />
                 Live Demo в Telegram
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-              </a>
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display inline-flex items-center gap-2 rounded-xl px-6 py-4 text-sm font-medium transition-all duration-200 hover:scale-[1.03]"
-                style={{
-                  background: "var(--ld-surface)",
-                  color: "var(--ld-text-secondary)",
-                  border: "1px solid var(--ld-border)",
-                }}
-              >
-                <Github className="h-4 w-4" />
-                Документация
               </a>
             </div>
           </Reveal>
@@ -1919,7 +1889,7 @@ export function Landing() {
                 className="font-body mt-3 text-sm leading-relaxed"
                 style={{ color: "var(--ld-text-muted)" }}
               >
-                AI-платформа для персонализации мероприятий с параллельными треками
+                AI-навигатор для конференций, Demo Day и мероприятий с параллельными треками
               </p>
             </div>
 
@@ -1955,18 +1925,6 @@ export function Landing() {
                 Ресурсы
               </h4>
               <ul className="mt-3 space-y-2">
-                <li>
-                  <a
-                    href={GITHUB_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-body inline-flex items-center gap-1.5 text-sm transition-colors hover:opacity-80"
-                    style={{ color: "var(--ld-text-muted)" }}
-                  >
-                    <Github className="h-3.5 w-3.5" />
-                    GitHub
-                  </a>
-                </li>
                 <li>
                   <a
                     href={BOT_URL}
