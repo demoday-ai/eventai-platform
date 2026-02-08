@@ -21,7 +21,7 @@ export function Settings() {
     document.title = `${APP_NAME} - Настройки`
   }, [])
 
-  const { data: event, isLoading } = useQuery<Event | null>({
+  const { data: event, isLoading, error } = useQuery<Event | null>({
     queryKey: ["currentEvent"],
     queryFn: async () => {
       try {
@@ -94,7 +94,7 @@ export function Settings() {
     )
   }
 
-  const noEvent = !isLoading && !event
+  const noEvent = !isLoading && !event && !error
 
   return (
     <div className="grid gap-6">
@@ -105,6 +105,11 @@ export function Settings() {
           <CardTitle>Мероприятие</CardTitle>
         </CardHeader>
         <CardContent>
+          {error && (
+            <p className="text-sm text-red-500 mb-4">
+              Ошибка загрузки: {error instanceof Error ? error.message : "Неизвестная ошибка"}
+            </p>
+          )}
           {noEvent && (
             <p className="text-sm text-muted-foreground mb-4">
               Нет активного мероприятия. Загрузите проекты на вкладке «Проекты», чтобы создать мероприятие.
