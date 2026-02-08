@@ -15,10 +15,14 @@ vi.mock("../hooks/useAuth", () => ({
 }))
 
 // Mock API client
-vi.mock("../lib/api-client", () => ({
-  getRoomDetail: vi.fn(),
-  updateRoom: vi.fn(),
-}))
+vi.mock("../lib/api-client", async () => {
+  const actual = await vi.importActual("../lib/api-client")
+  return {
+    ...actual,
+    getRoomDetail: vi.fn(),
+    updateRoom: vi.fn(),
+  }
+})
 
 const mockRoomData = {
   room: {

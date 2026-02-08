@@ -14,10 +14,14 @@ vi.mock("../hooks/useAuth", () => ({
 }))
 
 // Mock API client
-vi.mock("../lib/api-client", () => ({
-  getDashboard: vi.fn(),
-  getCoverage: vi.fn(),
-}))
+vi.mock("../lib/api-client", async () => {
+  const actual = await vi.importActual("../lib/api-client")
+  return {
+    ...actual,
+    getDashboard: vi.fn(),
+    getCoverage: vi.fn(),
+  }
+})
 
 const createWrapper = () => {
   const queryClient = new QueryClient({

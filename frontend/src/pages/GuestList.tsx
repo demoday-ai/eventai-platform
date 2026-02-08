@@ -7,6 +7,7 @@ import { APP_NAME } from "../lib/constants"
 import {
   getGuests,
   getGuestDetail,
+  isNoEventError,
   type GuestListItem,
   type GuestDetailResponse,
 } from "../lib/api-client"
@@ -164,7 +165,7 @@ export function GuestList() {
     document.title = `${APP_NAME} - Гости и партнёры`
   }, [])
 
-  const { data: guests, isLoading, isError } = useQuery({
+  const { data: guests, isLoading, isError, error } = useQuery({
     queryKey: ["guests", search, roleFilter],
     queryFn: () =>
       getGuests({
@@ -209,7 +210,10 @@ export function GuestList() {
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Загрузка...</p>}
-      {isError && <p className="text-sm text-red-500">Ошибка загрузки списка гостей</p>}
+      {isError && isNoEventError(error) && (
+        <p className="text-sm text-muted-foreground">Нет активного мероприятия. Гости появятся после создания события.</p>
+      )}
+      {isError && !isNoEventError(error) && <p className="text-sm text-red-500">Ошибка загрузки списка гостей</p>}
 
       {guests && guests.length === 0 && (
         <p className="text-sm text-muted-foreground">Гости не найдены</p>

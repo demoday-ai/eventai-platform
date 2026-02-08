@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useParams, useNavigate } from "react-router-dom"
-import { getRoomDetail, updateRoom, type ExpertInfo, type ProjectInfo } from "../lib/api-client"
+import { getRoomDetail, updateRoom, isNoEventError, type ExpertInfo, type ProjectInfo } from "../lib/api-client"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
@@ -78,6 +78,18 @@ export function RoomDetail() {
     return (
       <div className="flex items-center justify-center py-16">
         <p className="text-muted-foreground">Загрузка...</p>
+      </div>
+    )
+  }
+
+  if (error && isNoEventError(error)) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Card className="border-dashed">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">Нет активного мероприятия.</p>
+          </CardContent>
+        </Card>
       </div>
     )
   }

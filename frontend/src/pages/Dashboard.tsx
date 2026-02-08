@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Skeleton } from "../components/ui/skeleton"
 import { APP_NAME } from "../lib/constants"
-import { getDashboard, getCoverage, type DashboardData, type Alert as AlertType } from "../lib/api-client"
+import { getDashboard, getCoverage, isNoEventError, type DashboardData, type Alert as AlertType } from "../lib/api-client"
 import { CoverageTable } from "../components/CoverageTable"
 
 export function Dashboard() {
@@ -78,8 +78,19 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
+          {/* No event state */}
+          {error && isNoEventError(error) && (
+            <Card className="border-dashed">
+              <CardContent className="pt-6 text-center">
+                <p className="text-muted-foreground">
+                  Нет активного мероприятия. Загрузите проекты на вкладке «Импорт данных», чтобы создать мероприятие.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Error state */}
-          {error && (
+          {error && !isNoEventError(error) && (
             <Card className="border-red-500">
               <CardContent className="pt-6">
                 <p className="text-red-500">

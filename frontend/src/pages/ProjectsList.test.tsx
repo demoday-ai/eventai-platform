@@ -15,10 +15,14 @@ vi.mock("../hooks/useAuth", () => ({
 }))
 
 // Mock API client
-vi.mock("../lib/api-client", () => ({
-  getProjects: vi.fn(),
-  getCoverage: vi.fn(),
-}))
+vi.mock("../lib/api-client", async () => {
+  const actual = await vi.importActual("../lib/api-client")
+  return {
+    ...actual,
+    getProjects: vi.fn(),
+    getCoverage: vi.fn(),
+  }
+})
 
 const mockProjects = [
   {

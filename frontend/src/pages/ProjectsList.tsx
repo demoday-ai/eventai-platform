@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { getProjects, getCoverage, type ProjectListItem } from "../lib/api-client"
+import { getProjects, getCoverage, isNoEventError, type ProjectListItem } from "../lib/api-client"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
@@ -40,6 +40,20 @@ export function ProjectsList() {
     return (
       <div className="flex items-center justify-center py-16">
         <p className="text-muted-foreground">Загрузка...</p>
+      </div>
+    )
+  }
+
+  if (error && isNoEventError(error)) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Card className="border-dashed">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">
+              Нет активного мероприятия. Загрузите проекты на вкладке «Импорт данных», чтобы создать мероприятие.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     )
   }

@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios, { AxiosError } from "axios"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1"
 
@@ -709,6 +709,19 @@ export interface ScheduleChangeItem {
 export interface ScheduleChangeListResponse {
   total: number
   items: ScheduleChangeItem[]
+}
+
+/** Check if error is a 404 "no active event" response. */
+export function isNoEventError(error: unknown): boolean {
+  if (error instanceof AxiosError && error.response?.status === 404) {
+    const detail = error.response.data?.detail
+    return typeof detail === "string" && (
+      detail.includes("No active event") ||
+      detail.includes("Нет активного события") ||
+      detail.includes("event")
+    )
+  }
+  return false
 }
 
 // API functions
