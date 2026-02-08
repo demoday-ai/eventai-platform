@@ -25,7 +25,7 @@ from app.bot.keyboards import (
     move_target_room_keyboard,
     room_expert_detail_keyboard,
 )
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.services import expert_service, matching_service, user_service
 
@@ -46,16 +46,12 @@ logger = logging.getLogger(__name__)
 ) = range(10)
 
 
-def _is_organizer(user_id: int) -> bool:
-    return str(user_id) in settings.organizer_ids
-
-
 # ========== ORGANIZER: /experts command ==========
 
 
 async def experts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Entry point: /experts command (organizer only)."""
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("Эта команда доступна только организаторам.")
         return ConversationHandler.END
 

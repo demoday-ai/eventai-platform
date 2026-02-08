@@ -13,16 +13,12 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.bot.keyboards import coverage_room_detail_kb, coverage_summary_keyboard
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.models.room import Room
 from app.services import coverage_service, user_service
 
 logger = logging.getLogger(__name__)
-
-
-def _is_organizer(user_id: int) -> bool:
-    return str(user_id) in settings.organizer_ids
 
 
 async def _get_event_id(session):
@@ -36,7 +32,7 @@ async def _get_event_id(session):
 async def coverage_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /coverage command — show coverage summary for organizers."""
     user_id = update.effective_user.id
-    if not _is_organizer(user_id):
+    if not is_organizer(user_id):
         await update.message.reply_text("Эта команда доступна только организаторам.")
         return
 
@@ -55,7 +51,7 @@ async def coverage_refresh_callback(update: Update, context: ContextTypes.DEFAUL
     await query.answer()
 
     user_id = update.effective_user.id
-    if not _is_organizer(user_id):
+    if not is_organizer(user_id):
         await query.edit_message_text("Эта команда доступна только организаторам.")
         return
 
@@ -118,7 +114,7 @@ async def coverage_room_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
 
     user_id = update.effective_user.id
-    if not _is_organizer(user_id):
+    if not is_organizer(user_id):
         await query.edit_message_text("Доступ запрещён.")
         return
 
@@ -238,7 +234,7 @@ async def coverage_gaps_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
 
     user_id = update.effective_user.id
-    if not _is_organizer(user_id):
+    if not is_organizer(user_id):
         await query.edit_message_text("Доступ запрещён.")
         return
 

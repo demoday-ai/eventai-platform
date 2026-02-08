@@ -20,14 +20,10 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 
 logger = logging.getLogger(__name__)
-
-
-def _is_organizer(telegram_user_id: int | str) -> bool:
-    return str(telegram_user_id) in settings.organizer_ids
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +32,7 @@ def _is_organizer(telegram_user_id: int | str) -> bool:
 
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("Только для организаторов.")
         return
 
@@ -68,7 +64,7 @@ async def broadcast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("Только для организаторов.")
         return
 
@@ -150,7 +146,7 @@ async def acknowledge_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("Только для организаторов.")
         return
 
@@ -187,7 +183,7 @@ async def room_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     short_room_id = query.data.split(":")[1]
@@ -243,7 +239,7 @@ async def refresh_status_callback(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer("Обновляю...")
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     from app.bot.keyboards import participation_summary_rooms

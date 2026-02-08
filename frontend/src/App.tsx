@@ -43,10 +43,6 @@ function App() {
           <Route path="/projects" element={<ProjectsList />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
           <Route path="/settings" element={<Settings />} />
-          {/* Redirects from old routes */}
-          <Route path="/briefing" element={<Navigate to="/messaging" replace />} />
-          <Route path="/participation" element={<Navigate to="/messaging" replace />} />
-          <Route path="/notifications" element={<Navigate to="/messaging" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -62,10 +62,6 @@ def create_bot_app() -> Application:
     for handler in get_briefing_handlers():
         application.add_handler(handler)
 
-    # EPIC-010: Contact Request handlers (temporarily disabled)
-    # for handler in get_contact_handlers():
-    #     application.add_handler(handler)
-
     # EPIC-011: Organizer Dashboard handlers
     for handler in get_dashboard_handlers():
         application.add_handler(handler)

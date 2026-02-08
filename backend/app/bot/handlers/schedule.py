@@ -14,7 +14,7 @@ from telegram.ext import (
     ConversationHandler,
 )
 
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.services import notification_service, schedule_service, user_service
 
@@ -33,15 +33,10 @@ class ScheduleState(Enum):
     DASHBOARD = auto()
 
 
-def _is_organizer(user_id: int) -> bool:
-    """Check if Telegram user is an organizer."""
-    return str(user_id) in settings.organizer_ids
-
-
 async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /schedule command - show schedule menu."""
     user = update.effective_user
-    if not user or not _is_organizer(user.id):
+    if not user or not is_organizer(user.id):
         await update.message.reply_text("⛔ Эта команда доступна только организаторам.")
         return ConversationHandler.END
 
@@ -69,7 +64,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     data = query.data
     user = update.effective_user
 
-    if not user or not _is_organizer(user.id):
+    if not user or not is_organizer(user.id):
         await query.edit_message_text("⛔ Доступ запрещён.")
         return ConversationHandler.END
 

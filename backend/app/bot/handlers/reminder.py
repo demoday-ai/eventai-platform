@@ -26,17 +26,12 @@ from app.bot.keyboards import (
     reminder_resend_keyboard,
     reminder_type_keyboard,
 )
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.models.reminder import ReminderType
 from app.services import reminder_service, user_service
 
 logger = logging.getLogger(__name__)
-
-
-def _is_organizer(telegram_user_id: int | str) -> bool:
-    """Check if user is an organizer."""
-    return str(telegram_user_id) in settings.organizer_ids
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +42,7 @@ def _is_organizer(telegram_user_id: int | str) -> bool:
 async def remind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /remind command - check for interrupted batch, then show type selection."""
     # T022: Check organizer access
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("Команда доступна только организаторам.")
         return
 
@@ -113,7 +108,7 @@ async def type_selection_callback(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("Команда доступна только организаторам.")
         return
 
@@ -204,7 +199,7 @@ async def send_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("Команда доступна только организаторам.")
         return
 
@@ -274,7 +269,7 @@ async def resend_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("Команда доступна только организаторам.")
         return
 
@@ -335,7 +330,7 @@ async def recovery_choice_callback(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("Команда доступна только организаторам.")
         return
 

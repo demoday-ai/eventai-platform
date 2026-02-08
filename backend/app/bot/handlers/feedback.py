@@ -22,16 +22,11 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.services import feedback_service, user_service
 
 logger = logging.getLogger(__name__)
-
-
-def _is_organizer(telegram_user_id: int | str) -> bool:
-    """Check if user is an organizer."""
-    return str(telegram_user_id) in settings.organizer_ids
 
 
 def project_list_keyboard(projects: list[dict]) -> InlineKeyboardMarkup:
@@ -66,7 +61,7 @@ def feedback_review_keyboard(feedback_id: UUID, project_id: UUID) -> InlineKeybo
 
 async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /feedback command — show projects with pending feedback."""
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("❌ Команда доступна только организаторам.")
         return
 
@@ -102,7 +97,7 @@ async def project_select_callback(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     project_id = query.data.split(":")[-1]
@@ -164,7 +159,7 @@ async def approve_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("✅ Одобрено")
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     feedback_id = query.data.split(":")[-1]
@@ -202,7 +197,7 @@ async def reject_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("❌ Отклонено")
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     feedback_id = query.data.split(":")[-1]
@@ -239,7 +234,7 @@ async def send_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("Отправляю...")
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     project_id = query.data.split(":")[-1]
@@ -270,7 +265,7 @@ async def back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     async with async_session() as session:

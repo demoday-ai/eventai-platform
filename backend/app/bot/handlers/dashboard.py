@@ -20,16 +20,11 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.services import dashboard_service, user_service
 
 logger = logging.getLogger(__name__)
-
-
-def _is_organizer(telegram_user_id: int | str) -> bool:
-    """Check if user is an organizer."""
-    return str(telegram_user_id) in settings.organizer_ids
 
 
 def dashboard_keyboard() -> InlineKeyboardMarkup:
@@ -57,7 +52,7 @@ def back_keyboard() -> InlineKeyboardMarkup:
 
 async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /dashboard command."""
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("❌ Команда доступна только организаторам.")
         return
 
@@ -93,7 +88,7 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("Обновляю...")
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("❌ Доступ запрещён.")
         return
 
@@ -125,7 +120,7 @@ async def noshows_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     async with async_session() as session:
@@ -163,7 +158,7 @@ async def problems_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     async with async_session() as session:
@@ -195,7 +190,7 @@ async def guests_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         return
 
     async with async_session() as session:

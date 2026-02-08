@@ -18,16 +18,11 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.services import briefing_service, user_service
 
 logger = logging.getLogger(__name__)
-
-
-def _is_organizer(telegram_user_id: int | str) -> bool:
-    """Check if user is an organizer."""
-    return str(telegram_user_id) in settings.organizer_ids
 
 
 def briefing_confirm_keyboard() -> InlineKeyboardMarkup:
@@ -40,7 +35,7 @@ def briefing_confirm_keyboard() -> InlineKeyboardMarkup:
 
 async def briefing_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /briefing command - show preview and confirm."""
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("Команда доступна только организаторам.")
         return
 
@@ -75,7 +70,7 @@ async def send_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not _is_organizer(query.from_user.id):
+    if not is_organizer(query.from_user.id):
         await query.edit_message_text("Команда доступна только организаторам.")
         return
 

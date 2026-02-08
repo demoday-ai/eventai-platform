@@ -35,7 +35,7 @@ from app.bot.keyboards import (
     rooms_overview_keyboard,
     target_room_keyboard,
 )
-from app.config import settings
+from app.bot.utils import is_organizer
 from app.database import async_session
 from app.services import clustering_service, project_service, user_service
 
@@ -56,13 +56,9 @@ logger = logging.getLogger(__name__)
 ) = range(10)
 
 
-def _is_organizer(user_id: int) -> bool:
-    return str(user_id) in settings.organizer_ids
-
-
 async def clustering_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Entry point: /clustering command."""
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         await update.message.reply_text("Эта команда доступна только организаторам.")
         return ConversationHandler.END
 
@@ -95,7 +91,7 @@ async def clustering_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def receive_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle uploaded document."""
-    if not _is_organizer(update.effective_user.id):
+    if not is_organizer(update.effective_user.id):
         return ConversationHandler.END
 
     document = update.message.document
