@@ -18,14 +18,17 @@ from app.models.role import RoleCode
 from app.models.user import GuestSubtype
 from app.models.user_role import UserRole
 from app.schemas.admin import (
+    Alert,
     AuditLogItem,
     AuditLogResponse,
     BriefingPreview,
     BriefingSendResult,
     DashboardResponse,
     EventUpdateRequest,
+    ExpertStats,
     GuestDetailResponse,
     GuestListItem,
+    GuestStats,
     GuestUploadResult,
     MessagingPreviewRequest,
     MessagingPreviewResponse,
@@ -36,8 +39,10 @@ from app.schemas.admin import (
     ProjectListItem,
     RoomCoverage,
     RoomDetailResponse,
+    RoomStats,
     RoomUpdateRequest,
     RoomUpdateResponse,
+    StudentStats,
     TagListResponse,
     TagReplaceRequest,
     TagReplaceResponse,
@@ -71,8 +76,12 @@ async def get_dashboard(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        return DashboardResponse(
+            students=StudentStats(total=0, confirmed=0, pending=0, declined=0),
+            experts=ExpertStats(total=0, confirmed=0, pending=0, invited=0),
+            guests=GuestStats(total=0, by_subtype=[]),
+            rooms=RoomStats(total=0, with_experts=0, without_experts=0),
+            alerts=[Alert(severity="info", message="Нет активного мероприятия. Загрузите проекты для начала работы.")],
         )
 
     return await admin_service.get_dashboard_stats(db, event.id)
@@ -85,12 +94,9 @@ async def get_coverage(
 ):
     """Get room coverage statistics."""
 
-
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        return []
 
     return await admin_service.get_coverage_stats(db, event.id)
 

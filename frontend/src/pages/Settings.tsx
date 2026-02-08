@@ -21,9 +21,19 @@ export function Settings() {
     document.title = `${APP_NAME} - Настройки`
   }, [])
 
-  const { data: event, isLoading, error } = useQuery<Event>({
+  const { data: event, isLoading } = useQuery<Event | null>({
     queryKey: ["currentEvent"],
-    queryFn: getCurrentEvent,
+    queryFn: async () => {
+      try {
+        return await getCurrentEvent()
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "response" in err) {
+          const resp = (err as { response?: { status?: number } }).response
+          if (resp?.status === 404) return null
+        }
+        throw err
+      }
+    },
   })
 
   const [name, setName] = useState("")
@@ -84,20 +94,7 @@ export function Settings() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="grid gap-6">
-        <h2 className="text-2xl font-bold">Настройки</h2>
-        <Card className="border-red-500">
-          <CardContent className="pt-6">
-            <p className="text-red-500">
-              Ошибка загрузки: {error instanceof Error ? error.message : "Неизвестная ошибка"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const noEvent = !isLoading && !event
 
   return (
     <div className="grid gap-6">
@@ -108,6 +105,11 @@ export function Settings() {
           <CardTitle>Мероприятие</CardTitle>
         </CardHeader>
         <CardContent>
+          {noEvent && (
+            <p className="text-sm text-muted-foreground mb-4">
+              Нет активного мероприятия. Загрузите проекты на вкладке «Проекты», чтобы создать мероприятие.
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="event-name">Название</Label>
@@ -160,7 +162,7 @@ export function Settings() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={mutation.isPending || noEvent}>
                 {mutation.isPending ? "Сохранение..." : "Сохранить"}
               </Button>
 
