@@ -14,15 +14,19 @@ vi.mock("../hooks/useAuth", () => ({
 
 const mockRunMatching = vi.fn()
 const mockGetCurrentMatching = vi.fn()
+const mockGetCurrentClustering = vi.fn()
 const mockMoveExpert = vi.fn()
 const mockApproveMatching = vi.fn()
 const mockGetInvitePreview = vi.fn()
 const mockConfirmInvites = vi.fn()
+const mockAssignExpert = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   runMatching: (...args: unknown[]) => mockRunMatching(...args),
   getCurrentMatching: (...args: unknown[]) => mockGetCurrentMatching(...args),
+  getCurrentClustering: (...args: unknown[]) => mockGetCurrentClustering(...args),
   moveExpert: (...args: unknown[]) => mockMoveExpert(...args),
+  assignExpert: (...args: unknown[]) => mockAssignExpert(...args),
   approveMatching: (...args: unknown[]) => mockApproveMatching(...args),
   getInvitePreview: (...args: unknown[]) => mockGetInvitePreview(...args),
   confirmInvites: (...args: unknown[]) => mockConfirmInvites(...args),
@@ -69,6 +73,18 @@ describe("ExpertMatching", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetCurrentMatching.mockRejectedValue(new Error("Not found"))
+    mockGetCurrentClustering.mockResolvedValue({ approved_at: "2026-02-01T12:00:00", rooms: [] }) // default: clustering approved
+  })
+
+  it("shows empty state when no approved clustering", async () => {
+    mockGetCurrentClustering.mockRejectedValue(new Error("Not found"))
+
+    render(<ExpertMatching />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Для матчинга экспертов необходима одобренная кластеризация")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к кластеризации" })).toHaveAttribute("href", "/clustering")
+    })
   })
 
   it("renders run step initially", () => {

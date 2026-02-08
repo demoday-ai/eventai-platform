@@ -235,13 +235,14 @@ describe("ProjectsList", () => {
     })
   })
 
-  it("shows empty state when no projects", async () => {
+  it("shows empty state with link to import when no projects and no filters", async () => {
     vi.mocked(apiClient.getProjects).mockResolvedValue([])
 
     render(<ProjectsList />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText(/нет проектов/i)).toBeInTheDocument()
+      expect(screen.getByText("Проекты ещё не загружены")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к импорту" })).toHaveAttribute("href", "/import")
     })
   })
 })

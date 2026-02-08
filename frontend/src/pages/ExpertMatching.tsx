@@ -2,13 +2,16 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { AxiosError } from "axios"
+import { Users } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Stepper } from "../components/ui/stepper"
+import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 import {
   runMatching,
   getCurrentMatching,
+  getCurrentClustering,
   moveExpert,
   assignExpert,
   approveMatching,
@@ -58,6 +61,13 @@ export function ExpertMatching() {
   useEffect(() => {
     document.title = `${APP_NAME} - Эксперты`
   }, [])
+
+  // Check if approved clustering exists
+  const { data: clusteringData, isFetched: clusteringFetched } = useQuery({
+    queryKey: ["clustering"],
+    queryFn: getCurrentClustering,
+    retry: false,
+  })
 
   // Load existing matching
   const { data: existingMatching } = useQuery({
@@ -163,6 +173,28 @@ export function ExpertMatching() {
 
   const allRooms = matchingResult?.rooms || []
   const hasMatched = matchingResult ? matchingResult.matched_experts > 0 : false
+
+  const hasNoApprovedClustering = clusteringFetched && !clusteringData?.approved_at && !existingMatching
+
+  if (hasNoApprovedClustering) {
+    return (
+      <div className="grid gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <h2 className="text-2xl font-bold">Эксперты</h2>
+          <Link to="/experts/list">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">Список экспертов</Button>
+          </Link>
+        </div>
+        <PageEmptyState
+          icon={Users}
+          title="Для матчинга экспертов необходима одобренная кластеризация"
+          description="Одобрите кластеризацию, чтобы начать матчинг."
+          actionLabel="Перейти к кластеризации"
+          actionLink="/clustering"
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="grid gap-6">

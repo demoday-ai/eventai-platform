@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Calendar } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Stepper } from "../components/ui/stepper"
+import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 import {
   generateSchedule,
@@ -40,7 +42,7 @@ export function Schedule() {
   }, [])
 
   // Load clustering rooms for per-room time overrides
-  const { data: clusteringData } = useQuery({
+  const { data: clusteringData, isFetched: clusteringFetched } = useQuery({
     queryKey: ["clustering"],
     queryFn: () => getCurrentClustering(),
     retry: false,
@@ -164,6 +166,23 @@ export function Schedule() {
       room_id: slot.room_id,
       status: slot.status,
     })
+  }
+
+  const hasNoApprovedClustering = clusteringFetched && !clusteringData?.approved_at && !existingSchedule?.days?.length
+
+  if (hasNoApprovedClustering) {
+    return (
+      <div className="grid gap-6">
+        <h2 className="text-2xl font-bold">Расписание</h2>
+        <PageEmptyState
+          icon={Calendar}
+          title="Для генерации расписания необходима одобренная кластеризация"
+          description="Одобрите кластеризацию, чтобы генерировать расписание."
+          actionLabel="Перейти к кластеризации"
+          actionLink="/clustering"
+        />
+      </div>
+    )
   }
 
   return (

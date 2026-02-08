@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { FolderOpen } from "lucide-react"
 import { getProjects, getCoverage, isNoEventError, type ProjectListItem } from "../lib/api-client"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Label } from "../components/ui/label"
+import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 
 export function ProjectsList() {
@@ -46,15 +48,13 @@ export function ProjectsList() {
 
   if (error && isNoEventError(error)) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Card className="border-dashed">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">
-              Нет активного мероприятия. Загрузите проекты на вкладке «Импорт данных», чтобы создать мероприятие.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <PageEmptyState
+        icon={FolderOpen}
+        title="Проекты ещё не загружены"
+        description="Загрузите проекты на странице Импорта, чтобы создать мероприятие."
+        actionLabel="Перейти к импорту"
+        actionLink="/import"
+      />
     )
   }
 
@@ -169,7 +169,17 @@ export function ProjectsList() {
           <Card>
             <CardContent className="pt-6">
               {projects.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">Нет проектов</p>
+                !roomFilter && !statusFilter && !searchQuery ? (
+                  <PageEmptyState
+                    icon={FolderOpen}
+                    title="Проекты ещё не загружены"
+                    description="Загрузите проекты на странице Импорта."
+                    actionLabel="Перейти к импорту"
+                    actionLink="/import"
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">Нет проектов</p>
+                )
               ) : (
                 <div className="space-y-3">
                   {projects.map((project) => (

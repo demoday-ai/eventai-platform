@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Layers } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Stepper } from "../components/ui/stepper"
+import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 import {
   runClustering,
   getClusteringJobStatus,
   getCurrentClustering,
+  getProjects,
   moveProject,
   approveClustering,
   type ClusteringResult,
@@ -39,6 +42,13 @@ export function Clustering() {
   useEffect(() => {
     document.title = `${APP_NAME} - Кластеризация`
   }, [])
+
+  // Check if projects exist
+  const { data: projectsData, isFetched: projectsFetched } = useQuery({
+    queryKey: ["projects", {}],
+    queryFn: () => getProjects({}),
+    retry: false,
+  })
 
   // Try to load existing clustering
   const { data: existingClustering } = useQuery({
@@ -155,6 +165,25 @@ export function Clustering() {
     }
     setRoomThemesError("")
     runMutation.mutate({ roomThemes: themes.length > 0 ? themes : null })
+  }
+
+  const hasNoProjects = projectsFetched && projectsData && projectsData.length === 0 && !existingClustering
+
+  if (hasNoProjects) {
+    return (
+      <div className="grid gap-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Кластеризация</h2>
+        </div>
+        <PageEmptyState
+          icon={Layers}
+          title="Для кластеризации необходимы проекты"
+          description="Загрузите проекты на странице Импорта."
+          actionLabel="Перейти к импорту"
+          actionLink="/import"
+        />
+      </div>
+    )
   }
 
   return (

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { Users, UserSearch } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
+import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 import {
   getGuests,
@@ -211,11 +213,24 @@ export function GuestList() {
 
       {isLoading && <p className="text-sm text-muted-foreground">Загрузка...</p>}
       {isError && isNoEventError(error) && (
-        <p className="text-sm text-muted-foreground">Нет активного мероприятия. Гости появятся после создания события.</p>
+        <PageEmptyState
+          icon={Users}
+          title="Создайте мероприятие"
+          description="Создайте мероприятие на странице Импорта, чтобы начать работу с аудиторией."
+          actionLabel="Перейти к импорту"
+          actionLink="/import"
+        />
       )}
       {isError && !isNoEventError(error) && <p className="text-sm text-red-500">Ошибка загрузки списка гостей</p>}
 
-      {guests && guests.length === 0 && (
+      {guests && guests.length === 0 && !search && !roleFilter && (
+        <PageEmptyState
+          icon={UserSearch}
+          title="Пока никто не взаимодействовал с ботом"
+          description="Контакты появятся автоматически, когда участники начнут использовать бота."
+        />
+      )}
+      {guests && guests.length === 0 && (search || roleFilter) && (
         <p className="text-sm text-muted-foreground">Гости не найдены</p>
       )}
 

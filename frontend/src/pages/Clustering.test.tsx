@@ -18,12 +18,15 @@ const mockGetClusteringJobStatus = vi.fn()
 const mockMoveProject = vi.fn()
 const mockApproveClustering = vi.fn()
 
+const mockGetProjects = vi.fn()
+
 vi.mock("../lib/api-client", () => ({
   runClustering: (...args: unknown[]) => mockRunClustering(...args),
   getCurrentClustering: (...args: unknown[]) => mockGetCurrentClustering(...args),
   getClusteringJobStatus: (...args: unknown[]) => mockGetClusteringJobStatus(...args),
   moveProject: (...args: unknown[]) => mockMoveProject(...args),
   approveClustering: (...args: unknown[]) => mockApproveClustering(...args),
+  getProjects: (...args: unknown[]) => mockGetProjects(...args),
 }))
 
 const createWrapper = () => {
@@ -71,6 +74,18 @@ describe("Clustering", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetCurrentClustering.mockRejectedValue(new Error("Not found"))
+    mockGetProjects.mockResolvedValue([{ id: "p1", title: "Test" }]) // default: projects exist
+  })
+
+  it("shows empty state when no projects exist", async () => {
+    mockGetProjects.mockResolvedValue([])
+
+    render(<Clustering />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Для кластеризации необходимы проекты")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к импорту" })).toHaveAttribute("href", "/import")
+    })
   })
 
   it("renders parameters step initially", () => {

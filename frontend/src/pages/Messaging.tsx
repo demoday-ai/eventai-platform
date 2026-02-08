@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
+import { MessageSquare, Users } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 import { useAuth } from "../hooks/useAuth"
 import {
   getCoverage,
+  getDashboard,
+  isNoEventError,
   previewMessaging,
   sendMessaging,
   getNotificationDashboard,
@@ -56,6 +60,53 @@ export function Messaging() {
   useEffect(() => {
     document.title = `${APP_NAME} - Рассылки`
   }, [])
+
+  // Check for event and participants
+  const { data: dashboardData, error: dashboardError } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: getDashboard,
+    retry: false,
+  })
+
+  // Tier 1: No event
+  if (dashboardError && isNoEventError(dashboardError)) {
+    return (
+      <div className="grid gap-6">
+        <h2 className="text-2xl font-bold">Рассылки</h2>
+        <PageEmptyState
+          icon={MessageSquare}
+          title="Создайте мероприятие"
+          description="Создайте мероприятие на странице Импорта, чтобы начать рассылки."
+          actionLabel="Перейти к импорту"
+          actionLink="/import"
+        />
+      </div>
+    )
+  }
+
+  // Tier 2: No participants
+  if (dashboardData) {
+    const totalParticipants =
+      (dashboardData.students?.total || 0) +
+      (dashboardData.experts?.total || 0) +
+      (dashboardData.guests?.total || 0) +
+      (dashboardData.partners?.total || 0)
+
+    if (totalParticipants === 0) {
+      return (
+        <div className="grid gap-6">
+          <h2 className="text-2xl font-bold">Рассылки</h2>
+          <PageEmptyState
+            icon={Users}
+            title="Загрузите участников"
+            description="Загрузите участников на странице Импорта, чтобы начать рассылки."
+            actionLabel="Перейти к импорту"
+            actionLink="/import"
+          />
+        </div>
+      )
+    }
+  }
 
   return (
     <div className="grid gap-6">

@@ -113,6 +113,17 @@ describe("Schedule", () => {
     mockGetCurrentClustering.mockResolvedValue(mockClusteringResult)
   })
 
+  it("shows empty state when no approved clustering", async () => {
+    mockGetCurrentClustering.mockRejectedValue(new Error("Not found"))
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Для генерации расписания необходима одобренная кластеризация")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к кластеризации" })).toHaveAttribute("href", "/clustering")
+    })
+  })
+
   it("renders generate step initially", () => {
     render(<Schedule />, { wrapper: createWrapper() })
 
