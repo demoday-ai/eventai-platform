@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from app.services.core.send_retry import send_with_retry
 
 
