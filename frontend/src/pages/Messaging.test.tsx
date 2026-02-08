@@ -15,6 +15,7 @@ vi.mock("../hooks/useAuth", () => ({
 const mockPreviewMessaging = vi.fn()
 const mockSendMessaging = vi.fn()
 const mockGetCoverage = vi.fn()
+const mockGetDashboard = vi.fn()
 const mockGetNotificationDashboard = vi.fn()
 const mockGetNotifications = vi.fn()
 const mockGetScheduleReminderPreview = vi.fn()
@@ -32,6 +33,8 @@ vi.mock("../lib/api-client", () => ({
   previewMessaging: (...args: unknown[]) => mockPreviewMessaging(...args),
   sendMessaging: (...args: unknown[]) => mockSendMessaging(...args),
   getCoverage: (...args: unknown[]) => mockGetCoverage(...args),
+  getDashboard: (...args: unknown[]) => mockGetDashboard(...args),
+  isNoEventError: (error: unknown) => error instanceof Error && error.message.includes("no active event"),
   getNotificationDashboard: (...args: unknown[]) => mockGetNotificationDashboard(...args),
   getNotifications: (...args: unknown[]) => mockGetNotifications(...args),
   getScheduleReminderPreview: (...args: unknown[]) => mockGetScheduleReminderPreview(...args),
@@ -60,6 +63,12 @@ const createWrapper = () => {
 describe("Messaging", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetDashboard.mockResolvedValue({
+      students: { total: 10 },
+      experts: { total: 5 },
+      guests: { total: 3 },
+      partners: { total: 2 },
+    })
     mockGetNotificationDashboard.mockResolvedValue({
       summary: { total: 0, sent: 0, failed: 0, pending: 0 },
       by_role: [],
@@ -72,6 +81,33 @@ describe("Messaging", () => {
       total: 0, acknowledged: 0, pending: 0, unregistered: 0, by_room: [],
     })
     mockGetUnacknowledged.mockResolvedValue({ items: [] })
+  })
+
+  it("shows empty state when no event exists", async () => {
+    mockGetDashboard.mockRejectedValue(new Error("no active event"))
+
+    render(<Messaging />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Создайте мероприятие")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к импорту" })).toHaveAttribute("href", "/import")
+    })
+  })
+
+  it("shows empty state when no participants", async () => {
+    mockGetDashboard.mockResolvedValue({
+      students: { total: 0 },
+      experts: { total: 0 },
+      guests: { total: 0 },
+      partners: { total: 0 },
+    })
+
+    render(<Messaging />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Загрузите участников")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к импорту" })).toHaveAttribute("href", "/import")
+    })
   })
 
   it("renders page title and tabs", () => {
