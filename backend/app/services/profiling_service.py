@@ -3,10 +3,8 @@
 
 import json
 import logging
-import math
 import uuid
 
-import sqlalchemy as sa
 from sqlalchemy import delete, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -28,12 +26,6 @@ TEXT_EXTRACTION_SYSTEM = """Ты AI-ассистент для Demo Day. Проа
 Верни JSON строго в формате:
 {{"tags": ["tag1", "tag2"], "keywords": ["keyword1", "keyword2"]}}
 tags --только из списка допустимых. keywords --дополнительные ключевые слова не из списка."""
-
-RERANK_SYSTEM = """Ты AI-ассистент для Demo Day. Перед тобой профиль гостя и проекты-кандидаты.
-Отранжируй проекты по релевантности к профилю гостя. Учитывай не только теги, но и ключевые слова из свободного текста.
-Верни JSON строго в формате:
-{{"ranked": [{{"project_id": "...", "score": 0.95}}, ...]}}
-Верни все проекты из входного списка, от наиболее к наименее релевантному."""
 
 SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерируй краткое описание (2-3 предложения) каждого проекта, адаптированное под интересы гостя. Подчеркни аспекты релевантные для гостя.
 Верни JSON строго в формате:
@@ -342,249 +334,44 @@ async def extract_interests_from_text(
         return {"tags": [], "keywords": []}
 
 
-# --- T007: IDF computation ---
+# --- T007: Schedule-aware re-ranking ---
 
 
-async def compute_project_idf(
-    session: AsyncSession, event_id: uuid.UUID
-) -> dict[str, float]:
-    """Compute IDF weight for each tag: log(total_projects / projects_with_tag)."""
-    total_result = await session.execute(
-        select(func.count(func.distinct(ProjectTag.project_id)))
-        .join(Project, Project.id == ProjectTag.project_id)
-        .where(Project.event_id == event_id)
-    )
-    total_projects = total_result.scalar() or 1
+def schedule_rerank(
+    candidates: list[dict],
+) -> list[dict]:
+    """Re-rank candidates considering schedule conflicts and room proximity.
 
-    tag_counts_result = await session.execute(
-        select(Tag.name, func.count(func.distinct(ProjectTag.project_id)))
-        .join(ProjectTag, ProjectTag.tag_id == Tag.id)
-        .join(Project, Project.id == ProjectTag.project_id)
-        .where(Project.event_id == event_id)
-        .group_by(Tag.name)
-    )
-
-    idf: dict[str, float] = {}
-    for tag_name, count in tag_counts_result.all():
-        idf[tag_name] = math.log(total_projects / max(count, 1))
-
-    return idf
-
-
-# --- T008: Score projects ---
-
-# Russian stop-words for text search filtering
-_STOP_WORDS = frozenset({
-    "это", "как", "для", "что", "при", "все", "его", "она", "они", "так",
-    "уже", "или", "если", "есть", "был", "они", "мне", "мой", "моя", "наш",
-    "ваш", "где", "кто", "чем", "без", "под", "над", "про", "еще", "тоже",
-    "очень", "будет", "можно", "нужно", "этот", "этом", "того", "тому",
-    "the", "and", "for", "with", "that", "this", "from", "are", "was", "not",
-})
-
-
-async def _text_search_scores(
-    session: AsyncSession, event_id: uuid.UUID, profile: GuestProfile,
-) -> dict[uuid.UUID, float]:
-    """Score projects via PostgreSQL full-text search on keywords and raw_text.
-
-    Returns {project_id: text_score} where score is a relative relevance value.
+    Each candidate dict has: project_id, score, room_number, room_name, tags.
+    Applies penalties for time conflicts and bonuses for room proximity.
     """
-    # Collect search terms from keywords + meaningful words from raw_text
-    terms: list[str] = []
-    if profile.keywords:
-        terms.extend(profile.keywords)
-
-    if profile.raw_text:
-        words = profile.raw_text.split()
-        for w in words:
-            cleaned = w.strip(".,;:!?\"'()[]{}").lower()
-            if len(cleaned) > 3 and cleaned not in _STOP_WORDS and cleaned not in terms:
-                terms.append(cleaned)
-
-    # Add business context terms
-    if profile.extra_data:
-        ed = profile.extra_data
-        if ed.get("company"):
-            terms.append(ed["company"])
-        for obj in ed.get("business_objectives", []):
-            if obj not in terms:
-                terms.append(obj)
-
-    # Limit to 20 terms
-    terms = terms[:20]
-    if not terms:
-        return {}
-
-    # Try PostgreSQL full-text search first
-    query_parts = [t.replace("'", "''") for t in terms if t.strip()]
-    if not query_parts:
-        return {}
-
-    " | ".join(query_parts)
-    scores: dict[uuid.UUID, float] = {}
-
-    try:
-        result = await session.execute(
-            sa.text(
-                "SELECT p.id, ts_rank("
-                "  to_tsvector('russian', coalesce(p.title, '') || ' ' || coalesce(p.description, '')), "
-                "  plainto_tsquery('russian', :query)"
-                ") AS rank "
-                "FROM projects p "
-                "WHERE p.event_id = :eid "
-                "AND to_tsvector('russian', coalesce(p.title, '') || ' ' || coalesce(p.description, '')) "
-                "   @@ plainto_tsquery('russian', :query) "
-                "ORDER BY rank DESC"
-            ),
-            {"query": " ".join(query_parts), "eid": event_id},
-        )
-        for row in result.all():
-            scores[row[0]] = float(row[1])
-    except Exception:
-        logger.warning("FTS search failed, trying ILIKE fallback")
-
-    # Fallback: if FTS gave no results, try ILIKE on keywords
-    if not scores:
-        try:
-            for term in terms[:5]:
-                pattern = f"%{term}%"
-                result = await session.execute(
-                    sa.text(
-                        "SELECT id FROM projects "
-                        "WHERE event_id = :eid "
-                        "AND (title ILIKE :pat OR description ILIKE :pat)"
-                    ),
-                    {"eid": event_id, "pat": pattern},
-                )
-                for row in result.all():
-                    scores[row[0]] = scores.get(row[0], 0.0) + 1.0
-        except Exception:
-            logger.warning("ILIKE fallback also failed")
-
-    return scores
-
-
-async def score_projects(
-    session: AsyncSession, event_id: uuid.UUID, profile: GuestProfile
-) -> list[tuple[uuid.UUID, float]]:
-    """Score all projects by IDF tag overlap + text search, normalized to 0-100."""
-    idf = await compute_project_idf(session, event_id)
-
-    # All guest interest tags (deduplicated)
-    all_tags = list(set(profile.selected_tags))
-
-    # Text search scores
-    text_scores = await _text_search_scores(session, event_id, profile)
-
-    # If no tags AND no text matches, return empty
-    if not all_tags and not text_scores:
-        return []
-
-    # Load all projects with their tags
-    result = await session.execute(
-        select(Project)
-        .where(Project.event_id == event_id)
-        .options(selectinload(Project.tags).selectinload(ProjectTag.tag))
-    )
-    projects = result.scalars().all()
-
-    # Determine max IDF for scaling text boost
-    max_idf = max(idf.values()) if idf else 1.0
-
-    combined: dict[uuid.UUID, float] = {}
-    for project in projects:
-        project_tag_names = {pt.tag.name for pt in project.tags}
-        idf_score = 0.0
-        for tag in all_tags:
-            if tag in project_tag_names:
-                idf_score += idf.get(tag, 1.0)
-
-        # Text boost scaled to IDF magnitude
-        text_boost = text_scores.get(project.id, 0.0) * max_idf
-        combined[project.id] = idf_score + text_boost
-
-    # Normalize to 0-100
-    max_score = max(combined.values()) if combined else 1.0
-    if max_score == 0:
-        max_score = 1.0
-
-    scored: list[tuple[uuid.UUID, float]] = [
-        (pid, round(score / max_score * 100, 1))
-        for pid, score in combined.items()
-        if score > 0
-    ]
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return scored
-
-
-# --- T009: LLM re-ranking ---
-
-
-async def llm_rerank_projects(
-    profile: GuestProfile,
-    candidates: list[tuple[uuid.UUID, float, str, str, list[str]]],
-) -> list[tuple[uuid.UUID, float]]:
-    """LLM re-rank top candidates. Input: list of (project_id, score, title, description, tags).
-    Returns reordered (project_id, score). Falls back to original order on failure."""
     if not candidates:
         return []
 
-    all_tags = list(set(profile.selected_tags))
-    projects_json = [
-        {
-            "project_id": str(pid),
-            "title": title,
-            "description": desc,
-            "tags": tags,
-        }
-        for pid, _, title, desc, tags in candidates
-    ]
+    # Track occupied rooms (higher-ranked projects take priority)
+    occupied_rooms: set[int | None] = set()
+    reranked = []
 
-    extra_context = ""
-    if profile.extra_data:
-        ed = profile.extra_data
-        if ed.get("company"):
-            extra_context += f', компания="{ed["company"]}"'
-        if ed.get("business_objectives"):
-            extra_context += f", бизнес-цели={json.dumps(ed['business_objectives'], ensure_ascii=False)}"
+    for c in candidates:
+        room = c.get("room_number")
+        score = c.get("score", 0.0)
 
-    user_prompt = (
-        f"Профиль: теги={json.dumps(all_tags, ensure_ascii=False)}, "
-        f"ключевые слова={json.dumps(profile.keywords, ensure_ascii=False)}, "
-        f'текст="{profile.raw_text or ""}"{extra_context}\n'
-        f"Проекты: {json.dumps(projects_json, ensure_ascii=False)}"
-    )
+        # Bonus for being in same room as previous recommendations (less walking)
+        if room is not None and room in occupied_rooms:
+            score += 3.0
 
-    try:
-        response = await llm_client.send_chat_completion(
-            system_prompt=RERANK_SYSTEM,
-            user_prompt=user_prompt,
-            json_mode=True,
-        )
+        # Penalty for room conflicts (many projects in same room = can't see all)
+        room_count = sum(1 for r in occupied_rooms if r == room) if room else 0
+        if room_count > 1:
+            score -= 2.0 * (room_count - 1)
 
-        ranked = response.get("ranked", [])
-        # Build reordered list
-        id_to_orig = {str(pid): (pid, score) for pid, score, *_ in candidates}
-        reordered = []
-        for item in ranked:
-            pid_str = item.get("project_id")
-            if pid_str in id_to_orig:
-                orig_pid, _ = id_to_orig[pid_str]
-                reordered.append((orig_pid, float(item.get("score", 0.5))))
+        c["score"] = score
+        if room is not None:
+            occupied_rooms.add(room)
+        reranked.append(c)
 
-        # Add any missing candidates at the end
-        seen = {str(pid) for pid, _ in reordered}
-        for pid, score, *_ in candidates:
-            if str(pid) not in seen:
-                reordered.append((pid, score))
-
-        logger.info("LLM re-ranking completed: %d projects", len(reordered))
-        return reordered
-
-    except Exception:
-        logger.warning("LLM re-ranking failed, using tag-only scores (graceful degradation)")
-        return [(pid, score) for pid, score, *_ in candidates]
+    reranked.sort(key=lambda x: x["score"], reverse=True)
+    return reranked
 
 
 # --- T010: LLM summaries ---
@@ -647,62 +434,143 @@ async def generate_llm_summaries(
 async def generate_recommendations(
     session: AsyncSession, profile: GuestProfile
 ) -> dict:
-    """Orchestrate: IDF score -> LLM rerank -> LLM summaries -> save recommendations."""
+    """Orchestrate: embedding search → schedule rerank → LLM summaries → save.
+
+    Pipeline:
+    1. Build profile text from NL summary + tags + goals
+    2. Embed profile text (1 API call ~100ms)
+    3. Qdrant similarity search (top-30, <10ms)
+    4. Schedule-aware rerank (in-memory)
+    5. LLM summaries for top-15 (1 LLM call ~3-5s)
+    6. Save to Recommendation table
+    """
     import time
+
+    from app.services import embedding_service
 
     start = time.monotonic()
     event_id = profile.event_id
 
-    # 1. Score all projects by IDF tag overlap
-    scored = await score_projects(session, event_id, profile)
-    if not scored:
-        logger.info("No scored projects, padding with all projects")
+    # 1. Build profile text
+    parts = []
+    if profile.extra_data and profile.extra_data.get("nl_summary"):
+        parts.append(profile.extra_data["nl_summary"])
+    if profile.selected_tags:
+        parts.append(f"Интересы: {', '.join(profile.selected_tags)}")
+    if profile.keywords:
+        parts.append(f"Цели: {', '.join(profile.keywords)}")
+    if profile.extra_data:
+        ed = profile.extra_data
+        if ed.get("company"):
+            parts.append(f"Компания: {ed['company']}")
+        if ed.get("business_objectives"):
+            parts.append(f"Бизнес-цели: {', '.join(ed['business_objectives'])}")
+    if profile.raw_text:
+        parts.append(profile.raw_text[:500])
 
-    # 2. Take top-20 candidates with project details for LLM
-    top_ids = [pid for pid, _ in scored[:20]]
-    if top_ids:
+    profile_text = ". ".join(parts) if parts else "Интерес к AI проектам"
+
+    # 2. Embed profile text
+    try:
+        profile_embedding = await embedding_service.embed_text(profile_text)
+    except Exception:
+        logger.warning("Profile embedding failed, falling back to empty search")
+        profile_embedding = None
+
+    # 3. Qdrant similarity search
+    candidates_raw = []
+    if profile_embedding:
+        try:
+            scored_points = await embedding_service.find_similar(
+                profile_embedding, event_id, limit=30,
+            )
+            for sp in scored_points:
+                candidates_raw.append({
+                    "project_id": sp.payload["project_id"],
+                    "score": sp.score * 100,  # Cosine similarity → 0-100
+                    "title": sp.payload.get("title", ""),
+                    "description": sp.payload.get("description", ""),
+                    "tags": sp.payload.get("tags", []),
+                    "room_name": sp.payload.get("room_name"),
+                    "room_number": sp.payload.get("room_number"),
+                })
+        except Exception:
+            logger.warning("Qdrant search failed")
+
+    # Fallback: if no embedding results, load projects directly
+    if not candidates_raw:
+        logger.info("No embedding results, loading projects directly")
         result = await session.execute(
             select(Project)
-            .where(Project.id.in_(top_ids))
-            .options(selectinload(Project.tags).selectinload(ProjectTag.tag))
+            .where(Project.event_id == event_id)
+            .options(
+                selectinload(Project.tags).selectinload(ProjectTag.tag),
+                selectinload(Project.room_assignments).selectinload(RoomProject.room),
+            )
+            .limit(30)
         )
-        projects_map = {p.id: p for p in result.scalars().all()}
-    else:
-        projects_map = {}
-
-    candidates = []
-    for pid, score in scored[:20]:
-        p = projects_map.get(pid)
-        if p:
+        for p in result.scalars().all():
             tag_names = [pt.tag.name for pt in p.tags]
-            candidates.append((p.id, score, p.title, p.description, tag_names))
+            room_name = None
+            room_number = None
+            for ra in p.room_assignments:
+                room_name = ra.room.name
+                room_number = ra.room.display_order + 1
+                break
+            # Simple tag overlap scoring as fallback
+            overlap = len(set(tag_names) & set(profile.selected_tags or []))
+            candidates_raw.append({
+                "project_id": str(p.id),
+                "score": overlap * 20.0,
+                "title": p.title,
+                "description": p.description[:500],
+                "tags": tag_names,
+                "room_name": room_name,
+                "room_number": room_number,
+            })
+        candidates_raw.sort(key=lambda x: x["score"], reverse=True)
 
-    # 3. LLM re-rank top-20 → reordered
-    if candidates:
-        reranked = await llm_rerank_projects(profile, candidates)
-    else:
-        reranked = []
+    # 4. Schedule-aware rerank
+    reranked = schedule_rerank(candidates_raw)
 
-    # 4. Take top-15
+    # 5. Take top-15
     top15 = reranked[:15]
 
-    # 5. Pad with popular projects if <10 (FR-013)
+    # Pad with popular projects if <10
     if len(top15) < 10:
-        existing_ids = {pid for pid, _ in top15}
-        # Get popular projects not already included
+        existing_ids = {c["project_id"] for c in top15}
         popular_result = await session.execute(
-            select(Project.id)
+            select(Project)
             .where(Project.event_id == event_id)
-            .where(Project.id.notin_(existing_ids) if existing_ids else true())
+            .where(Project.id.notin_([uuid.UUID(eid) for eid in existing_ids]) if existing_ids else true())
+            .options(
+                selectinload(Project.tags).selectinload(ProjectTag.tag),
+                selectinload(Project.room_assignments).selectinload(RoomProject.room),
+            )
             .order_by(Project.created_at)
             .limit(10 - len(top15))
         )
-        for row in popular_result.all():
-            top15.append((row[0], 0.0))
+        for p in popular_result.scalars().all():
+            tag_names = [pt.tag.name for pt in p.tags]
+            room_name = None
+            room_number = None
+            for ra in p.room_assignments:
+                room_name = ra.room.name
+                room_number = ra.room.display_order + 1
+                break
+            top15.append({
+                "project_id": str(p.id),
+                "score": 0.0,
+                "title": p.title,
+                "description": p.description[:500],
+                "tags": tag_names,
+                "room_name": room_name,
+                "room_number": room_number,
+            })
         logger.info("Padded recommendations to %d with popular projects", len(top15))
 
-    # 6. Load project details for top-15
-    final_ids = [pid for pid, _ in top15]
+    # 6. Load project details for LLM summaries
+    final_ids = [uuid.UUID(c["project_id"]) for c in top15]
     if final_ids:
         result = await session.execute(
             select(Project)
@@ -715,7 +583,8 @@ async def generate_recommendations(
 
     # 7. Generate LLM summaries for top-15
     summary_input = []
-    for pid, _ in top15:
+    for c in top15:
+        pid = uuid.UUID(c["project_id"])
         p = final_projects.get(pid)
         if p:
             tag_names = [pt.tag.name for pt in p.tags]
@@ -723,17 +592,16 @@ async def generate_recommendations(
 
     summaries = await generate_llm_summaries(profile, summary_input)
 
-    # 8. Normalize final scores to 0-100
-    raw_scores = [s for _, s in top15]
+    # 8. Normalize scores to 0-100
+    raw_scores = [c["score"] for c in top15]
     max_final = max(raw_scores) if raw_scores else 1.0
     if max_final <= 0:
         max_final = 1.0
-    # If scores are already 0-100 scale (from score_projects), keep them;
-    # if they're 0-1 scale (from LLM rerank), scale up.
-    if max_final <= 1.0:
-        top15 = [(pid, round(s * 100, 1)) for pid, s in top15]
-    elif max_final > 100:
-        top15 = [(pid, round(s / max_final * 100, 1)) for pid, s in top15]
+    for c in top15:
+        if max_final > 100:
+            c["score"] = round(c["score"] / max_final * 100, 1)
+        else:
+            c["score"] = round(c["score"], 1)
 
     # 9. Delete old recommendations
     await session.execute(
@@ -742,8 +610,9 @@ async def generate_recommendations(
 
     # 10. Save new recommendations
     recs = []
-    for rank_idx, (pid, score) in enumerate(top15):
-        category = "must_visit" if rank_idx < 5 else "if_time"
+    for rank_idx, c in enumerate(top15):
+        pid = uuid.UUID(c["project_id"])
+        category = "must_visit" if rank_idx < 8 else "if_time"
         p = final_projects.get(pid)
         llm_summary = summaries.get(pid)
 
@@ -757,7 +626,7 @@ async def generate_recommendations(
         rec = Recommendation(
             guest_profile_id=profile.id,
             project_id=pid,
-            relevance_score=round(score, 3),
+            relevance_score=round(c["score"], 3),
             category=category,
             rank=rank_idx + 1,
             llm_summary=llm_summary,

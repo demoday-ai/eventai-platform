@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     team_bot_token: str = ""  # Separate bot token for team notifications (optional)
     rabbitmq_url: str = "amqp://demoday:demoday@localhost:5672//"
     redis_url: str = "redis://localhost:6379/0"
+    qdrant_url: str = "http://localhost:6333"
+    embedding_model: str = "google/gemini-embedding-001"
+    embedding_dimensions: int = 768
 
     @property
     def api_keys(self) -> list[str]:

@@ -147,7 +147,41 @@ def extract_interests_from_text_task(
 
 
 # =============================================================================
-# 4. Generate Recommendations (IDF scoring + LLM rerank + LLM summaries)
+# 3. Embed Projects (batch embedding for Qdrant)
+# =============================================================================
+
+
+@celery_app.task(bind=True, max_retries=2, default_retry_delay=10)
+def embed_projects_task(
+    self,
+    event_id: str,
+) -> dict:
+    """Embed all projects for an event into Qdrant vector store.
+
+    Should be called after project import/update.
+    Returns dict with count of embedded projects.
+    """
+    from app.services import embedding_service
+
+    async def _run():
+        session = await _get_session()
+        try:
+            count = await embedding_service.embed_projects(session, uuid.UUID(event_id))
+            return {"embedded": count, "event_id": event_id}
+        finally:
+            await session.close()
+
+    try:
+        result = run_async(_run())
+        logger.info("embed_projects_task completed: event=%s count=%s", event_id, result.get("embedded"))
+        return result
+    except Exception as exc:
+        logger.exception("embed_projects_task failed")
+        raise self.retry(exc=exc, countdown=5 * (self.request.retries + 1))
+
+
+# =============================================================================
+# 4. Generate Recommendations (embedding search + schedule rerank + LLM summaries)
 # =============================================================================
 
 
@@ -160,10 +194,11 @@ def generate_recommendations_task(
     """Generate personalized recommendations for guest profile.
 
     Pipeline:
-    1. Score projects by tag overlap (IDF)
-    2. LLM re-rank top candidates
-    3. Generate LLM summaries
-    4. Save recommendations to DB
+    1. Embed profile text (1 API call ~100ms)
+    2. Qdrant similarity search (top-30, <10ms)
+    3. Schedule-aware rerank (in-memory)
+    4. LLM summaries for top-15 (1 LLM call ~3-5s)
+    5. Save recommendations to DB
 
     Returns recommendations dict or None on failure.
     """

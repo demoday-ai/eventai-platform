@@ -1,75 +1,20 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from app.models.role import ROLE_DISPLAY_NAMES, RoleCode
-from app.models.user import GUEST_SUBTYPE_DISPLAY
+from app.models.role import RoleCode
 
 
 def role_keyboard() -> InlineKeyboardMarkup:
-    """Two-button role selection: Guest or Partner."""
+    """Four-button role selection: Student, Applicant, Business, Other."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton(
-                ROLE_DISPLAY_NAMES[RoleCode.GUEST],
-                callback_data=f"role:{RoleCode.GUEST.value}",
-            ),
-            InlineKeyboardButton(
-                ROLE_DISPLAY_NAMES[RoleCode.BUSINESS],
-                callback_data=f"role:{RoleCode.BUSINESS.value}",
-            ),
+            InlineKeyboardButton("🎓 Студент", callback_data="role:guest:student"),
+            InlineKeyboardButton("📚 Абитуриент", callback_data="role:guest:applicant"),
+        ],
+        [
+            InlineKeyboardButton("💼 Бизнес", callback_data=f"role:{RoleCode.BUSINESS.value}"),
+            InlineKeyboardButton("👤 Другое", callback_data="role:guest:other"),
         ],
     ])
-
-
-def guest_subtype_keyboard() -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton(display, callback_data=f"subtype:{st.value}")]
-        for st, display in GUEST_SUBTYPE_DISPLAY.items()
-    ]
-    return InlineKeyboardMarkup(buttons)
-
-
-_DEFAULT_TOPICS: list[tuple[str, str]] = [
-    ("EdTech", "EdTech"),
-    ("MedTech", "MedTech"),
-    ("Wellness", "Wellness"),
-    ("Agents", "Agents"),
-    ("NLP", "NLP"),
-    ("RAG", "RAG"),
-    ("LLM", "LLM"),
-    ("Retail", "Retail"),
-    ("FinTech", "FinTech"),
-    ("DevTools", "DevTools"),
-    ("Analytics", "Analytics"),
-    ("Media", "Media"),
-    ("CV", "CV"),
-    ("HR", "HR"),
-    ("Security", "Security"),
-    ("Industrial", "Industrial"),
-]
-
-
-def nl_topic_buttons(
-    prefix: str = "nl", topics: list[tuple[str, str]] | None = None,
-) -> InlineKeyboardMarkup:
-    """Quick-pick topic buttons for NL profiling.
-
-    Args:
-        prefix: Callback data prefix. Use "onb_nl" for onboarding, "reb_nl" for rebuild.
-        topics: Optional list of (tag_key, display_label). Falls back to _DEFAULT_TOPICS.
-    """
-    if topics is None:
-        topics = _DEFAULT_TOPICS
-    buttons = []
-    row = []
-    for tag_key, label in topics:
-        row.append(InlineKeyboardButton(label, callback_data=f"{prefix}:topic:{tag_key}"))
-        if len(row) == 3:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-    buttons.append([InlineKeyboardButton("Готово →", callback_data=f"{prefix}:done")])
-    return InlineKeyboardMarkup(buttons)
 
 
 def confirm_nl_profile_keyboard(prefix: str = "nlconf") -> InlineKeyboardMarkup:
@@ -347,33 +292,22 @@ def escalation_detail_keyboard(escalation_id: str) -> InlineKeyboardMarkup:
 
 
 def program_recommendation_keyboard(
-    recommendations: list[dict], page: int = 0, page_size: int = 8,
+    recommendations: list[dict],
     has_if_time: bool = False,
 ) -> InlineKeyboardMarkup:
-    """Inline buttons for project details from recommendation list."""
-    start_idx = page * page_size
-    page_recs = recommendations[start_idx:start_idx + page_size]
-    total_pages = max(1, (len(recommendations) + page_size - 1) // page_size)
-
+    """Inline buttons for project details from recommendation list (no pagination)."""
     buttons = []
-    for rec in page_recs:
+    for rec in recommendations:
         label = f"#{rec['rank']} {rec['title'][:35]}"
         pid_short = rec["project_id"][:12]
         buttons.append([InlineKeyboardButton(label, callback_data=f"pdetail:{pid_short}")])
 
-    # Pagination
-    if total_pages > 1:
-        nav = []
-        if page > 0:
-            nav.append(InlineKeyboardButton("◀", callback_data=f"recpage:{page - 1}"))
-        nav.append(InlineKeyboardButton(f"{page + 1}/{total_pages}", callback_data="noop"))
-        if page < total_pages - 1:
-            nav.append(InlineKeyboardButton("▶", callback_data=f"recpage:{page + 1}"))
-        buttons.append(nav)
-
     if has_if_time:
         buttons.append([InlineKeyboardButton("Ещё рекомендации", callback_data="prof:show_if_time")])
-    buttons.append([InlineKeyboardButton("Обновить профиль", callback_data="profile:update")])
+    buttons.append([
+        InlineKeyboardButton("👤 Мой профиль", callback_data="prof:show_profile"),
+        InlineKeyboardButton("Обновить профиль", callback_data="profile:update"),
+    ])
     return InlineKeyboardMarkup(buttons)
 
 
@@ -389,14 +323,6 @@ def retry_generation_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Попробовать заново", callback_data="prof:retry_gen")],
         [InlineKeyboardButton("Изменить профиль", callback_data="profile:update")],
-    ])
-
-
-def resume_or_restart_keyboard() -> InlineKeyboardMarkup:
-    """Ask user to resume current profiling or start over."""
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Продолжить", callback_data="prof:resume")],
-        [InlineKeyboardButton("Начать заново", callback_data="prof:restart")],
     ])
 
 

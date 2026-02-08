@@ -139,6 +139,10 @@ async def upload_projects(
                 bg_session, event_id, valid, progress_callback=progress_cb
             )
 
+            # Trigger embedding of uploaded projects
+            from app.worker.tasks import embed_projects_task
+            embed_projects_task.delay(str(event_id))
+
             # Log audit
             bg_user = await bg_session.get(User, user_id)
             if bg_user:
@@ -375,6 +379,10 @@ async def approve_clustering(
             status_code=409,
             detail={"message": "Расписание уже утверждено", "current_status": "approved"},
         )
+
+    # Re-embed projects with updated room assignments
+    from app.worker.tasks import embed_projects_task
+    embed_projects_task.delay(str(event.id))
 
     return {"status": "approved"}
 
