@@ -1,0 +1,212 @@
+# OpenAPI Contract: Dashboard API (extended)
+# Feature: 019-admin-dashboard
+# Changes: Added projects, partners, event fields to DashboardResponse
+
+openapi: "3.1.0"
+info:
+  title: EventAI Admin Dashboard API
+  version: "2.0.0"
+
+paths:
+  /api/v1/admin/dashboard:
+    get:
+      summary: Get dashboard metrics and alerts
+      description: Returns aggregated metrics for the active event including projects, students, experts, partners, rooms, alerts, and event summary.
+      operationId: getDashboard
+      tags: [admin, dashboard]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+        "401":
+          description: Unauthorized
+
+  /api/v1/admin/coverage:
+    get:
+      summary: Get room coverage by experts
+      description: Returns coverage details for each room with 5-level status scale.
+      operationId: getCoverage
+      tags: [admin, dashboard]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Room coverage list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomCoverage"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DashboardResponse:
+      type: object
+      required: [projects, students, experts, partners, guests, rooms, alerts]
+      properties:
+        event:
+          $ref: "#/components/schemas/EventSummary"
+          nullable: true
+          description: "null if no active event"
+        projects:
+          $ref: "#/components/schemas/ProjectStats"
+        students:
+          $ref: "#/components/schemas/StudentStats"
+        experts:
+          $ref: "#/components/schemas/ExpertStats"
+        partners:
+          $ref: "#/components/schemas/PartnerStats"
+        guests:
+          $ref: "#/components/schemas/GuestStats"
+        rooms:
+          $ref: "#/components/schemas/RoomStats"
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+
+    EventSummary:
+      type: object
+      required: [name, start_date, end_date, days_until]
+      properties:
+        name:
+          type: string
+          example: "Demo Day 2026"
+        start_date:
+          type: string
+          format: date
+          example: "2026-03-15"
+        end_date:
+          type: string
+          format: date
+          example: "2026-03-16"
+        days_until:
+          type: integer
+          description: "Days until start_date. Negative = past event."
+          example: 35
+
+    ProjectStats:
+      type: object
+      required: [total]
+      properties:
+        total:
+          type: integer
+          example: 127
+
+    PartnerStats:
+      type: object
+      required: [total, from_bot, from_import]
+      properties:
+        total:
+          type: integer
+          example: 23
+        from_bot:
+          type: integer
+          example: 8
+        from_import:
+          type: integer
+          example: 15
+
+    StudentStats:
+      type: object
+      required: [total, confirmed, pending, declined]
+      properties:
+        total:
+          type: integer
+        confirmed:
+          type: integer
+        pending:
+          type: integer
+        declined:
+          type: integer
+
+    ExpertStats:
+      type: object
+      required: [total, confirmed, pending, invited]
+      properties:
+        total:
+          type: integer
+        confirmed:
+          type: integer
+        pending:
+          type: integer
+        invited:
+          type: integer
+
+    GuestStats:
+      type: object
+      required: [total, by_subtype]
+      properties:
+        total:
+          type: integer
+        by_subtype:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubtypeCount"
+
+    SubtypeCount:
+      type: object
+      required: [subtype, count]
+      properties:
+        subtype:
+          type: string
+        count:
+          type: integer
+
+    RoomStats:
+      type: object
+      required: [total, with_experts, without_experts]
+      properties:
+        total:
+          type: integer
+        with_experts:
+          type: integer
+        without_experts:
+          type: integer
+
+    Alert:
+      type: object
+      required: [severity, message]
+      properties:
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        message:
+          type: string
+        room_id:
+          type: string
+          nullable: true
+        room_name:
+          type: string
+          nullable: true
+
+    RoomCoverage:
+      type: object
+      required: [room_id, room_name, total_experts, confirmed_experts, projects_count, coverage_status]
+      properties:
+        room_id:
+          type: string
+        room_name:
+          type: string
+        total_experts:
+          type: integer
+        confirmed_experts:
+          type: integer
+        projects_count:
+          type: integer
+        coverage_status:
+          type: string
+          enum: [gap, partial, covered, excellent, excess]
+          description: "0=gap, 1=partial, 2=covered, 3=excellent, >3=excess"

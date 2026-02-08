@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth"
 import { Button } from "../ui/button"
 import { APP_NAME } from "../../lib/constants"
 import { Sidebar } from "./Sidebar"
+import { GlobalStepper } from "../dashboard/GlobalStepper"
 
 export function AppLayout() {
   const { telegramId, logout } = useAuth()
@@ -60,6 +61,8 @@ export function AppLayout() {
           </div>
         </div>
       </header>
+
+      <GlobalStepper />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}

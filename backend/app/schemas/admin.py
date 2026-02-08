@@ -56,11 +56,37 @@ class Alert(BaseModel):
     room_name: str | None = None
 
 
+class ProjectStats(BaseModel):
+    """Project statistics."""
+
+    total: int
+
+
+class PartnerStats(BaseModel):
+    """Partner statistics with source breakdown."""
+
+    total: int
+    from_bot: int
+    from_import: int
+
+
+class EventSummary(BaseModel):
+    """Event summary for dashboard header."""
+
+    name: str
+    start_date: date
+    end_date: date
+    days_until: int
+
+
 class DashboardResponse(BaseModel):
     """Organizer dashboard response."""
 
+    event: EventSummary | None = None
+    projects: ProjectStats
     students: StudentStats
     experts: ExpertStats
+    partners: PartnerStats
     guests: GuestStats
     rooms: RoomStats
     alerts: list[Alert]
@@ -74,7 +100,42 @@ class RoomCoverage(BaseModel):
     total_experts: int
     confirmed_experts: int
     projects_count: int
-    coverage_status: str  # "full", "partial", "none"
+    coverage_status: str  # "gap", "partial", "covered", "excellent", "excess"
+
+
+# --- Pipeline status schemas ---
+
+
+class Step(BaseModel):
+    """Pipeline step status."""
+
+    name: str
+    label: str
+    status: str  # "completed", "not_started"
+
+
+class Phase(BaseModel):
+    """Pipeline phase with sub-steps."""
+
+    name: str
+    label: str
+    status: str  # "completed", "in_progress", "not_started"
+    steps: list[Step]
+
+
+class NextAction(BaseModel):
+    """Next action suggestion for Quick Action component."""
+
+    step: str
+    label: str
+    link: str
+
+
+class PipelineStatusResponse(BaseModel):
+    """Pipeline preparation status for Global Stepper."""
+
+    phases: list[Phase]
+    next_action: NextAction | None = None
 
 
 class CoverageResponse(BaseModel):
