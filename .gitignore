@@ -45,4 +45,4 @@ backend/build/
 Screenshot.png
 
 # Core dumps
-core
+/core
