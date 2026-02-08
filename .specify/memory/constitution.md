@@ -13,7 +13,7 @@
 
 ### Modified Sections
 - Технологический стек: LangChain/OpenAI SDK → OpenRouter API (GPT-4.1, Claude) per Brief v3.0
-- Инфраструктура: added team10 domain, SSH bastion details
+- Инфраструктура: added team12 domain, SSH bastion details
 - Governance: expanded — added amendment procedure, versioning policy, compliance review, document hierarchy
 
 ### Added Sections
@@ -99,7 +99,7 @@
 ### Инфраструктура
 - **Docker** + **Docker Compose**
 - **Yandex Cloud VM** (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04)
-- **Домен:** `team10.camp.aitalenthub.ru`
+- **Домен:** `team12.camp.aitalenthub.ru`
 - **Traefik** — reverse proxy (на Edge VM кэмпа)
 - **Xray** — AI API proxy (на Edge VM кэмпа)
 - **SSH bastion:** `bastion.camp.aitalenthub.ru`

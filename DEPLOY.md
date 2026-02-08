@@ -4,7 +4,7 @@
 
 - **Edge/NAT VM**: Traefik reverse proxy на `bastion.camp.aitalenthub.ru`
 - **Team VM**: 4 vCPU, 8GB RAM, 65GB SSD, private subnet
-- **Домен**: `team10.camp.aitalenthub.ru` (или другой номер команды)
+- **Домен**: `team12.camp.aitalenthub.ru` (или другой номер команды)
 
 ## Pre-requisites
 
@@ -19,7 +19,7 @@
 
 ```bash
 # Подключиться к Team VM через bastion
-ssh -J bastion.camp.aitalenthub.ru team10.camp.aitalenthub.ru
+ssh -J bastion.camp.aitalenthub.ru team12.camp.aitalenthub.ru
 
 # Клонировать репозиторий (если еще не сделано)
 cd ~
@@ -39,7 +39,7 @@ nano backend/.env
 
 **`.env.prod`:**
 ```bash
-DOMAIN=team10.camp.aitalenthub.ru  # Ваш домен
+DOMAIN=team12.camp.aitalenthub.ru  # Ваш домен
 POSTGRES_USER=demoday
 POSTGRES_PASSWORD=<strong-random-password>
 POSTGRES_DB=demoday
@@ -63,7 +63,7 @@ OPENROUTER_BASE_URL=http://xray:8080/v1  # Через Xray proxy на Edge VM
 
 # Telegram Bot
 BOT_TOKEN=<your-bot-token>
-TELEGRAM_WEBHOOK_URL=https://team10.camp.aitalenthub.ru/api/v1/telegram/webhook
+TELEGRAM_WEBHOOK_URL=https://team12.camp.aitalenthub.ru/api/v1/telegram/webhook
 ```
 
 ### 3. Создать Traefik network (если не создана)
@@ -99,10 +99,10 @@ docker compose -f docker-compose.prod.yml exec backend python -m app.scripts.see
 
 ```bash
 # Health check
-curl https://team10.camp.aitalenthub.ru/health
+curl https://team12.camp.aitalenthub.ru/health
 
 # API health check
-curl https://team10.camp.aitalenthub.ru/api/v1/health
+curl https://team12.camp.aitalenthub.ru/api/v1/health
 
 # Проверить логи
 docker compose -f docker-compose.prod.yml logs frontend
@@ -116,7 +116,7 @@ docker compose -f docker-compose.prod.yml logs db
 # Установить webhook для бота (после деплоя)
 curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://team10.camp.aitalenthub.ru/api/v1/telegram/webhook"}'
+  -d '{"url": "https://team12.camp.aitalenthub.ru/api/v1/telegram/webhook"}'
 
 # Проверить webhook
 curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
@@ -177,8 +177,8 @@ docker compose -f docker-compose.prod.yml restart backend
 
 ### Health Checks
 
-- Frontend: `https://team10.camp.aitalenthub.ru/health`
-- Backend API: `https://team10.camp.aitalenthub.ru/api/v1/health`
+- Frontend: `https://team12.camp.aitalenthub.ru/health`
+- Backend API: `https://team12.camp.aitalenthub.ru/api/v1/health`
 - Database: проверяется автоматически через Docker healthcheck
 
 ### Resource Usage
@@ -256,7 +256,7 @@ Internet → Traefik (Edge VM) → Frontend (nginx) → Backend (FastAPI) → Po
 
 ## Useful Links
 
-- Team VM: `team10.camp.aitalenthub.ru`
+- Team VM: `team12.camp.aitalenthub.ru`
 - Bastion: `bastion.camp.aitalenthub.ru`
 - Repository: https://github.com/demoday-ai/demoday-core
 - Infrastructure: https://github.com/AI-Talent-Camp-2026/ai-talent-camp-2026-infra

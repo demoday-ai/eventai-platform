@@ -366,7 +366,7 @@ scp -r frontend/dist/* user@vm:/var/www/admin/
 # Nginx config
 server {
     listen 80;
-    server_name admin.team10.camp.aitalenthub.ru;
+    server_name admin.team12.camp.aitalenthub.ru;
 
     root /var/www/admin;
     index index.html;
