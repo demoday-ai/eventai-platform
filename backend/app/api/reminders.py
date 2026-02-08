@@ -23,7 +23,8 @@ from app.schemas.reminder import (
     ReminderBatchSummary,
     ReminderPreview,
 )
-from app.services import organizer_service, reminder_service, user_service
+from app.services.admin import organizer_service, reminder_service
+from app.services.core import user_service
 
 router = APIRouter(prefix="/reminders", tags=["Reminders"])
 

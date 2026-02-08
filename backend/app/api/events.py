@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.schemas.user import EventResponse
-from app.services import user_service
+from app.services.core import user_service
 
 router = APIRouter(prefix="/events", tags=["Events"])
 

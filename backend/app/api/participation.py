@@ -12,7 +12,8 @@ from app.schemas.participation import (
     ParticipationSummary,
     UnacknowledgedList,
 )
-from app.services import participation_service, user_service
+from app.services.admin import participation_service
+from app.services.core import user_service
 
 router = APIRouter(prefix="/participation", tags=["Participation"])
 

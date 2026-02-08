@@ -40,13 +40,8 @@ from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.models.role import RoleCode
 from app.models.user import GuestSubtype
-from app.services import (
-    business_followup_service,
-    followup_service,
-    profiling_service,
-    qa_service,
-    user_service,
-)
+from app.services.core import user_service
+from app.services.guest import business_followup_service, followup_service, profiling_service, qa_service
 
 logger = logging.getLogger(__name__)
 
@@ -232,11 +227,6 @@ def _format_if_time(data: dict) -> list[str]:
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /start command — entry point for onboarding."""
-    # Check if this is an expert deep link: /start expert
-    if context.args and context.args[0] == "expert":
-        from app.bot.handlers.expert_assignment import handle_expert_start
-        return await handle_expert_start(update, context)
-
     tg_user = update.effective_user
     telegram_user_id = str(tg_user.id)
     full_name = tg_user.full_name or tg_user.first_name

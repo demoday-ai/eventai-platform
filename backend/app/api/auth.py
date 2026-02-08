@@ -14,7 +14,7 @@ from app.schemas.user import (
     TelegramAuthRequest,
     UserProfile,
 )
-from app.services import user_service
+from app.services.core import user_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

@@ -8,7 +8,7 @@ from app.models.event import Event
 from app.models.project import Project
 from app.models.room import Room
 from app.models.room_project import RoomProject
-from app.services import clustering_service
+from app.services.admin import clustering_service
 
 
 @pytest.mark.asyncio

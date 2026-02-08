@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.services.send_retry import send_with_retry
+from app.services.core.send_retry import send_with_retry
 
 
 @pytest.mark.asyncio
@@ -48,7 +48,7 @@ async def test_send_with_retry_retries_on_failure():
         side_effect=[Exception("Network error"), None]
     )
 
-    with patch("app.services.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+    with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         success, error = await send_with_retry(bot, 123, "hello", max_retries=3)
 
     assert success is True
@@ -62,7 +62,7 @@ async def test_send_with_retry_fails_after_max_retries():
     bot = AsyncMock()
     bot.send_message = AsyncMock(side_effect=Exception("Blocked by user"))
 
-    with patch("app.services.send_retry.asyncio.sleep", new_callable=AsyncMock):
+    with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock):
         success, error = await send_with_retry(bot, 123, "hello", max_retries=3)
 
     assert success is False
@@ -77,7 +77,7 @@ async def test_send_with_retry_exponential_backoff():
         side_effect=[Exception("e1"), Exception("e2"), None]
     )
 
-    with patch("app.services.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+    with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         success, error = await send_with_retry(bot, 123, "hello", max_retries=3)
 
     assert success is True
@@ -92,7 +92,7 @@ async def test_send_with_retry_truncates_long_error():
     long_error = "x" * 1000
     bot.send_message = AsyncMock(side_effect=Exception(long_error))
 
-    with patch("app.services.send_retry.asyncio.sleep", new_callable=AsyncMock):
+    with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock):
         success, error = await send_with_retry(bot, 123, "hello", max_retries=1)
 
     assert success is False
@@ -104,7 +104,7 @@ async def test_send_with_retry_single_attempt():
     bot = AsyncMock()
     bot.send_message = AsyncMock(side_effect=Exception("fail"))
 
-    with patch("app.services.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+    with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         success, error = await send_with_retry(bot, 123, "hello", max_retries=1)
 
     assert success is False

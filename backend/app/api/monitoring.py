@@ -19,7 +19,7 @@ async def llm_health(user: User = Depends(get_current_user)):
     Returns status of each configured API key.
     Requires authentication.
     """
-    from app.services.llm_client import check_api_health
+    from app.services.core.llm_client import check_api_health
 
     return await check_api_health()
 
@@ -31,7 +31,7 @@ async def llm_stats(user: User = Depends(get_current_user)):
     Returns availability and failure counts for each key.
     Requires authentication.
     """
-    from app.services.llm_client import get_key_manager
+    from app.services.core.llm_client import get_key_manager
 
     return get_key_manager().get_stats()
 

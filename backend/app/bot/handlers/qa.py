@@ -32,7 +32,8 @@ from app.models.business_profile import BusinessProfile
 from app.models.guest_profile import GuestProfile
 from app.models.role import RoleCode
 from app.models.user import User
-from app.services import qa_service, user_service
+from app.services.core import user_service
+from app.services.guest import qa_service
 
 logger = logging.getLogger(__name__)
 

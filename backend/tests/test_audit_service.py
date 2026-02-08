@@ -3,7 +3,7 @@
 import pytest
 
 from app.models.user import User
-from app.services import audit_service
+from app.services.admin import audit_service
 
 
 @pytest.fixture

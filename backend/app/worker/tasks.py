@@ -4,75 +4,28 @@ Each task wraps an async service function to run in Celery's sync worker.
 DB engine is initialized once per worker process via Celery signals.
 """
 
-import asyncio
 import logging
 import uuid
 from typing import Any
 
 from celery.signals import worker_process_init, worker_process_shutdown
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config import settings
 from app.worker.celery_app import celery_app
+from app.worker.utils import init_db_engine, run_async, shutdown_db_engine, worker_session
 
 logger = logging.getLogger(__name__)
-
-# Singleton DB engine — initialized per worker process
-_engine = None
-_async_session_factory = None
 
 
 @worker_process_init.connect
 def _init_db_engine(**kwargs):
     """Create shared DB engine when worker process starts."""
-    global _engine, _async_session_factory
-    _engine = create_async_engine(
-        settings.database_url,
-        echo=False,
-        pool_size=3,
-        max_overflow=2,
-        pool_recycle=600,
-        pool_pre_ping=True,
-    )
-    _async_session_factory = async_sessionmaker(
-        _engine, class_=AsyncSession, expire_on_commit=False
-    )
-    logger.info("Worker DB engine initialized (pool_size=3, max_overflow=2)")
+    init_db_engine()
 
 
 @worker_process_shutdown.connect
 def _shutdown_db_engine(**kwargs):
     """Dispose DB engine when worker process shuts down."""
-    global _engine, _async_session_factory
-    if _engine is not None:
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(_engine.dispose())
-        finally:
-            loop.close()
-        logger.info("Worker DB engine disposed")
-    _engine = None
-    _async_session_factory = None
-
-
-def run_async(coro):
-    """Run async coroutine in sync Celery task."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-
-async def _get_session():
-    """Get async database session from shared engine."""
-    if _async_session_factory is not None:
-        return _async_session_factory()
-    # Fallback for tests or when signals haven't fired
-    engine = create_async_engine(settings.database_url, echo=False)
-    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    return factory()
+    run_async(shutdown_db_engine())
 
 
 # =============================================================================
@@ -93,7 +46,7 @@ def chat_for_profile_task(
 
     Returns dict with action ("reply" or "profile") and relevant data.
     """
-    from app.services import profiling_service
+    from app.services.guest import profiling_service
 
     async def _run():
         return await profiling_service.chat_for_profile(
@@ -128,7 +81,7 @@ def extract_interests_from_text_task(
 
     Returns dict with "tags" and "keywords" lists.
     """
-    from app.services import profiling_service
+    from app.services.guest import profiling_service
 
     async def _run():
         return await profiling_service.extract_interests_from_text(raw_text, available_tags)
@@ -161,15 +114,12 @@ def embed_projects_task(
     Should be called after project import/update.
     Returns dict with count of embedded projects.
     """
-    from app.services import embedding_service
+    from app.services.core import embedding_service
 
     async def _run():
-        session = await _get_session()
-        try:
+        async with worker_session() as session:
             count = await embedding_service.embed_projects(session, uuid.UUID(event_id))
             return {"embedded": count, "event_id": event_id}
-        finally:
-            await session.close()
 
     try:
         result = run_async(_run())
@@ -202,17 +152,14 @@ def generate_recommendations_task(
 
     Returns recommendations dict or None on failure.
     """
-    from app.services import profiling_service
+    from app.services.guest import profiling_service
 
     async def _run():
-        session = await _get_session()
-        try:
+        async with worker_session() as session:
             profile = await profiling_service.get_or_create_profile(
                 session, uuid.UUID(user_id), uuid.UUID(event_id)
             )
             return await profiling_service.generate_recommendations(session, profile)
-        finally:
-            await session.close()
 
     try:
         result = run_async(_run())
@@ -245,11 +192,11 @@ def generate_qa_questions_task(
     from sqlalchemy import select
 
     from app.models.project import Project
-    from app.services import qa_service, user_service
+    from app.services.core import user_service
+    from app.services.guest import qa_service
 
     async def _run():
-        session = await _get_session()
-        try:
+        async with worker_session() as session:
             user = await user_service.get_user_by_id(session, uuid.UUID(user_id))
             if not user:
                 return []
@@ -267,8 +214,6 @@ def generate_qa_questions_task(
             return await qa_service.generate_questions(
                 session, user, project, guest_profile, business_profile
             )
-        finally:
-            await session.close()
 
     try:
         result = run_async(_run())
@@ -302,11 +247,10 @@ def generate_comparison_matrix_task(
     from sqlalchemy import select
 
     from app.models.project import Project
-    from app.services import qa_service
+    from app.services.guest import qa_service
 
     async def _run():
-        session = await _get_session()
-        try:
+        async with worker_session() as session:
             result = await session.execute(
                 select(Project).where(Project.id.in_([uuid.UUID(pid) for pid in project_ids]))
             )
@@ -316,8 +260,6 @@ def generate_comparison_matrix_task(
                 return {"error": "Нужно минимум 2 проекта для сравнения"}
 
             return await qa_service.generate_comparison_matrix(session, projects, criteria)
-        finally:
-            await session.close()
 
     try:
         result = run_async(_run())
@@ -346,11 +288,10 @@ def cluster_projects_task(
     This is a heavy task (10-60 sec).
     Returns clustering run info or raises exception.
     """
-    from app.services import clustering_service
+    from app.services.admin import clustering_service
 
     async def _run():
-        session = await _get_session()
-        try:
+        async with worker_session() as session:
             run = await clustering_service.run_clustering(
                 session, uuid.UUID(event_id), num_rooms, feedback, room_themes=room_themes
             )
@@ -369,8 +310,6 @@ def cluster_projects_task(
                     for room in sorted(run.rooms, key=lambda r: r.display_order)
                 ],
             }
-        finally:
-            await session.close()
 
     try:
         result = run_async(_run())
@@ -397,16 +336,13 @@ def run_matching_task(
     Pipeline includes LLM call for adjacent tag resolution.
     Returns matching result dict.
     """
-    from app.services import matching_service
+    from app.services.admin import matching_service
 
     async def _run():
-        session = await _get_session()
-        try:
+        async with worker_session() as session:
             return await matching_service.run_matching(
                 session, uuid.UUID(event_id), use_adjacent_tags
             )
-        finally:
-            await session.close()
 
     try:
         result = run_async(_run())
@@ -437,7 +373,7 @@ def agent_chat_task(
       - "tool_name": str (if tool_call)
       - "tool_args": dict (if tool_call)
     """
-    from app.services import llm_client
+    from app.services.core import llm_client
 
     async def _run():
         return await llm_client.send_chat_with_tools(

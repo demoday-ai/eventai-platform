@@ -16,8 +16,8 @@ from app.schemas.project import (
     ReplaceConfirmation,
     RoomSummary,
 )
-from app.services import audit_service, clustering_service, dedup_service, project_service, user_service
-from app.services.background_jobs import (
+from app.services.admin import audit_service, clustering_service, dedup_service, project_service
+from app.services.admin.background_jobs import (
     JobStatus,
     create_job,
     get_active_job_by_type,
@@ -25,6 +25,7 @@ from app.services.background_jobs import (
     update_job,
     update_job_progress,
 )
+from app.services.core import user_service
 
 logger = logging.getLogger(__name__)
 

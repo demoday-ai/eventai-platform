@@ -4,14 +4,7 @@ import logging
 
 from telegram import Bot, InlineKeyboardMarkup
 
-from app.config import settings
-
 logger = logging.getLogger(__name__)
-
-
-def is_organizer(telegram_user_id: int | str) -> bool:
-    """Check if user is an organizer."""
-    return str(telegram_user_id) in settings.organizer_ids
 
 MAX_TG_MESSAGE_LEN = 4096
 SAFE_SPLIT_LEN = 4000  # Leave margin for formatting

@@ -218,7 +218,7 @@ def mock_llm():
             "keywords": ["чат-бот", "генерация"],
         }
 
-    with patch("app.services.llm_client.send_chat_completion", side_effect=fake_llm) as mock:
+    with patch("app.services.core.llm_client.send_chat_completion", side_effect=fake_llm) as mock:
         yield mock
 
 
@@ -226,7 +226,7 @@ def mock_llm():
 def mock_llm_unavailable():
     """Mock LLM client to simulate unavailability."""
     with patch(
-        "app.services.llm_client.send_chat_completion",
+        "app.services.core.llm_client.send_chat_completion",
         side_effect=Exception("LLM unavailable")
     ) as mock:
         yield mock

@@ -100,9 +100,9 @@ def upgrade() -> None:
     op.create_index("ix_reminder_batches_event_id", "reminder_batches", ["event_id"])
     op.create_index("ix_reminder_batches_status", "reminder_batches", ["status"])
 
-    # Create notifications table
+    # Create reminder_notifications table
     op.create_table(
-        "notifications",
+        "reminder_notifications",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column(
             "batch_id",
@@ -141,9 +141,9 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index("ix_notifications_batch_id", "notifications", ["batch_id"])
-    op.create_index("ix_notifications_status", "notifications", ["status"])
-    op.create_index("ix_notifications_telegram_user_id", "notifications", ["telegram_user_id"])
+    op.create_index("ix_reminder_notif_batch_id", "reminder_notifications", ["batch_id"])
+    op.create_index("ix_reminder_notif_status", "reminder_notifications", ["status"])
+    op.create_index("ix_reminder_notif_tg_uid", "reminder_notifications", ["telegram_user_id"])
 
     # Add telegram_chat_id to experts
     op.add_column("experts", sa.Column("telegram_chat_id", sa.String(20), nullable=True))
@@ -156,7 +156,7 @@ def downgrade() -> None:
     op.drop_column("experts", "telegram_chat_id")
 
     # Drop tables
-    op.drop_table("notifications")
+    op.drop_table("reminder_notifications")
     op.drop_table("reminder_batches")
 
     # Drop enum types

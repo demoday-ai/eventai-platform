@@ -2,13 +2,77 @@
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from typing import Any
 
 from celery.result import AsyncResult
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.config import settings
 from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+# Singleton DB engine — initialized per worker process (set by tasks.py signals)
+_engine = None
+_async_session_factory = None
+
+
+def init_db_engine():
+    """Create shared DB engine (called from worker_process_init signal)."""
+    global _engine, _async_session_factory
+    _engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        pool_size=3,
+        max_overflow=2,
+        pool_recycle=600,
+        pool_pre_ping=True,
+    )
+    _async_session_factory = async_sessionmaker(
+        _engine, class_=AsyncSession, expire_on_commit=False
+    )
+    logger.info("Worker DB engine initialized (pool_size=3, max_overflow=2)")
+
+
+async def shutdown_db_engine():
+    """Dispose DB engine (called from worker_process_shutdown signal)."""
+    global _engine, _async_session_factory
+    if _engine is not None:
+        await _engine.dispose()
+        logger.info("Worker DB engine disposed")
+    _engine = None
+    _async_session_factory = None
+
+
+def run_async(coro):
+    """Run async coroutine in sync Celery task."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+async def _get_session() -> AsyncSession:
+    """Get async database session from shared engine."""
+    if _async_session_factory is not None:
+        return _async_session_factory()
+    # Fallback for tests or when signals haven't fired
+    engine = create_async_engine(settings.database_url, echo=False)
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return factory()
+
+
+@asynccontextmanager
+async def worker_session():
+    """Async context manager for DB session in Celery tasks."""
+    session = await _get_session()
+    try:
+        yield session
+    finally:
+        await session.close()
 
 DEFAULT_TIMEOUT = 30
 SHORT_TIMEOUT = 15

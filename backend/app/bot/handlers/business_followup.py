@@ -26,7 +26,8 @@ from telegram.ext import (
 from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.models.business_followup import PipelineStatus
-from app.services import business_followup_service, user_service
+from app.services.core import user_service
+from app.services.guest import business_followup_service
 
 logger = logging.getLogger(__name__)
 

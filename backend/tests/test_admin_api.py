@@ -16,7 +16,7 @@ from app.models.base import Base
 from app.models.event import Event
 from app.models.organizer import Organizer
 from app.models.user import User
-from app.services import audit_service
+from app.services.admin import audit_service
 
 # --- Fixtures ---
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.services import profiling_service
+from app.services.guest import profiling_service
 
 router = APIRouter(tags=["guests"])
 

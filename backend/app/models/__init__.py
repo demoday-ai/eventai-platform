@@ -9,9 +9,7 @@ from app.models.event import Event
 from app.models.expert import Expert
 from app.models.expert_briefing import BriefingStatus, ExpertBriefing
 from app.models.expert_room_assignment import ExpertRoomAssignment
-from app.models.expert_score import ExpertScore
 from app.models.expert_tag import ExpertTag
-from app.models.feedback_comment import FeedbackCategory, FeedbackComment, ModerationStatus
 from app.models.followup_package import FollowupPackage
 from app.models.guest_profile import GuestProfile
 from app.models.notification import Notification, NotificationStatus, NotificationType
@@ -22,9 +20,6 @@ from app.models.project_recommendation import ProjectRecommendation
 from app.models.project_tag import ProjectTag
 from app.models.qa_suggestion import QASuggestion, QuestionType
 from app.models.recommendation import Recommendation
-from app.models.reminder import (
-    NotificationStatus as ReminderNotificationStatus,
-)
 from app.models.reminder import (
     RecipientType,
     ReminderBatch,
@@ -59,14 +54,10 @@ __all__ = [
     "Expert",
     "ExpertBriefing",
     "ExpertRoomAssignment",
-    "ExpertScore",
     "ExpertTag",
-    "FeedbackCategory",
-    "FeedbackComment",
     "FollowupPackage",
     "GuestProfile",
     "GuestSubtype",
-    "ModerationStatus",
     "OBJECTIVE_DISPLAY",
     "Notification",
     "NotificationStatus",
@@ -83,7 +74,6 @@ __all__ = [
     "ReminderBatch",
     "ReminderBatchStatus",
     "ReminderNotification",
-    "ReminderNotificationStatus",
     "ReminderType",
     "Role",
     "RoleCode",

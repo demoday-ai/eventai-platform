@@ -12,7 +12,7 @@ from app.schemas.user import (
     SetRoleRequest,
     UserProfile,
 )
-from app.services import user_service
+from app.services.core import user_service
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

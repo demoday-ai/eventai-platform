@@ -1,7 +1,7 @@
 """Tests for dedup_service."""
 
 
-from app.services.dedup_service import compute_file_hash
+from app.services.admin.dedup_service import compute_file_hash
 
 
 def test_compute_file_hash_deterministic():

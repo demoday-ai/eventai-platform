@@ -28,8 +28,9 @@ from app.schemas.schedule import (
     SlotUpdateRequest,
     SlotUpdateResult,
 )
-from app.services import audit_service, notification_service, schedule_service, user_service
-from app.services.notification_service import CancellationWindowClosedError
+from app.services.admin import audit_service, notification_service, schedule_service
+from app.services.admin.notification_service import CancellationWindowClosedError
+from app.services.core import user_service
 
 router = APIRouter(tags=["Schedule"])
 

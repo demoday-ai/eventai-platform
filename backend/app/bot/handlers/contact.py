@@ -18,7 +18,8 @@ from telegram.ext import (
 from app.database import async_session
 from app.models.contact_request import ContactRequestStatus
 from app.models.role import RoleCode
-from app.services import contact_service, user_service
+from app.services.core import user_service
+from app.services.guest import contact_service
 
 logger = logging.getLogger(__name__)
 

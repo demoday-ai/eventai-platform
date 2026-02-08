@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models.organizer import Organizer
-from app.services import organizer_service
+from app.services.admin import organizer_service
 
 
 @pytest.mark.asyncio
@@ -66,7 +66,7 @@ async def test_is_organizer_db_match(session):
 
 @pytest.mark.asyncio
 async def test_is_organizer_not_found_falls_back_to_env(session):
-    with patch("app.services.organizer_service.settings") as mock_settings:
+    with patch("app.services.admin.organizer_service.settings") as mock_settings:
         mock_settings.is_organizer.return_value = False
 
         result = await organizer_service.is_organizer(session, "nonexistent_999")
@@ -77,7 +77,7 @@ async def test_is_organizer_not_found_falls_back_to_env(session):
 
 @pytest.mark.asyncio
 async def test_is_organizer_env_fallback_positive(session):
-    with patch("app.services.organizer_service.settings") as mock_settings:
+    with patch("app.services.admin.organizer_service.settings") as mock_settings:
         mock_settings.is_organizer.return_value = True
 
         result = await organizer_service.is_organizer(session, "env_org_1")
@@ -87,7 +87,7 @@ async def test_is_organizer_env_fallback_positive(session):
 
 @pytest.mark.asyncio
 async def test_is_organizer_passes_username(session):
-    with patch("app.services.organizer_service.settings") as mock_settings:
+    with patch("app.services.admin.organizer_service.settings") as mock_settings:
         mock_settings.is_organizer.return_value = False
 
         await organizer_service.is_organizer(session, "some_id", username="johndoe")
@@ -103,7 +103,7 @@ async def test_seed_from_env_empty_table(session):
         await session.delete(org)
     await session.flush()
 
-    with patch("app.services.organizer_service.settings") as mock_settings:
+    with patch("app.services.admin.organizer_service.settings") as mock_settings:
         mock_settings.organizer_ids = {"seed_1", "seed_2"}
 
         count = await organizer_service.seed_from_env(session)
@@ -122,7 +122,7 @@ async def test_seed_from_env_skips_when_not_empty(session):
     # Add an organizer first
     await organizer_service.add_organizer(session, telegram_id="existing_org_seed")
 
-    with patch("app.services.organizer_service.settings") as mock_settings:
+    with patch("app.services.admin.organizer_service.settings") as mock_settings:
         mock_settings.organizer_ids = {"new_seed_1"}
 
         count = await organizer_service.seed_from_env(session)

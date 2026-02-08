@@ -92,20 +92,73 @@ Frontend `localhost:3000` · API docs `localhost:8000/api/v1/docs`
 
 ## Архитектура
 
+Layered Architecture: **Routes → Services → Repos → Models**
+
 ```
-frontend/          React 19, TypeScript, Vite, Tailwind, shadcn/ui
+frontend/               React 19, TypeScript, Vite, Tailwind, shadcn/ui
+
 backend/
-├── app/api/       REST API, 60+ endpoints
-├── app/bot/       Telegram handlers
-├── app/services/  profiling, clustering, matching, qa
-└── app/models/    34 SQLAlchemy модели
+├── app/
+│   ├── main.py              App factory, CORS, router includes, health
+│   ├── lifespan.py          Startup/shutdown: DB, bot, scheduler
+│   ├── scheduler.py         11 APScheduler jobs (reminders, briefings, etc.)
+│   │
+│   ├── api/                 REST API — thin HTTP layer
+│   │   ├── admin/           10 модулей: dashboard, rooms, tags, events,
+│   │   │                    guests, projects, briefing, messaging, audit, organizers
+│   │   ├── experts/         5 модулей: crud, matching, invites, coverage, escalations
+│   │   └── *.py             users, auth, schedule, participation, reminders, ...
+│   │
+│   ├── bot/                 Telegram bot (python-telegram-bot 21.x)
+│   │   ├── handlers/        ConversationHandler states
+│   │   └── keyboards.py     InlineKeyboard builders
+│   │
+│   ├── services/            Business logic (no HTTP, no ORM queries)
+│   │   ├── admin/           clustering, matching, coverage, schedule,
+│   │   │                    briefing, messaging, reminders, ...
+│   │   ├── guest/           profiling, qa, contact, followup
+│   │   └── core/            user_service, llm_client, embedding, send_retry
+│   │
+│   ├── repos/               Data access layer (async SQLAlchemy queries)
+│   │   ├── event_repo.py    get_current_event, get_approved_clustering
+│   │   ├── user_repo.py     upsert, get_by_telegram_id, roles
+│   │   ├── tag_repo.py      CRUD, get_name_to_id_map
+│   │   ├── expert_repo.py   get_by_id, get_experts, count_by_event
+│   │   ├── project_repo.py  get_by_id, count_by_event, get_with_descriptions
+│   │   ├── room_repo.py     get_by_event, count_projects/experts
+│   │   └── ...              notification, schedule, guest, participation
+│   │
+│   ├── models/              SQLAlchemy 2.0 ORM (30 tables)
+│   ├── schemas/             Pydantic request/response models
+│   └── worker/              Celery tasks (LLM, clustering, embeddings)
+│       ├── tasks.py         9 async tasks
+│       └── utils.py         worker_session(), run_async(), task status
+│
+├── alembic/                 Database migrations
+└── tests/                   pytest (61 тест)
 ```
+
+**Потоки данных:**
+
+```
+Telegram → bot/handlers → services → repos → PostgreSQL
+Browser  → api/         → services → repos → PostgreSQL
+Celery   → worker/tasks → services → repos → PostgreSQL
+                                    → llm_client → OpenRouter API
+                                    → embedding   → Qdrant
+```
+
+**Ключевые принципы:**
+- Services не знают о HTTP и Telegram — принимают `session` + данные
+- Repos — чистые async-функции, только `select`/`insert`/`update`/`delete`
+- `MessageSender` Protocol вместо прямой зависимости на `telegram.Bot`
+- Worker tasks используют `async with worker_session()` для управления сессиями
 
 <br>
 
 ## Стек
 
-**Backend** — Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL 16, APScheduler, python-telegram-bot 21.x
+**Backend** — Python 3.12, FastAPI, SQLAlchemy 2.0 (30 моделей), PostgreSQL 16, APScheduler, python-telegram-bot 21.x
 
 **Frontend** — React 19, TypeScript, Vite, TanStack Query, Tailwind, shadcn/ui
 
