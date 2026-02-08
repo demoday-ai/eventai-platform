@@ -73,7 +73,7 @@
 | Precision@15 | 0.71 | 7 из 10 попадают в цель |
 | Recall@15 | 0.78 | Находим 8 из 10 подходящих |
 
-Пайплайн: TF-IDF по тегам → LLM re-ranking (Claude/GPT) → топ-15
+Пайплайн: Gemini Embedding → Qdrant cosine search (top-30) → schedule rerank → LLM summaries (GPT-4.1) → топ-15
 
 <br>
 
@@ -103,7 +103,7 @@ backend/
 │   ├── lifespan.py          Startup/shutdown: DB, bot, scheduler
 │   ├── scheduler.py         11 APScheduler jobs (reminders, briefings, etc.)
 │   │
-│   ├── api/                 REST API — thin HTTP layer
+│   ├── api/                 REST API (87 endpoints) — thin HTTP layer
 │   │   ├── admin/           10 модулей: dashboard, rooms, tags, events,
 │   │   │                    guests, projects, briefing, messaging, audit, organizers
 │   │   ├── experts/         5 модулей: crud, matching, invites, coverage, escalations
@@ -135,7 +135,7 @@ backend/
 │       └── utils.py         worker_session(), run_async(), task status
 │
 ├── alembic/                 Database migrations
-└── tests/                   pytest (61 тест)
+└── tests/                   pytest (62 теста)
 ```
 
 **Потоки данных:**
@@ -162,9 +162,9 @@ Celery   → worker/tasks → services → repos → PostgreSQL
 
 **Frontend** — React 19, TypeScript, Vite, TanStack Query, Tailwind, shadcn/ui
 
-**AI** — OpenRouter (Claude, GPT), TF-IDF + LLM re-ranking
+**AI** — OpenRouter (GPT-4.1), Gemini Embedding, Qdrant (vector search), cosine similarity + LLM re-ranking
 
-**Infra** — Docker Compose, Celery, RabbitMQ, Redis, Traefik, Yandex Cloud
+**Infra** — Docker Compose, Celery (2 workers: default + heavy), RabbitMQ, Redis, Qdrant, Traefik, Yandex Cloud
 
 <br>
 
