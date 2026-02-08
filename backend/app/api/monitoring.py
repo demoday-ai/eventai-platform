@@ -44,7 +44,7 @@ async def services_status():
     """
     from app.config import settings
 
-    domain = "team12.camp.aitalenthub.ru"
+    domain = "evt-ai.ru"
 
     services = {
         "rabbitmq": {

@@ -99,7 +99,7 @@
 ### Инфраструктура
 - **Docker** + **Docker Compose**
 - **Yandex Cloud VM** (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04)
-- **Домен:** `team12.camp.aitalenthub.ru`
+- **Домен:** `evt-ai.ru`
 - **Traefik** — reverse proxy (на Edge VM кэмпа)
 - **Xray** — AI API proxy (на Edge VM кэмпа)
 - **SSH bastion:** `bastion.camp.aitalenthub.ru`

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     organizer_telegram_ids: str = ""
     organizer_telegram_usernames: str = ""  # comma-separated usernames (without @)
     secret_key: str = "dev-secret-key"
-    webhook_url: str = ""  # e.g. https://team12.camp.aitalenthub.ru
+    webhook_url: str = ""  # e.g. https://evt-ai.ru
     openrouter_api_key: str = ""  # single key (backward compat)
     openrouter_api_keys: str = ""  # comma-separated list of keys for rotation
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

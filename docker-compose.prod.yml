@@ -43,7 +43,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
       # RabbitMQ Management UI at /rabbitmq/
-      - "traefik.http.routers.rabbitmq.rule=Host(`${DOMAIN:-team12.camp.aitalenthub.ru}`) && PathPrefix(`/rabbitmq`)"
+      - "traefik.http.routers.rabbitmq.rule=Host(`${DOMAIN:-evt-ai.ru}`) && PathPrefix(`/rabbitmq`)"
       - "traefik.http.routers.rabbitmq.entrypoints=websecure"
       - "traefik.http.routers.rabbitmq.tls=true"
       - "traefik.http.routers.rabbitmq.tls.certresolver=letsencrypt"
@@ -74,7 +74,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
       # Flower UI at /flower/
-      - "traefik.http.routers.flower.rule=Host(`${DOMAIN:-team12.camp.aitalenthub.ru}`) && PathPrefix(`/flower`)"
+      - "traefik.http.routers.flower.rule=Host(`${DOMAIN:-evt-ai.ru}`) && PathPrefix(`/flower`)"
       - "traefik.http.routers.flower.entrypoints=websecure"
       - "traefik.http.routers.flower.tls=true"
       - "traefik.http.routers.flower.tls.certresolver=letsencrypt"
@@ -201,7 +201,7 @@ services:
       - "traefik.docker.network=traefik-public"
 
       # HTTP router
-      - "traefik.http.routers.demoday-frontend.rule=Host(`${DOMAIN:-team12.camp.aitalenthub.ru}`)"
+      - "traefik.http.routers.demoday-frontend.rule=Host(`${DOMAIN:-evt-ai.ru}`)"
       - "traefik.http.routers.demoday-frontend.entrypoints=websecure"
       - "traefik.http.routers.demoday-frontend.tls=true"
       - "traefik.http.routers.demoday-frontend.tls.certresolver=letsencrypt"

@@ -26,7 +26,7 @@
 
 <p align="center">
   <a href="https://t.me/demoday_ai_talent_hub_test_bot">Попробовать бота</a> •
-  <a href="https://team12.camp.aitalenthub.ru">Live Demo</a> •
+  <a href="https://evt-ai.ru">Live Demo</a> •
   <a href="./docs">Документация</a>
 </p>
 
@@ -119,10 +119,10 @@ backend/
 
 | Сервис | URL | Описание |
 |:-------|:----|:---------|
-| Admin Panel | [team12.camp.aitalenthub.ru](https://team12.camp.aitalenthub.ru) | Панель организатора |
-| RabbitMQ | [/rabbitmq/](https://team12.camp.aitalenthub.ru/rabbitmq/) | Очередь задач |
-| Flower | [/flower/](https://team12.camp.aitalenthub.ru/flower/) | Мониторинг Celery воркеров |
-| API Docs | [/docs](https://team12.camp.aitalenthub.ru/docs) | Swagger UI |
+| Admin Panel | [evt-ai.ru](https://evt-ai.ru) | Панель организатора |
+| RabbitMQ | [/rabbitmq/](https://evt-ai.ru/rabbitmq/) | Очередь задач |
+| Flower | [/flower/](https://evt-ai.ru/flower/) | Мониторинг Celery воркеров |
+| API Docs | [/docs](https://evt-ai.ru/docs) | Swagger UI |
 
 Логин/пароль для RabbitMQ и Flower: `demoday` / `demoday`
 
