@@ -2,7 +2,7 @@
   <a href="https://ai.itmo.ru"><strong>AI Talent Hub</strong></a> ×
   <a href="https://itmo.ru"><strong>ИТМО</strong></a>
   <br>
-  <sub>AI Talent Camp 2026 · Проект #10</sub>
+  <sub>AI Talent Camp 2026 · Проект #12</sub>
 </p>
 
 <p align="center">
@@ -193,7 +193,7 @@ Celery   → worker/tasks → services → repos → PostgreSQL
 
 ## Команда
 
-**"ЯСНОПОНЯТНО"** — AI Talent Camp 2026, проект #10
+**"ЯСНОПОНЯТНО"** — AI Talent Camp 2026, проект #12
 
 - **Дмитрий Горбунов** — тимлид, продукт · [@grbn_dima](https://t.me/grbn_dima)
 - **Анастасия Гапеева** — UX/UI, фронтенд · [@agapeeva](https://t.me/agapeeva)
