@@ -1,5 +1,6 @@
 """Dashboard & room detail service (split from admin_service)."""
 
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -7,8 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     ClusteringRun,
+    Event,
     Expert,
     ExpertRoomAssignment,
+    GuestSubtype,
+    Notification,
     ParticipationRequest,
     ParticipationStatus,
     Project,
@@ -26,22 +30,82 @@ from app.repos import event_repo
 from app.schemas.admin import (
     Alert,
     DashboardResponse,
+    EventSummary,
     ExpertInfo,
     ExpertStats,
     GuestStats,
     GuestSubtypeCount,
+    NextAction,
+    PartnerStats,
+    Phase,
+    PipelineStatusResponse,
     ProjectInfo,
     ProjectListItem,
+    ProjectStats,
     RoomCoverage,
     RoomDetailResponse,
     RoomInfo,
     RoomStats,
+    Step,
     StudentStats,
 )
 
 
 async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResponse:
     """Get dashboard statistics for organizer."""
+
+    # Event summary
+    event = await db.scalar(select(Event).where(Event.id == event_id))
+    event_summary = None
+    if event:
+        days_until = (event.start_date - date.today()).days
+        event_summary = EventSummary(
+            name=event.name,
+            start_date=event.start_date,
+            end_date=event.end_date,
+            days_until=days_until,
+        )
+
+    # Projects stats
+    total_projects = await db.scalar(
+        select(func.count(Project.id)).where(Project.event_id == event_id)
+    ) or 0
+
+    projects = ProjectStats(total=total_projects)
+
+    # Partners stats (guests with subtype business_partner)
+    guest_role_for_partners = await db.scalar(
+        select(Role).where(Role.code == RoleCode.GUEST.value)
+    )
+    total_partners = 0
+    partners_from_bot = 0
+    partners_from_import = 0
+
+    if guest_role_for_partners:
+        partner_query = (
+            select(User.source, func.count(User.id))
+            .select_from(UserRole)
+            .join(User, UserRole.user_id == User.id)
+            .where(
+                UserRole.event_id == event_id,
+                UserRole.role_id == guest_role_for_partners.id,
+                User.guest_subtype == GuestSubtype.BUSINESS_PARTNER,
+            )
+            .group_by(User.source)
+        )
+        partner_result = await db.execute(partner_query)
+        for source, count in partner_result.all():
+            total_partners += count
+            if source == "import":
+                partners_from_import = count
+            else:
+                partners_from_bot += count
+
+    partners = PartnerStats(
+        total=total_partners,
+        from_bot=partners_from_bot,
+        from_import=partners_from_import,
+    )
 
     # Students stats
     total_students = await db.scalar(
@@ -207,8 +271,174 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
         )
 
     return DashboardResponse(
-        students=students, experts=experts, guests=guests, rooms=rooms, alerts=alerts
+        event=event_summary,
+        projects=projects,
+        students=students,
+        experts=experts,
+        partners=partners,
+        guests=guests,
+        rooms=rooms,
+        alerts=alerts,
     )
+
+
+_STEP_CONFIG = [
+    # (step_name, label, phase, link)
+    ("event", "Создать событие", "data", "/import"),
+    ("projects", "Загрузить проекты", "data", "/import"),
+    ("students", "Загрузить студентов", "data", "/import"),
+    ("experts", "Загрузить экспертов", "data", "/experts"),
+    ("clustering", "Кластеризация проектов", "distribution", "/clustering"),
+    ("matching", "Распределение экспертов", "distribution", "/experts"),
+    ("schedule", "Генерация расписания", "distribution", "/schedule"),
+    ("reminders", "Настройка напоминаний", "launch", "/reminders"),
+    ("briefing", "Отправка брифинга", "launch", "/briefing"),
+]
+
+_NEXT_ACTION_LABELS = {
+    "event": "Создайте мероприятие на странице Импорта",
+    "projects": "Загрузите проекты на странице Импорта",
+    "students": "Загрузите студентов на странице Импорта",
+    "experts": "Загрузите экспертов",
+    "clustering": "Запустите кластеризацию по залам",
+    "matching": "Распределите экспертов по залам",
+    "schedule": "Одобрите расписание",
+    "reminders": "Настройте напоминания",
+    "briefing": "Отправьте брифинг экспертам",
+}
+
+_PHASE_LABELS = {
+    "data": "Данные",
+    "distribution": "Распределение",
+    "launch": "Запуск",
+}
+
+
+async def get_pipeline_status(
+    db: AsyncSession, event_id: UUID | None,
+) -> PipelineStatusResponse:
+    """Get pipeline preparation status for Global Stepper."""
+
+    # Determine step statuses
+    step_statuses: dict[str, str] = {}
+
+    if event_id is None:
+        # No event — all steps not_started
+        for step_name, _, _, _ in _STEP_CONFIG:
+            step_statuses[step_name] = "not_started"
+    else:
+        # event step
+        event = await db.scalar(select(Event).where(Event.id == event_id))
+        step_statuses["event"] = "completed" if event else "not_started"
+
+        # projects step
+        projects_count = await db.scalar(
+            select(func.count(Project.id)).where(Project.event_id == event_id)
+        ) or 0
+        step_statuses["projects"] = "completed" if projects_count > 0 else "not_started"
+
+        # students step
+        students_count = await db.scalar(
+            select(func.count(ParticipationRequest.id)).where(
+                ParticipationRequest.event_id == event_id
+            )
+        ) or 0
+        step_statuses["students"] = "completed" if students_count > 0 else "not_started"
+
+        # experts step
+        experts_count = await db.scalar(
+            select(func.count(Expert.id)).where(Expert.event_id == event_id)
+        ) or 0
+        step_statuses["experts"] = "completed" if experts_count > 0 else "not_started"
+
+        # clustering step
+        current_clustering = await event_repo.get_approved_clustering(db, event_id)
+        step_statuses["clustering"] = (
+            "completed" if current_clustering else "not_started"
+        )
+
+        # matching step
+        if current_clustering:
+            assignments_count = await db.scalar(
+                select(func.count(ExpertRoomAssignment.id)).where(
+                    ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+                )
+            ) or 0
+            step_statuses["matching"] = (
+                "completed" if assignments_count > 0 else "not_started"
+            )
+        else:
+            step_statuses["matching"] = "not_started"
+
+        # schedule step
+        step_statuses["schedule"] = (
+            "completed"
+            if current_clustering and current_clustering.schedule_approved_at is not None
+            else "not_started"
+        )
+
+        # reminders step
+        reminders_count = await db.scalar(
+            select(func.count(Notification.id)).where(
+                Notification.event_id == event_id,
+                Notification.type.in_(["eve_of_dd", "pre_slot"]),
+            )
+        ) or 0
+        step_statuses["reminders"] = (
+            "completed" if reminders_count > 0 else "not_started"
+        )
+
+        # briefing step
+        from app.models import ExpertBriefing
+
+        briefings_count = await db.scalar(
+            select(func.count(ExpertBriefing.id)).where(
+                ExpertBriefing.event_id == event_id,
+            )
+        ) or 0
+        step_statuses["briefing"] = (
+            "completed" if briefings_count > 0 else "not_started"
+        )
+
+    # Build phases
+    phase_steps: dict[str, list[Step]] = {"data": [], "distribution": [], "launch": []}
+    for step_name, label, phase, _ in _STEP_CONFIG:
+        phase_steps[phase].append(
+            Step(name=step_name, label=label, status=step_statuses[step_name])
+        )
+
+    phases = []
+    for phase_name in ["data", "distribution", "launch"]:
+        steps = phase_steps[phase_name]
+        completed = sum(1 for s in steps if s.status == "completed")
+        if completed == 0:
+            phase_status = "not_started"
+        elif completed == len(steps):
+            phase_status = "completed"
+        else:
+            phase_status = "in_progress"
+
+        phases.append(
+            Phase(
+                name=phase_name,
+                label=_PHASE_LABELS[phase_name],
+                status=phase_status,
+                steps=steps,
+            )
+        )
+
+    # Determine next_action
+    next_action = None
+    for step_name, _, _, link in _STEP_CONFIG:
+        if step_statuses[step_name] == "not_started":
+            next_action = NextAction(
+                step=step_name,
+                label=_NEXT_ACTION_LABELS[step_name],
+                link=link,
+            )
+            break
+
+    return PipelineStatusResponse(phases=phases, next_action=next_action)
 
 
 async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCoverage]:
@@ -245,12 +475,16 @@ async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCover
             )
         )
 
-        if total_experts == 0:
-            coverage_status = "none"
-        elif confirmed_experts == total_experts:
-            coverage_status = "full"
-        else:
+        if confirmed_experts == 0:
+            coverage_status = "gap"
+        elif confirmed_experts == 1:
             coverage_status = "partial"
+        elif confirmed_experts == 2:
+            coverage_status = "covered"
+        elif confirmed_experts == 3:
+            coverage_status = "excellent"
+        else:
+            coverage_status = "excess"
 
         coverage_list.append(
             RoomCoverage(

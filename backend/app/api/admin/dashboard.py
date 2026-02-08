@@ -1,4 +1,4 @@
-"""Admin dashboard & coverage endpoints."""
+"""Admin dashboard, pipeline-status & coverage endpoints."""
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,9 @@ from app.schemas.admin import (
     DashboardResponse,
     ExpertStats,
     GuestStats,
+    PartnerStats,
+    PipelineStatusResponse,
+    ProjectStats,
     RoomCoverage,
     RoomStats,
     StudentStats,
@@ -31,14 +34,30 @@ async def get_dashboard(
     event = await user_service.get_current_event(db)
     if not event:
         return DashboardResponse(
+            event=None,
+            projects=ProjectStats(total=0),
             students=StudentStats(total=0, confirmed=0, pending=0, declined=0),
             experts=ExpertStats(total=0, confirmed=0, pending=0, invited=0),
+            partners=PartnerStats(total=0, from_bot=0, from_import=0),
             guests=GuestStats(total=0, by_subtype=[]),
             rooms=RoomStats(total=0, with_experts=0, without_experts=0),
             alerts=[Alert(severity="info", message="Нет активного мероприятия. Загрузите проекты для начала работы.")],
         )
 
     return await admin_service.get_dashboard_stats(db, event.id)
+
+
+@router.get("/pipeline-status", response_model=PipelineStatusResponse)
+async def get_pipeline_status(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get pipeline preparation status for Global Stepper."""
+
+    event = await user_service.get_current_event(db)
+    event_id = event.id if event else None
+
+    return await admin_service.get_pipeline_status(db, event_id)
 
 
 @router.get("/coverage", response_model=list[RoomCoverage])

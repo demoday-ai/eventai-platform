@@ -6,6 +6,7 @@ Kept for backward-compatibility of imports like `from app.services.admin import 
 from app.services.admin.dashboard_service import (  # noqa: F401
     get_coverage_stats,
     get_dashboard_stats,
+    get_pipeline_status,
     get_projects_list,
     get_room_detail,
     update_room_theme,

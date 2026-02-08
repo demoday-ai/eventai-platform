@@ -1,0 +1,146 @@
+# OpenAPI Contract: Pipeline Status API (new)
+# Feature: 019-admin-dashboard
+# New endpoint for Global Stepper and Quick Action
+
+openapi: "3.1.0"
+info:
+  title: EventAI Admin Pipeline Status API
+  version: "1.0.0"
+
+paths:
+  /api/v1/admin/pipeline-status:
+    get:
+      summary: Get pipeline preparation status
+      description: |
+        Returns the status of all 3 preparation phases (Data, Distribution, Launch)
+        and their sub-steps. Used by Global Stepper and Quick Action components.
+        Returns default empty state if no active event exists.
+      operationId: getPipelineStatus
+      tags: [admin, pipeline]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pipeline status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineStatusResponse"
+        "401":
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PipelineStatusResponse:
+      type: object
+      required: [phases]
+      properties:
+        phases:
+          type: array
+          items:
+            $ref: "#/components/schemas/Phase"
+          minItems: 3
+          maxItems: 3
+        next_action:
+          $ref: "#/components/schemas/NextAction"
+          nullable: true
+          description: "null when all steps completed"
+      example:
+        phases:
+          - name: "data"
+            label: "Данные"
+            status: "completed"
+            steps:
+              - name: "event"
+                label: "Создать событие"
+                status: "completed"
+              - name: "projects"
+                label: "Загрузить проекты"
+                status: "completed"
+              - name: "students"
+                label: "Загрузить студентов"
+                status: "completed"
+              - name: "experts"
+                label: "Загрузить экспертов"
+                status: "completed"
+          - name: "distribution"
+            label: "Распределение"
+            status: "in_progress"
+            steps:
+              - name: "clustering"
+                label: "Кластеризация проектов"
+                status: "completed"
+              - name: "matching"
+                label: "Распределение экспертов"
+                status: "not_started"
+              - name: "schedule"
+                label: "Генерация расписания"
+                status: "not_started"
+          - name: "launch"
+            label: "Запуск"
+            status: "not_started"
+            steps:
+              - name: "reminders"
+                label: "Настройка напоминаний"
+                status: "not_started"
+              - name: "briefing"
+                label: "Отправка брифинга"
+                status: "not_started"
+        next_action:
+          step: "matching"
+          label: "Распределите экспертов по залам"
+          link: "/experts"
+
+    Phase:
+      type: object
+      required: [name, label, status, steps]
+      properties:
+        name:
+          type: string
+          enum: [data, distribution, launch]
+        label:
+          type: string
+          description: Human-readable phase name in Russian
+        status:
+          type: string
+          enum: [completed, in_progress, not_started]
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/Step"
+
+    Step:
+      type: object
+      required: [name, label, status]
+      properties:
+        name:
+          type: string
+          enum: [event, projects, students, experts, clustering, matching, schedule, reminders, briefing]
+        label:
+          type: string
+          description: Human-readable step name in Russian
+        status:
+          type: string
+          enum: [completed, not_started]
+
+    NextAction:
+      type: object
+      required: [step, label, link]
+      properties:
+        step:
+          type: string
+          description: Step name from the pipeline
+        label:
+          type: string
+          description: User-facing instruction text in Russian
+          example: "Распределите экспертов по залам"
+        link:
+          type: string
+          description: Frontend route path for navigation
+          example: "/experts"

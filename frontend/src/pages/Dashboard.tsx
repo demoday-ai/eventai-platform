@@ -1,20 +1,21 @@
-import { useEffect, type ReactNode } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { RefreshCw, ClipboardList, GraduationCap, Users, Building2, AlertTriangle, AlertCircle, Info, CheckCircle, XCircle, Clock } from "lucide-react"
+import { useEffect } from "react"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { RefreshCw, AlertTriangle, AlertCircle, Info } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
-import { Skeleton } from "../components/ui/skeleton"
 import { APP_NAME } from "../lib/constants"
-import { getDashboard, getCoverage, isNoEventError, type DashboardData, type Alert as AlertType } from "../lib/api-client"
-import { CoverageTable } from "../components/CoverageTable"
+import { getDashboard, getCoverage, type DashboardData, type RoomCoverage, type Alert as AlertType } from "../lib/api-client"
+import { EmptyState } from "../components/dashboard/EmptyState"
+import { QuickAction } from "../components/dashboard/QuickAction"
+import { MetricCards } from "../components/dashboard/MetricCards"
+import { EventCountdown } from "../components/dashboard/EventCountdown"
+import { DashboardCoverageTable } from "../components/dashboard/CoverageTable"
 
 export function Dashboard() {
-  // Set page title
   useEffect(() => {
     document.title = `${APP_NAME} - Dashboard`
   }, [])
 
-  // Fetch dashboard data with auto-refresh every 60 seconds
   const {
     data,
     isLoading,
@@ -24,22 +25,19 @@ export function Dashboard() {
   } = useQuery<DashboardData>({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
-    refetchInterval: 60000, // 60 seconds
+    refetchInterval: 30_000,
+    placeholderData: keepPreviousData,
   })
 
-  // Fetch coverage data
   const {
     data: coverageData,
     isLoading: coverageLoading,
-  } = useQuery({
+  } = useQuery<RoomCoverage[]>({
     queryKey: ["coverage"],
     queryFn: getCoverage,
-    refetchInterval: 60000,
+    refetchInterval: 30_000,
+    placeholderData: keepPreviousData,
   })
-
-  const handleRefresh = () => {
-    refetch()
-  }
 
   const formatLastUpdate = (timestamp: number) => {
     const date = new Date(timestamp)
@@ -50,103 +48,51 @@ export function Dashboard() {
     })
   }
 
+  // Empty state: no event
+  const hasNoEvent = !isLoading && data && !data.event
+
   return (
     <div className="grid gap-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Dashboard</h2>
         <div className="flex items-center gap-3">
-          {dataUpdatedAt && (
+          {dataUpdatedAt > 0 && (
             <span className="text-xs text-muted-foreground">
               Обновлено: {formatLastUpdate(dataUpdatedAt)}
             </span>
           )}
-          <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading}>
+          <Button variant="ghost" size="icon" onClick={() => refetch()} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
 
-          {/* Welcome card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Demo Day 2026</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Панель управления Demo Day. Статистика обновляется автоматически каждую минуту.
-              </p>
-            </CardContent>
-          </Card>
+      {/* Empty state */}
+      {hasNoEvent && <EmptyState />}
 
-          {/* No event state */}
-          {error && isNoEventError(error) && (
-            <Card className="border-dashed">
-              <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">
-                  Нет активного мероприятия. Загрузите проекты на вкладке «Импорт данных», чтобы создать мероприятие.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+      {/* Error state */}
+      {error && (
+        <Card className="border-red-500">
+          <CardContent className="pt-6">
+            <p className="text-red-500">
+              Ошибка загрузки данных: {error instanceof Error ? error.message : "Неизвестная ошибка"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Error state */}
-          {error && !isNoEventError(error) && (
-            <Card className="border-red-500">
-              <CardContent className="pt-6">
-                <p className="text-red-500">
-                  Ошибка загрузки данных: {error instanceof Error ? error.message : "Неизвестная ошибка"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+      {/* Main content: only when event exists */}
+      {!hasNoEvent && !error && (
+        <>
+          {/* Event countdown */}
+          {data?.event && <EventCountdown event={data.event} />}
 
-          {/* Metrics */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <MetricCard
-              title="Студенты"
-              value={isLoading ? "—" : data?.students.total.toString() || "0"}
-              subtitle={
-                isLoading
-                  ? "Загрузка..."
-                  : <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-600 inline" />{data?.students.confirmed} | <Clock className="w-3 h-3 text-yellow-600 inline" />{data?.students.pending} | <XCircle className="w-3 h-3 text-red-600 inline" />{data?.students.declined}</span>
-              }
-              icon={<ClipboardList className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
-              loading={isLoading}
-            />
-            <MetricCard
-              title="Эксперты"
-              value={isLoading ? "—" : data?.experts.total.toString() || "0"}
-              subtitle={
-                isLoading
-                  ? "Загрузка..."
-                  : <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-600 inline" />{data?.experts.confirmed} | <Clock className="w-3 h-3 text-yellow-600 inline" />{data?.experts.pending}</span>
-              }
-              icon={<GraduationCap className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
-              loading={isLoading}
-            />
-            <MetricCard
-              title="Гости"
-              value={isLoading ? "—" : data?.guests.total.toString() || "0"}
-              subtitle={
-                isLoading
-                  ? "Загрузка..."
-                  : data?.guests.by_subtype.map((s) => `${s.subtype}: ${s.count}`).join(" | ") || "Нет данных"
-              }
-              icon={<Users className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
-              loading={isLoading}
-            />
-            <MetricCard
-              title="Залы"
-              value={isLoading ? "—" : data?.rooms.total.toString() || "0"}
-              subtitle={
-                isLoading
-                  ? "Загрузка..."
-                  : <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-600 inline" />{data?.rooms.with_experts} | <XCircle className="w-3 h-3 text-red-600 inline" />{data?.rooms.without_experts}</span>
-              }
-              icon={<Building2 className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />}
-              loading={isLoading}
-            />
-          </div>
+          {/* Quick Action */}
+          <QuickAction />
+
+          {/* Metric cards */}
+          <MetricCards data={data} loading={isLoading} />
 
           {/* Alerts */}
           {data?.alerts && data.alerts.length > 0 && (
@@ -154,72 +100,12 @@ export function Dashboard() {
           )}
 
           {/* Coverage table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Покрытие залов</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {coverageLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Загрузка...
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground mb-2 md:hidden">
-                    Проведите для прокрутки →
-                  </p>
-                  <CoverageTable data={coverageData || []} />
-                </>
-              )}
-            </CardContent>
-          </Card>
+          {!coverageLoading && coverageData && coverageData.length > 0 && (
+            <DashboardCoverageTable data={coverageData} />
+          )}
+        </>
+      )}
     </div>
-  )
-}
-
-function MetricCard({
-  title,
-  value,
-  subtitle,
-  icon,
-  loading,
-}: {
-  title: string
-  value: string
-  subtitle: ReactNode
-  icon: ReactNode
-  loading?: boolean
-}) {
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-3 md:pt-6 md:p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-20 md:w-24" />
-              <Skeleton className="h-8 md:h-10 w-12 md:w-16" />
-              <Skeleton className="h-3 w-24 md:w-32" />
-            </div>
-            <Skeleton className="h-6 w-6 md:h-8 md:w-8 rounded-full" />
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-3 md:pt-6 md:p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs md:text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1">{value}</p>
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
-          </div>
-          <span>{icon}</span>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 

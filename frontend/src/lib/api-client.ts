@@ -66,12 +66,58 @@ export interface Alert {
   room_name?: string
 }
 
+export interface ProjectStats {
+  total: number
+}
+
+export interface PartnerStats {
+  total: number
+  from_bot: number
+  from_import: number
+}
+
+export interface EventSummary {
+  name: string
+  start_date: string
+  end_date: string
+  days_until: number
+}
+
 export interface DashboardData {
+  event: EventSummary | null
+  projects: ProjectStats
   students: StudentStats
   experts: ExpertStats
+  partners: PartnerStats
   guests: GuestStats
   rooms: RoomStats
   alerts: Alert[]
+}
+
+// --- Pipeline status types ---
+
+export interface PipelineStep {
+  name: string
+  label: string
+  status: "completed" | "not_started"
+}
+
+export interface PipelinePhase {
+  name: string
+  label: string
+  status: "completed" | "in_progress" | "not_started"
+  steps: PipelineStep[]
+}
+
+export interface PipelineNextAction {
+  step: string
+  label: string
+  link: string
+}
+
+export interface PipelineStatusData {
+  phases: PipelinePhase[]
+  next_action: PipelineNextAction | null
 }
 
 export interface Event {
@@ -95,7 +141,7 @@ export interface RoomCoverage {
   total_experts: number
   confirmed_experts: number
   projects_count: number
-  coverage_status: "full" | "partial" | "none"
+  coverage_status: "gap" | "partial" | "covered" | "excellent" | "excess"
 }
 
 export interface RoomInfo {
@@ -727,6 +773,11 @@ export function isNoEventError(error: unknown): boolean {
 // API functions
 export const getDashboard = async (): Promise<DashboardData> => {
   const { data } = await apiClient.get<DashboardData>("/admin/dashboard")
+  return data
+}
+
+export const getPipelineStatus = async (): Promise<PipelineStatusData> => {
+  const { data } = await apiClient.get<PipelineStatusData>("/admin/pipeline-status")
   return data
 }
 
