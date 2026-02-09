@@ -5,39 +5,9 @@ import { Card, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { ExpertFormDialog } from "../components/ExpertFormDialog"
+import { StatusBadge } from "../components/shared/StatusBadge"
 import { APP_NAME } from "../lib/constants"
 import { getExperts, updateExpertStatus, type ExpertListItem } from "../lib/api-client"
-
-function StatusBadge({ status }: { status: string | null }) {
-  if (!status) return <span className="text-xs text-muted-foreground">—</span>
-
-  const styles: Record<string, string> = {
-    confirmed: "bg-green-100 text-green-800",
-    declined: "bg-red-100 text-red-800",
-    invited: "bg-yellow-100 text-yellow-800",
-    invite_ready: "bg-yellow-100 text-yellow-800",
-    proposed: "bg-gray-100 text-gray-700",
-    approved: "bg-gray-100 text-gray-700",
-  }
-
-  const labels: Record<string, string> = {
-    confirmed: "Подтверждён",
-    declined: "Отклонён",
-    invited: "Приглашён",
-    invite_ready: "Готов к приглашению",
-    proposed: "Предложен",
-    approved: "Одобрен",
-  }
-
-  return (
-    <span
-      data-testid="status-badge"
-      className={`px-1.5 py-0.5 text-xs rounded ${styles[status] || "bg-gray-100 text-gray-700"}`}
-    >
-      {labels[status] || status}
-    </span>
-  )
-}
 
 function canChangeStatus(status: string | null): boolean {
   return status !== null && status !== "confirmed" && status !== "declined"
@@ -134,7 +104,7 @@ export function ExpertList() {
                       </td>
                       <td className="py-2">
                         <div className="flex items-center gap-1">
-                          <StatusBadge status={expert.assignment_status} />
+                          <StatusBadge status={expert.assignment_status} variant="expert" />
                           {canChangeStatus(expert.assignment_status) && (
                             <>
                               <Button

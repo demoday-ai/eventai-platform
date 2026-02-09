@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
+import { StatusBadge } from "../components/shared/StatusBadge"
 import { APP_NAME } from "../lib/constants"
 import {
   getCoverageSummary,
@@ -13,17 +14,6 @@ import {
 
 const TABS = ["Обзор", "Пробелы", "Эскалации"] as const
 type Tab = (typeof TABS)[number]
-
-function coverageBadge(level: string) {
-  switch (level) {
-    case "full":
-      return <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">Полное</span>
-    case "partial":
-      return <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">Частичное</span>
-    default:
-      return <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">Нет</span>
-  }
-}
 
 export function Coverage() {
   const navigate = useNavigate()
@@ -147,7 +137,7 @@ export function Coverage() {
                             <td className="py-2 pr-4">{room.confirmed}</td>
                             <td className="py-2 pr-4">{room.pending}</td>
                             <td className="py-2 pr-4">{room.declined}</td>
-                            <td className="py-2 pr-4">{coverageBadge(room.coverage_level)}</td>
+                            <td className="py-2 pr-4"><StatusBadge status={room.coverage_level} variant="coverage" /></td>
                             <td className="py-2">
                               <Button
                                 variant="outline"
