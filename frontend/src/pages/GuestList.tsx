@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
 import { Users, UserSearch, Send, X } from "lucide-react"
@@ -362,9 +362,8 @@ export function GuestList() {
                 </thead>
                 <tbody>
                   {filteredGuests.map((guest: GuestListItem) => (
-                    <>
+                    <React.Fragment key={guest.id}>
                       <tr
-                        key={guest.id}
                         className="border-b last:border-0 cursor-pointer hover:bg-muted/50"
                         onClick={() => setExpandedId(expandedId === guest.id ? null : guest.id)}
                       >
@@ -415,13 +414,13 @@ export function GuestList() {
                         </td>
                       </tr>
                       {expandedId === guest.id && (
-                        <tr key={`${guest.id}-detail`}>
+                        <tr>
                           <td colSpan={7}>
                             <GuestDetailPanel guestId={guest.id} />
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
