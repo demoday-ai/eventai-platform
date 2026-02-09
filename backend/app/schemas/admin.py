@@ -230,6 +230,15 @@ class ProjectListItem(BaseModel):
     tags: list[str]
 
 
+class EventCreateRequest(BaseModel):
+    """Request to create a new event."""
+
+    name: str
+    start_date: date
+    end_date: date
+    description: str | None = None
+
+
 class EventUpdateRequest(BaseModel):
     """Request to update event details."""
 

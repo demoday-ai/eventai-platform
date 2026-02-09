@@ -1,17 +1,60 @@
 """Admin event management endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.database import get_session
 from app.models import User
-from app.schemas.admin import EventUpdateRequest
+from app.models.event import Event
+from app.schemas.admin import EventCreateRequest, EventUpdateRequest
 from app.schemas.user import EventResponse
 from app.services.admin import audit_service
 from app.services.core import user_service
 
 router = APIRouter()
+
+
+@router.post("/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
+async def create_event(
+    request: EventCreateRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new event."""
+    if request.end_date < request.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="end_date must be >= start_date",
+        )
+
+    # Check if an event already exists
+    result = await db.execute(select(Event).limit(1))
+    existing = result.scalar_one_or_none()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Active event already exists",
+        )
+
+    event = Event(
+        name=request.name,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        description=request.description,
+    )
+    db.add(event)
+
+    await audit_service.log_action(
+        db, current_user, "event_create",
+        entity_type="event",
+        details={"name": request.name, "start_date": str(request.start_date), "end_date": str(request.end_date)},
+    )
+
+    await db.commit()
+    await db.refresh(event)
+    return event
 
 
 @router.patch("/events/current", response_model=EventResponse)
