@@ -20,7 +20,7 @@ from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.notification import Notification
 from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.project import Project
-from app.models.role import Role, RoleCode
+from app.models.role import Role
 from app.models.room import Room
 from app.models.room_project import RoomProject
 from app.models.schedule_slot import ScheduleSlot
@@ -185,7 +185,9 @@ async def test_pipeline_status_with_data(db, seed_event, seed_project):
 
 
 @pytest.mark.asyncio
-async def test_pipeline_status_next_action_none_when_all_complete(db, seed_event, seed_project, seed_clustering, seed_room):
+async def test_pipeline_status_next_action_none_when_all_complete(
+    db, seed_event, seed_project, seed_clustering, seed_room,
+):
     """All steps completed → next_action is None."""
     # Add expert
     expert = Expert(seed_id="exp1", name="Expert One", event_id=seed_event.id)
