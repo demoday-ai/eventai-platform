@@ -149,4 +149,71 @@ describe("ExpertMatching", () => {
       expect(screen.getByText(/Ошибка/)).toBeInTheDocument()
     })
   })
+
+  it("shows confirmation dialog when clicking approve", async () => {
+    const user = userEvent.setup()
+    mockGetCurrentMatching.mockResolvedValue(mockMatchingResult)
+
+    render(<ExpertMatching />, { wrapper: createWrapper() })
+
+    // Wait for results to load and navigate to approve step
+    await waitFor(() => {
+      expect(screen.getByText("Далее")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Далее"))
+
+    // Step 2: click Одобрить
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить матчинг")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Одобрить матчинг"))
+
+    // Should show confirmation
+    await waitFor(() => {
+      expect(screen.getByText(/Вы уверены/)).toBeInTheDocument()
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+      expect(screen.getByText("Отмена")).toBeInTheDocument()
+    })
+  })
+
+  it("shows next-step hint after approval", async () => {
+    const user = userEvent.setup()
+    mockGetCurrentMatching.mockResolvedValue(mockMatchingResult)
+    mockApproveMatching.mockResolvedValue({ status: "approved" })
+    mockGetInvitePreview.mockResolvedValue({
+      total_experts: 10,
+      with_telegram: 8,
+      without_telegram: 2,
+      has_unapproved: false,
+      sample_message: "Test",
+      bot_link: "https://t.me/test",
+    })
+
+    render(<ExpertMatching />, { wrapper: createWrapper() })
+
+    // Navigate to approve step
+    await waitFor(() => {
+      expect(screen.getByText("Далее")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Далее"))
+
+    // Click approve
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить матчинг")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Одобрить матчинг"))
+
+    // Confirm
+    await waitFor(() => {
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Подтвердить"))
+
+    // Should show next-step hint
+    await waitFor(() => {
+      expect(screen.getByText("Матчинг одобрён")).toBeInTheDocument()
+      expect(screen.getByText("Следующий шаг — генерация расписания")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к расписанию" })).toHaveAttribute("href", "/schedule")
+    })
+  })
 })

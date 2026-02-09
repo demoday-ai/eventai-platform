@@ -57,6 +57,7 @@ export function ExpertMatching() {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [inviteResult, setInviteResult] = useState<InviteConfirmResult | null>(null)
   const [stepDetected, setStepDetected] = useState(false)
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false)
 
   useEffect(() => {
     document.title = `${APP_NAME} - Эксперты`
@@ -136,6 +137,9 @@ export function ExpertMatching() {
     mutationFn: approveMatching,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matching"] })
+      queryClient.invalidateQueries({ queryKey: ["pipeline-status"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      setShowApproveConfirm(false)
       previewMutation.mutate()
     },
   })
@@ -478,18 +482,51 @@ export function ExpertMatching() {
                   Всего экспертов: {matchingResult.total_experts}, назначены: {matchingResult.matched_experts}
                 </p>
 
-                {!approveMutation.isSuccess && (
+                {!approveMutation.isSuccess && !showApproveConfirm && (
                   <Button
-                    onClick={() => approveMutation.mutate()}
+                    onClick={() => setShowApproveConfirm(true)}
                     disabled={approveMutation.isPending || !hasMatched}
                     className="w-full sm:w-auto"
                   >
-                    {approveMutation.isPending ? "Одобрение..." : "Одобрить матчинг"}
+                    Одобрить матчинг
                   </Button>
                 )}
 
+                {showApproveConfirm && !approveMutation.isSuccess && (
+                  <div className="p-4 border rounded-md space-y-3">
+                    <p className="text-sm font-medium">Вы уверены, что хотите одобрить матчинг?</p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => approveMutation.mutate()}
+                        disabled={approveMutation.isPending}
+                      >
+                        {approveMutation.isPending ? "Одобрение..." : "Подтвердить"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowApproveConfirm(false)}
+                        disabled={approveMutation.isPending}
+                      >
+                        Отмена
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {approveMutation.isSuccess && (
-                  <p className="text-sm text-green-600">Матчинг одобрён</p>
+                  <div className="space-y-3">
+                    <p className="text-sm text-green-600 font-medium">Матчинг одобрён</p>
+                    <Card className="border-green-200">
+                      <CardContent className="pt-4">
+                        <p className="text-sm">Следующий шаг — генерация расписания</p>
+                        <Link to="/schedule">
+                          <Button variant="outline" size="sm" className="mt-2">
+                            Перейти к расписанию
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  </div>
                 )}
 
                 {approveMutation.isError && (
