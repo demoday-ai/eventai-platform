@@ -251,30 +251,6 @@ describe("Settings", () => {
     })
   })
 
-  it("renders audit log section", async () => {
-    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
-
-    render(<Settings />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Журнал действий")).toBeInTheDocument()
-    })
-  })
-
-  it("loads and displays audit log entries", async () => {
-    vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
-
-    render(<Settings />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(apiClient.getAuditLog).toHaveBeenCalled()
-    })
-
-    await waitFor(() => {
-      expect(screen.getAllByText("Admin User").length).toBeGreaterThan(0)
-    })
-  })
-
   it("renders organizers section", async () => {
     vi.mocked(apiClient.getCurrentEvent).mockResolvedValue(mockEvent)
 

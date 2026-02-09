@@ -11,6 +11,7 @@ import {
   Bell,
   UserCheck,
   Settings,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "../../lib/utils"
@@ -36,6 +37,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Подготовка",
     items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/import", label: "Импорт данных", icon: Upload, pipelineSteps: ["event", "projects", "students", "experts"] },
       { to: "/projects", label: "Проекты", icon: FolderOpen },
     ],
@@ -52,7 +54,7 @@ const navGroups: NavGroup[] = [
     label: "Коммуникация",
     items: [
       { to: "/messaging", label: "Рассылки", icon: MessageSquare },
-      { to: "/schedule", label: "Напоминания", icon: Bell, pipelineSteps: ["reminders"] },
+      { to: "/reminders", label: "Напоминания", icon: Bell, pipelineSteps: ["reminders"] },
     ],
   },
   {
@@ -66,6 +68,7 @@ const navGroups: NavGroup[] = [
     label: "Администрирование",
     items: [
       { to: "/settings", label: "Настройки", icon: Settings },
+      { to: "/audit-log", label: "Журнал", icon: ClipboardList },
     ],
   },
 ]
@@ -112,28 +115,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <nav className="flex-1 py-4">
       <div className="space-y-6 px-2">
-        {/* Dashboard — standalone top item */}
-        <ul>
-          <li>
-            <NavLink
-              to="/dashboard"
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )
-              }
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </NavLink>
-          </li>
-        </ul>
-
-        {/* Grouped navigation */}
         {navGroups.map((group) => (
           <div key={group.label}>
             <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
