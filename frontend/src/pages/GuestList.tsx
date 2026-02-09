@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Users, UserSearch } from "lucide-react"
+import { Link } from "react-router-dom"
+import { Users, UserSearch, Send, X } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
@@ -158,10 +159,20 @@ function GuestDetailPanel({ guestId }: { guestId: string }) {
   )
 }
 
+const ACTIVITY_FILTERS = [
+  { value: "has_recommendations", label: "С рекомендациями" },
+  { value: "has_business_profile", label: "С бизнес-профилем" },
+  { value: "has_contacts", label: "С запросами контактов" },
+] as const
+
+type ActivityFilterValue = typeof ACTIVITY_FILTERS[number]["value"]
+
 export function GuestList() {
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [activityFilters, setActivityFilters] = useState<ActivityFilterValue[]>([])
 
   useEffect(() => {
     document.title = `${APP_NAME} - Гости и партнёры`
@@ -176,6 +187,52 @@ export function GuestList() {
       }),
   })
 
+  const availableTags = useMemo(() => {
+    if (!guests) return []
+    const tagSet = new Set<string>()
+    guests.forEach((g) => g.tags.forEach((t) => tagSet.add(t)))
+    return Array.from(tagSet).sort()
+  }, [guests])
+
+  const filteredGuests = useMemo(() => {
+    if (!guests) return undefined
+    return guests.filter((g) => {
+      if (selectedTags.length > 0 && !selectedTags.some((t) => g.tags.includes(t))) return false
+      for (const af of activityFilters) {
+        if (af === "has_recommendations" && g.recommendations_count === 0) return false
+        if (af === "has_business_profile" && !g.has_business_profile) return false
+        if (af === "has_contacts" && g.contact_requests_count === 0) return false
+      }
+      return true
+    })
+  }, [guests, selectedTags, activityFilters])
+
+  const hasAdvancedFilters = selectedTags.length > 0 || activityFilters.length > 0
+  const activeFilterCount = selectedTags.length + activityFilters.length + (roleFilter ? 1 : 0) + (search ? 1 : 0)
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
+
+  const toggleActivity = (value: ActivityFilterValue) => {
+    setActivityFilters((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    )
+  }
+
+  const resetAllFilters = () => {
+    setSearch("")
+    setRoleFilter("")
+    setSelectedTags([])
+    setActivityFilters([])
+  }
+
+  const segmentParams = new URLSearchParams()
+  if (roleFilter) segmentParams.set("segment_role", roleFilter)
+  if (selectedTags.length > 0) segmentParams.set("segment_tags", selectedTags.join(","))
+
   const filterOptions = [
     { value: "", label: "Все" },
     { value: "business", label: "Партнёры" },
@@ -186,28 +243,81 @@ export function GuestList() {
     <div className="grid gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold">
-          Гости и партнёры {guests && <span className="text-muted-foreground text-lg font-normal">({guests.length})</span>}
+          Гости и партнёры {filteredGuests && <span className="text-muted-foreground text-lg font-normal">({filteredGuests.length}{guests && filteredGuests.length !== guests.length ? ` из ${guests.length}` : ""})</span>}
         </h2>
+        {hasAdvancedFilters && filteredGuests && filteredGuests.length > 0 && (
+          <Link to={`/messaging?${segmentParams.toString()}`}>
+            <Button variant="outline" size="sm">
+              <Send className="h-4 w-4 mr-1" />
+              Отправить сегменту
+            </Button>
+          </Link>
+        )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Input
-          placeholder="Поиск по имени или Telegram..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="sm:max-w-sm"
-        />
-        <div className="flex gap-1">
-          {filterOptions.map((opt) => (
-            <Button
-              key={opt.value}
-              variant={roleFilter === opt.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setRoleFilter(opt.value)}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input
+            placeholder="Поиск по имени или Telegram..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="sm:max-w-sm"
+          />
+          <div className="flex gap-1">
+            {filterOptions.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={roleFilter === opt.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoleFilter(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {availableTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5" data-testid="tag-filters">
+            {availableTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                  selectedTags.includes(tag)
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted text-muted-foreground border-transparent hover:border-border"
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {ACTIVITY_FILTERS.map((af) => (
+            <button
+              key={af.value}
+              type="button"
+              onClick={() => toggleActivity(af.value)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${
+                activityFilters.includes(af.value)
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-transparent hover:border-border"
+              }`}
             >
-              {opt.label}
-            </Button>
+              {af.label}
+            </button>
           ))}
+
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={resetAllFilters} className="h-6 px-2 text-xs">
+              <X className="h-3 w-3 mr-1" />
+              Сбросить ({activeFilterCount})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -223,18 +333,18 @@ export function GuestList() {
       )}
       {isError && !isNoEventError(error) && <p className="text-sm text-red-500">Ошибка загрузки списка гостей</p>}
 
-      {guests && guests.length === 0 && !search && !roleFilter && (
+      {filteredGuests && filteredGuests.length === 0 && !search && !roleFilter && !hasAdvancedFilters && (
         <PageEmptyState
           icon={UserSearch}
           title="Пока никто не взаимодействовал с ботом"
           description="Контакты появятся автоматически, когда участники начнут использовать бота."
         />
       )}
-      {guests && guests.length === 0 && (search || roleFilter) && (
+      {filteredGuests && filteredGuests.length === 0 && (search || roleFilter || hasAdvancedFilters) && (
         <p className="text-sm text-muted-foreground">Гости не найдены</p>
       )}
 
-      {guests && guests.length > 0 && (
+      {filteredGuests && filteredGuests.length > 0 && (
         <Card>
           <CardContent className="pt-4">
             <div className="overflow-x-auto">
@@ -251,7 +361,7 @@ export function GuestList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {guests.map((guest: GuestListItem) => (
+                  {filteredGuests.map((guest: GuestListItem) => (
                     <>
                       <tr
                         key={guest.id}
