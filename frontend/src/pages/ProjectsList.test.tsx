@@ -87,7 +87,7 @@ describe("ProjectsList", () => {
         total_experts: 5,
         confirmed_experts: 5,
         projects_count: 20,
-        coverage_status: "full",
+        coverage_status: "covered",
       },
       {
         room_id: "room-2",

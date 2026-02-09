@@ -11,7 +11,6 @@ import {
   Bell,
   UserCheck,
   Settings,
-  ScrollText,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "../../lib/utils"

@@ -25,9 +25,9 @@ export function PageEmptyState({
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <p className="text-muted-foreground mb-6 max-w-md">{description}</p>
         {actionLabel && actionLink && (
-          <Button asChild>
-            <Link to={actionLink}>{actionLabel}</Link>
-          </Button>
+          <Link to={actionLink}>
+            <Button>{actionLabel}</Button>
+          </Link>
         )}
       </CardContent>
     </Card>

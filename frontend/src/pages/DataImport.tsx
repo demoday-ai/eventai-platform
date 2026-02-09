@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { AxiosError } from "axios"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
@@ -47,10 +47,10 @@ export function DataImport() {
     document.title = `${APP_NAME} - Импорт данных`
   }, [])
 
-  const refreshAllStats = () => {
+  const refreshAllStats = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     queryClient.invalidateQueries({ queryKey: ["projects"] })
-  }
+  }, [queryClient])
 
   // --- Projects ---
   const [projectFile, setProjectFile] = useState<File | null>(null)
@@ -92,7 +92,7 @@ export function DataImport() {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [projectJobId, projectJobStatus])
+  }, [projectJobId, projectJobStatus, refreshAllStats])
 
   const projectMutation = useMutation({
     mutationFn: ({ file, replace }: { file: File; replace: boolean }) =>

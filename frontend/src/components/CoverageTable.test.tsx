@@ -11,7 +11,7 @@ const mockCoverageData = [
     total_experts: 5,
     confirmed_experts: 5,
     projects_count: 20,
-    coverage_status: "full" as const,
+    coverage_status: "covered" as const,
   },
   {
     room_id: "room-2",
@@ -27,7 +27,7 @@ const mockCoverageData = [
     total_experts: 0,
     confirmed_experts: 0,
     projects_count: 15,
-    coverage_status: "none" as const,
+    coverage_status: "gap" as const,
   },
 ]
 
@@ -141,8 +141,8 @@ describe("CoverageTable", () => {
     // Check that status indicators have appropriate styling
     const statusElements = container.querySelectorAll("[data-status]")
 
-    expect(statusElements[0]).toHaveAttribute("data-status", "full")
+    expect(statusElements[0]).toHaveAttribute("data-status", "covered")
     expect(statusElements[1]).toHaveAttribute("data-status", "partial")
-    expect(statusElements[2]).toHaveAttribute("data-status", "none")
+    expect(statusElements[2]).toHaveAttribute("data-status", "gap")
   })
 })

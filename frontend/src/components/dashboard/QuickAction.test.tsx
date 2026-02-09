@@ -57,7 +57,7 @@ describe("QuickAction", () => {
   it("returns null when next_action is null", () => {
     vi.mocked(usePipelineStatus).mockReturnValue({
       data: { phases: [], next_action: null },
-    } as ReturnType<typeof usePipelineStatus>)
+    } as unknown as ReturnType<typeof usePipelineStatus>)
 
     const { container } = render(<QuickAction />, { wrapper: createWrapper() })
     expect(container.innerHTML).toBe("")

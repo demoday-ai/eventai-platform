@@ -20,33 +20,39 @@ export function CoverageTable({ data }: CoverageTableProps) {
 
   const getStatusColor = (status: RoomCoverage["coverage_status"]) => {
     switch (status) {
-      case "full":
+      case "covered":
+      case "excellent":
+      case "excess":
         return "text-green-600 bg-green-50"
       case "partial":
         return "text-yellow-600 bg-yellow-50"
-      case "none":
+      case "gap":
         return "text-red-600 bg-red-50"
     }
   }
 
   const getStatusIcon = (status: RoomCoverage["coverage_status"]) => {
     switch (status) {
-      case "full":
+      case "covered":
+      case "excellent":
+      case "excess":
         return <CheckCircle className="w-4 h-4 text-green-600" />
       case "partial":
         return <AlertCircle className="w-4 h-4 text-yellow-600" />
-      case "none":
+      case "gap":
         return <XCircle className="w-4 h-4 text-red-600" />
     }
   }
 
   const getStatusText = (status: RoomCoverage["coverage_status"]) => {
     switch (status) {
-      case "full":
+      case "covered":
+      case "excellent":
+      case "excess":
         return "Покрыт"
       case "partial":
         return "Частично"
-      case "none":
+      case "gap":
         return "Не покрыт"
     }
   }
