@@ -314,6 +314,73 @@ describe("Schedule", () => {
     })
   })
 
+  it("shows confirmation dialog when clicking approve", async () => {
+    const user = userEvent.setup()
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    // Wait for schedule to load (auto-advance to step 1)
+    await waitFor(() => {
+      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+    })
+
+    // Navigate to step 2 (Одобрение)
+    await user.click(screen.getByText("Далее"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Одобрение расписания")).toBeInTheDocument()
+    })
+
+    // Click Одобрить
+    await user.click(screen.getByText("Одобрить"))
+
+    // Should show confirmation dialog
+    await waitFor(() => {
+      expect(screen.getByText(/Вы уверены/)).toBeInTheDocument()
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+      expect(screen.getByText("Отмена")).toBeInTheDocument()
+    })
+  })
+
+  it("shows next-step hint after approval", async () => {
+    const user = userEvent.setup()
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+    mockApproveSchedule.mockResolvedValue({
+      total_slots: 2,
+      rooms: 1,
+      days: 1,
+    })
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    // Wait for schedule to load
+    await waitFor(() => {
+      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+    })
+
+    // Navigate to approve step
+    await user.click(screen.getByText("Далее"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить")).toBeInTheDocument()
+    })
+
+    // Click approve, then confirm
+    await user.click(screen.getByText("Одобрить"))
+    await waitFor(() => {
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Подтвердить"))
+
+    // Should show next-step hint
+    await waitFor(() => {
+      expect(screen.getByText(/Расписание одобрено/)).toBeInTheDocument()
+      expect(screen.getByText("Расписание утверждено. Можно отправить напоминания")).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Перейти к напоминаниям" })).toHaveAttribute("href", "/reminders")
+    })
+  })
+
   it("passes room_overrides and breaks to generateSchedule", async () => {
     const user = userEvent.setup()
     mockGenerateSchedule.mockResolvedValue({

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Calendar } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
@@ -34,6 +35,7 @@ export function Schedule() {
   const [approveResult, setApproveResult] = useState<ScheduleApproveResult | null>(null)
   const [editingSlot, setEditingSlot] = useState<ScheduleSlotResponse | null>(null)
   const [editForm, setEditForm] = useState<SlotUpdateRequest>({})
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false)
   const [roomOverrides, setRoomOverrides] = useState<Record<string, { start_time: string; end_time: string }>>({})
   const [breaks, setBreaks] = useState<{ start_time: string; end_time: string }[]>([])
 
@@ -105,7 +107,10 @@ export function Schedule() {
     mutationFn: approveSchedule,
     onSuccess: (data) => {
       setApproveResult(data)
+      setShowApproveConfirm(false)
       queryClient.invalidateQueries({ queryKey: ["schedule"] })
+      queryClient.invalidateQueries({ queryKey: ["pipeline-status"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     },
   })
 
@@ -579,19 +584,55 @@ export function Schedule() {
             )}
 
             {approveResult ? (
-              <p className="text-sm text-green-600 font-medium">
-                Расписание одобрено: {approveResult.total_slots} слотов, {approveResult.rooms} залов, {approveResult.days} дней
-              </p>
-            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-green-600 font-medium">
+                  Расписание одобрено: {approveResult.total_slots} слотов, {approveResult.rooms} залов, {approveResult.days} дней
+                </p>
+                <Card className="border-green-200">
+                  <CardContent className="pt-4">
+                    <p className="text-sm">Расписание утверждено. Можно отправить напоминания</p>
+                    <Link to="/reminders">
+                      <Button variant="outline" size="sm" className="mt-2">
+                        Перейти к напоминаниям
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : !showApproveConfirm ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
-                  onClick={() => approveMutation.mutate()}
+                  onClick={() => setShowApproveConfirm(true)}
                   disabled={approveMutation.isPending}
                   className="w-full sm:w-auto"
                 >
-                  {approveMutation.isPending ? "Одобрение..." : "Одобрить"}
+                  Одобрить
                 </Button>
                 <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
+                  Назад
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-4 border rounded-md space-y-3">
+                  <p className="text-sm font-medium">Вы уверены, что хотите одобрить расписание?</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => approveMutation.mutate()}
+                      disabled={approveMutation.isPending}
+                    >
+                      {approveMutation.isPending ? "Одобрение..." : "Подтвердить"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowApproveConfirm(false)}
+                      disabled={approveMutation.isPending}
+                    >
+                      Отмена
+                    </Button>
+                  </div>
+                </div>
+                <Button variant="outline" onClick={() => { setShowApproveConfirm(false); setCurrentStep(1) }} className="w-full sm:w-auto">
                   Назад
                 </Button>
               </div>
