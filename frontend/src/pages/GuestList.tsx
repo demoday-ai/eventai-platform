@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
-import { Users, UserSearch, Send, X } from "lucide-react"
+import { Users, UserSearch, Send, Save, X } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 import {
@@ -165,25 +166,25 @@ const ACTIVITY_FILTERS = [
   { value: "has_contacts", label: "С запросами контактов" },
 ] as const
 
-type ActivityFilterValue = typeof ACTIVITY_FILTERS[number]["value"]
-
 export function GuestList() {
   const [search, setSearch] = useState("")
-  const [roleFilter, setRoleFilter] = useState<string>("")
+  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [activityFilter, setActivityFilter] = useState<string>("all")
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [activityFilters, setActivityFilters] = useState<ActivityFilterValue[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     document.title = `${APP_NAME} - Гости и партнёры`
   }, [])
 
+  const roleParam = roleFilter !== "all" ? roleFilter : ""
   const { data: guests, isLoading, isError, error } = useQuery({
-    queryKey: ["guests", search, roleFilter],
+    queryKey: ["guests", search, roleParam],
     queryFn: () =>
       getGuests({
         ...(search ? { search } : {}),
-        ...(roleFilter ? { role: roleFilter } : {}),
+        ...(roleParam ? { role: roleParam } : {}),
       }),
   })
 
@@ -198,17 +199,15 @@ export function GuestList() {
     if (!guests) return undefined
     return guests.filter((g) => {
       if (selectedTags.length > 0 && !selectedTags.some((t) => g.tags.includes(t))) return false
-      for (const af of activityFilters) {
-        if (af === "has_recommendations" && g.recommendations_count === 0) return false
-        if (af === "has_business_profile" && !g.has_business_profile) return false
-        if (af === "has_contacts" && g.contact_requests_count === 0) return false
-      }
+      if (activityFilter === "has_recommendations" && g.recommendations_count === 0) return false
+      if (activityFilter === "has_business_profile" && !g.has_business_profile) return false
+      if (activityFilter === "has_contacts" && g.contact_requests_count === 0) return false
       return true
     })
-  }, [guests, selectedTags, activityFilters])
+  }, [guests, selectedTags, activityFilter])
 
-  const hasAdvancedFilters = selectedTags.length > 0 || activityFilters.length > 0
-  const activeFilterCount = selectedTags.length + activityFilters.length + (roleFilter ? 1 : 0) + (search ? 1 : 0)
+  const hasAdvancedFilters = selectedTags.length > 0 || activityFilter !== "all"
+  const activeFilterCount = selectedTags.length + (activityFilter !== "all" ? 1 : 0) + (roleFilter !== "all" ? 1 : 0) + (search ? 1 : 0)
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -216,28 +215,35 @@ export function GuestList() {
     )
   }
 
-  const toggleActivity = (value: ActivityFilterValue) => {
-    setActivityFilters((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    )
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (!filteredGuests) return
+    if (selectedIds.size === filteredGuests.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredGuests.map((g) => g.id)))
+    }
   }
 
   const resetAllFilters = () => {
     setSearch("")
-    setRoleFilter("")
+    setRoleFilter("all")
+    setActivityFilter("all")
     setSelectedTags([])
-    setActivityFilters([])
+    setSelectedIds(new Set())
   }
 
   const segmentParams = new URLSearchParams()
-  if (roleFilter) segmentParams.set("segment_role", roleFilter)
+  if (roleFilter !== "all") segmentParams.set("segment_role", roleFilter)
   if (selectedTags.length > 0) segmentParams.set("segment_tags", selectedTags.join(","))
-
-  const filterOptions = [
-    { value: "", label: "Все" },
-    { value: "business", label: "Партнёры" },
-    { value: "guest", label: "Гости" },
-  ]
 
   return (
     <div className="grid gap-6">
@@ -245,36 +251,62 @@ export function GuestList() {
         <h2 className="text-2xl font-bold">
           Гости и партнёры {filteredGuests && <span className="text-muted-foreground text-lg font-normal">({filteredGuests.length}{guests && filteredGuests.length !== guests.length ? ` из ${guests.length}` : ""})</span>}
         </h2>
-        {hasAdvancedFilters && filteredGuests && filteredGuests.length > 0 && (
-          <Link to={`/messaging?${segmentParams.toString()}`}>
-            <Button variant="outline" size="sm">
-              <Send className="h-4 w-4 mr-1" />
-              Отправить сегменту
+        <div className="flex gap-2 flex-wrap">
+          {selectedIds.size > 0 && (
+            <span className="text-sm text-muted-foreground self-center">Выбрано: {selectedIds.size}</span>
+          )}
+          {selectedIds.size > 0 && (
+            <Button variant="outline" size="sm" disabled>
+              <Save className="h-4 w-4 mr-1" />
+              Сохранить как сегмент
             </Button>
-          </Link>
-        )}
+          )}
+          {(hasAdvancedFilters || selectedIds.size > 0) && filteredGuests && filteredGuests.length > 0 && (
+            <Link to={`/messaging?${segmentParams.toString()}`}>
+              <Button variant="outline" size="sm">
+                <Send className="h-4 w-4 mr-1" />
+                Отправить сегменту
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row gap-2">
           <Input
-            placeholder="Поиск по имени или Telegram..."
+            placeholder="Поиск по имени или @telegram..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sm:max-w-sm"
           />
-          <div className="flex gap-1">
-            {filterOptions.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={roleFilter === opt.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setRoleFilter(opt.value)}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Роль" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все роли</SelectItem>
+              <SelectItem value="guest">Гости</SelectItem>
+              <SelectItem value="business">Партнёры</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={activityFilter} onValueChange={setActivityFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Активность" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Вся активность</SelectItem>
+              {ACTIVITY_FILTERS.map((af) => (
+                <SelectItem key={af.value} value={af.value}>{af.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={resetAllFilters} className="h-9 px-3 text-xs">
+              <X className="h-3 w-3 mr-1" />
+              Сбросить ({activeFilterCount})
+            </Button>
+          )}
         </div>
 
         {availableTags.length > 0 && (
@@ -295,30 +327,6 @@ export function GuestList() {
             ))}
           </div>
         )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          {ACTIVITY_FILTERS.map((af) => (
-            <button
-              key={af.value}
-              type="button"
-              onClick={() => toggleActivity(af.value)}
-              className={`px-2 py-0.5 text-xs rounded border transition-colors ${
-                activityFilters.includes(af.value)
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted text-muted-foreground border-transparent hover:border-border"
-              }`}
-            >
-              {af.label}
-            </button>
-          ))}
-
-          {activeFilterCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={resetAllFilters} className="h-6 px-2 text-xs">
-              <X className="h-3 w-3 mr-1" />
-              Сбросить ({activeFilterCount})
-            </Button>
-          )}
-        </div>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Загрузка...</p>}
@@ -333,14 +341,14 @@ export function GuestList() {
       )}
       {isError && !isNoEventError(error) && <p className="text-sm text-red-500">Ошибка загрузки списка гостей</p>}
 
-      {filteredGuests && filteredGuests.length === 0 && !search && !roleFilter && !hasAdvancedFilters && (
+      {filteredGuests && filteredGuests.length === 0 && !search && roleFilter === "all" && !hasAdvancedFilters && (
         <PageEmptyState
           icon={UserSearch}
           title="Пока никто не взаимодействовал с ботом"
           description="Контакты появятся автоматически, когда участники начнут использовать бота."
         />
       )}
-      {filteredGuests && filteredGuests.length === 0 && (search || roleFilter || hasAdvancedFilters) && (
+      {filteredGuests && filteredGuests.length === 0 && (search || roleFilter !== "all" || hasAdvancedFilters) && (
         <p className="text-sm text-muted-foreground">Гости не найдены</p>
       )}
 
@@ -351,6 +359,14 @@ export function GuestList() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
+                    <th className="pb-2 w-8">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={filteredGuests.length > 0 && selectedIds.size === filteredGuests.length}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
                     <th className="pb-2 font-medium">Имя</th>
                     <th className="pb-2 font-medium">Telegram</th>
                     <th className="pb-2 font-medium">Роль</th>
@@ -367,6 +383,14 @@ export function GuestList() {
                         className="border-b last:border-0 cursor-pointer hover:bg-muted/50"
                         onClick={() => setExpandedId(expandedId === guest.id ? null : guest.id)}
                       >
+                        <td className="py-2" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="rounded"
+                            checked={selectedIds.has(guest.id)}
+                            onChange={() => toggleSelect(guest.id)}
+                          />
+                        </td>
                         <td className="py-2">{guest.full_name}</td>
                         <td className="py-2 text-muted-foreground">
                           {guest.username ? `@${guest.username}` : "—"}
@@ -415,7 +439,7 @@ export function GuestList() {
                       </tr>
                       {expandedId === guest.id && (
                         <tr>
-                          <td colSpan={7}>
+                          <td colSpan={8}>
                             <GuestDetailPanel guestId={guest.id} />
                           </td>
                         </tr>

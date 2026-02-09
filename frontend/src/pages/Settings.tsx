@@ -6,13 +6,12 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { APP_NAME } from "../lib/constants"
 import {
-  getCurrentEvent, updateCurrentEvent, getAuditLog,
+  getCurrentEvent, updateCurrentEvent,
   getOrganizers, addOrganizer, removeOrganizer,
   getTags, addTags, suggestTags, replaceTags, deleteTag,
-  type Event, type EventUpdateRequest, type AuditLogItem,
+  type Event, type EventUpdateRequest,
   type OrganizerItem,
 } from "../lib/api-client"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 
 export function Settings() {
   const queryClient = useQueryClient()
@@ -187,8 +186,6 @@ export function Settings() {
       <TagsSection />
 
       <OrganizersSection />
-
-      <AuditLogSection />
     </div>
   )
 }
@@ -573,83 +570,3 @@ function OrganizersSection() {
   )
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  event_update: "Обновление события",
-  upload_projects: "Загрузка проектов",
-  upload_experts: "Загрузка экспертов",
-  upload_guests: "Загрузка гостей",
-  send_briefing: "Отправка брифинга",
-  send_messaging: "Отправка рассылки",
-  schedule_generate: "Генерация расписания",
-  schedule_approve: "Утверждение расписания",
-  slot_update: "Изменение слота",
-}
-
-function AuditLogSection() {
-  const [actionFilter, setActionFilter] = useState("")
-
-  const { data: auditData, isLoading: auditLoading } = useQuery({
-    queryKey: ["auditLog", actionFilter],
-    queryFn: () => getAuditLog({ action: actionFilter && actionFilter !== "all" ? actionFilter : undefined, limit: 20 }),
-  })
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Журнал действий</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="audit-action-filter">Фильтр по действию</Label>
-          <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger id="audit-action-filter" className="w-[220px]">
-              <SelectValue placeholder="Все действия" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все действия</SelectItem>
-              {Object.entries(ACTION_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {auditLoading && <p className="text-muted-foreground">Загрузка...</p>}
-
-        {auditData && auditData.items.length === 0 && (
-          <p className="text-muted-foreground">Нет записей</p>
-        )}
-
-        {auditData && auditData.items.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Время</th>
-                  <th className="text-left py-2 pr-4">Пользователь</th>
-                  <th className="text-left py-2 pr-4">Действие</th>
-                  <th className="text-left py-2">Объект</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditData.items.map((item: AuditLogItem) => (
-                  <tr key={item.id} className="border-b">
-                    <td className="py-2 pr-4 whitespace-nowrap">
-                      {new Date(item.created_at).toLocaleString("ru-RU")}
-                    </td>
-                    <td className="py-2 pr-4">{item.user_name || "—"}</td>
-                    <td className="py-2 pr-4">{ACTION_LABELS[item.action] || item.action}</td>
-                    <td className="py-2">
-                      {item.entity_type || "—"}
-                      {item.entity_id ? ` #${item.entity_id.slice(0, 8)}` : ""}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
