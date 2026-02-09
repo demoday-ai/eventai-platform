@@ -786,6 +786,18 @@ export const getCurrentEvent = async (): Promise<Event> => {
   return data
 }
 
+export interface EventCreateRequest {
+  name: string
+  start_date: string
+  end_date: string
+  description?: string | null
+}
+
+export const createEvent = async (body: EventCreateRequest): Promise<Event> => {
+  const { data } = await apiClient.post<Event>("/admin/events", body)
+  return data
+}
+
 export const updateCurrentEvent = async (body: EventUpdateRequest): Promise<Event> => {
   const { data } = await apiClient.patch<Event>("/admin/events/current", body)
   return data
