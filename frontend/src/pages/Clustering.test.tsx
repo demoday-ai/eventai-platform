@@ -133,7 +133,7 @@ describe("Clustering", () => {
     })
   })
 
-  it("shows approved state for approved clustering", async () => {
+  it("shows approved state with next-step hint", async () => {
     mockGetCurrentClustering.mockResolvedValue({
       ...mockClusteringResult,
       approved_at: "2026-02-01T12:00:00",
@@ -143,6 +143,42 @@ describe("Clustering", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Кластеризация одобрена")).toBeInTheDocument()
+      expect(screen.getByText("Следующий шаг — распределение экспертов")).toBeInTheDocument()
+      expect(screen.getByText("Перейти к экспертам")).toHaveAttribute("href", "/experts")
+    })
+  })
+
+  it("shows confirmation dialog when clicking approve", async () => {
+    const user = userEvent.setup()
+    mockGetCurrentClustering.mockResolvedValue(mockClusteringResult)
+
+    render(<Clustering />, { wrapper: createWrapper() })
+
+    // Navigate to approve step
+    await waitFor(() => {
+      expect(screen.getByText("Далее")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Далее"))
+
+    // Step 2 → Step 3
+    await waitFor(() => {
+      const nextButtons = screen.getAllByText("Далее")
+      expect(nextButtons.length).toBeGreaterThan(0)
+    })
+    const nextButtons = screen.getAllByText("Далее")
+    await user.click(nextButtons[0])
+
+    // Step 3: click Одобрить
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Одобрить"))
+
+    // Should show confirmation
+    await waitFor(() => {
+      expect(screen.getByText(/Вы уверены/)).toBeInTheDocument()
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+      expect(screen.getByText("Отмена")).toBeInTheDocument()
     })
   })
 

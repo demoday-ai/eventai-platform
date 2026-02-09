@@ -38,6 +38,7 @@ export function Clustering() {
   const [jobId, setJobId] = useState<string | null>(null)
   const [jobStatus, setJobStatus] = useState<string | null>(null)
   const [jobError, setJobError] = useState<string | null>(null)
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false)
 
   useEffect(() => {
     document.title = `${APP_NAME} - Кластеризация`
@@ -149,7 +150,10 @@ export function Clustering() {
       if (clusteringResult) {
         setClusteringResult({ ...clusteringResult, approved_at: new Date().toISOString() })
       }
+      setShowApproveConfirm(false)
       queryClient.invalidateQueries({ queryKey: ["clustering"] })
+      queryClient.invalidateQueries({ queryKey: ["pipeline-status"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     },
   })
 
@@ -411,6 +415,16 @@ export function Clustering() {
                   <p className="text-sm text-green-600 font-medium">
                     Кластеризация одобрена
                   </p>
+                  <Card className="border-green-300 bg-green-50">
+                    <CardContent className="pt-4">
+                      <p className="text-sm text-green-800">
+                        Следующий шаг — распределение экспертов
+                      </p>
+                      <a href="/experts" className="text-sm text-green-700 underline hover:text-green-900">
+                        Перейти к экспертам
+                      </a>
+                    </CardContent>
+                  </Card>
                   <Button
                     variant="outline"
                     onClick={() => setCurrentStep(2)}
@@ -419,14 +433,29 @@ export function Clustering() {
                     Назад к редактированию
                   </Button>
                 </div>
+              ) : showApproveConfirm ? (
+                <div className="space-y-2 pt-2">
+                  <p className="text-sm font-medium">Вы уверены? После одобрения кластеризация будет зафиксирована.</p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      onClick={() => approveMutation.mutate(clusteringResult.id)}
+                      disabled={approveMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {approveMutation.isPending ? "Одобрение..." : "Подтвердить"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowApproveConfirm(false)} className="w-full sm:w-auto">
+                      Отмена
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button
-                    onClick={() => approveMutation.mutate(clusteringResult.id)}
-                    disabled={approveMutation.isPending}
+                    onClick={() => setShowApproveConfirm(true)}
                     className="w-full sm:w-auto"
                   >
-                    {approveMutation.isPending ? "Одобрение..." : "Одобрить"}
+                    Одобрить
                   </Button>
                   <Button variant="outline" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
                     Назад
