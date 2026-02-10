@@ -6,11 +6,10 @@ import { APP_NAME } from "../../lib/constants"
 import { getDashboard, isNoEventError } from "../../lib/api-client"
 import { OverviewTab } from "./OverviewTab"
 import { BroadcastTab } from "./BroadcastTab"
-import { RemindersTab } from "./RemindersTab"
 import { ParticipationTab } from "./ParticipationTab"
 import { BriefingTab } from "./BriefingTab"
 
-const TABS = ["Обзор", "Рассылка", "Напоминания", "Участие", "Брифинг"] as const
+const TABS = ["Обзор", "Рассылка", "Участие", "Брифинг"] as const
 type Tab = (typeof TABS)[number]
 
 export function Messaging() {
@@ -86,7 +85,6 @@ export function Messaging() {
 
       {activeTab === "Обзор" && <OverviewTab />}
       {activeTab === "Рассылка" && <BroadcastTab />}
-      {activeTab === "Напоминания" && <RemindersTab />}
       {activeTab === "Участие" && <ParticipationTab />}
       {activeTab === "Брифинг" && <BriefingTab />}
     </div>
