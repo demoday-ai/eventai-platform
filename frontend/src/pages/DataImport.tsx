@@ -385,8 +385,8 @@ export function DataImport() {
                   label="Перетащите файл с проектами или нажмите кнопку"
                   disabled={!!isProjectJobRunning}
                   formats={["XLSX", "CSV", "JSON"]}
-                  requiredColumns={["title", "description", "author"]}
-                  optionalColumns={["telegram_contact", "tags"]}
+                  requiredColumns={["Название", "Описание", "Автор"]}
+                  optionalColumns={["Телеграм", "Тематики", "Трек"]}
                   templateUrl="/templates/projects_template.xlsx"
                 />
 
@@ -456,8 +456,8 @@ export function DataImport() {
                   onFileSelect={setExpertFile}
                   label="Перетащите файл с экспертами или нажмите кнопку"
                   formats={["XLSX", "CSV", "JSON"]}
-                  requiredColumns={["name"]}
-                  optionalColumns={["telegram", "position", "expertise_tags"]}
+                  requiredColumns={["Имя"]}
+                  optionalColumns={["Телеграм", "Описание", "Тематики"]}
                   templateUrl="/templates/experts_template.xlsx"
                 />
 
@@ -523,7 +523,7 @@ export function DataImport() {
                   onFileSelect={setStudentFile}
                   label="Перетащите файл со студентами или нажмите кнопку"
                   formats={["XLSX", "CSV", "JSON"]}
-                  requiredColumns={["name", "telegram"]}
+                  requiredColumns={["Имя", "Телеграм"]}
                   templateUrl="/templates/students_template.xlsx"
                 />
 
@@ -589,7 +589,7 @@ export function DataImport() {
                   onFileSelect={setPartnerFile}
                   label="Перетащите файл с партнёрами или нажмите кнопку"
                   formats={["XLSX", "CSV", "JSON"]}
-                  requiredColumns={["name", "telegram"]}
+                  requiredColumns={["Имя", "Телеграм"]}
                   templateUrl="/templates/partners_template.xlsx"
                 />
 
