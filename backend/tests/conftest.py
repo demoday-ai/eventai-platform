@@ -8,8 +8,10 @@ from app.models.clustering_run import ClusteringRun
 from app.models.event import Event
 from app.models.organizer import Organizer
 from app.models.project import Project
+from app.models.project_tag import ProjectTag
 from app.models.room import Room
 from app.models.room_project import RoomProject
+from app.models.tag import Tag
 from app.models.user import User
 
 
@@ -22,6 +24,8 @@ async def async_engine():
             tables=[
                 Event.__table__,
                 Project.__table__,
+                Tag.__table__,
+                ProjectTag.__table__,
                 ClusteringRun.__table__,
                 Room.__table__,
                 RoomProject.__table__,

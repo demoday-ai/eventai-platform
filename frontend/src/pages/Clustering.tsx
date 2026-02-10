@@ -15,6 +15,7 @@ import {
   getProjects,
   moveProject,
   approveClustering,
+  suggestRoomThemes,
   type ClusteringResult,
   type ClusteringRoom,
 } from "../lib/api-client"
@@ -28,6 +29,7 @@ export function Clustering() {
   const [feedback, setFeedback] = useState("")
   const [roomThemesInput, setRoomThemesInput] = useState("")
   const [roomThemesError, setRoomThemesError] = useState("")
+  const [suggestError, setSuggestError] = useState<string | null>(null)
   const [moveDialog, setMoveDialog] = useState<{
     projectId: string
     projectTitle: string
@@ -157,6 +159,22 @@ export function Clustering() {
     },
   })
 
+  const suggestMutation = useMutation({
+    mutationFn: (numRooms: number) => suggestRoomThemes({ num_rooms: numRooms }),
+    onSuccess: (data) => {
+      setRoomThemesInput(data.themes.join("\n"))
+      setSuggestError(null)
+    },
+    onError: (err) => {
+      setSuggestError(err instanceof Error ? err.message : "Ошибка подсказки")
+    },
+  })
+
+  const handleSuggestThemes = () => {
+    setSuggestError(null)
+    suggestMutation.mutate(numRooms)
+  }
+
   const isApproved = !!clusteringResult?.approved_at
   const isJobRunning = jobId && (jobStatus === "pending" || jobStatus === "running")
   const handleRun = () => {
@@ -232,7 +250,18 @@ export function Clustering() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="room-themes">Тематики залов (опционально)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="room-themes">Тематики залов (опционально)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSuggestThemes}
+                  disabled={!!isJobRunning || suggestMutation.isPending}
+                >
+                  {suggestMutation.isPending ? "Анализ..." : "Подсказать тематики"}
+                </Button>
+              </div>
               <textarea
                 id="room-themes"
                 className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -241,14 +270,19 @@ export function Clustering() {
                 onChange={(e) => {
                   setRoomThemesInput(e.target.value)
                   setRoomThemesError("")
+                  setSuggestError(null)
                 }}
                 disabled={!!isJobRunning}
               />
               <p className="text-xs text-muted-foreground">
                 Если заполнено — количество тем должно совпадать с числом залов.
+                Нажмите "Подсказать тематики" для автоматического анализа проектов.
               </p>
               {roomThemesError && (
                 <p className="text-sm text-red-500">{roomThemesError}</p>
+              )}
+              {suggestError && (
+                <p className="text-sm text-red-500">Ошибка подсказки: {suggestError}</p>
               )}
             </div>
             <Button

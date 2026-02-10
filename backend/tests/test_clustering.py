@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import select
@@ -113,3 +114,67 @@ async def test_move_project_rejects_invalid_target(session):
         await clustering_service.move_project(
             session, run.id, project.id, room_other.id
         )
+
+
+@pytest.mark.asyncio
+async def test_suggest_room_themes_returns_themes(session):
+    """Test suggest_room_themes returns N themes."""
+    event = Event(name="DemoDay", start_date=date.today(), end_date=date.today())
+    session.add(event)
+    await session.flush()
+
+    # Add 10 projects
+    for i in range(10):
+        project = Project(
+            event_id=event.id,
+            title=f"Project {i}",
+            description=f"NLP project about {i}",
+            author=f"Author {i}",
+            telegram_contact=f"@user{i}",
+            source="upload",
+        )
+        session.add(project)
+    await session.flush()
+
+    # Mock LLM
+    with patch("app.services.admin.clustering_service.llm_client.send_chat_completion") as mock_llm:
+        mock_llm.return_value = {
+            "themes": ["NLP и языковые модели", "AI в образовании", "Computer Vision"]
+        }
+
+        themes = await clustering_service.suggest_room_themes(session, event.id, num_rooms=3)
+
+        assert len(themes) == 3
+        assert themes[0] == "NLP и языковые модели"
+        mock_llm.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_suggest_room_themes_fallback_on_error(session):
+    """Test suggest_room_themes returns generic themes on LLM failure."""
+    event = Event(name="DemoDay", start_date=date.today(), end_date=date.today())
+    session.add(event)
+    await session.flush()
+
+    # Add 2 projects (minimum required)
+    for i in range(2):
+        project = Project(
+            event_id=event.id,
+            title=f"Project {i}",
+            description=f"Description {i}",
+            author=f"Author {i}",
+            telegram_contact=f"@user{i}",
+            source="upload",
+        )
+        session.add(project)
+    await session.flush()
+
+    # Mock LLM to return invalid response
+    with patch("app.services.admin.clustering_service.llm_client.send_chat_completion") as mock_llm:
+        mock_llm.return_value = {"themes": []}  # invalid
+
+        themes = await clustering_service.suggest_room_themes(session, event.id, num_rooms=3)
+
+        # Should fallback to generic themes
+        assert len(themes) == 3
+        assert themes == ["Зал 1", "Зал 2", "Зал 3"]
