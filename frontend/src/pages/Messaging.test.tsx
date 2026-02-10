@@ -116,7 +116,6 @@ describe("Messaging", () => {
     expect(screen.getByText("Рассылки")).toBeInTheDocument()
     expect(screen.getByText("Обзор")).toBeInTheDocument()
     expect(screen.getByText("Рассылка")).toBeInTheDocument()
-    expect(screen.getAllByText("Напоминания").length).toBeGreaterThan(0)
     expect(screen.getByText("Участие")).toBeInTheDocument()
     expect(screen.getByText("Брифинг")).toBeInTheDocument()
   })

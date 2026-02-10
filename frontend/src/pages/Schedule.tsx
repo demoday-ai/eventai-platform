@@ -590,10 +590,10 @@ export function Schedule() {
                 </p>
                 <Card className="border-green-200">
                   <CardContent className="pt-4">
-                    <p className="text-sm">Расписание утверждено. Можно отправить напоминания</p>
+                    <p className="text-sm">Расписание утверждено. Можно настроить авто-напоминания</p>
                     <Link to="/reminders">
                       <Button variant="outline" size="sm" className="mt-2">
-                        Перейти к напоминаниям
+                        Перейти к авто-напоминаниям
                       </Button>
                     </Link>
                   </CardContent>

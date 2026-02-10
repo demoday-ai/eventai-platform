@@ -8,7 +8,7 @@ import { RemindersTab } from "./Messaging/RemindersTab"
 
 export function Reminders() {
   useEffect(() => {
-    document.title = `${APP_NAME} - Напоминания`
+    document.title = `${APP_NAME} - Авто-напоминания`
   }, [])
 
   const { data: dashboardData, error: dashboardError } = useQuery({
@@ -20,7 +20,7 @@ export function Reminders() {
   if (dashboardError && isNoEventError(dashboardError)) {
     return (
       <div className="grid gap-6">
-        <h2 className="text-2xl font-bold">Напоминания</h2>
+        <h2 className="text-2xl font-bold">Авто-напоминания</h2>
         <PageEmptyState
           icon={Bell}
           title="Создайте мероприятие"
@@ -42,7 +42,7 @@ export function Reminders() {
     if (totalParticipants === 0) {
       return (
         <div className="grid gap-6">
-          <h2 className="text-2xl font-bold">Напоминания</h2>
+          <h2 className="text-2xl font-bold">Авто-напоминания</h2>
           <PageEmptyState
             icon={Users}
             title="Загрузите участников"
@@ -57,7 +57,7 @@ export function Reminders() {
 
   return (
     <div className="grid gap-6">
-      <h2 className="text-2xl font-bold">Напоминания</h2>
+      <h2 className="text-2xl font-bold">Авто-напоминания</h2>
       <RemindersTab />
     </div>
   )

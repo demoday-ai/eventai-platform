@@ -53,7 +53,7 @@ const navGroups: NavGroup[] = [
     label: "Коммуникация",
     items: [
       { to: "/messaging", label: "Рассылки", icon: MessageSquare },
-      { to: "/reminders", label: "Напоминания", icon: Bell, pipelineSteps: ["reminders"] },
+      { to: "/reminders", label: "Авто-напоминания", icon: Bell, pipelineSteps: ["reminders"] },
     ],
   },
   {
