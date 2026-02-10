@@ -376,6 +376,18 @@ class TagReplaceResponse(BaseModel):
     removed: list[str]
 
 
+class SuggestThemesRequest(BaseModel):
+    """Request to suggest room themes."""
+
+    num_rooms: int
+
+
+class SuggestThemesResponse(BaseModel):
+    """LLM-suggested room themes."""
+
+    themes: list[str]
+
+
 # --- Guest list schemas ---
 
 
