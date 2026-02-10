@@ -17,6 +17,7 @@ const mockGetCurrentClustering = vi.fn()
 const mockGetClusteringJobStatus = vi.fn()
 const mockMoveProject = vi.fn()
 const mockApproveClustering = vi.fn()
+const mockSuggestRoomThemes = vi.fn()
 
 const mockGetProjects = vi.fn()
 
@@ -26,6 +27,7 @@ vi.mock("../lib/api-client", () => ({
   getClusteringJobStatus: (...args: unknown[]) => mockGetClusteringJobStatus(...args),
   moveProject: (...args: unknown[]) => mockMoveProject(...args),
   approveClustering: (...args: unknown[]) => mockApproveClustering(...args),
+  suggestRoomThemes: (...args: unknown[]) => mockSuggestRoomThemes(...args),
   getProjects: (...args: unknown[]) => mockGetProjects(...args),
 }))
 
@@ -234,6 +236,57 @@ describe("Clustering", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Ошибка/)).toBeInTheDocument()
+    })
+  })
+})
+
+describe("Clustering - Suggest Themes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetProjects.mockResolvedValue([{ id: "1", title: "Test Project" }])
+    mockGetCurrentClustering.mockResolvedValue(null)
+    mockRunClustering.mockResolvedValue({ job_id: "job-1" })
+    mockGetClusteringJobStatus.mockResolvedValue({ status: "pending" })
+  })
+
+  it("should fill textarea when suggest succeeds", async () => {
+    const user = userEvent.setup()
+    mockSuggestRoomThemes.mockResolvedValue({
+      themes: ["NLP и LLM", "Computer Vision", "AI в финансах"],
+    })
+
+    render(<Clustering />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByText(/Для кластеризации необходимы проекты/)).not.toBeInTheDocument())
+
+    const numRoomsInput = screen.getByLabelText(/Количество залов/)
+    await user.clear(numRoomsInput)
+    await user.type(numRoomsInput, "3")
+
+    const suggestBtn = screen.getByRole("button", { name: /Подсказать тематики/ })
+    await user.click(suggestBtn)
+
+    await waitFor(() => {
+      expect(mockSuggestRoomThemes).toHaveBeenCalledWith({ num_rooms: 3 })
+    })
+
+    const textarea = screen.getByLabelText(/Тематики залов/)
+    await waitFor(() => {
+      expect(textarea).toHaveValue("NLP и LLM\nComputer Vision\nAI в финансах")
+    })
+  })
+
+  it("should show error if suggest fails", async () => {
+    const user = userEvent.setup()
+    mockSuggestRoomThemes.mockRejectedValue(new Error("LLM timeout"))
+
+    render(<Clustering />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByText(/Для кластеризации необходимы проекты/)).not.toBeInTheDocument())
+
+    const suggestBtn = screen.getByRole("button", { name: /Подсказать тематики/ })
+    await user.click(suggestBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ошибка подсказки: LLM timeout/)).toBeInTheDocument()
     })
   })
 })

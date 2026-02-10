@@ -334,6 +334,14 @@ export interface MoveProjectRequest {
   target_room_id: string
 }
 
+export interface SuggestThemesRequest {
+  num_rooms: number
+}
+
+export interface SuggestThemesResponse {
+  themes: string[]
+}
+
 // --- Matching types ---
 
 export interface MatchingRequest {
@@ -937,6 +945,16 @@ export const moveProject = async (
 
 export const approveClustering = async (runId: string): Promise<{ status: string }> => {
   const { data } = await apiClient.post<{ status: string }>(`/clustering/${runId}/approve`)
+  return data
+}
+
+export const suggestRoomThemes = async (
+  params: SuggestThemesRequest
+): Promise<SuggestThemesResponse> => {
+  const { data } = await apiClient.post<SuggestThemesResponse>(
+    "/admin/clustering/suggest-themes",
+    params
+  )
   return data
 }
 

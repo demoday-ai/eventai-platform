@@ -39,6 +39,30 @@ Constraints:
   ]
 }"""
 
+SUGGEST_THEMES_SYSTEM_PROMPT = """Ты AI-ассистент для организации Demo Day.
+Твоя задача — предложить тематики залов на основе анализа проектов.
+
+Проанализируй теги и описания проектов, выяви основные тематические кластеры
+(NLP, CV, Agents, EdTech, FinTech, Healthcare, etc).
+
+Constraints:
+- Количество тем должно быть ровно равно запрошенному числу залов
+- Темы должны быть информативными и отражать содержание проектов (не "Зал 1", "Зал 2")
+- Темы должны охватывать все проекты (не создавай слишком узкие темы)
+- Учитывай И теги, И descriptions проектов (теги могут быть неполными)
+
+Примеры хороших тем:
+- "NLP и языковые модели"
+- "Автономные агенты и RAG"
+- "Computer Vision и мультимодальные модели"
+- "AI в образовании и EdTech"
+- "FinTech и предиктивная аналитика"
+
+Верни JSON строго в формате:
+{
+  "themes": ["Тема зала 1", "Тема зала 2", ...]
+}"""
+
 
 def _build_user_prompt(
     projects: list[dict],
@@ -60,6 +84,73 @@ def _build_user_prompt(
 
     prompt += "\n\nВерни JSON с распределением."
     return prompt
+
+
+def _build_suggest_themes_user_prompt(
+    projects: list[dict],
+    num_rooms: int,
+) -> str:
+    """Build user prompt for theme suggestion."""
+    prompt = f"Предложи {num_rooms} тематик для залов на основе {len(projects)} проектов.\n\n"
+    prompt += "Проекты:\n"
+    prompt += json.dumps(projects, ensure_ascii=False, indent=None)
+    prompt += "\n\nВерни JSON со списком тем."
+    return prompt
+
+
+async def suggest_room_themes(
+    session: AsyncSession,
+    event_id: uuid.UUID,
+    num_rooms: int,
+) -> list[str]:
+    """Suggest room themes based on project tags and descriptions.
+
+    Analyzes all projects using LLM and returns suggested theme names.
+    Returns list[str] of length num_rooms.
+    """
+    # 1. Fetch projects with tags
+    stmt = (
+        select(Project)
+        .where(Project.event_id == event_id)
+        .options(selectinload(Project.tags).selectinload(ProjectTag.tag))
+    )
+    result = await session.execute(stmt)
+    projects = list(result.scalars().unique().all())
+
+    if len(projects) < 2:
+        raise ValueError(f"Недостаточно проектов для анализа: {len(projects)}")
+
+    # 2. Build data for LLM (tags + descriptions)
+    projects_data = []
+    for p in projects:
+        tags = [pt.tag.name for pt in p.tags if pt.tag]
+        projects_data.append({
+            "id": str(p.id),
+            "title": p.title,
+            "tags": tags,
+            "description": p.description[:500],
+        })
+
+    # 3. Build prompt
+    system_prompt = SUGGEST_THEMES_SYSTEM_PROMPT
+    user_prompt = _build_suggest_themes_user_prompt(projects_data, num_rooms)
+
+    # 4. Call LLM
+    logger.info("Suggesting themes: %d projects → %d rooms", len(projects), num_rooms)
+    llm_response = await llm_client.send_chat_completion(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        json_mode=True,
+    )
+
+    # 5. Validate response
+    themes = llm_response.get("themes", [])
+    if not themes or len(themes) != num_rooms:
+        logger.warning("LLM returned %d themes, expected %d", len(themes), num_rooms)
+        # Fallback to generic themes
+        return [f"Зал {i + 1}" for i in range(num_rooms)]
+
+    return themes
 
 
 async def run_clustering(
@@ -100,7 +191,7 @@ async def run_clustering(
             "id": pid,
             "title": p.title,
             "tags": tags,
-            "description": p.description[:200],  # truncate for token budget
+            "description": p.description[:500],  # increased from 200 for better context
         })
         project_map[pid] = p
 
@@ -130,11 +221,11 @@ async def run_clustering(
     all_project_ids = set(project_map.keys())
     missing = all_project_ids - assigned_ids
     if missing:
-        logger.warning("Projects missing from clustering: %d", len(missing))
-        # Distribute missing to smallest room
+        logger.warning("Projects missing from clustering: %s", list(missing))
         if rooms_data:
             smallest = min(rooms_data, key=lambda r: len(r.get("project_ids", [])))
             smallest.setdefault("project_ids", []).extend(list(missing))
+            logger.info("Added %d missing projects to smallest room '%s'", len(missing), smallest.get("name"))
 
     # 5. Supersede previous draft runs
     await session.execute(
