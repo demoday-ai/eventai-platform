@@ -7,11 +7,11 @@ interface ImportSummaryProps {
 }
 
 function isUploadResult(result: UploadResult | ExpertUploadResult | GuestUploadResult): result is UploadResult {
-  return "loaded" in result
+  return "loaded" in result && !("imported" in result) && !("with_tags" in result)
 }
 
 function isGuestUploadResult(result: UploadResult | ExpertUploadResult | GuestUploadResult): result is GuestUploadResult {
-  return "duplicates" in result && "imported" in result && !("with_tags" in result)
+  return "imported" in result && "total_parsed" in result && !("with_tags" in result)
 }
 
 export function ImportSummary({ result, type }: ImportSummaryProps) {
