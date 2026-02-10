@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter } from "react-router-dom"
-import { ExpertMatching } from "./ExpertMatching"
+import { ExpertMatchingTab } from "./ExpertMatching"
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
@@ -69,7 +69,7 @@ const mockMatchingResult = {
   ],
 }
 
-describe("ExpertMatching", () => {
+describe("ExpertMatchingTab", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetCurrentMatching.mockRejectedValue(new Error("Not found"))
@@ -79,7 +79,7 @@ describe("ExpertMatching", () => {
   it("shows empty state when no approved clustering", async () => {
     mockGetCurrentClustering.mockRejectedValue(new Error("Not found"))
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Для матчинга экспертов необходима одобренная кластеризация")).toBeInTheDocument()
@@ -88,9 +88,8 @@ describe("ExpertMatching", () => {
   })
 
   it("renders run step initially", () => {
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
-    expect(screen.getByText("Эксперты")).toBeInTheDocument()
     expect(screen.getByText("Запуск матчинга")).toBeInTheDocument()
     expect(screen.getByText("Запустить матчинг")).toBeInTheDocument()
   })
@@ -99,7 +98,7 @@ describe("ExpertMatching", () => {
     const user = userEvent.setup()
     mockRunMatching.mockResolvedValue(mockMatchingResult)
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     const runBtn = screen.getByText("Запустить матчинг")
     await user.click(runBtn)
@@ -115,7 +114,7 @@ describe("ExpertMatching", () => {
   it("loads existing matching results", async () => {
     mockGetCurrentMatching.mockResolvedValue(mockMatchingResult)
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Иван")).toBeInTheDocument()
@@ -126,7 +125,7 @@ describe("ExpertMatching", () => {
     const user = userEvent.setup()
     mockRunMatching.mockResolvedValue(mockMatchingResult)
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     await user.click(screen.getByText("Запустить матчинг"))
 
@@ -141,7 +140,7 @@ describe("ExpertMatching", () => {
     const user = userEvent.setup()
     mockRunMatching.mockRejectedValue(new Error("Server error"))
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     await user.click(screen.getByText("Запустить матчинг"))
 
@@ -154,7 +153,7 @@ describe("ExpertMatching", () => {
     const user = userEvent.setup()
     mockGetCurrentMatching.mockResolvedValue(mockMatchingResult)
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     // Wait for results to load and navigate to approve step
     await waitFor(() => {
@@ -189,7 +188,7 @@ describe("ExpertMatching", () => {
       bot_link: "https://t.me/test",
     })
 
-    render(<ExpertMatching />, { wrapper: createWrapper() })
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
 
     // Navigate to approve step
     await waitFor(() => {

@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Stepper } from "../components/ui/stepper"
 import { PageEmptyState } from "../components/ui/PageEmptyState"
-import { APP_NAME } from "../lib/constants"
 import {
   runMatching,
   getCurrentMatching,
@@ -46,7 +45,11 @@ function detectStep(matching: MatchingResult | null | undefined): number {
   return 1
 }
 
-export function ExpertMatching() {
+interface ExpertMatchingTabProps {
+  onSwitchTab: (tab: string) => void
+}
+
+export function ExpertMatchingTab({ onSwitchTab }: ExpertMatchingTabProps) {
   const queryClient = useQueryClient()
   const [currentStep, setCurrentStep] = useState(0)
   const [useAdjacentTags, setUseAdjacentTags] = useState(true)
@@ -58,10 +61,6 @@ export function ExpertMatching() {
   const [inviteResult, setInviteResult] = useState<InviteConfirmResult | null>(null)
   const [stepDetected, setStepDetected] = useState(false)
   const [showApproveConfirm, setShowApproveConfirm] = useState(false)
-
-  useEffect(() => {
-    document.title = `${APP_NAME} - Эксперты`
-  }, [])
 
   // Check if approved clustering exists
   const { data: clusteringData, isFetched: clusteringFetched } = useQuery({
@@ -182,33 +181,18 @@ export function ExpertMatching() {
 
   if (hasNoApprovedClustering) {
     return (
-      <div className="grid gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-          <h2 className="text-2xl font-bold">Эксперты</h2>
-          <Link to="/experts/list">
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">Список экспертов</Button>
-          </Link>
-        </div>
-        <PageEmptyState
-          icon={Users}
-          title="Для матчинга экспертов необходима одобренная кластеризация"
-          description="Одобрите кластеризацию, чтобы начать матчинг."
-          actionLabel="Перейти к кластеризации"
-          actionLink="/clustering"
-        />
-      </div>
+      <PageEmptyState
+        icon={Users}
+        title="Для матчинга экспертов необходима одобренная кластеризация"
+        description="Одобрите кластеризацию, чтобы начать матчинг."
+        actionLabel="Перейти к кластеризации"
+        actionLink="/clustering"
+      />
     )
   }
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <h2 className="text-2xl font-bold">Эксперты</h2>
-        <Link to="/experts/list">
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">Список экспертов</Button>
-        </Link>
-      </div>
-
       <Stepper steps={STEPS} currentStep={currentStep} />
 
       {/* Step 0: Run matching */}
@@ -293,9 +277,9 @@ export function ExpertMatching() {
               </p>
               <p className="text-sm text-yellow-700">
                 Назначьте экспертов вручную из списка ниже, или{" "}
-                <Link to="/experts/list" className="underline font-medium">
+                <button onClick={() => onSwitchTab("list")} className="underline font-medium">
                   проверьте теги экспертов
-                </Link>{" "}
+                </button>{" "}
                 и перезапустите матчинг.
               </p>
             </div>

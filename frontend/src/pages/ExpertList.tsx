@@ -1,19 +1,17 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Link } from "react-router-dom"
 import { Card, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { ExpertFormDialog } from "../components/ExpertFormDialog"
 import { StatusBadge } from "../components/shared/StatusBadge"
-import { APP_NAME } from "../lib/constants"
 import { getExperts, updateExpertStatus, type ExpertListItem } from "../lib/api-client"
 
 function canChangeStatus(status: string | null): boolean {
   return status !== null && status !== "confirmed" && status !== "declined"
 }
 
-export function ExpertList() {
+export function ExpertListTab() {
   const [search, setSearch] = useState("")
   const [dialog, setDialog] = useState<{
     mode: "create" | "edit"
@@ -29,10 +27,6 @@ export function ExpertList() {
     },
   })
 
-  useEffect(() => {
-    document.title = `${APP_NAME} - Список экспертов`
-  }, [])
-
   const { data: experts, isLoading, isError } = useQuery({
     queryKey: ["experts", search],
     queryFn: () => getExperts(search ? { search } : undefined),
@@ -40,16 +34,10 @@ export function ExpertList() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl font-bold">Список экспертов</h2>
-        <div className="flex gap-2">
-          <Link to="/experts">
-            <Button variant="outline" className="flex-1 sm:flex-none">Матчинг</Button>
-          </Link>
-          <Button onClick={() => setDialog({ mode: "create" })} className="flex-1 sm:flex-none">
-            Добавить эксперта
-          </Button>
-        </div>
+      <div className="flex justify-end">
+        <Button onClick={() => setDialog({ mode: "create" })}>
+          Добавить эксперта
+        </Button>
       </div>
 
       <Input

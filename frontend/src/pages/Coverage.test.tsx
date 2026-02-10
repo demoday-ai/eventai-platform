@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter } from "react-router-dom"
-import { Coverage } from "./Coverage"
+import { CoverageTab } from "./Coverage"
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
@@ -58,7 +58,7 @@ const mockSummary = {
   },
 }
 
-describe("Coverage", () => {
+describe("CoverageTab", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetCoverageSummary.mockResolvedValue(mockSummary)
@@ -67,7 +67,7 @@ describe("Coverage", () => {
   })
 
   it("renders summary tab with metric cards", async () => {
-    render(<Coverage />, { wrapper: createWrapper() })
+    render(<CoverageTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("10")).toBeInTheDocument()
@@ -91,7 +91,7 @@ describe("Coverage", () => {
       ],
     })
 
-    render(<Coverage />, { wrapper: createWrapper() })
+    render(<CoverageTab />, { wrapper: createWrapper() })
 
     const gapsTab = screen.getByText("Пробелы")
     await user.click(gapsTab)
@@ -125,7 +125,7 @@ describe("Coverage", () => {
       created_at: "2026-02-01T10:00:00",
     })
 
-    render(<Coverage />, { wrapper: createWrapper() })
+    render(<CoverageTab />, { wrapper: createWrapper() })
 
     const escalationsTab = screen.getByText("Эскалации")
     await user.click(escalationsTab)
@@ -143,7 +143,7 @@ describe("Coverage", () => {
   it("shows error state on summary failure", async () => {
     mockGetCoverageSummary.mockRejectedValue(new Error("fail"))
 
-    render(<Coverage />, { wrapper: createWrapper() })
+    render(<CoverageTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Ошибка загрузки данных покрытия")).toBeInTheDocument()
@@ -151,7 +151,7 @@ describe("Coverage", () => {
   })
 
   it("shows details button in room table", async () => {
-    render(<Coverage />, { wrapper: createWrapper() })
+    render(<CoverageTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Детали")).toBeInTheDocument()

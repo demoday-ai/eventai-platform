@@ -54,7 +54,7 @@ export function DashboardCoverageTable({ data }: DashboardCoverageTableProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/coverage?room=${room.room_id}`)}
+                        onClick={() => navigate(`/experts/rooms/${room.room_id}`)}
                       >
                         Детали
                       </Button>

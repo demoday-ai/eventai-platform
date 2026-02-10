@@ -40,7 +40,7 @@ export function CoverageRoomDetail() {
   return (
     <div className="grid gap-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => navigate("/coverage")}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/experts")}>
           ← Назад
         </Button>
         <h2 className="text-2xl font-bold">{data.room_name}</h2>

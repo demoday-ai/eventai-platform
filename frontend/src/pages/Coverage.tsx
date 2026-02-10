@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { StatusBadge } from "../components/shared/StatusBadge"
-import { APP_NAME } from "../lib/constants"
 import {
   getCoverageSummary,
   getCoverageGaps,
@@ -15,15 +14,11 @@ import {
 const TABS = ["Обзор", "Пробелы", "Эскалации"] as const
 type Tab = (typeof TABS)[number]
 
-export function Coverage() {
+export function CoverageTab() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<Tab>("Обзор")
   const [escalationFilter, setEscalationFilter] = useState<"open" | "all">("open")
-
-  useEffect(() => {
-    document.title = `${APP_NAME} - Покрытие`
-  }, [])
 
   const { data: summary, isLoading: summaryLoading, isError: summaryError } = useQuery({
     queryKey: ["coverageSummary"],
@@ -52,9 +47,7 @@ export function Coverage() {
 
   return (
     <div className="grid gap-6">
-      <h2 className="text-2xl font-bold">Покрытие экспертами</h2>
-
-      {/* Tab buttons */}
+      {/* Sub-tab buttons */}
       <div className="flex gap-1 border-b pb-0 overflow-x-auto">
         {TABS.map((tab) => (
           <button
@@ -142,7 +135,7 @@ export function Coverage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => navigate(`/coverage/rooms/${room.room_id}`)}
+                                onClick={() => navigate(`/experts/rooms/${room.room_id}`)}
                               >
                                 Детали
                               </Button>

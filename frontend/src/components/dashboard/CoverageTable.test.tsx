@@ -64,7 +64,7 @@ describe("DashboardCoverageTable", () => {
     render(<DashboardCoverageTable data={mockData} />, { wrapper: BrowserRouter })
     const buttons = screen.getAllByText("Детали")
     fireEvent.click(buttons[0])
-    expect(mockNavigate).toHaveBeenCalledWith("/coverage?room=r1")
+    expect(mockNavigate).toHaveBeenCalledWith("/experts/rooms/r1")
   })
 
   it("returns null for empty data", () => {

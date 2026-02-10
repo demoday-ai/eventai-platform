@@ -23,9 +23,9 @@ const createWrapper = (roomId: string) => {
   })
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/coverage/rooms/${roomId}`]}>
+      <MemoryRouter initialEntries={[`/experts/rooms/${roomId}`]}>
         <Routes>
-          <Route path="/coverage/rooms/:roomId" element={children} />
+          <Route path="/experts/rooms/:roomId" element={children} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>

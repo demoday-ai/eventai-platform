@@ -6,7 +6,6 @@ import {
   Users,
   Calendar,
   FolderOpen,
-  ShieldCheck,
   MessageSquare,
   Bell,
   UserCheck,
@@ -60,7 +59,6 @@ const navGroups: NavGroup[] = [
   {
     label: "Аналитика",
     items: [
-      { to: "/coverage", label: "Покрытие", icon: ShieldCheck },
       { to: "/guests", label: "Аудитория", icon: UserCheck },
     ],
   },

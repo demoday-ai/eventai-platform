@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter } from "react-router-dom"
-import { ExpertList } from "./ExpertList"
+import { ExpertListTab } from "./ExpertList"
 import * as apiClient from "../lib/api-client"
 
 vi.mock("../hooks/useAuth", () => ({
@@ -57,24 +57,23 @@ const createWrapper = () => {
   )
 }
 
-describe("ExpertList", () => {
+describe("ExpertListTab", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("renders title and add button", () => {
+  it("renders add button", () => {
     vi.mocked(apiClient.getExperts).mockImplementation(() => new Promise(() => {}))
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
-    expect(screen.getByText("Список экспертов")).toBeInTheDocument()
     expect(screen.getByText("Добавить эксперта")).toBeInTheDocument()
   })
 
   it("loads and displays expert table rows", async () => {
     vi.mocked(apiClient.getExperts).mockResolvedValue(mockExperts)
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Иван Петров")).toBeInTheDocument()
@@ -100,7 +99,7 @@ describe("ExpertList", () => {
       assignment_status: null,
     })
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Иван Петров")).toBeInTheDocument()
@@ -137,7 +136,7 @@ describe("ExpertList", () => {
   it("opens edit dialog with pre-filled data", async () => {
     vi.mocked(apiClient.getExperts).mockResolvedValue(mockExperts)
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Иван Петров")).toBeInTheDocument()
@@ -166,7 +165,7 @@ describe("ExpertList", () => {
   it("shows error on API failure", async () => {
     vi.mocked(apiClient.getExperts).mockRejectedValue(new Error("Network error"))
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Ошибка загрузки списка экспертов")).toBeInTheDocument()
@@ -176,7 +175,7 @@ describe("ExpertList", () => {
   it("validates that name is required on create", async () => {
     vi.mocked(apiClient.getExperts).mockResolvedValue([])
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Добавить эксперта")).toBeInTheDocument()
@@ -201,7 +200,7 @@ describe("ExpertList", () => {
     ]
     vi.mocked(apiClient.getExperts).mockResolvedValue(expertsWithStatuses)
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Иван Петров")).toBeInTheDocument()
@@ -221,7 +220,7 @@ describe("ExpertList", () => {
       assignment_status: "confirmed",
     })
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Иван Петров")).toBeInTheDocument()
@@ -243,7 +242,7 @@ describe("ExpertList", () => {
     ]
     vi.mocked(apiClient.getExperts).mockResolvedValue(confirmedExperts)
 
-    render(<ExpertList />, { wrapper: createWrapper() })
+    render(<ExpertListTab />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText("Мария Сидорова")).toBeInTheDocument()
