@@ -25,6 +25,13 @@ from app.schemas.admin import (
 )
 
 
+def _extract_summary(extra_data: dict | None) -> str | None:
+    """Get profile summary from extra_data (saved as 'nl_summary', fallback 'summary')."""
+    if not extra_data:
+        return None
+    return extra_data.get("summary") or extra_data.get("nl_summary")
+
+
 async def list_guests(
     db: AsyncSession,
     event_id: UUID,
@@ -124,7 +131,7 @@ async def list_guests(
             keywords = guest_prof.keywords or []
             raw_text = guest_prof.raw_text
             extra = guest_prof.extra_data or {}
-            profile_summary = extra.get("summary")
+            profile_summary = _extract_summary(extra)
 
         if biz_prof and not profile_summary:
             parts = []
@@ -231,7 +238,7 @@ async def get_guest_detail(
             raw_text=profile.raw_text,
             interests=extra.get("interests", []),
             goals=extra.get("goals", []),
-            summary=extra.get("summary"),
+            summary=_extract_summary(extra),
             company=extra.get("company"),
             position=extra.get("position"),
             partner_status=extra.get("partner_status"),
@@ -256,7 +263,7 @@ async def get_guest_detail(
         guest_subtype=user.guest_subtype.value if user.guest_subtype else None,
         tags=(profile.selected_tags or []) + (profile.extracted_tags or []) if profile else [],
         keywords=profile.keywords or [] if profile else [],
-        profile_summary=(profile.extra_data or {}).get("summary") if profile else None,
+        profile_summary=_extract_summary(profile.extra_data) if profile else None,
         raw_text=profile.raw_text if profile else None,
         recommendations_count=rec_count,
         contact_requests_count=contact_count,
