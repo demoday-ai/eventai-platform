@@ -271,7 +271,7 @@ async def save_projects(
             })
 
     await session.commit()
-    return {"loaded": loaded}
+    return {"loaded": loaded, "tags_generated": 0}
 
 
 async def get_projects(
