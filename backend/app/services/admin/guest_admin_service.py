@@ -177,6 +177,17 @@ async def get_guest_detail(
     if not user:
         raise ValueError("User not found")
 
+    # Get user role for this event
+    user_role_result = await db.execute(
+        select(Role.code)
+        .select_from(UserRole)
+        .join(Role, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id, UserRole.event_id == event_id)
+    )
+    role_code = user_role_result.scalar_one_or_none()
+    if not role_code:
+        raise ValueError("User role not found for this event")
+
     profile = await db.scalar(
         select(GuestProfile).where(
             GuestProfile.user_id == user_id,
@@ -260,6 +271,7 @@ async def get_guest_detail(
         full_name=user.full_name or f"User {user.telegram_user_id}",
         username=user.username,
         telegram_user_id=user.telegram_user_id,
+        role=role_code,
         guest_subtype=user.guest_subtype.value if user.guest_subtype else None,
         tags=(profile.selected_tags or []) + (profile.extracted_tags or []) if profile else [],
         keywords=profile.keywords or [] if profile else [],
