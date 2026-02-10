@@ -32,12 +32,14 @@ vi.mock("../lib/api-client", () => ({
   confirmInvites: (...args: unknown[]) => mockConfirmInvites(...args),
 }))
 
+let testQueryClient: QueryClient
+
 const createWrapper = () => {
-  const queryClient = new QueryClient({
+  testQueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={testQueryClient}>
       <BrowserRouter>{children}</BrowserRouter>
     </QueryClientProvider>
   )
@@ -214,5 +216,46 @@ describe("ExpertMatchingTab", () => {
       expect(screen.getByText("Следующий шаг — генерация расписания")).toBeInTheDocument()
       expect(screen.getByRole("link", { name: "Перейти к расписанию" })).toHaveAttribute("href", "/schedule")
     })
+  })
+
+  it("invalidates pipeline-status and dashboard after approval", async () => {
+    const user = userEvent.setup()
+    mockGetCurrentMatching.mockResolvedValue(mockMatchingResult)
+    mockApproveMatching.mockResolvedValue({ status: "approved" })
+    mockGetInvitePreview.mockResolvedValue({
+      total_experts: 10,
+      with_telegram: 8,
+      without_telegram: 2,
+      has_unapproved: false,
+      sample_message: "Test",
+      bot_link: "https://t.me/test",
+    })
+
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
+
+    const invalidateSpy = vi.spyOn(testQueryClient, "invalidateQueries")
+
+    // Navigate to approve step
+    await waitFor(() => {
+      expect(screen.getByText("Далее")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Далее"))
+
+    // Click approve → confirm
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить матчинг")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Одобрить матчинг"))
+    await waitFor(() => {
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Подтвердить"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Матчинг одобрён")).toBeInTheDocument()
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["pipeline-status"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
   })
 })

@@ -29,12 +29,14 @@ vi.mock("../lib/api-client", () => ({
   getProjects: (...args: unknown[]) => mockGetProjects(...args),
 }))
 
+let testQueryClient: QueryClient
+
 const createWrapper = () => {
-  const queryClient = new QueryClient({
+  testQueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={testQueryClient}>
       <BrowserRouter>{children}</BrowserRouter>
     </QueryClientProvider>
   )
@@ -180,6 +182,45 @@ describe("Clustering", () => {
       expect(screen.getByText("Подтвердить")).toBeInTheDocument()
       expect(screen.getByText("Отмена")).toBeInTheDocument()
     })
+  })
+
+  it("invalidates pipeline-status and dashboard after approval", async () => {
+    const user = userEvent.setup()
+    mockGetCurrentClustering.mockResolvedValue(mockClusteringResult)
+    mockApproveClustering.mockResolvedValue({ status: "approved" })
+
+    render(<Clustering />, { wrapper: createWrapper() })
+
+    const invalidateSpy = vi.spyOn(testQueryClient, "invalidateQueries")
+
+    // Navigate to approve step (step 1 → step 2 → step 3)
+    await waitFor(() => {
+      expect(screen.getByText("Далее")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Далее"))
+
+    await waitFor(() => {
+      const nextButtons = screen.getAllByText("Далее")
+      expect(nextButtons.length).toBeGreaterThan(0)
+    })
+    await user.click(screen.getAllByText("Далее")[0])
+
+    // Click Одобрить → confirm
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Одобрить"))
+    await waitFor(() => {
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Подтвердить"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Кластеризация одобрена")).toBeInTheDocument()
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["pipeline-status"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
   })
 
   it("shows error when clustering fails", async () => {

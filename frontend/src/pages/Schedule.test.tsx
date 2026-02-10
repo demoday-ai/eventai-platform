@@ -28,12 +28,14 @@ vi.mock("../lib/api-client", () => ({
   getCurrentClustering: (...args: unknown[]) => mockGetCurrentClustering(...args),
 }))
 
+let testQueryClient: QueryClient
+
 const createWrapper = () => {
-  const queryClient = new QueryClient({
+  testQueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={testQueryClient}>
       <BrowserRouter>{children}</BrowserRouter>
     </QueryClientProvider>
   )
@@ -379,6 +381,45 @@ describe("Schedule", () => {
       expect(screen.getByText("Расписание утверждено. Можно отправить напоминания")).toBeInTheDocument()
       expect(screen.getByRole("link", { name: "Перейти к напоминаниям" })).toHaveAttribute("href", "/reminders")
     })
+  })
+
+  it("invalidates pipeline-status and dashboard after approval", async () => {
+    const user = userEvent.setup()
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+    mockApproveSchedule.mockResolvedValue({
+      total_slots: 2,
+      rooms: 1,
+      days: 1,
+    })
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    const invalidateSpy = vi.spyOn(testQueryClient, "invalidateQueries")
+
+    // Wait for schedule to load
+    await waitFor(() => {
+      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+    })
+
+    // Navigate to approve step
+    await user.click(screen.getByText("Далее"))
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить")).toBeInTheDocument()
+    })
+
+    // Click approve → confirm
+    await user.click(screen.getByText("Одобрить"))
+    await waitFor(() => {
+      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
+    })
+    await user.click(screen.getByText("Подтвердить"))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Расписание одобрено/)).toBeInTheDocument()
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["pipeline-status"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
   })
 
   it("passes room_overrides and breaks to generateSchedule", async () => {
