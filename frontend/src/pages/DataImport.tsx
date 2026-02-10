@@ -9,7 +9,6 @@ import { FileUpload } from "../components/import/FileUpload"
 import { ImportSummary } from "../components/import/ImportSummary"
 import { APP_NAME } from "../lib/constants"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import {
   uploadProjects,
   uploadExperts,
@@ -371,68 +370,119 @@ export function DataImport() {
     saveToStorage("import_expert_result", expertResult)
   }, [expertResult])
 
-  // --- Guests ---
-  const [guestFile, setGuestFile] = useState<File | null>(null)
-  const [guestSubtype, setGuestSubtype] = useState<string>("")
-  const [guestResult, setGuestResult] = useState<GuestUploadResult | null>(() =>
-    loadFromStorage<GuestUploadResult>("import_guest_result")
+  // --- Students ---
+  const [studentFile, setStudentFile] = useState<File | null>(null)
+  const [studentResult, setStudentResult] = useState<GuestUploadResult | null>(() =>
+    loadFromStorage<GuestUploadResult>("import_student_result")
   )
-  const [guestConflict, setGuestConflict] = useState<GuestUploadConflict | null>(null)
-  const [guestError, setGuestError] = useState<string | null>(null)
+  const [studentConflict, setStudentConflict] = useState<GuestUploadConflict | null>(null)
+  const [studentError, setStudentError] = useState<string | null>(null)
 
-  const guestMutation = useMutation({
-    mutationFn: ({ file, subtype, confirmReplace }: { file: File; subtype: string; confirmReplace: boolean }) =>
-      uploadGuests(file, subtype, confirmReplace),
+  const studentMutation = useMutation({
+    mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
+      uploadGuests(file, "student", confirmReplace),
     onSuccess: (data) => {
       if ("existing_count" in data) {
-        setGuestConflict(data as unknown as GuestUploadConflict)
-        setGuestResult(null)
+        setStudentConflict(data as unknown as GuestUploadConflict)
+        setStudentResult(null)
       } else {
-        setGuestResult(data)
-        setGuestConflict(null)
-        setGuestFile(null)
-        setGuestError(null)
+        setStudentResult(data)
+        setStudentConflict(null)
+        setStudentFile(null)
+        setStudentError(null)
         refreshAllStats()
       }
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       const detail = error.response?.data?.detail
       if (typeof detail === "string") {
-        setGuestError(detail)
+        setStudentError(detail)
       } else {
-        setGuestError(error.message)
+        setStudentError(error.message)
       }
     },
   })
 
-  const handleGuestUpload = () => {
-    if (!guestFile || !guestSubtype) return
-    setGuestResult(null)
-    setGuestConflict(null)
-    setGuestError(null)
-    guestMutation.mutate({ file: guestFile, subtype: guestSubtype, confirmReplace: false })
+  const handleStudentUpload = () => {
+    if (!studentFile) return
+    setStudentResult(null)
+    setStudentConflict(null)
+    setStudentError(null)
+    studentMutation.mutate({ file: studentFile, confirmReplace: false })
   }
 
-  const handleGuestReplace = () => {
-    if (!guestFile || !guestSubtype) return
-    setGuestConflict(null)
-    guestMutation.mutate({ file: guestFile, subtype: guestSubtype, confirmReplace: true })
+  const handleStudentReplace = () => {
+    if (!studentFile) return
+    setStudentConflict(null)
+    studentMutation.mutate({ file: studentFile, confirmReplace: true })
   }
 
   useEffect(() => {
-    saveToStorage("import_guest_result", guestResult)
-  }, [guestResult])
+    saveToStorage("import_student_result", studentResult)
+  }, [studentResult])
+
+  // --- Partners ---
+  const [partnerFile, setPartnerFile] = useState<File | null>(null)
+  const [partnerResult, setPartnerResult] = useState<GuestUploadResult | null>(() =>
+    loadFromStorage<GuestUploadResult>("import_partner_result")
+  )
+  const [partnerConflict, setPartnerConflict] = useState<GuestUploadConflict | null>(null)
+  const [partnerError, setPartnerError] = useState<string | null>(null)
+
+  const partnerMutation = useMutation({
+    mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
+      uploadGuests(file, "business_partner", confirmReplace),
+    onSuccess: (data) => {
+      if ("existing_count" in data) {
+        setPartnerConflict(data as unknown as GuestUploadConflict)
+        setPartnerResult(null)
+      } else {
+        setPartnerResult(data)
+        setPartnerConflict(null)
+        setPartnerFile(null)
+        setPartnerError(null)
+        refreshAllStats()
+      }
+    },
+    onError: (error: AxiosError<{ detail: string }>) => {
+      const detail = error.response?.data?.detail
+      if (typeof detail === "string") {
+        setPartnerError(detail)
+      } else {
+        setPartnerError(error.message)
+      }
+    },
+  })
+
+  const handlePartnerUpload = () => {
+    if (!partnerFile) return
+    setPartnerResult(null)
+    setPartnerConflict(null)
+    setPartnerError(null)
+    partnerMutation.mutate({ file: partnerFile, confirmReplace: false })
+  }
+
+  const handlePartnerReplace = () => {
+    if (!partnerFile) return
+    setPartnerConflict(null)
+    partnerMutation.mutate({ file: partnerFile, confirmReplace: true })
+  }
+
+  useEffect(() => {
+    saveToStorage("import_partner_result", partnerResult)
+  }, [partnerResult])
 
   return (
     <div className="grid gap-6">
       <h2 className="text-2xl font-bold">Импорт данных</h2>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="event">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="event">1. Событие</TabsTrigger>
           <TabsTrigger value="projects">2. Проекты</TabsTrigger>
-          <TabsTrigger value="experts">3. Эксперты</TabsTrigger>
-          <TabsTrigger value="guests">4. Гости</TabsTrigger>
+          <TabsTrigger value="students">3. Студенты</TabsTrigger>
+          <TabsTrigger value="experts">4. Эксперты</TabsTrigger>
+          <TabsTrigger value="partners">5. Партнёры</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Event */}
@@ -541,7 +591,7 @@ export function DataImport() {
           )}
         </TabsContent>
 
-        {/* Tab 3: Experts */}
+        {/* Tab 4: Experts */}
         <TabsContent value="experts">
           {!hasEvent ? (
             <NoEventHint onGoToEvent={goToEventTab} />
@@ -608,66 +658,44 @@ export function DataImport() {
           )}
         </TabsContent>
 
-        {/* Tab 4: Guests */}
-        <TabsContent value="guests">
+        {/* Tab 3: Students */}
+        <TabsContent value="students">
           {!hasEvent ? (
             <NoEventHint onGoToEvent={goToEventTab} />
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Гости</CardTitle>
+                <CardTitle>Студенты</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="guest-subtype" className="text-sm font-medium mb-1 block">
-                    Тип гостя
-                  </label>
-                  <Select value={guestSubtype} onValueChange={setGuestSubtype}>
-                    <SelectTrigger id="guest-subtype">
-                      <SelectValue placeholder="Выберите тип" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="investor">Инвестор</SelectItem>
-                      <SelectItem value="business_partner">Бизнес-партнёр</SelectItem>
-                      <SelectItem value="mentor">Ментор</SelectItem>
-                      <SelectItem value="hr">HR</SelectItem>
-                      <SelectItem value="jury">Жюри</SelectItem>
-                      <SelectItem value="student">Студент</SelectItem>
-                      <SelectItem value="applicant">Абитуриент</SelectItem>
-                      <SelectItem value="other">Другое</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <FileUpload
                   accept=".csv,.json,.xlsx"
-                  onFileSelect={setGuestFile}
-                  label="Перетащите файл с гостями или нажмите кнопку"
+                  onFileSelect={setStudentFile}
+                  label="Перетащите файл со студентами или нажмите кнопку"
                   formats={["XLSX", "CSV", "JSON"]}
-                  requiredColumns={["name"]}
-                  optionalColumns={["telegram"]}
-                  templateUrl="/templates/guests_template.xlsx"
+                  requiredColumns={["name", "telegram"]}
+                  templateUrl="/templates/students_template.xlsx"
                 />
 
                 <Button
-                  onClick={handleGuestUpload}
-                  disabled={!guestFile || !guestSubtype || guestMutation.isPending}
+                  onClick={handleStudentUpload}
+                  disabled={!studentFile || studentMutation.isPending}
                 >
-                  {guestMutation.isPending ? "Загрузка..." : "Загрузить"}
+                  {studentMutation.isPending ? "Загрузка..." : "Загрузить"}
                 </Button>
 
-                {guestConflict && (
+                {studentConflict && (
                   <Card className="border-yellow-300 bg-yellow-50">
                     <CardContent className="pt-4 space-y-3">
-                      <p className="text-sm">{guestConflict.message}</p>
+                      <p className="text-sm">{studentConflict.message}</p>
                       <div className="flex gap-2">
-                        <Button variant="destructive" size="sm" onClick={handleGuestReplace}>
+                        <Button variant="destructive" size="sm" onClick={handleStudentReplace}>
                           Заменить
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setGuestConflict(null)}
+                          onClick={() => setStudentConflict(null)}
                         >
                           Отмена
                         </Button>
@@ -676,21 +704,87 @@ export function DataImport() {
                   </Card>
                 )}
 
-                {(guestMutation.isError || guestError) && (
+                {(studentMutation.isError || studentError) && (
                   <p className="text-sm text-red-500">
-                    Ошибка загрузки: {guestError || "Неизвестная ошибка"}
+                    Ошибка загрузки: {studentError || "Неизвестная ошибка"}
                   </p>
                 )}
 
-                {guestResult?.duplicate_warning && (
+                {studentResult?.duplicate_warning && (
                   <Card className="border-amber-400 bg-amber-50">
                     <CardContent className="pt-4">
-                      <p className="text-sm text-amber-800">{guestResult.duplicate_warning}</p>
+                      <p className="text-sm text-amber-800">{studentResult.duplicate_warning}</p>
                     </CardContent>
                   </Card>
                 )}
 
-                {guestResult && <ImportSummary result={guestResult} type="guests" />}
+                {studentResult && <ImportSummary result={studentResult} type="guests" />}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab 5: Partners */}
+        <TabsContent value="partners">
+          {!hasEvent ? (
+            <NoEventHint onGoToEvent={goToEventTab} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Партнёры</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FileUpload
+                  accept=".csv,.json,.xlsx"
+                  onFileSelect={setPartnerFile}
+                  label="Перетащите файл с партнёрами или нажмите кнопку"
+                  formats={["XLSX", "CSV", "JSON"]}
+                  requiredColumns={["name", "telegram"]}
+                  templateUrl="/templates/partners_template.xlsx"
+                />
+
+                <Button
+                  onClick={handlePartnerUpload}
+                  disabled={!partnerFile || partnerMutation.isPending}
+                >
+                  {partnerMutation.isPending ? "Загрузка..." : "Загрузить"}
+                </Button>
+
+                {partnerConflict && (
+                  <Card className="border-yellow-300 bg-yellow-50">
+                    <CardContent className="pt-4 space-y-3">
+                      <p className="text-sm">{partnerConflict.message}</p>
+                      <div className="flex gap-2">
+                        <Button variant="destructive" size="sm" onClick={handlePartnerReplace}>
+                          Заменить
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPartnerConflict(null)}
+                        >
+                          Отмена
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {(partnerMutation.isError || partnerError) && (
+                  <p className="text-sm text-red-500">
+                    Ошибка загрузки: {partnerError || "Неизвестная ошибка"}
+                  </p>
+                )}
+
+                {partnerResult?.duplicate_warning && (
+                  <Card className="border-amber-400 bg-amber-50">
+                    <CardContent className="pt-4">
+                      <p className="text-sm text-amber-800">{partnerResult.duplicate_warning}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {partnerResult && <ImportSummary result={partnerResult} type="guests" />}
               </CardContent>
             </Card>
           )}

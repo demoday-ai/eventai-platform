@@ -73,14 +73,15 @@ describe("DataImport", () => {
     })
   })
 
-  it("renders 4 numbered tabs", () => {
+  it("renders 5 numbered tabs", () => {
     render(<DataImport />, { wrapper: createWrapper() })
 
     expect(screen.getByText("Импорт данных")).toBeInTheDocument()
     expect(screen.getByText("1. Событие")).toBeInTheDocument()
     expect(screen.getByText("2. Проекты")).toBeInTheDocument()
-    expect(screen.getByText("3. Эксперты")).toBeInTheDocument()
-    expect(screen.getByText("4. Гости")).toBeInTheDocument()
+    expect(screen.getByText("3. Студенты")).toBeInTheDocument()
+    expect(screen.getByText("4. Эксперты")).toBeInTheDocument()
+    expect(screen.getByText("5. Партнёры")).toBeInTheDocument()
   })
 
   it("shows event tab as active by default", () => {
@@ -168,7 +169,7 @@ describe("DataImport", () => {
 
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("3. Эксперты"))
+    await user.click(screen.getByText("4. Эксперты"))
 
     await waitFor(() => {
       expect(screen.getByText(/Сначала создайте мероприятие/)).toBeInTheDocument()
@@ -284,7 +285,7 @@ describe("DataImport", () => {
     render(<DataImport />, { wrapper: createWrapper() })
 
     // Switch to experts tab
-    await user.click(screen.getByText("3. Эксперты"))
+    await user.click(screen.getByText("4. Эксперты"))
 
     await waitFor(() => {
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
@@ -303,14 +304,83 @@ describe("DataImport", () => {
     })
   })
 
-  it("renders Гости tab with subtype dropdown", async () => {
+  it("renders Students tab with upload area", async () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("4. Гости"))
+    await user.click(screen.getByText("3. Студенты"))
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Тип гостя")).toBeInTheDocument()
+      expect(screen.getByText("Студенты")).toBeInTheDocument()
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+    })
+  })
+
+  it("renders Partners tab with upload area", async () => {
+    const user = userEvent.setup()
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("5. Партнёры"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Партнёры")).toBeInTheDocument()
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+    })
+  })
+
+  it("uploads students with student subtype", async () => {
+    const user = userEvent.setup()
+    mockUploadGuests.mockResolvedValue({
+      total_parsed: 5,
+      imported: 5,
+      duplicates: 0,
+      errors: [],
+    })
+
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("3. Студенты"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+    })
+
+    const file = new File(["test"], "students.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+    const inputs = document.querySelectorAll('input[type="file"]')
+    await user.upload(inputs[0] as HTMLInputElement, file)
+
+    await user.click(screen.getByText("Загрузить"))
+
+    await waitFor(() => {
+      expect(mockUploadGuests).toHaveBeenCalledWith(file, "student", false)
+    })
+  })
+
+  it("uploads partners with business_partner subtype", async () => {
+    const user = userEvent.setup()
+    mockUploadGuests.mockResolvedValue({
+      total_parsed: 3,
+      imported: 3,
+      duplicates: 0,
+      errors: [],
+    })
+
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    await user.click(screen.getByText("5. Партнёры"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+    })
+
+    const file = new File(["test"], "partners.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+    const inputs = document.querySelectorAll('input[type="file"]')
+    await user.upload(inputs[0] as HTMLInputElement, file)
+
+    await user.click(screen.getByText("Загрузить"))
+
+    await waitFor(() => {
+      expect(mockUploadGuests).toHaveBeenCalledWith(file, "business_partner", false)
     })
   })
 
