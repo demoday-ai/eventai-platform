@@ -1,6 +1,7 @@
 """LLM configuration API endpoints."""
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -252,6 +253,7 @@ async def delete_api_key(
 
 @router.post("/keys/check")
 async def check_all_keys(
+    session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
     """Manually trigger health check for all keys."""
@@ -259,5 +261,18 @@ async def check_all_keys(
 
     result = await check_api_health()
     logger.info("Manual LLM health check triggered by user %s", user.id)
+
+    # Update last_success_at in DB for successful keys
+    for key_result in result.get("keys", []):
+        if key_result["status"] == "ok":
+            key_suffix = key_result["key_suffix"]
+            stmt = select(LlmApiKey).where(LlmApiKey.key_suffix == key_suffix)
+            key_obj = (await session.execute(stmt)).scalar_one_or_none()
+            if key_obj:
+                key_obj.last_success_at = datetime.now(timezone.utc)
+                key_obj.fail_count = 0
+                key_obj.failed_at = None
+
+    await session.commit()
 
     return result
