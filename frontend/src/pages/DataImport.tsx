@@ -456,8 +456,8 @@ export function DataImport() {
                   onFileSelect={setExpertFile}
                   label="Перетащите файл с экспертами или нажмите кнопку"
                   formats={["XLSX", "CSV", "JSON"]}
-                  requiredColumns={["id", "name"]}
-                  optionalColumns={["telegram", "position", "expertise_tags"]}
+                  requiredColumns={["name"]}
+                  optionalColumns={["id", "telegram", "position", "expertise_tags"]}
                   templateUrl="/templates/experts_template.xlsx"
                 />
 

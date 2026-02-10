@@ -147,11 +147,14 @@ async def upload_experts(
     errors = []
 
     for i, item in enumerate(data):
-        seed_id = item.get("id", "").strip() if isinstance(item.get("id"), str) else str(item.get("id", ""))
+        raw_id = item.get("id", "")
+        seed_id = raw_id.strip() if isinstance(raw_id, str) else str(raw_id) if raw_id else ""
         name = item.get("name", "").strip()
-        if not seed_id or not name:
-            errors.append({"row": i, "field": "id/name", "message": "Missing required field"})
+        if not name:
+            errors.append({"row": i, "field": "name", "message": "Missing required field"})
             continue
+        if not seed_id:
+            seed_id = f"auto-{uuid.uuid4().hex[:8]}"
 
         telegram = item.get("telegram", "").strip()
         if telegram.startswith("@"):
