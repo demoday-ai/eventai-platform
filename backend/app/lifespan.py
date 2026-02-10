@@ -57,7 +57,24 @@ async def lifespan(app: FastAPI):
                 key_manager._db_keys = [k.api_key for k in db_keys]
                 logger.info("Loaded %d LLM API keys from database", len(db_keys))
             else:
-                logger.info("No LLM API keys in DB, using env fallback")
+                # Seed keys from env to DB if DB is empty
+                env_keys = settings.api_keys
+                if env_keys:
+                    for api_key in env_keys:
+                        new_key = LlmApiKey(
+                            api_key=api_key,
+                            key_suffix=api_key[-8:],
+                            is_active=True,
+                        )
+                        session.add(new_key)
+                    await session.commit()
+                    logger.info("Seeded %d LLM API keys from env to DB", len(env_keys))
+
+                    # Reload keys into KeyManager
+                    key_manager = get_key_manager()
+                    key_manager._db_keys = env_keys
+                else:
+                    logger.info("No LLM API keys in DB or env, using fallback")
     except Exception:
         logger.exception("Failed to load LLM keys from DB (non-fatal, will use env)")
 

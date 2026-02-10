@@ -10,7 +10,6 @@ import {
   getLlmModels, getCurrentLlmModel, updateLlmModel,
   getLlmApiKeys, addLlmApiKey, deleteLlmApiKey, checkLlmKeys,
   type OrganizerItem,
-  type LlmModel,
   type LlmApiKeyItem,
 } from "../lib/api-client"
 import {
