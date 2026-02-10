@@ -1,7 +1,9 @@
 import { NavLink } from "react-router-dom"
 import {
   LayoutDashboard,
+  CalendarDays,
   Upload,
+  Tag,
   Layers,
   Users,
   Calendar,
@@ -37,7 +39,9 @@ const navGroups: NavGroup[] = [
     label: "Подготовка",
     items: [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/import", label: "Импорт данных", icon: Upload, pipelineSteps: ["event", "projects", "students", "experts"] },
+      { to: "/event", label: "Мероприятие", icon: CalendarDays, pipelineSteps: ["event"] },
+      { to: "/import", label: "Импорт данных", icon: Upload, pipelineSteps: ["projects", "students", "experts"] },
+      { to: "/tags", label: "Теги", icon: Tag },
       { to: "/projects", label: "Проекты", icon: FolderOpen },
     ],
   },

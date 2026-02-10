@@ -12,6 +12,8 @@ import { Schedule } from "./pages/Schedule"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
 import { Messaging } from "./pages/Messaging/index"
 import { Reminders } from "./pages/Reminders"
+import { Event } from "./pages/Event"
+import { Tags } from "./pages/Tags"
 import { Settings } from "./pages/Settings"
 import { AuditLog } from "./pages/AuditLog"
 import { ProtectedRoute } from "./components/ProtectedRoute"
@@ -31,7 +33,9 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/event" element={<Event />} />
           <Route path="/import" element={<DataImport />} />
+          <Route path="/tags" element={<Tags />} />
           <Route path="/clustering" element={<Clustering />} />
           <Route path="/experts" element={<Experts />} />
           <Route path="/experts/rooms/:roomId" element={<CoverageRoomDetail />} />

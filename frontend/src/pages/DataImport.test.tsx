@@ -20,8 +20,6 @@ const mockGetDashboard = vi.fn()
 const mockGetProjects = vi.fn()
 const mockGetUploadJobStatus = vi.fn()
 const mockGetCurrentEvent = vi.fn()
-const mockCreateEvent = vi.fn()
-const mockUpdateCurrentEvent = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   uploadProjects: (...args: unknown[]) => mockUploadProjects(...args),
@@ -31,8 +29,6 @@ vi.mock("../lib/api-client", () => ({
   getProjects: () => mockGetProjects(),
   getUploadJobStatus: (...args: unknown[]) => mockGetUploadJobStatus(...args),
   getCurrentEvent: () => mockGetCurrentEvent(),
-  createEvent: (...args: unknown[]) => mockCreateEvent(...args),
-  updateCurrentEvent: (...args: unknown[]) => mockUpdateCurrentEvent(...args),
   isNoEventError: (error: unknown) => {
     if (error && typeof error === "object" && "response" in error) {
       const resp = (error as { response?: { status?: number } }).response
@@ -73,69 +69,36 @@ describe("DataImport", () => {
     })
   })
 
-  it("renders 5 numbered tabs", () => {
+  it("renders 4 tabs", () => {
     render(<DataImport />, { wrapper: createWrapper() })
 
     expect(screen.getByText("Импорт данных")).toBeInTheDocument()
-    expect(screen.getByText("1. Событие")).toBeInTheDocument()
-    expect(screen.getByText("2. Проекты")).toBeInTheDocument()
-    expect(screen.getByText("3. Студенты")).toBeInTheDocument()
-    expect(screen.getByText("4. Эксперты")).toBeInTheDocument()
-    expect(screen.getByText("5. Партнёры")).toBeInTheDocument()
+    expect(screen.getByText("Проекты")).toBeInTheDocument()
+    expect(screen.getByText("Студенты")).toBeInTheDocument()
+    expect(screen.getByText("Эксперты")).toBeInTheDocument()
+    expect(screen.getByText("Партнёры")).toBeInTheDocument()
   })
 
-  it("shows event tab as active by default", () => {
+  it("shows projects tab as active by default", () => {
     render(<DataImport />, { wrapper: createWrapper() })
 
-    const eventTab = screen.getByText("1. Событие")
-    expect(eventTab).toHaveAttribute("data-state", "active")
+    const projectsTab = screen.getByRole("tab", { name: "Проекты" })
+    expect(projectsTab).toHaveAttribute("data-state", "active")
   })
 
   it("switches between tabs", async () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
-    const projectsTab = screen.getByText("2. Проекты")
-    await user.click(projectsTab)
-    expect(projectsTab).toHaveAttribute("data-state", "active")
+    const expertsTab = screen.getByRole("tab", { name: "Эксперты" })
+    await user.click(expertsTab)
+    expect(expertsTab).toHaveAttribute("data-state", "active")
 
-    const eventTab = screen.getByText("1. Событие")
-    expect(eventTab).toHaveAttribute("data-state", "inactive")
-  })
-
-  it("shows event creation form when no event exists", async () => {
-    mockGetCurrentEvent.mockRejectedValue(
-      new AxiosError("Not found", "404", undefined, undefined, {
-        status: 404,
-        statusText: "Not Found",
-        headers: {},
-        config: { headers: new AxiosHeaders() },
-        data: { detail: "No active event" },
-      })
-    )
-
-    render(<DataImport />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Создание мероприятия")).toBeInTheDocument()
-    })
-    expect(screen.getByLabelText("Название")).toBeInTheDocument()
-    expect(screen.getByLabelText("Дата начала")).toBeInTheDocument()
-    expect(screen.getByLabelText("Дата окончания")).toBeInTheDocument()
-    expect(screen.getByText("Создать")).toBeInTheDocument()
-  })
-
-  it("shows event edit form when event exists", async () => {
-    render(<DataImport />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Редактирование мероприятия")).toBeInTheDocument()
-    })
-    expect(screen.getByText("Сохранить")).toBeInTheDocument()
+    const projectsTab = screen.getByRole("tab", { name: "Проекты" })
+    expect(projectsTab).toHaveAttribute("data-state", "inactive")
   })
 
   it("shows no-event hint on projects tab when no event", async () => {
-    const user = userEvent.setup()
     mockGetCurrentEvent.mockRejectedValue(
       new AxiosError("Not found", "404", undefined, undefined, {
         status: 404,
@@ -147,8 +110,6 @@ describe("DataImport", () => {
     )
 
     render(<DataImport />, { wrapper: createWrapper() })
-
-    await user.click(screen.getByText("2. Проекты"))
 
     await waitFor(() => {
       expect(screen.getByText(/Сначала создайте мероприятие/)).toBeInTheDocument()
@@ -169,7 +130,7 @@ describe("DataImport", () => {
 
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("4. Эксперты"))
+    await user.click(screen.getByRole("tab", { name: "Эксперты" }))
 
     await waitFor(() => {
       expect(screen.getByText(/Сначала создайте мероприятие/)).toBeInTheDocument()
@@ -177,13 +138,9 @@ describe("DataImport", () => {
   })
 
   it("shows upload sections on projects tab when event exists", async () => {
-    const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("2. Проекты"))
-
     await waitFor(() => {
-      expect(screen.getByText("Проекты")).toBeInTheDocument()
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
     })
   })
@@ -210,9 +167,6 @@ describe("DataImport", () => {
     })
 
     render(<DataImport />, { wrapper: createWrapper() })
-
-    // Switch to projects tab
-    await user.click(screen.getByText("2. Проекты"))
 
     await waitFor(() => {
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
@@ -250,9 +204,6 @@ describe("DataImport", () => {
 
     render(<DataImport />, { wrapper: createWrapper() })
 
-    // Switch to projects tab
-    await user.click(screen.getByText("2. Проекты"))
-
     await waitFor(() => {
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
     })
@@ -284,8 +235,7 @@ describe("DataImport", () => {
 
     render(<DataImport />, { wrapper: createWrapper() })
 
-    // Switch to experts tab
-    await user.click(screen.getByText("4. Эксперты"))
+    await user.click(screen.getByRole("tab", { name: "Эксперты" }))
 
     await waitFor(() => {
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
@@ -308,10 +258,9 @@ describe("DataImport", () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("3. Студенты"))
+    await user.click(screen.getByRole("tab", { name: "Студенты" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Студенты")).toBeInTheDocument()
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
     })
   })
@@ -320,10 +269,9 @@ describe("DataImport", () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("5. Партнёры"))
+    await user.click(screen.getByRole("tab", { name: "Партнёры" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Партнёры")).toBeInTheDocument()
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
     })
   })
@@ -339,7 +287,7 @@ describe("DataImport", () => {
 
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("3. Студенты"))
+    await user.click(screen.getByRole("tab", { name: "Студенты" }))
 
     await waitFor(() => {
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
@@ -367,7 +315,7 @@ describe("DataImport", () => {
 
     render(<DataImport />, { wrapper: createWrapper() })
 
-    await user.click(screen.getByText("5. Партнёры"))
+    await user.click(screen.getByRole("tab", { name: "Партнёры" }))
 
     await waitFor(() => {
       expect(screen.getByText("Загрузить")).toBeInTheDocument()
@@ -384,8 +332,7 @@ describe("DataImport", () => {
     })
   })
 
-  it("validates event creation with empty name", async () => {
-    const user = userEvent.setup()
+  it("shows link to event page from no-event hint", async () => {
     mockGetCurrentEvent.mockRejectedValue(
       new AxiosError("Not found", "404", undefined, undefined, {
         status: 404,
@@ -397,41 +344,12 @@ describe("DataImport", () => {
     )
 
     render(<DataImport />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Создать")).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByText("Создать"))
-
-    expect(screen.getByText("Введите название мероприятия")).toBeInTheDocument()
-  })
-
-  it("navigates to event tab from no-event hint", async () => {
-    const user = userEvent.setup()
-    mockGetCurrentEvent.mockRejectedValue(
-      new AxiosError("Not found", "404", undefined, undefined, {
-        status: 404,
-        statusText: "Not Found",
-        headers: {},
-        config: { headers: new AxiosHeaders() },
-        data: { detail: "No active event" },
-      })
-    )
-
-    render(<DataImport />, { wrapper: createWrapper() })
-
-    // Go to projects tab
-    await user.click(screen.getByText("2. Проекты"))
 
     await waitFor(() => {
       expect(screen.getByText(/Сначала создайте мероприятие/)).toBeInTheDocument()
     })
 
-    // Click the link to go to event tab
-    await user.click(screen.getByText("Перейти к созданию мероприятия"))
-
-    // Should now show event tab
-    expect(screen.getByText("1. Событие")).toHaveAttribute("data-state", "active")
+    const link = screen.getByText("Перейти к созданию мероприятия").closest("a")
+    expect(link).toHaveAttribute("href", "/event")
   })
 })

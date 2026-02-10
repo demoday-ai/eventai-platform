@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AxiosError } from "axios"
+import { Link } from "react-router-dom"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
-import { Input } from "../components/ui/input"
-import { Label } from "../components/ui/label"
 import { FileUpload } from "../components/import/FileUpload"
 import { ImportSummary } from "../components/import/ImportSummary"
 import { APP_NAME } from "../lib/constants"
@@ -15,11 +14,7 @@ import {
   uploadGuests,
   getUploadJobStatus,
   getCurrentEvent,
-  createEvent,
-  updateCurrentEvent,
   isNoEventError,
-  type Event,
-  type EventCreateRequest,
   type UploadResult,
   type ExpertUploadResult,
   type GuestUploadResult,
@@ -48,150 +43,18 @@ function saveToStorage<T>(key: string, value: T | null) {
   }
 }
 
-function EventTab({ event, onEventChange }: { event: Event | null; onEventChange: () => void }) {
-  const [name, setName] = useState("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [description, setDescription] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-
-  const isEdit = !!event
-
-  useEffect(() => {
-    if (event) {
-      setName(event.name || "")
-      setStartDate(event.start_date || "")
-      setEndDate(event.end_date || "")
-      setDescription(event.description || "")
-    }
-  }, [event])
-
-  const createMutation = useMutation({
-    mutationFn: (body: EventCreateRequest) => createEvent(body),
-    onSuccess: () => {
-      setSuccess("Мероприятие создано")
-      setError(null)
-      onEventChange()
-    },
-    onError: (err: AxiosError<{ detail: string }>) => {
-      setSuccess(null)
-      const detail = err.response?.data?.detail
-      setError(typeof detail === "string" ? detail : err.message)
-    },
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: (body: Partial<{ name: string; start_date: string; end_date: string; description: string }>) =>
-      updateCurrentEvent(body),
-    onSuccess: () => {
-      setSuccess("Изменения сохранены")
-      setError(null)
-      onEventChange()
-    },
-    onError: (err: AxiosError<{ detail: string }>) => {
-      setSuccess(null)
-      const detail = err.response?.data?.detail
-      setError(typeof detail === "string" ? detail : err.message)
-    },
-  })
-
-  const handleSubmit = () => {
-    setError(null)
-    setSuccess(null)
-
-    if (!name.trim()) {
-      setError("Введите название мероприятия")
-      return
-    }
-    if (!startDate) {
-      setError("Введите дату начала")
-      return
-    }
-    if (!endDate) {
-      setError("Введите дату окончания")
-      return
-    }
-    if (endDate < startDate) {
-      setError("Дата окончания не может быть раньше даты начала")
-      return
-    }
-
-    if (isEdit) {
-      updateMutation.mutate({ name, start_date: startDate, end_date: endDate, description: description || undefined })
-    } else {
-      createMutation.mutate({ name, start_date: startDate, end_date: endDate, description: description || undefined })
-    }
-  }
-
-  const isPending = createMutation.isPending || updateMutation.isPending
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEdit ? "Редактирование мероприятия" : "Создание мероприятия"}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="event-name">Название</Label>
-          <Input
-            id="event-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Demo Day 2026"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="event-start">Дата начала</Label>
-            <Input
-              id="event-start"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="event-end">Дата окончания</Label>
-            <Input
-              id="event-end"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="event-desc">Описание</Label>
-          <Input
-            id="event-desc"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Описание (необязательно)"
-          />
-        </div>
-
-        <Button onClick={handleSubmit} disabled={isPending}>
-          {isPending ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
-        </Button>
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
-        {success && <p className="text-sm text-green-600">{success}</p>}
-      </CardContent>
-    </Card>
-  )
-}
-
-function NoEventHint({ onGoToEvent }: { onGoToEvent: () => void }) {
+function NoEventHint() {
   return (
     <Card className="border-amber-300 bg-amber-50">
       <CardContent className="pt-6">
         <p className="text-sm text-amber-800">
-          Сначала создайте мероприятие на вкладке «Событие»
+          Сначала создайте мероприятие на странице «Мероприятие»
         </p>
-        <Button variant="link" className="px-0 text-amber-700" onClick={onGoToEvent}>
-          Перейти к созданию мероприятия
-        </Button>
+        <Link to="/event">
+          <Button variant="link" className="px-0 text-amber-700">
+            Перейти к созданию мероприятия
+          </Button>
+        </Link>
       </CardContent>
     </Card>
   )
@@ -199,7 +62,7 @@ function NoEventHint({ onGoToEvent }: { onGoToEvent: () => void }) {
 
 export function DataImport() {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState("event")
+  const [activeTab, setActiveTab] = useState("projects")
 
   useEffect(() => {
     document.title = `${APP_NAME} - Импорт данных`
@@ -216,17 +79,10 @@ export function DataImport() {
 
   const hasEvent = !!currentEvent
 
-  const handleEventChange = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["currentEvent"] })
-    queryClient.invalidateQueries({ queryKey: ["dashboard"] })
-  }, [queryClient])
-
   const refreshAllStats = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     queryClient.invalidateQueries({ queryKey: ["projects"] })
   }, [queryClient])
-
-  const goToEventTab = useCallback(() => setActiveTab("event"), [])
 
   // --- Projects ---
   const [projectFile, setProjectFile] = useState<File | null>(null)
@@ -476,24 +332,18 @@ export function DataImport() {
     <div className="grid gap-6">
       <h2 className="text-2xl font-bold">Импорт данных</h2>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="event">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="event">1. Событие</TabsTrigger>
-          <TabsTrigger value="projects">2. Проекты</TabsTrigger>
-          <TabsTrigger value="students">3. Студенты</TabsTrigger>
-          <TabsTrigger value="experts">4. Эксперты</TabsTrigger>
-          <TabsTrigger value="partners">5. Партнёры</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="projects">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="projects">Проекты</TabsTrigger>
+          <TabsTrigger value="students">Студенты</TabsTrigger>
+          <TabsTrigger value="experts">Эксперты</TabsTrigger>
+          <TabsTrigger value="partners">Партнёры</TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Event */}
-        <TabsContent value="event">
-          <EventTab event={currentEvent ?? null} onEventChange={handleEventChange} />
-        </TabsContent>
-
-        {/* Tab 2: Projects */}
+        {/* Tab 1: Projects */}
         <TabsContent value="projects">
           {!hasEvent ? (
-            <NoEventHint onGoToEvent={goToEventTab} />
+            <NoEventHint />
           ) : (
             <Card>
               <CardHeader>
@@ -594,7 +444,7 @@ export function DataImport() {
         {/* Tab 4: Experts */}
         <TabsContent value="experts">
           {!hasEvent ? (
-            <NoEventHint onGoToEvent={goToEventTab} />
+            <NoEventHint />
           ) : (
             <Card>
               <CardHeader>
@@ -661,7 +511,7 @@ export function DataImport() {
         {/* Tab 3: Students */}
         <TabsContent value="students">
           {!hasEvent ? (
-            <NoEventHint onGoToEvent={goToEventTab} />
+            <NoEventHint />
           ) : (
             <Card>
               <CardHeader>
@@ -727,7 +577,7 @@ export function DataImport() {
         {/* Tab 5: Partners */}
         <TabsContent value="partners">
           {!hasEvent ? (
-            <NoEventHint onGoToEvent={goToEventTab} />
+            <NoEventHint />
           ) : (
             <Card>
               <CardHeader>
