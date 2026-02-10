@@ -101,95 +101,58 @@ export function AppLayout() {
         </main>
       </div>
 
-      <footer className="border-t bg-background">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          {/* Header with logos */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-5 border-b">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="font-medium">Разработано в рамках</span>
-              <a
-                href="https://ai.itmo.ru"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
-                AI Talent Camp 2026
-              </a>
-            </div>
+      <footer className="border-t bg-background py-3 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
+            <span>Разработано в рамках</span>
             <a
-              href="https://itmo.ru"
+              href="https://ai.itmo.ru"
               target="_blank"
               rel="noopener noreferrer"
-              className="opacity-60 hover:opacity-100 transition-opacity"
+              className="text-primary hover:underline font-medium"
             >
-              <img
-                src="https://itmo.ru/file/pages/213/logo_na_plashke_russkiy_belyy.png"
-                alt="ИТМО"
-                className="h-7 w-auto dark:invert"
-              />
+              AI Talent Camp 2026
             </a>
-          </div>
-
-          {/* Team members */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-5">
+            <span className="hidden sm:inline">•</span>
             <a
               href="https://t.me/grbn_dima"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+              className="hover:text-foreground"
             >
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                ДГ
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">Дмитрий Горбунов</p>
-                <p className="text-xs text-muted-foreground truncate">Продукт, Backend, UX/UI, Frontend</p>
-              </div>
-              <svg className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-              </svg>
+              Дмитрий Горбунов
             </a>
-
+            <span>•</span>
             <a
               href="https://t.me/ivanich_spb"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+              className="hover:text-foreground"
             >
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                ИА
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">Иван Александров</p>
-                <p className="text-xs text-muted-foreground truncate">Backend, DevOps</p>
-              </div>
-              <svg className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-              </svg>
+              Иван Александров
             </a>
-
+            <span>•</span>
             <a
               href="https://t.me/agapeeva"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+              className="hover:text-foreground"
             >
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                АГ
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">Анастасия Гапеева</p>
-                <p className="text-xs text-muted-foreground truncate">UX/UI, Оценка качества</p>
-              </div>
-              <svg className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-              </svg>
+              Анастасия Гапеева
             </a>
           </div>
+          <a
+            href="https://itmo.ru"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-50 hover:opacity-100 transition-opacity flex-shrink-0"
+          >
+            <img
+              src="https://itmo.ru/file/pages/213/logo_na_plashke_russkiy_belyy.png"
+              alt="ИТМО"
+              className="h-5 w-auto dark:invert"
+            />
+          </a>
         </div>
       </footer>
     </div>
