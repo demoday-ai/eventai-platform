@@ -648,7 +648,42 @@ async def get_projects_list(
     current_clustering = await event_repo.get_approved_clustering(db, event_id)
 
     if not current_clustering:
-        return []
+        # No clustering yet - return all projects without rooms
+        query = select(Project).where(Project.event_id == event_id)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.where(
+                (Project.title.ilike(search_pattern)) | (Project.author.ilike(search_pattern))
+            )
+
+        result = await db.execute(query.order_by(Project.title))
+        projects = result.scalars().all()
+
+        projects_list = []
+        for project in projects:
+            tags_result = await db.execute(
+                select(Tag.name)
+                .select_from(ProjectTag)
+                .join(Tag, ProjectTag.tag_id == Tag.id)
+                .where(ProjectTag.project_id == project.id)
+            )
+            tags = [tag[0] for tag in tags_result.all()]
+
+            projects_list.append(
+                ProjectListItem(
+                    id=str(project.id),
+                    title=project.title,
+                    author=project.author or "Unknown",
+                    room_id="",
+                    room_name="Без зала",
+                    start_time="TBD",
+                    end_time="TBD",
+                    status="pending",
+                    tags=tags,
+                )
+            )
+        return projects_list
 
     query = (
         select(RoomProject, Project, Room, ScheduleSlot)
