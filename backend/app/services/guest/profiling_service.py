@@ -446,10 +446,19 @@ async def generate_recommendations(
     """
     import time
 
+    from sqlalchemy import func
+
     from app.services.core import embedding_service
 
     start = time.monotonic()
     event_id = profile.event_id
+
+    # 0. Early check: any projects loaded for this event?
+    project_count = await session.scalar(
+        select(func.count(Project.id)).where(Project.event_id == event_id)
+    )
+    if not project_count:
+        return {"no_projects": True, "total": 0, "must_visit": [], "if_time": []}
 
     # 1. Build profile text
     parts = []

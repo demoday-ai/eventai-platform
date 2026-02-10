@@ -90,7 +90,7 @@ describe("Messaging", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Создайте мероприятие")).toBeInTheDocument()
-      expect(screen.getByRole("link", { name: "Перейти к импорту" })).toHaveAttribute("href", "/import")
+      expect(screen.getByRole("link", { name: "Перейти к мероприятию" })).toHaveAttribute("href", "/event")
     })
   })
 

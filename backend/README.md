@@ -420,7 +420,6 @@ def my_task():
 | `escalations` | Interval | 12ч | Эскалация неответивших экспертов |
 | `participation_reminders` | Interval | 1ч | Напоминания по заявкам на участие |
 | `participation_escalations` | Interval | 1ч | Эскалация по заявкам → организаторам |
-| `participation_daily_summary` | Interval | 24ч | Дневная сводка по участию |
 | `eve_reminder_preview` | Cron | 17:00 MSK | Превью напоминаний организаторам (за день до DD) |
 | `eve_reminder_send` | Cron | 18:00 MSK | Отправка eve-of-DD напоминаний |
 | `pre_slot_reminders` | Interval | 5мин | Напоминания за ~1ч до слота |

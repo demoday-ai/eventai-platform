@@ -653,10 +653,18 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return VIEW_PROGRAM
 
     if not data or data.get("total", 0) == 0:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start.",
-        )
+        if data and data.get("no_projects"):
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Проекты ещё не загружены организаторами. "
+                     "Мы пришлём уведомление, когда программа будет готова!",
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Не удалось найти подходящие проекты. "
+                     "Попробуйте обновить профиль через /start.",
+            )
         return ConversationHandler.END
 
     context.user_data["recommendations"] = data
@@ -695,9 +703,16 @@ async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAUL
         return VIEW_PROGRAM
 
     if not data or data.get("total", 0) == 0:
-        await update.message.reply_text(
-            "Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start."
-        )
+        if data and data.get("no_projects"):
+            await update.message.reply_text(
+                "Проекты ещё не загружены организаторами. "
+                "Мы пришлём уведомление, когда программа будет готова!"
+            )
+        else:
+            await update.message.reply_text(
+                "Не удалось найти подходящие проекты. "
+                "Попробуйте обновить профиль через /start."
+            )
         return ConversationHandler.END
 
     context.user_data["recommendations"] = data

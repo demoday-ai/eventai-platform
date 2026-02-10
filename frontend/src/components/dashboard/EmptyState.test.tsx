@@ -18,14 +18,14 @@ describe("EmptyState", () => {
     expect(screen.getByText("Нет активного мероприятия")).toBeInTheDocument()
   })
 
-  it("renders import button", () => {
+  it("renders create event button", () => {
     render(<EmptyState />, { wrapper: BrowserRouter })
-    expect(screen.getByText("Перейти к импорту")).toBeInTheDocument()
+    expect(screen.getByText("Создать мероприятие")).toBeInTheDocument()
   })
 
-  it("navigates to /import on button click", () => {
+  it("navigates to /event on button click", () => {
     render(<EmptyState />, { wrapper: BrowserRouter })
-    fireEvent.click(screen.getByText("Перейти к импорту"))
-    expect(mockNavigate).toHaveBeenCalledWith("/import")
+    fireEvent.click(screen.getByText("Создать мероприятие"))
+    expect(mockNavigate).toHaveBeenCalledWith("/event")
   })
 })

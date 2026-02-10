@@ -14,8 +14,8 @@ export function EmptyState() {
         <p className="text-muted-foreground mb-6 max-w-md">
           Создайте мероприятие и загрузите данные, чтобы начать подготовку Demo Day.
         </p>
-        <Button onClick={() => navigate("/import")}>
-          Перейти к импорту
+        <Button onClick={() => navigate("/event")}>
+          Создать мероприятие
         </Button>
       </CardContent>
     </Card>

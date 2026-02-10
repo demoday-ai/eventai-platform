@@ -334,9 +334,9 @@ export function GuestList() {
         <PageEmptyState
           icon={Users}
           title="Создайте мероприятие"
-          description="Создайте мероприятие на странице Импорта, чтобы начать работу с аудиторией."
-          actionLabel="Перейти к импорту"
-          actionLink="/import"
+          description="Создайте мероприятие, чтобы начать работу с аудиторией."
+          actionLabel="Перейти к мероприятию"
+          actionLink="/event"
         />
       )}
       {isError && !isNoEventError(error) && <p className="text-sm text-red-500">Ошибка загрузки списка гостей</p>}

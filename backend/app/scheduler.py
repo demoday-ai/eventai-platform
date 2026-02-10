@@ -81,21 +81,6 @@ async def _participation_escalation_job(bot, session_factory):
         logger.exception("Participation escalation job failed")
 
 
-async def _daily_summary_job(bot, session_factory):
-    try:
-        from app.services.admin import participation_service
-        from app.services.core import user_service as us
-
-        async with session_factory() as session:
-            event = await us.get_current_event(session)
-            if event:
-                await participation_service.send_daily_summary(
-                    session, event, bot, settings.organizer_ids,
-                )
-                logger.info("Daily participation summary sent")
-    except Exception:
-        logger.exception("Daily summary job failed")
-
 
 async def _eve_reminder_preview_job(bot, session_factory):
     """Send preview to organizers at 17:00 MSK day before DD."""
@@ -245,10 +230,6 @@ def setup_scheduler(bot, session_factory) -> AsyncIOScheduler:
     scheduler.add_job(
         _participation_escalation_job, IntervalTrigger(hours=1),
         args=[bot, session_factory], id="participation_escalations",
-    )
-    scheduler.add_job(
-        _daily_summary_job, IntervalTrigger(hours=24),
-        args=[bot, session_factory], id="participation_daily_summary",
     )
     scheduler.add_job(
         _eve_reminder_preview_job,

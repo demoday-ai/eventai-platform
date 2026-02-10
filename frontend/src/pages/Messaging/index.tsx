@@ -32,9 +32,9 @@ export function Messaging() {
         <PageEmptyState
           icon={MessageSquare}
           title="Создайте мероприятие"
-          description="Создайте мероприятие на странице Импорта, чтобы начать рассылки."
-          actionLabel="Перейти к импорту"
-          actionLink="/import"
+          description="Создайте мероприятие, чтобы начать рассылки."
+          actionLabel="Перейти к мероприятию"
+          actionLink="/event"
         />
       </div>
     )

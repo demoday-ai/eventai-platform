@@ -453,36 +453,3 @@ async def get_unacknowledged_list(
             "escalated": r.escalated_at is not None,
         })
     return items
-
-
-async def build_daily_summary_text(
-    session: AsyncSession,
-    event_id: uuid.UUID,
-) -> str:
-    summary = await get_participation_summary(session, event_id)
-    lines = [
-        "📊 Сводка ознакомлений\n",
-        f"Всего: {summary['total']}",
-        f"Ознакомились: {summary['acknowledged']}",
-        f"Не ответили: {summary['pending']}",
-        f"Неподключённые: {summary['unregistered']}",
-        "\nПо залам:",
-    ]
-    for r in summary["by_room"]:
-        lines.append(f"  {r['room_name']}: {r['acknowledged']}/{r['total']}")
-    return "\n".join(lines)
-
-
-async def send_daily_summary(
-    session: AsyncSession,
-    event: Event,
-    bot: MessageSender,
-    organizer_ids: set[str],
-) -> bool:
-    text = await build_daily_summary_text(session, event.id)
-    for org_id in organizer_ids:
-        try:
-            await bot.send_message(chat_id=int(org_id), text=text)
-        except Exception as e:
-            logger.warning("Daily summary to %s failed: %s", org_id, e)
-    return True

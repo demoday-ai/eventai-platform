@@ -24,9 +24,9 @@ export function Reminders() {
         <PageEmptyState
           icon={Bell}
           title="Создайте мероприятие"
-          description="Создайте мероприятие на странице Импорта, чтобы настроить напоминания."
-          actionLabel="Перейти к импорту"
-          actionLink="/import"
+          description="Создайте мероприятие, чтобы настроить напоминания."
+          actionLabel="Перейти к мероприятию"
+          actionLink="/event"
         />
       </div>
     )
