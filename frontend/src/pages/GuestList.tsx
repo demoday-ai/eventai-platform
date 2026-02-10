@@ -54,13 +54,17 @@ function RoleBadge({ role, subtype }: { role: string; subtype: string | null }) 
 }
 
 function GuestDetailPanel({ guestId }: { guestId: string }) {
-  const { data, isLoading, isError } = useQuery<GuestDetailResponse>({
+  const { data, isLoading, isError, error } = useQuery<GuestDetailResponse>({
     queryKey: ["guest-detail", guestId],
     queryFn: () => getGuestDetail(guestId),
   })
 
   if (isLoading) return <div className="p-4 text-sm text-muted-foreground">Загрузка...</div>
-  if (isError) return <div className="p-4 text-sm text-red-500">Ошибка загрузки</div>
+  if (isError) {
+    const errorMessage = error instanceof Error ? error.message : "Неизвестная ошибка"
+    console.error("Guest detail error:", error)
+    return <div className="p-4 text-sm text-red-500">Ошибка загрузки: {errorMessage}</div>
+  }
   if (!data) return null
 
   const { profile, business_profile, recommendations, contact_requests } = data
@@ -190,6 +194,10 @@ export function GuestList() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+    },
+    onError: (error) => {
+      console.error("Export error:", error)
+      alert(`Ошибка экспорта: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`)
     },
   })
 

@@ -67,7 +67,7 @@ async def get_guest_detail(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.post("/admin/guests/upload", response_model=GuestUploadResult)
+@router.post("/guests/upload", response_model=GuestUploadResult)
 async def upload_guests(
     file: UploadFile = File(...),
     default_subtype: str = Query(...),
@@ -247,7 +247,7 @@ async def upload_guests(
     )
 
 
-@router.get("/admin/guests/export")
+@router.get("/guests/export")
 async def export_guests(
     search: str | None = None,
     subtype: str | None = None,
