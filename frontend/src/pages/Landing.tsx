@@ -1151,7 +1151,7 @@ export function Landing() {
             <FeatureCard
               icon={Brain}
               title="Q&A-помощник"
-              description="3-5 умных вопросов к проекту под профиль гостя. Готовый гайд для диалога."
+              description="3-5 релевантных вопросов к проекту под профиль гостя. Готовый гайд для диалога."
               index={1}
             />
             <FeatureCard
