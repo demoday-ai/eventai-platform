@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
-import { Users, UserSearch, Send, Save, X } from "lucide-react"
+import { Users, UserSearch, Send, Save, X, Download } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
@@ -11,6 +11,7 @@ import { APP_NAME } from "../lib/constants"
 import {
   getGuests,
   getGuestDetail,
+  exportGuests,
   isNoEventError,
   type GuestListItem,
   type GuestDetailResponse,
@@ -178,6 +179,20 @@ export function GuestList() {
     document.title = `${APP_NAME} - Гости и партнёры`
   }, [])
 
+  const exportMutation = useMutation({
+    mutationFn: exportGuests,
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `guests_${new Date().toISOString().split("T")[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    },
+  })
+
   const roleParam = roleFilter !== "all" ? roleFilter : ""
   const { data: guests, isLoading, isError, error } = useQuery({
     queryKey: ["guests", search, roleParam],
@@ -268,6 +283,17 @@ export function GuestList() {
                 Отправить сегменту
               </Button>
             </Link>
+          )}
+          {filteredGuests && filteredGuests.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportMutation.mutate({ search, role: roleFilter !== "all" ? roleFilter : undefined })}
+              disabled={exportMutation.isPending}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              {exportMutation.isPending ? "Экспорт..." : "Экспорт в Excel"}
+            </Button>
           )}
         </div>
       </div>

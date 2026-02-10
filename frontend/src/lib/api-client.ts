@@ -1409,6 +1409,14 @@ export const getGuestDetail = async (id: string): Promise<GuestDetailResponse> =
   return data
 }
 
+export const exportGuests = async (params?: { search?: string; subtype?: string; role?: string }): Promise<Blob> => {
+  const { data } = await apiClient.get<Blob>("/admin/guests/export", {
+    params,
+    responseType: "blob",
+  })
+  return data
+}
+
 // --- Messaging ---
 
 export const previewMessaging = async (

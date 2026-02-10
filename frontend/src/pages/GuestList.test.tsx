@@ -14,10 +14,12 @@ vi.mock("../hooks/useAuth", () => ({
 
 const mockGetGuests = vi.fn()
 const mockGetGuestDetail = vi.fn()
+const mockExportGuests = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   getGuests: (...args: unknown[]) => mockGetGuests(...args),
   getGuestDetail: (...args: unknown[]) => mockGetGuestDetail(...args),
+  exportGuests: (...args: unknown[]) => mockExportGuests(...args),
   isNoEventError: (error: unknown) => error instanceof Error && error.message.includes("no active event"),
 }))
 

@@ -3,9 +3,12 @@
 import csv
 import io
 import json
+from datetime import datetime
 from uuid import UUID, uuid4
 
+import openpyxl
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -241,4 +244,97 @@ async def upload_guests(
         duplicates=duplicates,
         errors=errors,
         duplicate_warning=dup_info["warning"] if dup_info else None,
+    )
+
+
+@router.get("/admin/guests/export")
+async def export_guests(
+    search: str | None = None,
+    subtype: str | None = None,
+    role: str | None = None,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Export guests to Excel file."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
+        )
+
+    guests = await admin_service.list_guests(db, event.id, search, subtype, role)
+
+    # Create Excel workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Гости"
+
+    # Header
+    ws.append([
+        "ФИО",
+        "Телеграм",
+        "Роль",
+        "Подтип",
+        "Интересы",
+        "Цели",
+        "Резюме профиля",
+        "Компания",
+        "Должность",
+        "Бизнес-цели",
+        "Статус партнёра",
+        "Рекомендаций",
+        "Запросов контактов",
+    ])
+
+    # Data rows
+    for guest in guests:
+        interests = ", ".join(guest.interests) if guest.interests else ""
+        goals = ", ".join(guest.goals) if guest.goals else ""
+        business_objectives = ", ".join(guest.business_objectives) if guest.business_objectives else ""
+
+        ws.append([
+            guest.full_name,
+            f"@{guest.username}" if guest.username else "",
+            guest.role,
+            guest.subtype or "",
+            interests,
+            goals,
+            guest.profile_summary or "",
+            guest.company or "",
+            guest.position or "",
+            business_objectives,
+            guest.partner_status or "",
+            guest.recommendation_count or 0,
+            guest.contact_request_count or 0,
+        ])
+
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"guests_{event.name.replace(' ', '_')}_{timestamp}.xlsx"
+
+    await audit_service.log_action(
+        db, current_user, "export_guests",
+        entity_type="guests",
+        details={"count": len(guests), "filters": {"search": search, "subtype": subtype, "role": role}},
+    )
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
