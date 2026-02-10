@@ -79,6 +79,35 @@ for row_idx in range(2, ws_checkpoint.max_row + 1):
 print(f"Extracted {len(projects)} projects")
 print(f"Extracted {len(students_set)} unique students")
 
+# Deduplicate and clean projects
+seen_titles = set()
+clean_projects = []
+
+for p in projects:
+    title = p['title']
+    desc = p['description']
+
+    # Skip мусор
+    if not title or str(title).strip() in ['-', '']:
+        continue
+    if not desc or len(str(desc)) < 10:
+        continue
+
+    # Skip дубли (case-insensitive)
+    title_key = str(title).strip().lower()
+    if title_key in seen_titles:
+        continue
+
+    seen_titles.add(title_key)
+    clean_projects.append(p)
+
+print(f"After dedup/cleanup: {len(clean_projects)} projects")
+
+# Clean students (keep all, names are anonymized as Студент_XXX)
+clean_students = students_set
+
+print(f"After cleanup: {len(clean_students)} students")
+
 # Create projects.xlsx
 wb_projects = openpyxl.Workbook()
 ws_projects = wb_projects.active
@@ -87,8 +116,8 @@ ws_projects.title = "Projects"
 # Header (Russian)
 ws_projects.append(['Название *', 'Описание *', 'Автор *', 'Телеграм', 'Тематики', 'Трек'])
 
-# Data (all projects)
-for p in projects:
+# Data (all clean projects)
+for p in clean_projects:
     ws_projects.append([
         p['title'],
         p['description'],
@@ -110,8 +139,8 @@ ws_students.title = "Students"
 # Header (Russian)
 ws_students.append(['Имя', 'Телеграм'])
 
-# Data (all students)
-for name, telegram in sorted(students_set):
+# Data (all clean students)
+for name, telegram in sorted(clean_students):
     ws_students.append([name, telegram])
 
 students_file = OUTPUT_DIR / "students.xlsx"

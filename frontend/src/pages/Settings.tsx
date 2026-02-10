@@ -244,9 +244,8 @@ function LlmConfigSection() {
             <Select
               value={currentModelData?.model_id}
               onValueChange={(value) => updateModelMutation.mutate(value)}
-              disabled={updateModelMutation.isPending}
             >
-              <SelectTrigger className="w-80">
+              <SelectTrigger className="w-80" disabled={updateModelMutation.isPending}>
                 <SelectValue placeholder="Выберите модель" />
               </SelectTrigger>
               <SelectContent>
