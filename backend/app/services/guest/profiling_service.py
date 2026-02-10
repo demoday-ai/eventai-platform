@@ -42,13 +42,13 @@ def _get_profile_agent_system() -> str:
 На Demo Day ~330 студенческих AI-проектов в нескольких залах. Стандартные теги:
 {tag_list}.
 
-{selected_tags_block}
+{{selected_tags_block}}
 
-{role_context_block}
+{{role_context_block}}
 
 ФОРМАТ ОТВЕТА --строго JSON:
 - Продолжить диалог: {{"action": "reply", "message": "..."}}
-- Зафиксировать профиль: {{"action": "profile", "interests": ["тег1", "тег2"], "goals": ["цель1"], "summary": "Краткое описание профиля на русском, 1-2 предложения"{partner_profile_fields}}}
+- Зафиксировать профиль: {{"action": "profile", "interests": ["тег1", "тег2"], "goals": ["цель1"], "summary": "Краткое описание профиля на русском, 1-2 предложения"{{partner_profile_fields}}}}
 
 interests --стандартные теги из списка выше. Если пользователь описал узкую задачу, добавь уточняющий подтег: например "CV (industrial quality inspection)" или "NLP (юридические документы)".
 

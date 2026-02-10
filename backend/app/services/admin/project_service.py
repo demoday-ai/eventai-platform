@@ -194,10 +194,9 @@ async def save_projects(
     rows: list[ProjectUploadRow],
     progress_callback: Callable | None = None,
 ) -> dict:
-    """Bulk insert projects with tag resolution. Returns stats dict."""
+    """Bulk insert projects with tag resolution (from file only). Returns stats dict."""
     tag_cache: dict[str, Tag] = {}
     loaded = 0
-    tags_generated = 0
     total = len(rows)
     candidate_tags = await _get_candidate_tags(session)
 
@@ -206,25 +205,13 @@ async def save_projects(
 
     for i, row in enumerate(rows):
         tag_names = _parse_tags(row.tags) if row.tags else []
-        generated_tags = False
 
         # Strict enforcement: only keep tags that exist in candidate set
         if tag_names:
             tag_names = [t for t in tag_names if t in candidate_tags_set]
 
-        if not tag_names:
-            generated_tags = True
-            raw_text = f"{row.title}\n{row.description}"
-            tag_names = _match_tags_heuristic(raw_text, candidate_tags)
-
-            if not tag_names and candidate_tags:
-                extracted = await profiling_service.extract_interests_from_text(
-                    raw_text=raw_text,
-                    available_tags=candidate_tags,
-                )
-                tag_names = extracted.get("tags", [])
-            if not tag_names:
-                tag_names = ["Other"]
+        # DO NOT auto-generate tags during upload
+        # Tags should be generated separately via generate_missing_tags()
 
         project = Project(
             event_id=event_id,
@@ -257,8 +244,6 @@ async def save_projects(
                 session.add(pt)
 
         loaded += 1
-        if generated_tags:
-            tags_generated += 1
 
         # Report progress every 10 items or at the end
         if progress_callback and (loaded % 10 == 0 or loaded == total):
@@ -266,11 +251,10 @@ async def save_projects(
                 "stage": "saving",
                 "current": loaded,
                 "total": total,
-                "tags_generated": tags_generated,
             })
 
     await session.commit()
-    return {"loaded": loaded, "tags_generated": tags_generated}
+    return {"loaded": loaded}
 
 
 async def get_projects(
@@ -314,3 +298,83 @@ async def delete_all_projects(session: AsyncSession, event_id: uuid.UUID) -> int
     )
     await session.commit()
     return count
+
+
+async def generate_missing_tags(
+    session: AsyncSession,
+    event_id: uuid.UUID,
+    progress_callback: Callable | None = None,
+) -> dict:
+    """Generate tags for projects without tags using heuristic + LLM. Returns stats."""
+    candidate_tags = await _get_candidate_tags(session)
+    if not candidate_tags:
+        return {"processed": 0, "tagged": 0, "message": "No tags available. Please add tags first."}
+
+    # Get projects without tags
+    stmt = (
+        select(Project)
+        .where(Project.event_id == event_id)
+        .outerjoin(Project.tags)
+        .group_by(Project.id)
+        .having(func.count(ProjectTag.id) == 0)
+    )
+    result = await session.execute(stmt)
+    projects_without_tags = list(result.scalars().all())
+
+    if not projects_without_tags:
+        return {"processed": 0, "tagged": 0, "message": "All projects already have tags"}
+
+    tag_cache: dict[str, Tag] = {}
+    processed = 0
+    tagged = 0
+    total = len(projects_without_tags)
+
+    for project in projects_without_tags:
+        raw_text = f"{project.title}\n{project.description}"
+        tag_names = _match_tags_heuristic(raw_text, candidate_tags)
+
+        # Fallback to LLM if heuristic didn't find anything
+        if not tag_names:
+            extracted = await profiling_service.extract_interests_from_text(
+                raw_text=raw_text,
+                available_tags=candidate_tags,
+            )
+            tag_names = extracted.get("tags", [])
+
+        # Fallback to "Other" if still nothing
+        if not tag_names:
+            tag_names = ["Other"]
+
+        # Assign tags to project
+        for tag_name in tag_names:
+            if not tag_name:
+                continue
+
+            if tag_name not in tag_cache:
+                existing = await session.scalar(
+                    select(Tag).where(Tag.name == tag_name)
+                )
+                if existing:
+                    tag_cache[tag_name] = existing
+                else:
+                    # Skip unknown tags (shouldn't happen if candidate_tags is correct)
+                    continue
+
+            pt = ProjectTag(project_id=project.id, tag_id=tag_cache[tag_name].id)
+            session.add(pt)
+
+        processed += 1
+        if tag_names:
+            tagged += 1
+
+        # Report progress
+        if progress_callback and (processed % 10 == 0 or processed == total):
+            progress_callback({
+                "stage": "tagging",
+                "current": processed,
+                "total": total,
+                "tagged": tagged,
+            })
+
+    await session.commit()
+    return {"processed": processed, "tagged": tagged}

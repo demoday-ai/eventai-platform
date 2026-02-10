@@ -867,6 +867,11 @@ export const getProjects = async (params?: ProjectsListParams): Promise<ProjectL
   return data
 }
 
+export const generateProjectTags = async (): Promise<{ processed: number; tagged: number; message?: string }> => {
+  const { data } = await apiClient.post("/admin/projects/generate-tags")
+  return data
+}
+
 // --- Project Upload ---
 
 export interface UploadJobResponse {

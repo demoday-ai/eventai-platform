@@ -1,23 +1,43 @@
 import { useState, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { FolderOpen } from "lucide-react"
-import { getProjects, getCoverage, isNoEventError, type ProjectListItem } from "../lib/api-client"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { FolderOpen, Sparkles } from "lucide-react"
+import { getProjects, getCoverage, generateProjectTags, isNoEventError, type ProjectListItem } from "../lib/api-client"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Label } from "../components/ui/label"
+import { Button } from "../components/ui/button"
 import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
 
 export function ProjectsList() {
+  const queryClient = useQueryClient()
   const [roomFilter, setRoomFilter] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
+  const [generateInfo, setGenerateInfo] = useState<string | null>(null)
 
   // Set page title
   useEffect(() => {
     document.title = `${APP_NAME} - Проекты`
   }, [])
+
+  const generateMutation = useMutation({
+    mutationFn: generateProjectTags,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] })
+      if (result.message) {
+        setGenerateInfo(result.message)
+      } else {
+        setGenerateInfo(`Обработано: ${result.processed}, теги присвоены: ${result.tagged}`)
+      }
+      setTimeout(() => setGenerateInfo(null), 5000)
+    },
+    onError: (err) => {
+      setGenerateInfo(err instanceof Error ? err.message : "Ошибка генерации тегов")
+      setTimeout(() => setGenerateInfo(null), 5000)
+    },
+  })
 
   // Build query params
   const params = {
@@ -113,7 +133,23 @@ export function ProjectsList() {
           {/* Filters */}
           <Card>
             <CardHeader>
-              <CardTitle>Проекты ({projects.length})</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Проекты ({projects.length})</CardTitle>
+                <div className="flex items-center gap-2">
+                  {generateInfo && (
+                    <p className="text-sm text-muted-foreground">{generateInfo}</p>
+                  )}
+                  <Button
+                    onClick={() => generateMutation.mutate()}
+                    disabled={generateMutation.isPending}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {generateMutation.isPending ? "Генерация..." : "Сгенерировать теги"}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
