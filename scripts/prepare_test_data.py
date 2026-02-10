@@ -87,8 +87,8 @@ ws_projects.title = "Projects"
 # Header (Russian)
 ws_projects.append(['Название *', 'Описание *', 'Автор *', 'Телеграм', 'Тематики', 'Трек'])
 
-# Data
-for p in projects[:50]:  # Limit to 50 for testing
+# Data (all projects)
+for p in projects:
     ws_projects.append([
         p['title'],
         p['description'],
@@ -110,8 +110,8 @@ ws_students.title = "Students"
 # Header (Russian)
 ws_students.append(['Имя', 'Телеграм'])
 
-# Data
-for name, telegram in sorted(students_set)[:100]:  # Limit to 100
+# Data (all students)
+for name, telegram in sorted(students_set):
     ws_students.append([name, telegram])
 
 students_file = OUTPUT_DIR / "students.xlsx"
