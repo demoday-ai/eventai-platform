@@ -176,7 +176,7 @@ ws_projects = wb_projects.active
 ws_projects.title = "Projects"
 
 # Header (Russian)
-ws_projects.append(['Название *', 'Описание *', 'Автор *', 'Телеграм', 'Тематики', 'Трек'])
+ws_projects.append(['Название *', 'Описание *', 'Автор *', 'Телеграм', 'Теги', 'Трек'])
 
 # Data (all clean projects)
 for p in clean_projects:
@@ -199,7 +199,7 @@ ws_students = wb_students.active
 ws_students.title = "Students"
 
 # Header (Russian)
-ws_students.append(['Имя', 'Телеграм'])
+ws_students.append(['ФИО', 'Телеграм'])
 
 # Data (all clean students)
 for name, telegram in sorted(clean_students):
@@ -215,7 +215,7 @@ ws_experts = wb_experts.active
 ws_experts.title = "Experts"
 
 # Header
-ws_experts.append(['Имя *', 'Телеграм', 'Описание', 'Тематики', 'Статус', 'Комментарии'])
+ws_experts.append(['ФИО *', 'Телеграм', 'Описание', 'Теги', 'Статус', 'Комментарии'])
 
 # Mock experts with relevant tags
 experts_data = [
@@ -244,7 +244,7 @@ ws_partners = wb_partners.active
 ws_partners.title = "Partners"
 
 # Header
-ws_partners.append(['Имя', 'Телеграм'])
+ws_partners.append(['ФИО', 'Телеграм'])
 
 # Mock partners
 partners_data = [
