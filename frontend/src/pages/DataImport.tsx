@@ -482,17 +482,13 @@ export function DataImport() {
                 <FileUpload
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setProjectFile}
-                  label="Перетащите CSV, JSON или XLSX файл с проектами"
+                  label="Перетащите файл с проектами или нажмите кнопку"
                   disabled={!!isProjectJobRunning}
+                  formats={["XLSX", "CSV", "JSON"]}
+                  requiredColumns={["title", "description", "author"]}
+                  optionalColumns={["telegram_contact", "tags"]}
+                  templateUrl="/templates/projects_template.csv"
                 />
-                <details className="text-xs text-muted-foreground">
-                  <summary className="cursor-pointer hover:text-foreground">Формат файла</summary>
-                  <div className="mt-1 pl-3 space-y-1">
-                    <p><strong>Обязательные поля:</strong> <code>title</code> (мин. 3 символа), <code>description</code> (макс. 2000), <code>author</code></p>
-                    <p><strong>Необязательные:</strong> <code>telegram_contact</code>, <code>tags</code></p>
-                    <p><strong>Алиасы:</strong> <code>название</code>/<code>проект</code> = title, <code>описание</code> = description, <code>автор</code>/<code>команда</code> = author, <code>теги</code>/<code>технологии</code> = tags</p>
-                  </div>
-                </details>
 
                 <Button
                   onClick={handleProjectUpload}
@@ -558,15 +554,12 @@ export function DataImport() {
                 <FileUpload
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setExpertFile}
-                  label="Перетащите CSV, JSON или XLSX файл с экспертами"
+                  label="Перетащите файл с экспертами или нажмите кнопку"
+                  formats={["XLSX", "CSV", "JSON"]}
+                  requiredColumns={["id", "name"]}
+                  optionalColumns={["telegram", "position", "expertise_tags"]}
+                  templateUrl="/templates/experts_template.csv"
                 />
-                <details className="text-xs text-muted-foreground">
-                  <summary className="cursor-pointer hover:text-foreground">Формат файла</summary>
-                  <div className="mt-1 pl-3 space-y-1">
-                    <p><strong>Обязательные поля:</strong> <code>id</code>, <code>name</code></p>
-                    <p><strong>Необязательные:</strong> <code>telegram</code>, <code>position</code>, <code>expertise_tags</code></p>
-                  </div>
-                </details>
 
                 <Button
                   onClick={handleExpertUpload}
@@ -649,15 +642,12 @@ export function DataImport() {
                 <FileUpload
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setGuestFile}
-                  label="Перетащите CSV, JSON или XLSX файл с гостями"
+                  label="Перетащите файл с гостями или нажмите кнопку"
+                  formats={["XLSX", "CSV", "JSON"]}
+                  requiredColumns={["name"]}
+                  optionalColumns={["telegram"]}
+                  templateUrl="/templates/guests_template.csv"
                 />
-                <details className="text-xs text-muted-foreground">
-                  <summary className="cursor-pointer hover:text-foreground">Формат файла</summary>
-                  <div className="mt-1 pl-3 space-y-1">
-                    <p><strong>Обязательные поля:</strong> <code>name</code></p>
-                    <p><strong>Необязательные:</strong> <code>telegram</code></p>
-                  </div>
-                </details>
 
                 <Button
                   onClick={handleGuestUpload}

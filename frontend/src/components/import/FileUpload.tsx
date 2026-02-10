@@ -1,16 +1,33 @@
 import { useCallback, useState, useRef } from "react"
 import { Card, CardContent } from "../ui/card"
 import { Button } from "../ui/button"
-import { Upload } from "lucide-react"
+import { Upload, Download, FileSpreadsheet } from "lucide-react"
 
 interface FileUploadProps {
   accept: string
   onFileSelect: (file: File) => void
   label: string
   disabled?: boolean
+  /** Accepted formats displayed as badges, e.g. ["XLSX", "CSV", "JSON"] */
+  formats?: string[]
+  /** Required column names */
+  requiredColumns?: string[]
+  /** Optional column names */
+  optionalColumns?: string[]
+  /** URL to download a template file */
+  templateUrl?: string
 }
 
-export function FileUpload({ accept, onFileSelect, label, disabled = false }: FileUploadProps) {
+export function FileUpload({
+  accept,
+  onFileSelect,
+  label,
+  disabled = false,
+  formats,
+  requiredColumns,
+  optionalColumns,
+  templateUrl,
+}: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -72,14 +89,72 @@ export function FileUpload({ accept, onFileSelect, label, disabled = false }: Fi
       <CardContent className="flex flex-col items-center justify-center py-8 gap-3">
         <Upload className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{label}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          disabled={disabled}
-        >
-          Выбрать файл
-        </Button>
+
+        {formats && formats.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex gap-1">
+              {formats.map((fmt) => (
+                <span
+                  key={fmt}
+                  className="px-1.5 py-0.5 text-[11px] font-medium rounded bg-muted text-muted-foreground"
+                >
+                  {fmt}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(requiredColumns || optionalColumns) && (
+          <div className="text-center text-xs text-muted-foreground space-y-0.5">
+            {requiredColumns && requiredColumns.length > 0 && (
+              <p>
+                <span className="font-medium text-foreground">Обязательные:</span>{" "}
+                {requiredColumns.map((col, i) => (
+                  <span key={col}>
+                    <code className="px-1 py-0.5 bg-muted rounded text-[11px]">{col}</code>
+                    {i < requiredColumns.length - 1 && " "}
+                  </span>
+                ))}
+              </p>
+            )}
+            {optionalColumns && optionalColumns.length > 0 && (
+              <p>
+                <span className="font-medium text-foreground">Опционально:</span>{" "}
+                {optionalColumns.map((col, i) => (
+                  <span key={col}>
+                    <code className="px-1 py-0.5 bg-muted rounded text-[11px]">{col}</code>
+                    {i < optionalColumns.length - 1 && " "}
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={disabled}
+          >
+            Выбрать файл
+          </Button>
+          {templateUrl && (
+            <a
+              href={templateUrl}
+              download
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Скачать шаблон
+            </a>
+          )}
+        </div>
+
         <input
           ref={inputRef}
           type="file"
