@@ -213,17 +213,34 @@ async def save_projects(
         # DO NOT auto-generate tags during upload
         # Tags should be generated separately via generate_missing_tags()
 
-        project = Project(
-            event_id=event_id,
-            title=row.title,
-            description=row.description,
-            author=row.author,
-            telegram_contact=row.telegram_contact,
-            track=row.track,
-            source="upload",
-        )
-        session.add(project)
-        await session.flush()
+        try:
+            project = Project(
+                event_id=event_id,
+                title=row.title,
+                description=row.description,
+                author=row.author,
+                telegram_contact=row.telegram_contact,
+                track=row.track,
+                source="upload",
+            )
+            session.add(project)
+            await session.flush()
+        except Exception as e:
+            # If track column doesn't exist (migration not applied), retry without it
+            if "track" in str(e).lower() and "does not exist" in str(e).lower():
+                await session.rollback()
+                project = Project(
+                    event_id=event_id,
+                    title=row.title,
+                    description=row.description,
+                    author=row.author,
+                    telegram_contact=row.telegram_contact,
+                    source="upload",
+                )
+                session.add(project)
+                await session.flush()
+            else:
+                raise
 
         if tag_names:
             for tag_name in tag_names:
