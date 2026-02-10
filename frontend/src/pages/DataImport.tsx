@@ -487,7 +487,7 @@ export function DataImport() {
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["title", "description", "author"]}
                   optionalColumns={["telegram_contact", "tags"]}
-                  templateUrl="/templates/projects_template.csv"
+                  templateUrl="/templates/projects_template.xlsx"
                 />
 
                 <Button
@@ -558,7 +558,7 @@ export function DataImport() {
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["id", "name"]}
                   optionalColumns={["telegram", "position", "expertise_tags"]}
-                  templateUrl="/templates/experts_template.csv"
+                  templateUrl="/templates/experts_template.xlsx"
                 />
 
                 <Button
@@ -646,7 +646,7 @@ export function DataImport() {
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["name"]}
                   optionalColumns={["telegram"]}
-                  templateUrl="/templates/guests_template.csv"
+                  templateUrl="/templates/guests_template.xlsx"
                 />
 
                 <Button
