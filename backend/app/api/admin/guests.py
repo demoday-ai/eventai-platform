@@ -288,24 +288,21 @@ async def export_guests(
 
     # Data rows
     for guest in guests:
-        interests = ", ".join(guest.interests) if guest.interests else ""
-        goals = ", ".join(guest.goals) if guest.goals else ""
-        business_objectives = ", ".join(guest.business_objectives) if guest.business_objectives else ""
-
+        # GuestListItem doesn't have interests/goals/etc - only tags and keywords
         ws.append([
             guest.full_name,
             f"@{guest.username}" if guest.username else "",
             guest.role,
-            guest.subtype or "",
-            interests,
-            goals,
+            guest.guest_subtype or "",
+            ", ".join(guest.tags) if guest.tags else "",
+            ", ".join(guest.keywords) if guest.keywords else "",
             guest.profile_summary or "",
-            guest.company or "",
-            guest.position or "",
-            business_objectives,
-            guest.partner_status or "",
-            guest.recommendation_count or 0,
-            guest.contact_request_count or 0,
+            "",  # company - not in GuestListItem
+            "",  # position - not in GuestListItem
+            "",  # business_objectives - not in GuestListItem
+            "",  # partner_status - not in GuestListItem
+            guest.recommendations_count or 0,
+            guest.contact_requests_count or 0,
         ])
 
     # Auto-adjust column widths

@@ -100,6 +100,19 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <footer className="border-t bg-background py-4 px-6 text-sm text-muted-foreground">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="text-center md:text-left">
+            <p className="font-medium">Разработано на интенсиве AI Talent Camp 2026</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 text-xs">
+            <span><strong>Дмитрий Горбунов</strong> (@grbn_dima) — Продукт, Backend, UX/UI, Frontend</span>
+            <span><strong>Иван Александров</strong> (@ivanich_spb) — Backend, DevOps</span>
+            <span><strong>Анастасия Гапеева</strong> (@agapeeva) — UX/UI, Оценка качества</span>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
