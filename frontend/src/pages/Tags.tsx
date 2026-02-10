@@ -167,13 +167,13 @@ export function Tags() {
           {tags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 bg-muted text-sm rounded-full">
-                  {tag}
+                <span key={tag} className="inline-flex items-center justify-between gap-1 px-3 py-1 bg-muted text-sm rounded-full w-32">
+                  <span>{tag}</span>
                   <button
                     type="button"
                     onClick={() => deleteMutation.mutate(tag)}
                     disabled={deleteMutation.isPending}
-                    className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                    className="text-muted-foreground hover:text-destructive transition-colors"
                     title="Удалить тег"
                   >
                     x
