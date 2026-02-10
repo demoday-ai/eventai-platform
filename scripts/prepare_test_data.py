@@ -3,12 +3,70 @@
 Prepare test data files from checkpoint12_anon.xlsx in the correct format for import.
 """
 import openpyxl
+import json
+import re
 from pathlib import Path
 
 # Paths
 DATA_DIR = Path(__file__).parent.parent / "data" / "test"
 OUTPUT_DIR = Path(__file__).parent.parent / "data" / "import_ready"
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Tag normalization: Russian/long names -> short English
+TAG_NORMALIZE = {
+    'EdTech': 'EdTech',
+    'NLP': 'NLP',
+    'CV': 'CV',
+    'Computer Vision': 'CV',
+    'ML': 'ML',
+    'Machine Learning': 'ML',
+    'DL': 'DL',
+    'Deep Learning': 'DL',
+    'LLM': 'LLM',
+    'RAG': 'RAG',
+    'Автономные агенты': 'Agents',
+    'Агентные системы': 'Agents',
+    'Agents': 'Agents',
+    'Recsys': 'Recsys',
+    'предиктивная аналитика': 'Recsys',
+    'FinTech': 'FinTech',
+    'финтех': 'FinTech',
+    'ML в Fintech': 'FinTech',
+    'MedTech': 'MedTech',
+    'AgriTech': 'AgriTech',
+    'агротех': 'AgriTech',
+    'Security': 'Security',
+    'MLOps': 'MLOps',
+    'ASR': 'ASR',
+    'Распознавание речи': 'ASR',
+    'Speech Recognition': 'ASR',
+    'TTS': 'TTS',
+    'Синтез речи': 'TTS',
+    'RL': 'RL',
+    'Обучение с подкреплением': 'RL',
+    'TimeSeries': 'TimeSeries',
+    'Временные ряды': 'TimeSeries',
+    'Backend': 'Backend',
+    'ML в промышленности': 'Industrial',
+    'DL в промышленности': 'Industrial',
+}
+
+# Load project tags from schedule if available
+project_tags_map = {}
+tags_file = Path('/tmp/project_tags.json')
+if tags_file.exists():
+    with open(tags_file, 'r', encoding='utf-8') as f:
+        raw_map = json.load(f)
+        # Normalize tags
+        for project_title, tags_list in raw_map.items():
+            normalized_tags = []
+            for tag in tags_list:
+                normalized = TAG_NORMALIZE.get(tag.strip())
+                if normalized and normalized not in normalized_tags:
+                    normalized_tags.append(normalized)
+            if normalized_tags:
+                project_tags_map[project_title] = ', '.join(normalized_tags)
+    print(f"Loaded tags for {len(project_tags_map)} projects from schedule")
 
 # Read checkpoint12
 checkpoint_file = DATA_DIR / "checkpoint12_anon.xlsx"
@@ -52,8 +110,12 @@ for row_idx in range(2, ws_checkpoint.max_row + 1):
     }
     track_normalized = track_map.get(track, None) if track else None
 
-    # Tags from track if available
-    tags = track if track else ""
+    # Try to match tags from schedule by project title
+    tags = ""
+    if project_tags_map:
+        # Normalize title for matching
+        title_normalized = re.sub(r'\s+', ' ', title.strip())
+        tags = project_tags_map.get(title_normalized, "")
 
     projects.append({
         'title': title,

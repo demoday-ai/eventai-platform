@@ -22,9 +22,27 @@ TAG_SUGGEST_SYSTEM = (
 
 
 DEFAULT_TAGS = [
-    "EdTech", "MedTech", "Wellness", "Agents", "NLP", "RAG", "LLM",
-    "Retail", "FinTech", "DevTools", "Analytics", "Media", "CV", "HR",
-    "Security", "Industrial",
+    "NLP",
+    "CV",
+    "ML",
+    "DL",
+    "LLM",
+    "RAG",
+    "Agents",
+    "Recsys",
+    "EdTech",
+    "FinTech",
+    "MedTech",
+    "AgriTech",
+    "Security",
+    "MLOps",
+    "ASR",
+    "TTS",
+    "RL",
+    "TimeSeries",
+    "Backend",
+    "Industrial",
+    "Other",
 ]
 
 
