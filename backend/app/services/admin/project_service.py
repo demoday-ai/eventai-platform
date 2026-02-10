@@ -67,6 +67,7 @@ COLUMN_ALIASES = {
     "author": ["team_members", "team_name", "team", "автор", "команда"],
     "telegram_contact": ["telegram", "tg", "contact", "контакт", "team_id"],
     "tags": ["tech_stack", "stack", "теги", "технологии"],
+    "track": ["трек", "track_type", "тип_трека"],
 }
 
 
@@ -172,12 +173,16 @@ def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowErr
             tags_str = ", ".join(raw_tags)
         else:
             tags_str = raw_tags.strip()
+
+        track = (row.get("track") or "").strip() or None
+
         valid.append(ProjectUploadRow(
             title=title,
             description=description[:2000],
             tags=tags_str,
             author=author,
             telegram_contact=tg,
+            track=track,
         ))
 
     return valid, errors, duplicate_titles
@@ -227,6 +232,7 @@ async def save_projects(
             description=row.description,
             author=row.author,
             telegram_contact=row.telegram_contact,
+            track=row.track,
             source="upload",
         )
         session.add(project)

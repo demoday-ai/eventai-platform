@@ -191,6 +191,11 @@ export function ProjectsList() {
                         <div className="flex-1">
                           <p className="font-medium">{project.title}</p>
                           <p className="text-sm text-muted-foreground mt-1">{project.author}</p>
+                          {project.track && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              <span className="font-medium">Трек:</span> {project.track}
+                            </p>
+                          )}
                           <p className="text-sm text-muted-foreground mt-1">{project.room_name}</p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {formatTime(project.start_time)} - {formatTime(project.end_time)}

@@ -178,6 +178,7 @@ export interface ProjectListItem {
   id: string
   title: string
   author: string
+  track: string | null
   room_id: string
   room_name: string
   start_time: string

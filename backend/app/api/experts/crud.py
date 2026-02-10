@@ -161,10 +161,11 @@ async def upload_experts(
             telegram = telegram[1:]
 
         tags_list = item.get("expertise_tags", [])
-        if tags_list:
-            with_tags += 1
-        else:
-            without_tags += 1
+        if not tags_list:
+            errors.append({"row": i + 2, "field": "expertise_tags", "message": "Expertise tags are required"})
+            continue
+
+        with_tags += 1
 
         expert = Expert(
             seed_id=seed_id,

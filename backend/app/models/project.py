@@ -20,6 +20,7 @@ class Project(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     author: Mapped[str] = mapped_column(String(300), nullable=False)
     telegram_contact: Mapped[str] = mapped_column(String(100), nullable=False)
+    track: Mapped[str | None] = mapped_column(String(50), nullable=True)
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="upload")
 
     # EPIC-008: Additional fields for expert briefing

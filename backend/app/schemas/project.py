@@ -1,6 +1,9 @@
 import uuid
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+TrackType = Literal["Индустриальный", "Стартап", "Образовательный", "Научный"]
 
 
 class ProjectUploadRow(BaseModel):
@@ -9,6 +12,34 @@ class ProjectUploadRow(BaseModel):
     tags: str  # comma-separated
     author: str
     telegram_contact: str
+    track: TrackType | None = None
+
+    @field_validator("track", mode="before")
+    @classmethod
+    def validate_track(cls, v):
+        if v is None or v == "":
+            return None
+        # Normalize to lowercase for matching
+        v_lower = str(v).strip().lower()
+        # Map all variants to canonical Russian names with capital letter
+        track_map = {
+            "industrial": "Индустриальный",
+            "индустриальный": "Индустриальный",
+            "индустриал": "Индустриальный",
+            "startup": "Стартап",
+            "стартап": "Стартап",
+            "educational": "Образовательный",
+            "образовательный": "Образовательный",
+            "образование": "Образовательный",
+            "edtech": "Образовательный",
+            "research": "Научный",
+            "научный": "Научный",
+            "наука": "Научный",
+        }
+        normalized = track_map.get(v_lower)
+        if normalized is None:
+            raise ValueError(f"Track must be one of: Индустриальный, Стартап, Образовательный, Научный. Got: {v}")
+        return normalized
 
 
 class RowError(BaseModel):
@@ -39,6 +70,7 @@ class ProjectResponse(BaseModel):
     tags: list[str]
     author: str
     telegram_contact: str
+    track: str | None = None
     source: str
     room: "RoomSummary | None" = None
 
