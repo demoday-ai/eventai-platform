@@ -152,7 +152,6 @@ async def upload_projects(
                     entity_type="projects",
                     details={
                         "loaded": stats["loaded"],
-                        "tags_generated": stats["tags_generated"],
                         "errors": len(errors),
                         "duplicates": len(duplicate_titles),
                         "file_hash": file_hash,
@@ -161,7 +160,6 @@ async def upload_projects(
 
             return {
                 "loaded": stats["loaded"],
-                "tags_generated": stats["tags_generated"],
                 "errors": len(errors),
                 "duplicates": len(duplicate_titles),
                 "error_details": [e.model_dump() for e in errors[:50]],
