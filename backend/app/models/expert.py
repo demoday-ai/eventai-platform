@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,9 +19,10 @@ class Expert(Base):
     seed_id: Mapped[str] = mapped_column(String(20), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     telegram_username: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    position: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    position: Mapped[str | None] = mapped_column(String(500), nullable=True)
     inviter: Mapped[str | None] = mapped_column(String(100), nullable=True)
     dd_status_seed: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    dd_comments: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

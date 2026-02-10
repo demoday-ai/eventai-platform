@@ -87,14 +87,20 @@ async def upload_experts(
     def _parse_expert_row(row: dict) -> dict:
         """Convert a raw row dict into the expected expert format."""
         item = {
-            "id": row.get("id", ""),
-            "name": row.get("name", ""),
-            "telegram": row.get("telegram", ""),
-            "position": row.get("position", ""),
-            "inviter": row.get("inviter", ""),
-            "dd_status": row.get("dd_status", ""),
+            "id": row.get("id", "") or row.get("ID", "") or row.get("ид", ""),
+            "name": row.get("name", "") or row.get("имя", "") or row.get("фио", ""),
+            "telegram": row.get("telegram", "") or row.get("телеграм", ""),
+            "position": row.get("position", "") or row.get("описание", "") or row.get("должность", ""),
+            "inviter": row.get("inviter", "") or row.get("пригласивший", ""),
+            "dd_status": row.get("dd_status", "") or row.get("статус", "") or row.get("придет", ""),
+            "dd_comments": row.get("dd_comments", "") or row.get("комментарии", "") or row.get("заметки", ""),
         }
-        tags_str = row.get("expertise_tags", "") or row.get("tags", "")
+        tags_str = (
+            row.get("expertise_tags", "")
+            or row.get("tags", "")
+            or row.get("теги", "")
+            or row.get("тематики", "")
+        )
         if tags_str:
             item["expertise_tags"] = [t.strip() for t in tags_str.split(",") if t.strip()]
         else:
@@ -161,11 +167,10 @@ async def upload_experts(
             telegram = telegram[1:]
 
         tags_list = item.get("expertise_tags", [])
-        if not tags_list:
-            errors.append({"row": i + 2, "field": "expertise_tags", "message": "Expertise tags are required"})
-            continue
-
-        with_tags += 1
+        if tags_list:
+            with_tags += 1
+        else:
+            without_tags += 1
 
         expert = Expert(
             seed_id=seed_id,
@@ -174,6 +179,7 @@ async def upload_experts(
             position=item.get("position", "") or None,
             inviter=item.get("inviter") or None,
             dd_status_seed=item.get("dd_status", "") or None,
+            dd_comments=item.get("dd_comments", "") or None,
             event_id=event.id,
         )
         session.add(expert)

@@ -84,8 +84,8 @@ wb_projects = openpyxl.Workbook()
 ws_projects = wb_projects.active
 ws_projects.title = "Projects"
 
-# Header
-ws_projects.append(['title *', 'description *', 'author *', 'telegram_contact', 'tags', 'track'])
+# Header (Russian)
+ws_projects.append(['Название *', 'Описание *', 'Автор *', 'Телеграм', 'Тематики', 'Трек'])
 
 # Data
 for p in projects[:50]:  # Limit to 50 for testing
@@ -107,8 +107,8 @@ wb_students = openpyxl.Workbook()
 ws_students = wb_students.active
 ws_students.title = "Students"
 
-# Header
-ws_students.append(['name', 'telegram'])
+# Header (Russian)
+ws_students.append(['Имя', 'Телеграм'])
 
 # Data
 for name, telegram in sorted(students_set)[:100]:  # Limit to 100
@@ -124,20 +124,20 @@ ws_experts = wb_experts.active
 ws_experts.title = "Experts"
 
 # Header
-ws_experts.append(['name *', 'telegram', 'position', 'expertise_tags'])
+ws_experts.append(['Имя *', 'Телеграм', 'Описание', 'Тематики', 'Статус', 'Комментарии'])
 
 # Mock experts with relevant tags
 experts_data = [
-    ('Алексей Иванов', '@expert_ai', 'Senior ML Engineer', 'NLP, CV, ML'),
-    ('Мария Петрова', '@expert_nlp', 'Head of AI Research', 'NLP, Research, Education'),
-    ('Дмитрий Сидоров', '@expert_cv', 'Computer Vision Lead', 'CV, Deep Learning'),
-    ('Анна Козлова', '@expert_fintech', 'FinTech Product Manager', 'Finance, Product'),
-    ('Сергей Морозов', '@expert_edu', 'EdTech Founder', 'Education, Startups'),
-    ('Елена Новикова', '@expert_ml', 'ML Team Lead', 'ML, Data Science'),
-    ('Игорь Волков', '@expert_web', 'Senior Frontend Dev', 'Web, UI/UX'),
-    ('Ольга Смирнова', '@expert_mobile', 'Mobile Dev Lead', 'Mobile, iOS, Android'),
-    ('Павел Федоров', '@expert_backend', 'Backend Architect', 'Backend, Databases, API'),
-    ('Наталья Егорова', '@expert_ds', 'Data Scientist', 'Data Science, Analytics, ML'),
+    ('Алексей Иванов', '@expert_ai', 'Senior ML Engineer в TechCorp, 8 лет опыта', 'NLP, CV, ML', 'Подтвердил', 'Готов взять NLP и CV проекты'),
+    ('Мария Петрова', '@expert_nlp', 'Head of AI Research в UniversityLab', 'NLP, Research, Education', 'Подтвердил', ''),
+    ('Дмитрий Сидоров', '@expert_cv', 'Computer Vision Lead, специализация медицина', 'CV, Deep Learning', 'Подтвердил', 'Интересуют прикладные CV проекты'),
+    ('Анна Козлова', '@expert_fintech', 'FinTech Product Manager в банке', 'Finance, Product', 'Уточняется', 'Написала, что постарается приехать'),
+    ('Сергей Морозов', '@expert_edu', 'EdTech Founder, бывший преподаватель ВШЭ', 'Education, Startups', 'Подтвердил', ''),
+    ('Елена Новикова', '@expert_ml', 'ML Team Lead в e-commerce', 'ML, Data Science', 'Подтвердил', 'Recsys, fintech могу взять'),
+    ('Игорь Волков', '@expert_web', 'Senior Frontend Dev, React/Vue эксперт', 'Web, UI/UX', 'Не ответил', ''),
+    ('Ольга Смирнова', '@expert_mobile', 'Mobile Dev Lead в стартапе', 'Mobile, iOS, Android', 'Подтвердил', ''),
+    ('Павел Федоров', '@expert_backend', 'Backend Architect, highload системы', 'Backend, Databases, API', 'Подтвердил', 'Могу помочь с архитектурой'),
+    ('Наталья Егорова', '@expert_ds', 'Data Scientist в консалтинге', 'Data Science, Analytics, ML', 'Отказался', 'Занята в этот день'),
 ]
 
 for expert in experts_data:
@@ -153,7 +153,7 @@ ws_partners = wb_partners.active
 ws_partners.title = "Partners"
 
 # Header
-ws_partners.append(['name', 'telegram'])
+ws_partners.append(['Имя', 'Телеграм'])
 
 # Mock partners
 partners_data = [
