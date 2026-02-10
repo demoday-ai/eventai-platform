@@ -9,6 +9,7 @@ import {
   getCoverageGaps,
   getEscalations,
   resolveEscalation,
+  assignExpert,
 } from "../lib/api-client"
 
 const TABS = ["Обзор", "Пробелы", "Эскалации"] as const
@@ -165,7 +166,7 @@ export function CoverageTab() {
                 <p className="text-muted-foreground">Пробелов не обнаружено</p>
               ) : (
                 gaps.gaps.map((gap, idx) => (
-                  <GapCard key={`${gap.room_id}-${gap.uncovered_tag}-${idx}`} gap={gap} />
+                  <GapCard key={`${gap.room_id}-${gap.uncovered_tag}-${idx}`} gap={gap} queryClient={queryClient} />
                 ))
               )}
             </>
@@ -250,8 +251,17 @@ export function CoverageTab() {
   )
 }
 
-function GapCard({ gap }: { gap: import("../lib/api-client").CoverageGap }) {
+function GapCard({ gap, queryClient }: { gap: import("../lib/api-client").CoverageGap; queryClient: ReturnType<typeof useQueryClient> }) {
   const [expanded, setExpanded] = useState(false)
+
+  const assignMutation = useMutation({
+    mutationFn: ({ expertId, roomId }: { expertId: string; roomId: string }) =>
+      assignExpert(expertId, roomId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coverageGaps"] })
+      queryClient.invalidateQueries({ queryKey: ["coverageSummary"] })
+    },
+  })
 
   return (
     <Card>
@@ -283,6 +293,14 @@ function GapCard({ gap }: { gap: import("../lib/api-client").CoverageGap }) {
                     (залы: {c.current_rooms.join(", ")})
                   </span>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={assignMutation.isPending}
+                  onClick={() => assignMutation.mutate({ expertId: c.expert_id, roomId: gap.room_id })}
+                >
+                  Назначить
+                </Button>
               </div>
             ))}
           </div>

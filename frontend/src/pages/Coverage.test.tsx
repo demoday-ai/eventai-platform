@@ -16,12 +16,14 @@ const mockGetCoverageSummary = vi.fn()
 const mockGetCoverageGaps = vi.fn()
 const mockGetEscalations = vi.fn()
 const mockResolveEscalation = vi.fn()
+const mockAssignExpert = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   getCoverageSummary: (...args: unknown[]) => mockGetCoverageSummary(...args),
   getCoverageGaps: (...args: unknown[]) => mockGetCoverageGaps(...args),
   getEscalations: (...args: unknown[]) => mockGetEscalations(...args),
   resolveEscalation: (...args: unknown[]) => mockResolveEscalation(...args),
+  assignExpert: (...args: unknown[]) => mockAssignExpert(...args),
 }))
 
 const createWrapper = () => {
@@ -156,5 +158,43 @@ describe("CoverageTab", () => {
     await waitFor(() => {
       expect(screen.getByText("Детали")).toBeInTheDocument()
     })
+  })
+
+  it("assigns expert from gap candidates", async () => {
+    const user = userEvent.setup()
+    mockAssignExpert.mockResolvedValue({ status: "ok" })
+    mockGetCoverageGaps.mockResolvedValue({
+      total_gaps: 1,
+      gaps: [
+        {
+          room_id: "r1",
+          room_name: "Зал 1",
+          uncovered_tag: "CV",
+          project_count_with_tag: 5,
+          candidates: [{ expert_id: "e1", name: "Иван", matching_tags: ["CV"], current_rooms: [] }],
+        },
+      ],
+    })
+
+    render(<CoverageTab />, { wrapper: createWrapper() })
+
+    // Switch to Пробелы tab
+    await user.click(screen.getByText("Пробелы"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Зал 1")).toBeInTheDocument()
+    })
+
+    // Expand candidates
+    await user.click(screen.getByText("Кандидаты (1)"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Иван")).toBeInTheDocument()
+    })
+
+    // Click assign button
+    await user.click(screen.getByText("Назначить"))
+
+    expect(mockAssignExpert).toHaveBeenCalledWith("e1", "r1")
   })
 })
