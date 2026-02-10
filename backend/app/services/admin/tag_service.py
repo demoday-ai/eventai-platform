@@ -11,39 +11,43 @@ from app.repos import tag_repo
 
 logger = logging.getLogger(__name__)
 
+# Single source of truth for tags and their descriptions
+DEFAULT_TAGS = {
+    "NLP": "Natural Language Processing (чат-боты, RAG, суммаризация)",
+    "CV": "Computer Vision (детекция, сегментация, генерация картинок)",
+    "ML": "Machine Learning (классическое машинное обучение)",
+    "DL": "Deep Learning (глубокое обучение)",
+    "LLM": "Large Language Models (файн-тюнинг, инференс)",
+    "RAG": "Retrieval-Augmented Generation (поиск по документам)",
+    "Agents": "Autonomous Agents (автономные агенты, мультиагентные системы)",
+    "Recsys": "Recommender Systems (рекомендательные системы)",
+    "EdTech": "Education Technology",
+    "FinTech": "Financial Technology (антифрод, скоринг)",
+    "MedTech": "Medical Technology (диагностика, drug discovery)",
+    "AgriTech": "Agricultural Technology",
+    "Security": "Information Security (детекция угроз)",
+    "MLOps": "ML Operations",
+    "ASR": "Automatic Speech Recognition (распознавание речи)",
+    "TTS": "Text-to-Speech (синтез речи)",
+    "RL": "Reinforcement Learning (обучение с подкреплением)",
+    "TimeSeries": "Time Series Analysis (временные ряды)",
+    "Backend": "Backend Development",
+    "Industrial": "Industrial ML (предиктивное обслуживание, контроль качества)",
+    "Other": "Other topics",
+}
+
+# Generate formatted tag list for prompts
+_tag_list_with_desc = ", ".join(f"{k} ({v})" for k, v in DEFAULT_TAGS.items())
+_tag_list_plain = ", ".join(DEFAULT_TAGS.keys())
+
 TAG_SUGGEST_SYSTEM = (
     "Ты AI-ассистент для организатора Demo Day. "
     "Проанализируй названия и описания проектов и предложи 10-20 тегов "
     "для классификации этих проектов по тематикам. "
-    "Теги должны быть короткие (1-2 слова), на английском языке. "
+    f"Доступные теги: {_tag_list_plain}. "
     "Верни JSON строго в формате:\n"
     '{"tags": ["EdTech", "NLP", "CV", ...]}'
 )
-
-
-DEFAULT_TAGS = [
-    "NLP",
-    "CV",
-    "ML",
-    "DL",
-    "LLM",
-    "RAG",
-    "Agents",
-    "Recsys",
-    "EdTech",
-    "FinTech",
-    "MedTech",
-    "AgriTech",
-    "Security",
-    "MLOps",
-    "ASR",
-    "TTS",
-    "RL",
-    "TimeSeries",
-    "Backend",
-    "Industrial",
-    "Other",
-]
 
 
 async def list_tags(db: AsyncSession) -> list[str]:
@@ -77,7 +81,7 @@ async def add_tags(db: AsyncSession, tags: list[str]) -> tuple[list[str], list[s
 
 async def seed_default_tags(db: AsyncSession) -> tuple[list[str], list[str]]:
     """Seed the default tag set. Returns (added, skipped)."""
-    return await add_tags(db, DEFAULT_TAGS)
+    return await add_tags(db, list(DEFAULT_TAGS.keys()))
 
 
 async def delete_tag(db: AsyncSession, tag_name: str) -> bool:

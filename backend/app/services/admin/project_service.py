@@ -45,7 +45,7 @@ def _match_tags_heuristic(text: str, candidate_tags: list[str]) -> list[str]:
 async def _get_candidate_tags(session: AsyncSession) -> list[str]:
     result = await session.execute(select(Tag.name).order_by(Tag.name))
     tags = [row[0] for row in result.all()]
-    return tags or DEFAULT_TAGS.copy()
+    return tags or list(DEFAULT_TAGS.keys())
 
 
 async def get_topic_tags_for_buttons(session: AsyncSession) -> list[tuple[str, str]]:
@@ -57,7 +57,7 @@ async def get_topic_tags_for_buttons(session: AsyncSession) -> list[tuple[str, s
     tags = [row[0] for row in result.all()]
     if tags:
         return [(t, t) for t in tags]
-    return [(t, t) for t in DEFAULT_TAGS]
+    return [(t, t) for t in DEFAULT_TAGS.keys()]
 
 
 # Column name mappings (alternative names -> standard name)
