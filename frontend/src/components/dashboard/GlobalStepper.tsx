@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { Check, Circle, Loader2 } from "lucide-react"
 import { usePipelineStatus } from "../../hooks/usePipelineStatus"
 import type { PipelinePhase } from "../../lib/api-client"
@@ -11,6 +12,13 @@ function PhaseIcon({ status }: { status: PipelinePhase["status"] }) {
     return <Loader2 className="w-4 h-4 text-white animate-spin" />
   }
   return <Circle className="w-4 h-4 text-muted-foreground" />
+}
+
+function StepIcon({ status }: { status: string }) {
+  if (status === "completed") {
+    return <Check className="w-3 h-3 text-green-600 shrink-0" />
+  }
+  return <Circle className="w-3 h-3 text-muted-foreground shrink-0" />
 }
 
 function getPhaseStyles(status: PipelinePhase["status"]) {
@@ -33,33 +41,26 @@ function getConnectorStyles(status: PipelinePhase["status"]) {
 export function GlobalStepper() {
   const { data } = usePipelineStatus()
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const location = useLocation()
 
-  // Close popup on click outside
+  // Close expanded phase on route change
   useEffect(() => {
-    if (!expandedPhase) return
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setExpandedPhase(null)
-      }
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [expandedPhase])
+    setExpandedPhase(null)
+  }, [location.pathname])
 
   if (!data) return null
 
   const handlePhaseClick = (phase: PipelinePhase) => {
-    if (expandedPhase === phase.name) {
-      setExpandedPhase(null)
-    } else {
-      setExpandedPhase(phase.name)
-    }
+    setExpandedPhase(expandedPhase === phase.name ? null : phase.name)
   }
 
+  const expandedData = expandedPhase
+    ? data.phases.find((p) => p.name === expandedPhase)
+    : null
+
   return (
-    <div ref={containerRef} className="border-b bg-background px-4 py-2">
-      <div className="flex items-center justify-center gap-0">
+    <div className="border-b bg-background">
+      <div className="flex items-center justify-center gap-0 px-4 py-2">
         {data.phases.map((phase, idx) => {
           const completed = phase.steps.filter((s) => s.status === "completed").length
           const total = phase.steps.length
@@ -72,9 +73,9 @@ export function GlobalStepper() {
                 />
               )}
 
-              <div className="flex flex-col items-center relative">
+              <div className="flex flex-col items-center">
                 <button
-                  className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${getPhaseStyles(phase.status)}`}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${getPhaseStyles(phase.status)} ${expandedPhase === phase.name ? "ring-2 ring-offset-1 ring-primary" : ""}`}
                   onClick={() => handlePhaseClick(phase)}
                 >
                   <PhaseIcon status={phase.status} />
@@ -82,28 +83,24 @@ export function GlobalStepper() {
                 <span className="text-[11px] mt-0.5 whitespace-nowrap text-muted-foreground">
                   {phase.label} {completed}/{total}
                 </span>
-
-                {expandedPhase === phase.name && (
-                  <div className="absolute top-full mt-2 bg-popover border rounded-md shadow-md py-1.5 px-2 z-50 min-w-36">
-                    {phase.steps.map((step) => (
-                      <div key={step.name} className="flex items-center gap-1.5 py-0.5 text-xs">
-                        {step.status === "completed" ? (
-                          <Check className="w-3 h-3 text-green-600 shrink-0" />
-                        ) : (
-                          <Circle className="w-3 h-3 text-muted-foreground shrink-0" />
-                        )}
-                        <span className={step.status === "completed" ? "text-muted-foreground" : ""}>
-                          {step.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           )
         })}
       </div>
+
+      {expandedData && (
+        <div className="flex items-center justify-center gap-4 px-4 pb-2 border-t border-dashed">
+          {expandedData.steps.map((step) => (
+            <div key={step.name} className="flex items-center gap-1 py-1 text-xs">
+              <StepIcon status={step.status} />
+              <span className={step.status === "completed" ? "text-muted-foreground" : ""}>
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
