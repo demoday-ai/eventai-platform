@@ -56,23 +56,29 @@ class KeyManager:
         self._keys: list[KeyState] = []
         self._current_index: int = 0
         self._initialized: bool = False
+        self._db_keys: list[str] | None = None
 
     def _ensure_initialized(self) -> None:
-        """Initialize keys from settings (lazy load)."""
+        """Initialize keys from DB or settings (lazy load)."""
         if self._initialized:
             return
 
-        keys = settings.api_keys
-        if not keys:
-            # Fallback to single key
-            if settings.openrouter_api_key:
-                keys = [settings.openrouter_api_key]
-            else:
-                raise ValueError("No API keys configured")
+        # Priority: DB keys > settings.api_keys > settings.openrouter_api_key
+        if self._db_keys:
+            keys = self._db_keys
+            logger.info("KeyManager using %d keys from database", len(keys))
+        else:
+            keys = settings.api_keys
+            if not keys:
+                # Fallback to single key
+                if settings.openrouter_api_key:
+                    keys = [settings.openrouter_api_key]
+                else:
+                    raise ValueError("No API keys configured")
+            logger.info("KeyManager using %d keys from env", len(keys))
 
         self._keys = [KeyState(key=k) for k in keys]
         self._initialized = True
-        logger.info("KeyManager initialized with %d API keys", len(self._keys))
 
     def get_next_key(self) -> str:
         """Get next available API key with round-robin rotation."""

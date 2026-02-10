@@ -7,6 +7,7 @@ from app.api.admin.briefing import router as briefing_router
 from app.api.admin.dashboard import router as dashboard_router
 from app.api.admin.events import router as events_router
 from app.api.admin.guests import router as guests_router
+from app.api.admin.llm_config import router as llm_config_router
 from app.api.admin.messaging import router as messaging_router
 from app.api.admin.organizers import router as organizers_router
 from app.api.admin.projects import router as projects_router
@@ -25,3 +26,4 @@ router.include_router(briefing_router)
 router.include_router(messaging_router)
 router.include_router(audit_router)
 router.include_router(organizers_router)
+router.include_router(llm_config_router)

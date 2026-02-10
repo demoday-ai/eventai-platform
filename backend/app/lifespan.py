@@ -37,6 +37,30 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Failed to seed organizers (non-fatal)")
 
+    # Load LLM API keys from DB into KeyManager
+    try:
+        from sqlalchemy import select
+
+        from app.database import async_session
+        from app.models.llm_api_key import LlmApiKey
+        from app.services.core.llm_client import get_key_manager
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(LlmApiKey).where(LlmApiKey.is_active)
+            )
+            db_keys = result.scalars().all()
+
+            if db_keys:
+                key_manager = get_key_manager()
+                # Inject keys from DB
+                key_manager._db_keys = [k.api_key for k in db_keys]
+                logger.info("Loaded %d LLM API keys from database", len(db_keys))
+            else:
+                logger.info("No LLM API keys in DB, using env fallback")
+    except Exception:
+        logger.exception("Failed to load LLM keys from DB (non-fatal, will use env)")
+
     if settings.bot_token:
         from app.bot.app import create_bot_app
 

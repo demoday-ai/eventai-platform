@@ -1,3 +1,4 @@
+from app.models.app_settings import AppSettings
 from app.models.audit_log import AdminAuditLog
 from app.models.base import Base
 from app.models.business_followup import BusinessFollowup, PipelineStatus
@@ -12,6 +13,7 @@ from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_tag import ExpertTag
 from app.models.followup_package import FollowupPackage
 from app.models.guest_profile import GuestProfile
+from app.models.llm_api_key import LlmApiKey
 from app.models.notification import Notification, NotificationStatus, NotificationType
 from app.models.organizer import Organizer
 from app.models.participation import ParticipationRequest, ParticipationStatus
@@ -38,7 +40,9 @@ from app.models.user_role import UserRole
 
 __all__ = [
     "AdminAuditLog",
+    "AppSettings",
     "Base",
+    "LlmApiKey",
     "BriefingStatus",
     "BusinessFollowup",
     "BusinessObjective",

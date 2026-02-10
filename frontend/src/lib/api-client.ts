@@ -1419,3 +1419,61 @@ export const sendMessaging = async (
   const { data } = await apiClient.post<MessagingSendResult>("/admin/messaging/send", body)
   return data
 }
+
+// --- LLM Configuration ---
+
+export interface LlmModel {
+  id: string
+  name: string
+  input_price: number
+  output_price: number
+  context: number
+  tier: string
+}
+
+export interface LlmApiKeyItem {
+  id: string
+  key_suffix: string
+  is_active: boolean
+  fail_count: number
+  available: boolean
+  cooldown_remaining: number
+  failed_at: string | null
+  last_success_at: string | null
+  created_at: string
+}
+
+export const getLlmModels = async (): Promise<{ models: LlmModel[] }> => {
+  const { data } = await apiClient.get("/admin/llm/models")
+  return data
+}
+
+export const getCurrentLlmModel = async (): Promise<{ model_id: string }> => {
+  const { data } = await apiClient.get("/admin/llm/model")
+  return data
+}
+
+export const updateLlmModel = async (model_id: string): Promise<{ model_id: string }> => {
+  const { data } = await apiClient.patch("/admin/llm/model", { model_id })
+  return data
+}
+
+export const getLlmApiKeys = async (): Promise<{ keys: LlmApiKeyItem[] }> => {
+  const { data } = await apiClient.get("/admin/llm/keys")
+  return data
+}
+
+export const addLlmApiKey = async (api_key: string): Promise<{ id: string; key_suffix: string; created_at: string }> => {
+  const { data } = await apiClient.post("/admin/llm/keys", { api_key })
+  return data
+}
+
+export const deleteLlmApiKey = async (key_id: string): Promise<{ status: string }> => {
+  const { data } = await apiClient.delete(`/admin/llm/keys/${key_id}`)
+  return data
+}
+
+export const checkLlmKeys = async (): Promise<unknown> => {
+  const { data } = await apiClient.post("/admin/llm/keys/check")
+  return data
+}
