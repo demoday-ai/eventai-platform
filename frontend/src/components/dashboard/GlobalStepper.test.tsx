@@ -4,12 +4,6 @@ import { BrowserRouter } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { GlobalStepper } from "./GlobalStepper"
 
-const mockNavigate = vi.fn()
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom")
-  return { ...actual, useNavigate: () => mockNavigate }
-})
-
 const mockPipelineData = {
   phases: [
     {
@@ -56,11 +50,11 @@ const createWrapper = () => {
 }
 
 describe("GlobalStepper", () => {
-  it("renders 3 phase labels", () => {
+  it("renders 3 phase labels with counts", () => {
     render(<GlobalStepper />, { wrapper: createWrapper() })
-    expect(screen.getByText("Данные")).toBeInTheDocument()
-    expect(screen.getByText("Распределение")).toBeInTheDocument()
-    expect(screen.getByText("Запуск")).toBeInTheDocument()
+    expect(screen.getByText("Данные 4/4")).toBeInTheDocument()
+    expect(screen.getByText("Распределение 1/3")).toBeInTheDocument()
+    expect(screen.getByText("Запуск 0/2")).toBeInTheDocument()
   })
 
   it("click on phase toggles sub-steps", () => {

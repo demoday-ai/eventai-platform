@@ -17,29 +17,12 @@ from app.models.project_tag import ProjectTag
 from app.models.room_project import RoomProject
 from app.models.tag import Tag
 from app.schemas.project import ProjectUploadRow, RowError
+from app.services.admin.tag_service import DEFAULT_TAGS
 from app.services.guest import profiling_service
 
 logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = {"title", "description", "author"}
-DEFAULT_TAGS = [
-    "EdTech",
-    "MedTech",
-    "Wellness",
-    "Agents",
-    "NLP",
-    "RAG",
-    "LLM",
-    "Retail",
-    "FinTech",
-    "DevTools",
-    "Analytics",
-    "Media",
-    "CV",
-    "HR",
-    "Security",
-    "Industrial",
-]
 
 
 def _parse_tags(tags: str) -> list[str]:

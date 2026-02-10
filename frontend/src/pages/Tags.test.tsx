@@ -14,6 +14,7 @@ vi.mock("../hooks/useAuth", () => ({
 
 const mockGetTags = vi.fn()
 const mockAddTags = vi.fn()
+const mockSeedDefaultTags = vi.fn()
 const mockSuggestTags = vi.fn()
 const mockReplaceTags = vi.fn()
 const mockDeleteTag = vi.fn()
@@ -21,6 +22,7 @@ const mockDeleteTag = vi.fn()
 vi.mock("../lib/api-client", () => ({
   getTags: () => mockGetTags(),
   addTags: (...args: unknown[]) => mockAddTags(...args),
+  seedDefaultTags: () => mockSeedDefaultTags(),
   suggestTags: () => mockSuggestTags(),
   replaceTags: (...args: unknown[]) => mockReplaceTags(...args),
   deleteTag: (...args: unknown[]) => mockDeleteTag(...args),
@@ -56,13 +58,22 @@ describe("Tags", () => {
     })
   })
 
-  it("shows empty state when no tags", async () => {
+  it("shows empty state with seed button when no tags", async () => {
+    const user = userEvent.setup()
     mockGetTags.mockResolvedValue({ tags: [] })
+    mockSeedDefaultTags.mockResolvedValue({ added: ["NLP", "CV"], skipped: [] })
 
     render(<Tags />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText("Теги пока не добавлены.")).toBeInTheDocument()
+      expect(screen.getByText(/Теги пока не добавлены/)).toBeInTheDocument()
+      expect(screen.getByText("Добавить стандартные теги")).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText("Добавить стандартные теги"))
+
+    await waitFor(() => {
+      expect(mockSeedDefaultTags).toHaveBeenCalled()
     })
   })
 

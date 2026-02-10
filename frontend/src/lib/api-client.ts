@@ -831,6 +831,11 @@ export const addTags = async (tags: string[]): Promise<TagUpsertResponse> => {
   return data
 }
 
+export const seedDefaultTags = async (): Promise<TagUpsertResponse> => {
+  const { data } = await apiClient.post<TagUpsertResponse>("/admin/tags/seed")
+  return data
+}
+
 export interface TagSuggestResponse {
   suggested_tags: string[]
   project_count: number

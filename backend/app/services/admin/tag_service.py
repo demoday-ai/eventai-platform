@@ -21,6 +21,13 @@ TAG_SUGGEST_SYSTEM = (
 )
 
 
+DEFAULT_TAGS = [
+    "EdTech", "MedTech", "Wellness", "Agents", "NLP", "RAG", "LLM",
+    "Retail", "FinTech", "DevTools", "Analytics", "Media", "CV", "HR",
+    "Security", "Industrial",
+]
+
+
 async def list_tags(db: AsyncSession) -> list[str]:
     """List all available tags."""
     return await tag_repo.list_all(db)
@@ -48,6 +55,11 @@ async def add_tags(db: AsyncSession, tags: list[str]) -> tuple[list[str], list[s
         await db.commit()
 
     return added, skipped
+
+
+async def seed_default_tags(db: AsyncSession) -> tuple[list[str], list[str]]:
+    """Seed the default tag set. Returns (added, skipped)."""
+    return await add_tags(db, DEFAULT_TAGS)
 
 
 async def delete_tag(db: AsyncSession, tag_name: str) -> bool:

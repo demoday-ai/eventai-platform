@@ -20,5 +20,6 @@ from app.services.admin.tag_service import (  # noqa: F401
     delete_tag,
     list_tags,
     replace_tags,
+    seed_default_tags,
     suggest_tags,
 )

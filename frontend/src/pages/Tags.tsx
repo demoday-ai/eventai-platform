@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
 import { APP_NAME } from "../lib/constants"
-import { getTags, addTags, suggestTags, replaceTags, deleteTag } from "../lib/api-client"
+import { getTags, addTags, seedDefaultTags, suggestTags, replaceTags, deleteTag } from "../lib/api-client"
 
 export function Tags() {
   const queryClient = useQueryClient()
@@ -77,6 +77,19 @@ export function Tags() {
     },
     onError: (err) => {
       setTagError(err instanceof Error ? err.message : "Не удалось обновить теги")
+    },
+  })
+
+  const seedMutation = useMutation({
+    mutationFn: seedDefaultTags,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] })
+      const added = result.added.length
+      setTagInfo(`Добавлено стандартных тегов: ${added}.`)
+      setTagError("")
+    },
+    onError: (err) => {
+      setTagError(err instanceof Error ? err.message : "Не удалось добавить стандартные теги")
     },
   })
 
@@ -169,7 +182,24 @@ export function Tags() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Теги пока не добавлены.</p>
+            !isLoading && !error && (
+              <div className="border rounded-md p-4 space-y-3 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Теги пока не добавлены. Добавьте стандартный набор или создайте свои.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setTagInfo(null)
+                    setTagError("")
+                    seedMutation.mutate()
+                  }}
+                  disabled={seedMutation.isPending}
+                >
+                  {seedMutation.isPending ? "Добавление..." : "Добавить стандартные теги"}
+                </Button>
+              </div>
+            )
           )}
 
           {/* Suggest tags from LLM */}

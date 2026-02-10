@@ -1,14 +1,7 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect, useRef } from "react"
 import { Check, Circle, Loader2 } from "lucide-react"
 import { usePipelineStatus } from "../../hooks/usePipelineStatus"
 import type { PipelinePhase } from "../../lib/api-client"
-
-const PHASE_LINKS: Record<string, string> = {
-  data: "/import",
-  distribution: "/clustering",
-  launch: "/reminders",
-}
 
 function PhaseIcon({ status }: { status: PipelinePhase["status"] }) {
   if (status === "completed") {
@@ -39,13 +32,24 @@ function getConnectorStyles(status: PipelinePhase["status"]) {
 
 export function GlobalStepper() {
   const { data } = usePipelineStatus()
-  const navigate = useNavigate()
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Close popup on click outside
+  useEffect(() => {
+    if (!expandedPhase) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setExpandedPhase(null)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [expandedPhase])
 
   if (!data) return null
 
   const handlePhaseClick = (phase: PipelinePhase) => {
-    // Toggle sub-steps visibility
     if (expandedPhase === phase.name) {
       setExpandedPhase(null)
     } else {
@@ -53,54 +57,40 @@ export function GlobalStepper() {
     }
   }
 
-  const handlePhaseNavigate = (phase: PipelinePhase) => {
-    // Navigate to first incomplete step's page, or phase default
-    const incompleteStep = phase.steps.find((s) => s.status === "not_started")
-    if (incompleteStep) {
-      // Find corresponding link from next_action or use phase default
-      const link = data.next_action?.step === incompleteStep.name
-        ? data.next_action.link
-        : PHASE_LINKS[phase.name]
-      navigate(link)
-    } else {
-      navigate(PHASE_LINKS[phase.name])
-    }
-  }
-
   return (
-    <div className="border-b bg-background px-4 py-3">
+    <div ref={containerRef} className="border-b bg-background px-4 py-2">
       <div className="flex items-center justify-center gap-0">
-        {data.phases.map((phase, idx) => (
-          <div key={phase.name} className="flex items-center">
-            {/* Connector line (before phase, except first) */}
-            {idx > 0 && (
-              <div
-                className={`h-0.5 w-8 md:w-16 ${getConnectorStyles(data.phases[idx - 1].status)}`}
-              />
-            )}
+        {data.phases.map((phase, idx) => {
+          const completed = phase.steps.filter((s) => s.status === "completed").length
+          const total = phase.steps.length
 
-            {/* Phase */}
-            <div className="flex flex-col items-center relative">
-              <button
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors ${getPhaseStyles(phase.status)}`}
-                onClick={() => handlePhaseClick(phase)}
-                onDoubleClick={() => handlePhaseNavigate(phase)}
-                title={`${phase.label} — двойной клик для навигации`}
-              >
-                <PhaseIcon status={phase.status} />
-              </button>
-              <span className="text-xs mt-1 whitespace-nowrap">{phase.label}</span>
+          return (
+            <div key={phase.name} className="flex items-center">
+              {idx > 0 && (
+                <div
+                  className={`h-0.5 w-8 md:w-16 ${getConnectorStyles(data.phases[idx - 1].status)}`}
+                />
+              )}
 
-              {/* Expanded sub-steps */}
-              {expandedPhase === phase.name && (
-                <div className="absolute top-full mt-4 bg-popover border rounded-lg shadow-lg p-3 z-50 min-w-48">
-                  <div className="space-y-2">
+              <div className="flex flex-col items-center relative">
+                <button
+                  className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${getPhaseStyles(phase.status)}`}
+                  onClick={() => handlePhaseClick(phase)}
+                >
+                  <PhaseIcon status={phase.status} />
+                </button>
+                <span className="text-[11px] mt-0.5 whitespace-nowrap text-muted-foreground">
+                  {phase.label} {completed}/{total}
+                </span>
+
+                {expandedPhase === phase.name && (
+                  <div className="absolute top-full mt-2 bg-popover border rounded-md shadow-md py-1.5 px-2 z-50 min-w-36">
                     {phase.steps.map((step) => (
-                      <div key={step.name} className="flex items-center gap-2 text-sm">
+                      <div key={step.name} className="flex items-center gap-1.5 py-0.5 text-xs">
                         {step.status === "completed" ? (
-                          <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          <Check className="w-3 h-3 text-green-600 shrink-0" />
                         ) : (
-                          <Circle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <Circle className="w-3 h-3 text-muted-foreground shrink-0" />
                         )}
                         <span className={step.status === "completed" ? "text-muted-foreground" : ""}>
                           {step.label}
@@ -108,11 +98,11 @@ export function GlobalStepper() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
