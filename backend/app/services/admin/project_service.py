@@ -62,11 +62,11 @@ async def get_topic_tags_for_buttons(session: AsyncSession) -> list[tuple[str, s
 
 # Column name mappings (alternative names -> standard name)
 COLUMN_ALIASES = {
-    "title": ["project_name", "name", "название", "проект"],
-    "description": ["desc", "описание"],
-    "author": ["team_members", "team_name", "team", "автор", "команда"],
-    "telegram_contact": ["telegram", "tg", "contact", "контакт", "team_id"],
-    "tags": ["tech_stack", "stack", "теги", "технологии"],
+    "title": ["название *", "название", "project_name", "name", "проект"],
+    "description": ["описание *", "описание", "desc"],
+    "author": ["автор *", "автор", "team_members", "team_name", "team", "команда"],
+    "telegram_contact": ["телеграм", "telegram", "tg", "contact", "контакт", "team_id"],
+    "tags": ["тематики", "теги", "tech_stack", "stack", "технологии"],
     "track": ["трек", "track_type", "тип_трека"],
 }
 

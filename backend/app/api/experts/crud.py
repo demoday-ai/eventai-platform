@@ -86,21 +86,27 @@ async def upload_experts(
 
     def _parse_expert_row(row: dict) -> dict:
         """Convert a raw row dict into the expected expert format."""
+        # Normalize keys to lowercase for case-insensitive matching
+        row_lower = {k.lower().strip(): v for k, v in row.items()}
+
+        # Helper to get value with fallback to lowercase keys
+        def get_field(*keys):
+            for k in keys:
+                val = row.get(k) or row_lower.get(k.lower())
+                if val:
+                    return val
+            return ""
+
         item = {
-            "id": row.get("id", "") or row.get("ID", "") or row.get("ид", ""),
-            "name": row.get("name", "") or row.get("имя", "") or row.get("фио", ""),
-            "telegram": row.get("telegram", "") or row.get("телеграм", ""),
-            "position": row.get("position", "") or row.get("описание", "") or row.get("должность", ""),
-            "inviter": row.get("inviter", "") or row.get("пригласивший", ""),
-            "dd_status": row.get("dd_status", "") or row.get("статус", "") or row.get("придет", ""),
-            "dd_comments": row.get("dd_comments", "") or row.get("комментарии", "") or row.get("заметки", ""),
+            "id": get_field("id", "ID", "ид"),
+            "name": get_field("name", "имя *", "имя", "фио"),
+            "telegram": get_field("telegram", "телеграм"),
+            "position": get_field("position", "описание", "должность"),
+            "inviter": get_field("inviter", "пригласивший"),
+            "dd_status": get_field("dd_status", "статус", "придет"),
+            "dd_comments": get_field("dd_comments", "комментарии", "заметки"),
         }
-        tags_str = (
-            row.get("expertise_tags", "")
-            or row.get("tags", "")
-            or row.get("теги", "")
-            or row.get("тематики", "")
-        )
+        tags_str = get_field("expertise_tags", "tags", "теги", "тематики")
         if tags_str:
             item["expertise_tags"] = [t.strip() for t in tags_str.split(",") if t.strip()]
         else:

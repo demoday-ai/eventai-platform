@@ -183,19 +183,30 @@ async def upload_guests(
     seen_names: set[str] = set()
 
     for i, row in enumerate(rows):
-        name = (row.get("name") or "").strip()
+        # Normalize keys to lowercase for case-insensitive matching
+        row_lower = {k.lower().strip(): v for k, v in row.items()}
+
+        # Helper to get value with fallback to lowercase keys
+        def get_field(*keys):
+            for k in keys:
+                val = row.get(k) or row_lower.get(k.lower())
+                if val:
+                    return val
+            return ""
+
+        name = get_field("name", "имя", "фио").strip()
         if not name:
-            errors.append(RowError(row=i + 1, field="name", message="Name is required"))
+            errors.append(RowError(row=i + 1, field="name", message="Имя обязательно"))
             continue
 
         # Check duplicate within file
-        name_lower = name.lower()
-        if name_lower in seen_names:
+        name_lower_key = name.lower()
+        if name_lower_key in seen_names:
             duplicates += 1
             continue
-        seen_names.add(name_lower)
+        seen_names.add(name_lower_key)
 
-        telegram = (row.get("telegram") or "").strip()
+        telegram = get_field("telegram", "телеграм").strip()
         username = telegram.lstrip("@") if telegram else None
 
         # Generate synthetic telegram_user_id
