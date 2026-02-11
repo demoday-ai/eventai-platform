@@ -21,6 +21,7 @@ router = APIRouter()
 
 # In-memory tag generation progress store
 _tag_generation_tasks: dict[str, dict] = {}
+_tag_generation_async_tasks: dict[str, asyncio.Task] = {}
 
 
 @router.get("/projects", response_model=list[ProjectListItem])
@@ -121,6 +122,9 @@ async def _run_tag_generation(task_id: str, event_id: UUID):
             "status": "failed",
             "error": str(e),
         })
+    finally:
+        # Cleanup asyncio task reference
+        _tag_generation_async_tasks.pop(task_id, None)
 
 
 @router.post("/projects/generate-tags")
@@ -162,7 +166,9 @@ async def generate_project_tags(
         "processed": 0,
     }
 
-    asyncio.create_task(_run_tag_generation(task_id, event.id))
+    # Store asyncio.Task for cancellation
+    async_task = asyncio.create_task(_run_tag_generation(task_id, event.id))
+    _tag_generation_async_tasks[task_id] = async_task
 
     return {"task_id": task_id, "status": "pending", "total": count}
 
@@ -197,6 +203,12 @@ async def cancel_tag_generation(
             status_code=400,
             detail=f"Cannot cancel task with status: {task['status']}",
         )
+
+    # Cancel the asyncio task
+    async_task = _tag_generation_async_tasks.get(task_id)
+    if async_task and not async_task.done():
+        async_task.cancel()
+        logger.info("Cancelled asyncio task: task_id=%s", task_id)
 
     _tag_generation_tasks[task_id]["status"] = "cancelled"
     logger.info("Cancelling tag generation: task_id=%s", task_id)
