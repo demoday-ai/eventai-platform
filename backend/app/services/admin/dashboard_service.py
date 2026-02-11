@@ -26,7 +26,6 @@ from app.models import (
     User,
     UserRole,
 )
-from app.repos import event_repo
 from app.schemas.admin import (
     Alert,
     DashboardResponse,
@@ -151,7 +150,12 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     # Expert stats
     total_experts = await db.scalar(select(func.count(Expert.id)).where(Expert.event_id == event_id)) or 0
 
-    current_clustering = await event_repo.get_approved_clustering(db, event_id)
+    current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
 
     if current_clustering:
         confirmed_experts = (
@@ -385,7 +389,12 @@ async def get_pipeline_status(
         step_statuses["experts"] = "completed" if experts_count > 0 else "not_started"
 
         # clustering step
-        current_clustering = await event_repo.get_approved_clustering(db, event_id)
+        current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
         step_statuses["clustering"] = "completed" if current_clustering else "not_started"
 
         # matching step
@@ -473,7 +482,12 @@ async def get_pipeline_status(
 
 async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCoverage]:
     """Get room coverage statistics."""
-    current_clustering = await event_repo.get_approved_clustering(db, event_id)
+    current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
 
     if not current_clustering:
         return []
@@ -536,7 +550,12 @@ async def get_room_detail(db: AsyncSession, event_id: UUID, room_id: UUID) -> Ro
     if not room:
         raise ValueError("Room not found")
 
-    current_clustering = await event_repo.get_approved_clustering(db, event_id)
+    current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
 
     # Get experts assigned to this room
     experts_list = []
@@ -671,7 +690,12 @@ async def get_projects_list(
     search: str | None = None,
 ) -> list[ProjectListItem]:
     """Get list of projects with filters."""
-    current_clustering = await event_repo.get_approved_clustering(db, event_id)
+    current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
 
     if not current_clustering:
         # No clustering yet - return all projects without rooms
@@ -787,7 +811,12 @@ async def get_project_detail(
     tags = [tag[0] for tag in tags_result.all()]
 
     # Get room info
-    current_clustering = await event_repo.get_approved_clustering(db, event_id)
+    current_clustering = await db.scalar(
+        select(ClusteringRun)
+        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+        .order_by(ClusteringRun.created_at.desc())
+        .limit(1)
+    )
     room_id = None
     room_name = None
     start_time = None

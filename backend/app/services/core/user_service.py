@@ -1,7 +1,9 @@
-"""User service — thin wrapper over user_repo and event_repo."""
+"""User service with database access logic."""
 
 import uuid
 
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.business_profile import BusinessProfile
@@ -10,7 +12,6 @@ from app.models.guest_profile import GuestProfile
 from app.models.role import Role, RoleCode
 from app.models.user import GuestSubtype, User
 from app.models.user_role import UserRole
-from app.repos import event_repo, user_repo
 
 
 async def upsert_user(
@@ -20,33 +21,68 @@ async def upsert_user(
     username: str | None = None,
     source: str | None = None,
 ) -> User:
-    user = await user_repo.upsert(session, telegram_user_id, full_name, username, source=source)
+    """Create or update user by telegram_user_id."""
+    values: dict = {
+        "id": uuid.uuid4(),
+        "telegram_user_id": telegram_user_id,
+        "full_name": full_name,
+        "username": username,
+    }
+    if source is not None:
+        values["source"] = source
+
+    stmt = (
+        pg_insert(User)
+        .values(**values)
+        .on_conflict_do_update(
+            index_elements=["telegram_user_id"],
+            set_={"full_name": full_name, "username": username},
+        )
+        .returning(User)
+    )
+    result = await session.execute(stmt)
+    user = result.scalars().one()
     await session.commit()
     return user
 
 
 async def get_user_by_telegram_id(session: AsyncSession, telegram_user_id: str) -> User | None:
-    return await user_repo.get_by_telegram_id(session, telegram_user_id)
+    result = await session.execute(select(User).where(User.telegram_user_id == telegram_user_id))
+    return result.scalar_one_or_none()
 
 
 async def get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> User | None:
-    return await user_repo.get_by_id(session, user_id)
+    return await session.get(User, user_id)
 
 
 async def get_current_event(session: AsyncSession) -> Event | None:
-    return await event_repo.get_current_event(session)
+    """Get the most recent event by start_date."""
+    result = await session.execute(select(Event).order_by(Event.start_date.desc()).limit(1))
+    return result.scalar_one_or_none()
 
 
 async def get_role_by_code(session: AsyncSession, code: RoleCode) -> Role | None:
-    return await user_repo.get_role_by_code(session, code)
+    result = await session.execute(select(Role).where(Role.code == code.value))
+    return result.scalar_one_or_none()
 
 
 async def get_user_role(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> UserRole | None:
-    return await user_repo.get_user_role(session, user_id, event_id)
+    result = await session.execute(
+        select(UserRole).where(
+            UserRole.user_id == user_id,
+            UserRole.event_id == event_id,
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_user_role_with_info(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> Role | None:
-    return await user_repo.get_user_role_with_info(session, user_id, event_id)
+    result = await session.execute(
+        select(Role)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id, UserRole.event_id == event_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def set_role(
@@ -56,7 +92,14 @@ async def set_role(
     role: Role,
     guest_subtype: GuestSubtype | None = None,
 ) -> None:
-    existing = await user_repo.get_user_role(session, user_id, event_id)
+    # Get existing user_role
+    result = await session.execute(
+        select(UserRole).where(
+            UserRole.user_id == user_id,
+            UserRole.event_id == event_id,
+        )
+    )
+    existing = result.scalar_one_or_none()
 
     if existing:
         existing.role_id = role.id
@@ -81,8 +124,10 @@ async def set_guest_subtype(session: AsyncSession, user_id: uuid.UUID, guest_sub
 
 
 async def get_guest_profile(session: AsyncSession, user_id: uuid.UUID) -> GuestProfile | None:
-    return await user_repo.get_guest_profile(session, user_id)
+    result = await session.execute(select(GuestProfile).where(GuestProfile.user_id == user_id))
+    return result.scalar_one_or_none()
 
 
 async def get_business_profile(session: AsyncSession, user_id: uuid.UUID) -> BusinessProfile | None:
-    return await user_repo.get_business_profile(session, user_id)
+    result = await session.execute(select(BusinessProfile).where(BusinessProfile.user_id == user_id))
+    return result.scalar_one_or_none()

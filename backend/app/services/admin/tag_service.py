@@ -1,14 +1,14 @@
 """Tag management service (split from admin_service)."""
 
 import logging
+import uuid
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Project
+from app.models import Project, Tag
 from app.prompts.admin.tags import TAG_SUGGEST_SYSTEM, build_tag_suggest_prompt
-from app.repos import tag_repo
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,8 @@ _tag_list_plain = ", ".join(DEFAULT_TAGS.keys())
 
 async def list_tags(db: AsyncSession) -> list[str]:
     """List all available tags."""
-    return await tag_repo.list_all(db)
+    result = await db.execute(select(Tag.name).order_by(Tag.name))
+    return [row[0] for row in result.all()]
 
 
 async def add_tags(db: AsyncSession, tags: list[str]) -> tuple[list[str], list[str]]:
@@ -53,7 +54,9 @@ async def add_tags(db: AsyncSession, tags: list[str]) -> tuple[list[str], list[s
     if not cleaned:
         return [], []
 
-    existing = await tag_repo.get_existing_names(db)
+    # Get existing tag names (lowercase for comparison)
+    result = await db.execute(select(Tag.name))
+    existing = {row[0].lower() for row in result.all()}
 
     added: list[str] = []
     skipped: list[str] = []
@@ -61,7 +64,10 @@ async def add_tags(db: AsyncSession, tags: list[str]) -> tuple[list[str], list[s
         if tag.lower() in existing:
             skipped.append(tag)
             continue
-        await tag_repo.create(db, tag)
+        # Create new tag
+        new_tag = Tag(name=tag)
+        db.add(new_tag)
+        await db.flush()
         existing.add(tag.lower())
         added.append(tag)
 
@@ -78,10 +84,13 @@ async def seed_default_tags(db: AsyncSession) -> tuple[list[str], list[str]]:
 
 async def delete_tag(db: AsyncSession, tag_name: str) -> bool:
     """Delete a single tag and its project associations. Returns True if found."""
-    deleted = await tag_repo.delete_by_name(db, tag_name)
-    if deleted:
-        await db.commit()
-    return deleted
+    result = await db.execute(select(Tag).where(Tag.name == tag_name))
+    tag = result.scalar_one_or_none()
+    if not tag:
+        return False
+    await db.delete(tag)
+    await db.commit()
+    return True
 
 
 async def suggest_tags(db: AsyncSession, event_id: UUID) -> dict:
@@ -120,7 +129,9 @@ async def replace_tags(db: AsyncSession, tags: list[str]) -> dict:
     """Replace all tags with a new set. Returns added/removed/final lists."""
     cleaned = list(dict.fromkeys(t.strip() for t in tags if t and t.strip()))
 
-    existing_map = await tag_repo.get_name_to_id_map(db)
+    # Get existing tags as name->id map
+    result = await db.execute(select(Tag.name, Tag.id))
+    existing_map: dict[str, uuid.UUID] = {row[0]: row[1] for row in result.all()}
     existing_names = set(existing_map.keys())
     new_names = set(cleaned)
 
@@ -129,15 +140,21 @@ async def replace_tags(db: AsyncSession, tags: list[str]) -> dict:
 
     added = []
     for name in sorted(to_add):
-        await tag_repo.create(db, name)
+        new_tag = Tag(name=name)
+        db.add(new_tag)
+        await db.flush()
         added.append(name)
 
     removed = []
     for name in sorted(to_remove):
-        await tag_repo.delete_by_id(db, existing_map[name])
-        removed.append(name)
+        tag = await db.get(Tag, existing_map[name])
+        if tag:
+            await db.delete(tag)
+            removed.append(name)
 
     await db.commit()
 
-    final_tags = await tag_repo.list_all(db)
+    # Get final list
+    result = await db.execute(select(Tag.name).order_by(Tag.name))
+    final_tags = [row[0] for row in result.all()]
     return {"final_tags": final_tags, "added": added, "removed": removed}
