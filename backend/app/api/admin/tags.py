@@ -65,13 +65,15 @@ async def seed_default_tags(
     return TagUpsertResponse(added=added, skipped=skipped)
 
 
-@router.delete("/tags/{tag_name}", status_code=204)
+@router.delete("/tags/{tag_name:path}", status_code=204)
 async def delete_tag(
     tag_name: str,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a single tag and its project associations."""
+    from urllib.parse import unquote
+    tag_name = unquote(tag_name)
     deleted = await admin_service.delete_tag(db, tag_name)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
