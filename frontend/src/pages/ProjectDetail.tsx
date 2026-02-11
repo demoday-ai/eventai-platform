@@ -288,7 +288,7 @@ export function ProjectDetail() {
             {project.telegram_contact && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Телеграм</h3>
-                <p className="text-sm">@{project.telegram_contact}</p>
+                <p className="text-sm">{project.telegram_contact.startsWith("@") ? project.telegram_contact : `@${project.telegram_contact}`}</p>
               </div>
             )}
             {project.track && (
