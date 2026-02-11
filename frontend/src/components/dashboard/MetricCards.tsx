@@ -55,7 +55,7 @@ export function MetricCards({ data, loading }: MetricCardsProps) {
   const iconClass = "w-5 h-5 md:w-6 md:h-6 text-muted-foreground"
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+    <div id="metric-cards" className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
       <MetricCard
         title="Проекты"
         value={loading ? "—" : String(data?.projects.total ?? 0)}

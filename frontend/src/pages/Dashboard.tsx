@@ -10,6 +10,7 @@ import { QuickAction } from "../components/dashboard/QuickAction"
 import { MetricCards } from "../components/dashboard/MetricCards"
 import { EventCountdown } from "../components/dashboard/EventCountdown"
 import { DashboardCoverageTable } from "../components/dashboard/CoverageTable"
+import { startAdminTour, shouldShowTour } from "../lib/adminTour"
 
 export function Dashboard() {
   useEffect(() => {
@@ -28,6 +29,17 @@ export function Dashboard() {
     refetchInterval: 30_000,
     placeholderData: keepPreviousData,
   })
+
+  // Auto-start tour on first visit (after data loads)
+  useEffect(() => {
+    if (data && !isLoading && shouldShowTour()) {
+      // Delay to ensure UI is fully rendered
+      const timer = setTimeout(() => {
+        startAdminTour()
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [data, isLoading])
 
   const {
     data: coverageData,
