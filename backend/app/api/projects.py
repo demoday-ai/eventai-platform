@@ -3,7 +3,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -16,7 +16,13 @@ from app.schemas.project import (
     ReplaceConfirmation,
     RoomSummary,
 )
-from app.services.admin import audit_service, clustering_service, dedup_service, project_service
+from app.services.admin import (
+    audit_service,
+    clustering_service,
+    dedup_service,
+    merge_service,
+    project_service,
+)
 from app.services.admin.background_jobs import (
     JobStatus,
     create_job,
@@ -188,6 +194,128 @@ async def _run_upload_job(job_id: str, coro_factory):
     except Exception as e:
         logger.exception(f"Upload job {job_id} failed: {e}")
         update_job(job_id, JobStatus.FAILED, error=str(e))
+
+
+@router.post("/projects/upload/preview")
+async def preview_project_upload(
+    file: UploadFile,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Dry-run analysis of project file vs DB. Returns MergePreview."""
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=400, detail="Нет активного события")
+
+    filename = (file.filename or "").lower()
+    if not filename.endswith((".csv", ".json", ".xlsx")):
+        raise HTTPException(status_code=400, detail="Поддерживаемые форматы: CSV, JSON, XLSX")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Файл пуст")
+
+    try:
+        preview, _ = await merge_service.analyze_project_merge(
+            session, event.id, content, file.filename or "file.xlsx",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка анализа файла: {e}")
+
+    return preview
+
+
+@router.post("/projects/upload/merge")
+async def merge_project_upload(
+    file: UploadFile,
+    add_new: bool = Query(True),
+    update_existing: bool = Query(True),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Smart merge: add new + update changed projects."""
+    from app.database import async_session
+
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=400, detail="Нет активного события")
+
+    filename = (file.filename or "").lower()
+    if not filename.endswith((".csv", ".json", ".xlsx")):
+        raise HTTPException(status_code=400, detail="Поддерживаемые форматы: CSV, JSON, XLSX")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Файл пуст")
+
+    event_id = event.id
+    user_id = user.id
+
+    async def do_merge(job_id: str):
+        async with async_session() as bg_session:
+            try:
+                _, internal = await merge_service.analyze_project_merge(
+                    bg_session, event_id, content, file.filename or "file.xlsx",
+                )
+            except Exception as e:
+                raise ValueError(f"Ошибка анализа: {e}")
+
+            result = await merge_service.apply_project_merge(
+                bg_session, event_id, internal,
+                add_new=add_new, update_existing=update_existing,
+            )
+
+            # Trigger embedding if new projects were added
+            if result.added > 0:
+                from app.worker.tasks import embed_projects_task
+                embed_projects_task.delay(str(event_id))
+
+            bg_user = await bg_session.get(User, user_id)
+            if bg_user:
+                await audit_service.log_action(
+                    bg_session, bg_user, "merge_projects",
+                    entity_type="projects",
+                    details={
+                        "added": result.added,
+                        "updated": result.updated,
+                        "skipped": result.skipped,
+                    },
+                )
+
+            return {
+                "added": result.added,
+                "updated": result.updated,
+                "skipped": result.skipped,
+                "errors": result.errors,
+            }
+
+    import asyncio
+    job = create_job(job_type="project_merge")
+    asyncio.create_task(_run_upload_job(job.id, do_merge))
+
+    return {"job_id": job.id, "status": job.status.value}
+
+
+@router.delete("/projects/all")
+async def delete_all_projects(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Delete all projects for current event + invalidate clustering."""
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=400, detail="Нет активного события")
+
+    count = await project_service.delete_all_projects(session, event.id)
+    await clustering_service.invalidate_clustering_runs(session, event.id)
+
+    await audit_service.log_action(
+        session, user, "delete_all_projects",
+        entity_type="projects",
+        details={"deleted": count},
+    )
+
+    return {"deleted": count}
 
 
 @router.get("/projects/upload/job/{job_id}")

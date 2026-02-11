@@ -19,7 +19,8 @@ from app.schemas.expert import (
     ExpertStatusUpdate,
     ExpertUpdateRequest,
 )
-from app.services.admin import audit_service, dedup_service, expert_service, invite_service
+from app.schemas.merge import MergeApplyResult
+from app.services.admin import audit_service, dedup_service, expert_service, invite_service, merge_service
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +226,91 @@ async def upload_experts(
         "errors": errors,
         "duplicate_warning": dup_info["warning"] if dup_info else None,
     }
+
+
+@router.post("/experts/upload/preview")
+async def preview_expert_upload(
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Dry-run analysis of expert file vs DB. Returns MergePreview."""
+    from app.services.core import user_service
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+
+    content = await file.read()
+    filename = file.filename or "file.xlsx"
+
+    try:
+        preview, _ = await merge_service.analyze_expert_merge(
+            session, event.id, content, filename,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return preview
+
+
+@router.post("/experts/upload/merge", response_model=MergeApplyResult)
+async def merge_expert_upload(
+    file: UploadFile = File(...),
+    add_new: bool = Query(True),
+    update_existing: bool = Query(True),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Smart merge: add new + update changed experts."""
+    from app.services.core import user_service
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+
+    content = await file.read()
+    filename = file.filename or "file.xlsx"
+
+    try:
+        _, internal = await merge_service.analyze_expert_merge(
+            session, event.id, content, filename,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    result = await merge_service.apply_expert_merge(
+        session, event.id, internal,
+        add_new=add_new, update_existing=update_existing,
+    )
+
+    await audit_service.log_action(
+        session, current_user, "merge_experts",
+        entity_type="experts",
+        details={"added": result.added, "updated": result.updated, "skipped": result.skipped},
+    )
+
+    return result
+
+
+@router.delete("/experts/all")
+async def delete_all_experts(
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete all experts for current event."""
+    from app.services.core import user_service
+    event = await user_service.get_current_event(session)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+
+    count = await expert_service.delete_all_experts(session, event.id)
+
+    await audit_service.log_action(
+        session, current_user, "delete_all_experts",
+        entity_type="experts",
+        details={"deleted": count},
+    )
+
+    return {"deleted": count}
 
 
 @router.post("/experts")

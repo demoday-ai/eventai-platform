@@ -292,6 +292,45 @@ export interface GuestUploadConflict {
   message: string
 }
 
+// --- Smart Merge types ---
+
+export interface ChangedField {
+  field: string
+  old_value: string | null
+  new_value: string | null
+}
+
+export interface UpdatedItem {
+  name: string
+  db_id: string
+  changed_fields: ChangedField[]
+}
+
+export interface NewItem {
+  name: string
+  telegram: string | null
+}
+
+export interface MergePreview {
+  new_count: number
+  duplicate_count: number
+  updated_count: number
+  error_count: number
+  new_items: NewItem[]
+  updated_items: UpdatedItem[]
+  errors: RowError[]
+  with_tags_in_db: number | null
+  missing_tags_in_db: number | null
+}
+
+export interface MergeApplyResult {
+  added: number
+  updated: number
+  skipped: number
+  errors: number
+  error_details: RowError[]
+}
+
 // --- Clustering types ---
 
 export interface ClusteringRequest {
@@ -1009,6 +1048,96 @@ export const suggestRoomThemes = async (
     "/admin/clustering/suggest-themes",
     params
   )
+  return data
+}
+
+// --- Smart Merge API ---
+
+export const previewGuestUpload = async (file: File, subtype: string): Promise<MergePreview> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<MergePreview>("/admin/guests/upload/preview", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    params: { default_subtype: subtype },
+  })
+  return data
+}
+
+export const mergeGuests = async (
+  file: File,
+  subtype: string,
+  addNew: boolean,
+  updateExisting: boolean
+): Promise<MergeApplyResult> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<MergeApplyResult>("/admin/guests/upload/merge", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    params: { default_subtype: subtype, add_new: addNew, update_existing: updateExisting },
+  })
+  return data
+}
+
+export const previewExpertUpload = async (file: File): Promise<MergePreview> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<MergePreview>("/experts/upload/preview", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+  return data
+}
+
+export const mergeExperts = async (
+  file: File,
+  addNew: boolean,
+  updateExisting: boolean
+): Promise<MergeApplyResult> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<MergeApplyResult>("/experts/upload/merge", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    params: { add_new: addNew, update_existing: updateExisting },
+  })
+  return data
+}
+
+export const previewProjectUpload = async (file: File): Promise<MergePreview> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<MergePreview>("/projects/upload/preview", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+  return data
+}
+
+export const mergeProjects = async (
+  file: File,
+  addNew: boolean,
+  updateExisting: boolean
+): Promise<UploadJobResponse> => {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post<UploadJobResponse>("/projects/upload/merge", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    params: { add_new: addNew, update_existing: updateExisting },
+  })
+  return data
+}
+
+export const deleteAllGuests = async (subtype?: string): Promise<{ deleted: number }> => {
+  const { data } = await apiClient.delete<{ deleted: number }>("/admin/guests/all", {
+    params: subtype ? { subtype } : undefined,
+  })
+  return data
+}
+
+export const deleteAllExperts = async (): Promise<{ deleted: number }> => {
+  const { data } = await apiClient.delete<{ deleted: number }>("/experts/all")
+  return data
+}
+
+export const deleteAllProjects = async (): Promise<{ deleted: number }> => {
+  const { data } = await apiClient.delete<{ deleted: number }>("/projects/all")
   return data
 }
 

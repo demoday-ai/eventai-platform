@@ -24,7 +24,8 @@ from app.schemas.admin import (
     GuestUploadResult,
 )
 from app.schemas.expert import RowError
-from app.services.admin import admin_service, audit_service, dedup_service
+from app.schemas.merge import MergeApplyResult
+from app.services.admin import admin_service, audit_service, dedup_service, merge_service
 from app.services.core import user_service
 
 router = APIRouter()
@@ -335,3 +336,139 @@ async def upload_guests(
         errors=errors,
         duplicate_warning=dup_info["warning"] if dup_info else None,
     )
+
+
+@router.post("/guests/upload/preview")
+async def preview_guest_upload(
+    file: UploadFile = File(...),
+    default_subtype: str = Query(...),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Dry-run analysis of guest file vs DB. Returns MergePreview."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
+
+    try:
+        subtype_enum = GuestSubtype(default_subtype)
+    except ValueError:
+        valid = [s.value for s in GuestSubtype]
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid subtype '{default_subtype}'. Valid: {valid}",
+        )
+
+    content = await file.read()
+    filename = file.filename or "file.xlsx"
+
+    try:
+        preview, _ = await merge_service.analyze_guest_merge(
+            db, event.id, content, filename, subtype_enum,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return preview
+
+
+@router.post("/guests/upload/merge", response_model=MergeApplyResult)
+async def merge_guest_upload(
+    file: UploadFile = File(...),
+    default_subtype: str = Query(...),
+    add_new: bool = Query(True),
+    update_existing: bool = Query(True),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Smart merge: add new + update changed guests."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
+
+    try:
+        subtype_enum = GuestSubtype(default_subtype)
+    except ValueError:
+        valid = [s.value for s in GuestSubtype]
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid subtype '{default_subtype}'. Valid: {valid}",
+        )
+
+    content = await file.read()
+    filename = file.filename or "file.xlsx"
+
+    try:
+        _, internal = await merge_service.analyze_guest_merge(
+            db, event.id, content, filename, subtype_enum,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    result = await merge_service.apply_guest_merge(
+        db, event.id, subtype_enum, internal,
+        add_new=add_new, update_existing=update_existing,
+    )
+
+    await audit_service.log_action(
+        db, current_user, "merge_guests",
+        entity_type="guests",
+        details={
+            "added": result.added, "updated": result.updated,
+            "skipped": result.skipped, "subtype": default_subtype,
+        },
+    )
+
+    return result
+
+
+@router.delete("/guests/all")
+async def delete_all_guests(
+    subtype: str | None = Query(None),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete all guests for current event, optionally filtered by subtype."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
+
+    guest_role = await user_service.get_role_by_code(db, RoleCode.GUEST)
+    if not guest_role:
+        raise HTTPException(status_code=500, detail="Guest role not found")
+
+    query = select(UserRole).where(
+        UserRole.event_id == event.id,
+        UserRole.role_id == guest_role.id,
+    )
+    if subtype:
+        try:
+            subtype_enum = GuestSubtype(subtype)
+        except ValueError:
+            valid = [s.value for s in GuestSubtype]
+            raise HTTPException(status_code=422, detail=f"Invalid subtype. Valid: {valid}")
+        query = query.where(UserRole.guest_subtype == subtype_enum)
+
+    result = await db.execute(query)
+    roles = list(result.scalars().all())
+    count = len(roles)
+
+    user_ids = [ur.user_id for ur in roles]
+    for ur in roles:
+        await db.delete(ur)
+
+    # Delete users with synthetic IDs (created by import)
+    for uid in user_ids:
+        user = await db.get(User, uid)
+        if user and user.telegram_user_id.startswith("guest-"):
+            await db.delete(user)
+
+    await db.commit()
+
+    await audit_service.log_action(
+        db, current_user, "delete_all_guests",
+        entity_type="guests",
+        details={"deleted": count, "subtype": subtype},
+    )
+
+    return {"deleted": count}

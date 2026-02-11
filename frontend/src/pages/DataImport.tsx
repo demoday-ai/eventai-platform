@@ -6,6 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { FileUpload } from "../components/import/FileUpload"
 import { ImportSummary } from "../components/import/ImportSummary"
+import { MergePreviewCard } from "../components/import/MergePreviewCard"
+import { MergeResultCard } from "../components/import/MergeResult"
+import { DeleteAllButton } from "../components/import/DeleteAllButton"
 import { APP_NAME } from "../lib/constants"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
 import {
@@ -16,33 +19,22 @@ import {
   getCurrentEvent,
   getDashboard,
   isNoEventError,
+  previewProjectUpload,
+  previewExpertUpload,
+  previewGuestUpload,
+  mergeProjects,
+  mergeExperts,
+  mergeGuests,
+  deleteAllProjects,
+  deleteAllExperts,
+  deleteAllGuests,
   type UploadResult,
   type ExpertUploadResult,
   type GuestUploadResult,
-  type GuestUploadConflict,
-  type UploadConflict,
-  type ExpertUploadConflict,
+  type MergePreview,
+  type MergeApplyResult,
   type UploadJobResponse,
 } from "../lib/api-client"
-
-// Helper to load from localStorage
-function loadFromStorage<T>(key: string): T | null {
-  try {
-    const stored = localStorage.getItem(key)
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
-// Helper to save to localStorage
-function saveToStorage<T>(key: string, value: T | null) {
-  if (value) {
-    localStorage.setItem(key, JSON.stringify(value))
-  } else {
-    localStorage.removeItem(key)
-  }
-}
 
 function NoEventHint() {
   return (
@@ -60,6 +52,8 @@ function NoEventHint() {
     </Card>
   )
 }
+
+type MergeState = "idle" | "analyzing" | "preview" | "applying" | "result"
 
 export function DataImport() {
   const queryClient = useQueryClient()
@@ -90,24 +84,29 @@ export function DataImport() {
   const refreshAllStats = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     queryClient.invalidateQueries({ queryKey: ["projects"] })
+    queryClient.invalidateQueries({ queryKey: ["pipeline-status"] })
   }, [queryClient])
 
-  // --- Projects ---
+  // ================================================================
+  // PROJECTS TAB
+  // ================================================================
   const [projectFile, setProjectFile] = useState<File | null>(null)
-  const [projectResult, setProjectResult] = useState<UploadResult | null>(() =>
-    loadFromStorage<UploadResult>("import_project_result")
-  )
-  const [projectConflict, setProjectConflict] = useState<UploadConflict | null>(null)
+  const [projectMergeState, setProjectMergeState] = useState<MergeState>("idle")
+  const [projectPreview, setProjectPreview] = useState<MergePreview | null>(null)
+  const [projectMergeResult, setProjectMergeResult] = useState<MergeApplyResult | null>(null)
+  // Legacy result (for replace all flow)
+  const [projectResult, setProjectResult] = useState<UploadResult | null>(null)
   const [projectJobId, setProjectJobId] = useState<string | null>(null)
   const [projectJobStatus, setProjectJobStatus] = useState<string | null>(null)
   const [projectProgress, setProjectProgress] = useState<UploadJobResponse["progress"] | null>(null)
   const [projectError, setProjectError] = useState<string | null>(null)
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null)
 
+  // Job polling for both upload and merge
   useEffect(() => {
     if (!projectJobId || projectJobStatus === "completed" || projectJobStatus === "failed") {
       return
     }
-
     const interval = setInterval(async () => {
       try {
         const status = await getUploadJobStatus(projectJobId)
@@ -115,25 +114,45 @@ export function DataImport() {
         setProjectProgress(status.progress || null)
 
         if (status.status === "completed" && status.result) {
-          setProjectResult(status.result)
+          // Check if this is a merge result or legacy upload result
+          if ("added" in status.result) {
+            setProjectMergeResult(status.result as unknown as MergeApplyResult)
+            setProjectMergeState("result")
+          } else {
+            setProjectResult(status.result)
+          }
           setProjectJobId(null)
           setProjectJobStatus(null)
           setProjectProgress(null)
           setProjectFile(null)
+          setProjectPreview(null)
           refreshAllStats()
         } else if (status.status === "failed") {
           setProjectError(status.error || "Неизвестная ошибка")
           setProjectJobId(null)
+          setProjectMergeState("idle")
         }
       } catch (err) {
         console.error("Failed to poll job status:", err)
       }
     }, 1000)
-
     return () => clearInterval(interval)
   }, [projectJobId, projectJobStatus, refreshAllStats])
 
-  const projectMutation = useMutation({
+  const projectPreviewMutation = useMutation({
+    mutationFn: (file: File) => previewProjectUpload(file),
+    onSuccess: (data) => {
+      setProjectPreview(data)
+      setProjectMergeState("preview")
+      setProjectError(null)
+    },
+    onError: (error: AxiosError<{ detail: string }>) => {
+      setProjectError(error.response?.data?.detail || error.message)
+      setProjectMergeState("idle")
+    },
+  })
+
+  const projectUploadMutation = useMutation({
     mutationFn: ({ file, replace }: { file: File; replace: boolean }) =>
       uploadProjects(file, replace),
     onSuccess: (data) => {
@@ -141,205 +160,324 @@ export function DataImport() {
         setProjectJobId(data.job_id)
         setProjectJobStatus(data.status)
         setProjectError(null)
-        setProjectConflict(null)
+        setProjectMergeState("applying")
       }
     },
-    onError: (error: AxiosError<{ detail: UploadConflict | string | { message: string; errors: unknown[] } }>) => {
-      const detail = error.response?.data?.detail
-      if (error.response?.status === 409 && detail && typeof detail === "object" && "message" in detail) {
-        setProjectConflict(detail as UploadConflict)
-      } else if (detail) {
-        if (typeof detail === "string") {
-          setProjectError(detail)
-        } else if ("message" in detail) {
-          setProjectError(detail.message)
-        } else {
-          setProjectError(error.message)
-        }
-      } else {
-        setProjectError(error.message)
-      }
+    onError: (error: AxiosError<{ detail: string }>) => {
+      setProjectError(error.response?.data?.detail || error.message)
+      setProjectMergeState("idle")
     },
   })
 
-  const handleProjectUpload = () => {
+  const handleProjectAnalyze = () => {
     if (!projectFile) return
     setProjectResult(null)
-    setProjectConflict(null)
+    setProjectMergeResult(null)
     setProjectError(null)
-    projectMutation.mutate({ file: projectFile, replace: false })
+    setDeleteMessage(null)
+    setProjectMergeState("analyzing")
+    projectPreviewMutation.mutate(projectFile)
   }
 
-  const handleProjectReplace = () => {
+  const handleProjectMergeApply = (addNew: boolean, updateExisting: boolean) => {
     if (!projectFile) return
-    setProjectConflict(null)
-    setProjectError(null)
-    projectMutation.mutate({ file: projectFile, replace: true })
+    setProjectMergeState("applying")
+    mergeProjects(projectFile, addNew, updateExisting)
+      .then((data) => {
+        if (data.job_id) {
+          setProjectJobId(data.job_id)
+          setProjectJobStatus(data.status)
+        }
+      })
+      .catch((err) => {
+        setProjectError(err.response?.data?.detail || err.message)
+        setProjectMergeState("preview")
+      })
   }
 
-  const isProjectJobRunning = projectJobId && (projectJobStatus === "pending" || projectJobStatus === "running")
+  const handleProjectReplaceAll = () => {
+    if (!projectFile) return
+    setProjectMergeState("applying")
+    projectUploadMutation.mutate({ file: projectFile, replace: true })
+  }
 
-  useEffect(() => {
-    saveToStorage("import_project_result", projectResult)
-  }, [projectResult])
+  const handleProjectCancelPreview = () => {
+    setProjectPreview(null)
+    setProjectMergeState("idle")
+  }
 
-  // --- Experts ---
+  const isProjectBusy = projectJobId && (projectJobStatus === "pending" || projectJobStatus === "running")
+
+  // ================================================================
+  // EXPERTS TAB
+  // ================================================================
   const [expertFile, setExpertFile] = useState<File | null>(null)
-  const [expertResult, setExpertResult] = useState<ExpertUploadResult | null>(() =>
-    loadFromStorage<ExpertUploadResult>("import_expert_result")
-  )
-  const [expertConflict, setExpertConflict] = useState<ExpertUploadConflict | null>(null)
+  const [expertMergeState, setExpertMergeState] = useState<MergeState>("idle")
+  const [expertPreview, setExpertPreview] = useState<MergePreview | null>(null)
+  const [expertMergeResult, setExpertMergeResult] = useState<MergeApplyResult | null>(null)
+  const [expertResult, setExpertResult] = useState<ExpertUploadResult | null>(null)
   const [expertError, setExpertError] = useState<string | null>(null)
 
-  const expertMutation = useMutation({
+  const expertPreviewMutation = useMutation({
+    mutationFn: (file: File) => previewExpertUpload(file),
+    onSuccess: (data) => {
+      setExpertPreview(data)
+      setExpertMergeState("preview")
+      setExpertError(null)
+    },
+    onError: (error: AxiosError<{ detail: string }>) => {
+      setExpertError(error.response?.data?.detail || error.message)
+      setExpertMergeState("idle")
+    },
+  })
+
+  const expertUploadMutation = useMutation({
     mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
       uploadExperts(file, confirmReplace),
-    onSuccess: (data) => {
-      if ("existing_count" in data) {
-        setExpertConflict(data as unknown as ExpertUploadConflict)
-        setExpertResult(null)
-      } else {
-        setExpertResult(data)
-        setExpertConflict(null)
-        setExpertFile(null)
-        setExpertError(null)
-        refreshAllStats()
-      }
-    },
-    onError: (error: AxiosError<{ detail: string }>) => {
-      const detail = error.response?.data?.detail
-      if (typeof detail === "string") {
-        setExpertError(detail)
-      } else {
-        setExpertError(error.message)
-      }
-    },
   })
 
-  const handleExpertUpload = () => {
+  const handleExpertAnalyze = () => {
     if (!expertFile) return
     setExpertResult(null)
-    setExpertConflict(null)
+    setExpertMergeResult(null)
     setExpertError(null)
-    expertMutation.mutate({ file: expertFile, confirmReplace: false })
+    setDeleteMessage(null)
+    setExpertMergeState("analyzing")
+    expertPreviewMutation.mutate(expertFile)
   }
 
-  const handleExpertReplace = () => {
+  const handleExpertMergeApply = async (addNew: boolean, updateExisting: boolean) => {
     if (!expertFile) return
-    setExpertConflict(null)
-    expertMutation.mutate({ file: expertFile, confirmReplace: true })
+    setExpertMergeState("applying")
+    try {
+      const result = await mergeExperts(expertFile, addNew, updateExisting)
+      setExpertMergeResult(result)
+      setExpertMergeState("result")
+      setExpertPreview(null)
+      setExpertFile(null)
+      refreshAllStats()
+    } catch (err) {
+      const axErr = err as AxiosError<{ detail: string }>
+      setExpertError(axErr.response?.data?.detail || axErr.message)
+      setExpertMergeState("preview")
+    }
   }
 
-  useEffect(() => {
-    saveToStorage("import_expert_result", expertResult)
-  }, [expertResult])
+  const handleExpertReplaceAll = () => {
+    if (!expertFile) return
+    setExpertMergeState("applying")
+    expertUploadMutation.mutate(
+      { file: expertFile, confirmReplace: true },
+      {
+        onSuccess: (data) => {
+          if ("existing_count" in data) {
+            // Should not happen with confirmReplace=true, but handle gracefully
+            setExpertError("Unexpected conflict response")
+          } else {
+            setExpertResult(data)
+            setExpertPreview(null)
+            setExpertFile(null)
+            setExpertMergeState("idle")
+            refreshAllStats()
+          }
+        },
+        onError: (error: Error) => {
+          const axErr = error as AxiosError<{ detail: string }>
+          setExpertError(axErr.response?.data?.detail || error.message)
+          setExpertMergeState("idle")
+        },
+      },
+    )
+  }
 
-  // --- Students ---
+  const handleExpertCancelPreview = () => {
+    setExpertPreview(null)
+    setExpertMergeState("idle")
+  }
+
+  // ================================================================
+  // STUDENTS TAB
+  // ================================================================
   const [studentFile, setStudentFile] = useState<File | null>(null)
-  const [studentResult, setStudentResult] = useState<GuestUploadResult | null>(() =>
-    loadFromStorage<GuestUploadResult>("import_student_result")
-  )
-  const [studentConflict, setStudentConflict] = useState<GuestUploadConflict | null>(null)
+  const [studentMergeState, setStudentMergeState] = useState<MergeState>("idle")
+  const [studentPreview, setStudentPreview] = useState<MergePreview | null>(null)
+  const [studentMergeResult, setStudentMergeResult] = useState<MergeApplyResult | null>(null)
+  const [studentResult, setStudentResult] = useState<GuestUploadResult | null>(null)
   const [studentError, setStudentError] = useState<string | null>(null)
 
-  const studentMutation = useMutation({
+  const studentPreviewMutation = useMutation({
+    mutationFn: (file: File) => previewGuestUpload(file, "student"),
+    onSuccess: (data) => {
+      setStudentPreview(data)
+      setStudentMergeState("preview")
+      setStudentError(null)
+    },
+    onError: (error: AxiosError<{ detail: string }>) => {
+      setStudentError(error.response?.data?.detail || error.message)
+      setStudentMergeState("idle")
+    },
+  })
+
+  const studentUploadMutation = useMutation({
     mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
       uploadGuests(file, "student", confirmReplace),
-    onSuccess: (data) => {
-      if ("existing_count" in data) {
-        setStudentConflict(data as unknown as GuestUploadConflict)
-        setStudentResult(null)
-      } else {
-        setStudentResult(data)
-        setStudentConflict(null)
-        setStudentFile(null)
-        setStudentError(null)
-        refreshAllStats()
-      }
-    },
-    onError: (error: AxiosError<{ detail: string }>) => {
-      const detail = error.response?.data?.detail
-      if (typeof detail === "string") {
-        setStudentError(detail)
-      } else {
-        setStudentError(error.message)
-      }
-    },
   })
 
-  const handleStudentUpload = () => {
+  const handleStudentAnalyze = () => {
     if (!studentFile) return
     setStudentResult(null)
-    setStudentConflict(null)
+    setStudentMergeResult(null)
     setStudentError(null)
-    studentMutation.mutate({ file: studentFile, confirmReplace: false })
+    setDeleteMessage(null)
+    setStudentMergeState("analyzing")
+    studentPreviewMutation.mutate(studentFile)
   }
 
-  const handleStudentReplace = () => {
+  const handleStudentMergeApply = async (addNew: boolean, updateExisting: boolean) => {
     if (!studentFile) return
-    setStudentConflict(null)
-    studentMutation.mutate({ file: studentFile, confirmReplace: true })
+    setStudentMergeState("applying")
+    try {
+      const result = await mergeGuests(studentFile, "student", addNew, updateExisting)
+      setStudentMergeResult(result)
+      setStudentMergeState("result")
+      setStudentPreview(null)
+      setStudentFile(null)
+      refreshAllStats()
+    } catch (err) {
+      const axErr = err as AxiosError<{ detail: string }>
+      setStudentError(axErr.response?.data?.detail || axErr.message)
+      setStudentMergeState("preview")
+    }
   }
 
-  useEffect(() => {
-    const isEmpty = studentResult && studentResult.total_parsed === 0 && studentResult.imported === 0
-    saveToStorage("import_student_result", isEmpty ? null : studentResult)
-  }, [studentResult])
+  const handleStudentReplaceAll = () => {
+    if (!studentFile) return
+    setStudentMergeState("applying")
+    studentUploadMutation.mutate(
+      { file: studentFile, confirmReplace: true },
+      {
+        onSuccess: (data) => {
+          if ("existing_count" in data) {
+            setStudentError("Unexpected conflict response")
+          } else {
+            setStudentResult(data)
+            setStudentPreview(null)
+            setStudentFile(null)
+            setStudentMergeState("idle")
+            refreshAllStats()
+          }
+        },
+        onError: (error: Error) => {
+          const axErr = error as AxiosError<{ detail: string }>
+          setStudentError(axErr.response?.data?.detail || error.message)
+          setStudentMergeState("idle")
+        },
+      },
+    )
+  }
 
-  // --- Partners ---
+  const handleStudentCancelPreview = () => {
+    setStudentPreview(null)
+    setStudentMergeState("idle")
+  }
+
+  // ================================================================
+  // PARTNERS TAB
+  // ================================================================
   const [partnerFile, setPartnerFile] = useState<File | null>(null)
-  const [partnerResult, setPartnerResult] = useState<GuestUploadResult | null>(() =>
-    loadFromStorage<GuestUploadResult>("import_partner_result")
-  )
-  const [partnerConflict, setPartnerConflict] = useState<GuestUploadConflict | null>(null)
+  const [partnerMergeState, setPartnerMergeState] = useState<MergeState>("idle")
+  const [partnerPreview, setPartnerPreview] = useState<MergePreview | null>(null)
+  const [partnerMergeResult, setPartnerMergeResult] = useState<MergeApplyResult | null>(null)
+  const [partnerResult, setPartnerResult] = useState<GuestUploadResult | null>(null)
   const [partnerError, setPartnerError] = useState<string | null>(null)
 
-  const partnerMutation = useMutation({
-    mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
-      uploadGuests(file, "business_partner", confirmReplace),
+  const partnerPreviewMutation = useMutation({
+    mutationFn: (file: File) => previewGuestUpload(file, "business_partner"),
     onSuccess: (data) => {
-      if ("existing_count" in data) {
-        setPartnerConflict(data as unknown as GuestUploadConflict)
-        setPartnerResult(null)
-      } else {
-        setPartnerResult(data)
-        setPartnerConflict(null)
-        setPartnerFile(null)
-        setPartnerError(null)
-        refreshAllStats()
-      }
+      setPartnerPreview(data)
+      setPartnerMergeState("preview")
+      setPartnerError(null)
     },
     onError: (error: AxiosError<{ detail: string }>) => {
-      const detail = error.response?.data?.detail
-      if (typeof detail === "string") {
-        setPartnerError(detail)
-      } else {
-        setPartnerError(error.message)
-      }
+      setPartnerError(error.response?.data?.detail || error.message)
+      setPartnerMergeState("idle")
     },
   })
 
-  const handlePartnerUpload = () => {
+  const partnerUploadMutation = useMutation({
+    mutationFn: ({ file, confirmReplace }: { file: File; confirmReplace: boolean }) =>
+      uploadGuests(file, "business_partner", confirmReplace),
+  })
+
+  const handlePartnerAnalyze = () => {
     if (!partnerFile) return
     setPartnerResult(null)
-    setPartnerConflict(null)
+    setPartnerMergeResult(null)
     setPartnerError(null)
-    partnerMutation.mutate({ file: partnerFile, confirmReplace: false })
+    setDeleteMessage(null)
+    setPartnerMergeState("analyzing")
+    partnerPreviewMutation.mutate(partnerFile)
   }
 
-  const handlePartnerReplace = () => {
+  const handlePartnerMergeApply = async (addNew: boolean, updateExisting: boolean) => {
     if (!partnerFile) return
-    setPartnerConflict(null)
-    partnerMutation.mutate({ file: partnerFile, confirmReplace: true })
+    setPartnerMergeState("applying")
+    try {
+      const result = await mergeGuests(partnerFile, "business_partner", addNew, updateExisting)
+      setPartnerMergeResult(result)
+      setPartnerMergeState("result")
+      setPartnerPreview(null)
+      setPartnerFile(null)
+      refreshAllStats()
+    } catch (err) {
+      const axErr = err as AxiosError<{ detail: string }>
+      setPartnerError(axErr.response?.data?.detail || axErr.message)
+      setPartnerMergeState("preview")
+    }
   }
 
-  useEffect(() => {
-    saveToStorage("import_partner_result", partnerResult)
-  }, [partnerResult])
+  const handlePartnerReplaceAll = () => {
+    if (!partnerFile) return
+    setPartnerMergeState("applying")
+    partnerUploadMutation.mutate(
+      { file: partnerFile, confirmReplace: true },
+      {
+        onSuccess: (data) => {
+          if ("existing_count" in data) {
+            setPartnerError("Unexpected conflict response")
+          } else {
+            setPartnerResult(data)
+            setPartnerPreview(null)
+            setPartnerFile(null)
+            setPartnerMergeState("idle")
+            refreshAllStats()
+          }
+        },
+        onError: (error: Error) => {
+          const axErr = error as AxiosError<{ detail: string }>
+          setPartnerError(axErr.response?.data?.detail || error.message)
+          setPartnerMergeState("idle")
+        },
+      },
+    )
+  }
+
+  const handlePartnerCancelPreview = () => {
+    setPartnerPreview(null)
+    setPartnerMergeState("idle")
+  }
 
   return (
     <div className="grid gap-6">
       <h2 className="text-2xl font-bold">Импорт данных</h2>
+
+      {deleteMessage && (
+        <Card className="border-green-300 bg-green-50">
+          <CardContent className="pt-4">
+            <p className="text-sm text-green-800">{deleteMessage}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="projects">
         <TabsList className="grid w-full grid-cols-4">
@@ -366,7 +504,7 @@ export function DataImport() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isProjectJobRunning && (
+                {isProjectBusy && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <p className="text-sm text-blue-800 font-medium">
                       {projectProgress?.stage === "deleting" && "Удаление старых данных..."}
@@ -399,7 +537,7 @@ export function DataImport() {
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setProjectFile}
                   label="Перетащите файл с проектами или нажмите кнопку"
-                  disabled={!!isProjectJobRunning}
+                  disabled={!!isProjectBusy || projectMergeState === "analyzing"}
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["Название", "Описание", "Автор"]}
                   optionalColumns={["Телеграм", "Теги", "Трек"]}
@@ -407,57 +545,50 @@ export function DataImport() {
                 />
 
                 <Button
-                  onClick={handleProjectUpload}
-                  disabled={!projectFile || projectMutation.isPending || !!isProjectJobRunning}
+                  onClick={handleProjectAnalyze}
+                  disabled={!projectFile || projectPreviewMutation.isPending || !!isProjectBusy}
                 >
-                  {isProjectJobRunning
-                    ? "Загрузка..."
-                    : projectMutation.isPending
-                    ? "Запуск..."
-                    : "Загрузить"}
+                  {projectPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
                 </Button>
 
-                {projectConflict && (
-                  <Card className="border-yellow-300 bg-yellow-50">
-                    <CardContent className="pt-4 space-y-3">
-                      <p className="text-sm">{projectConflict.message}</p>
-                      <div className="flex gap-2">
-                        <Button variant="destructive" size="sm" onClick={handleProjectReplace}>
-                          Заменить
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setProjectConflict(null)}
-                        >
-                          Отмена
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {projectError && (
+                  <p className="text-sm text-red-500">Ошибка: {projectError}</p>
                 )}
 
-                {(projectMutation.isError || projectError) && !projectConflict && (
-                  <p className="text-sm text-red-500">
-                    Ошибка загрузки: {projectError || (projectMutation.error instanceof Error ? projectMutation.error.message : "Неизвестная ошибка")}
-                  </p>
+                {projectMergeState === "preview" && projectPreview && (
+                  <MergePreviewCard
+                    preview={projectPreview}
+                    type="projects"
+                    onApply={handleProjectMergeApply}
+                    onReplaceAll={handleProjectReplaceAll}
+                    onCancel={handleProjectCancelPreview}
+                    isApplying={projectUploadMutation.isPending || !!isProjectBusy}
+                  />
                 )}
 
-                {projectResult?.duplicate_warning && (
-                  <Card className="border-amber-400 bg-amber-50">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-amber-800">{projectResult.duplicate_warning}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
+                {projectMergeResult && <MergeResultCard result={projectMergeResult} type="projects" />}
                 {projectResult && <ImportSummary result={projectResult} type="projects" />}
+
+                {/* Delete all */}
+                <div className="pt-4 border-t">
+                  <DeleteAllButton
+                    label="всех проектов"
+                    count={dashboardData?.projects?.total}
+                    deleteFn={deleteAllProjects}
+                    onDeleted={(n) => {
+                      setDeleteMessage(`Удалено проектов: ${n}`)
+                      setProjectResult(null)
+                      setProjectMergeResult(null)
+                      refreshAllStats()
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Tab 4: Experts */}
+        {/* Tab 2: Experts */}
         <TabsContent value="experts">
           {!hasEvent ? (
             <NoEventHint />
@@ -478,6 +609,7 @@ export function DataImport() {
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setExpertFile}
                   label="Перетащите файл с экспертами или нажмите кнопку"
+                  disabled={expertMergeState === "analyzing" || expertMergeState === "applying"}
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["ФИО"]}
                   optionalColumns={["Телеграм", "Описание", "Теги"]}
@@ -485,47 +617,43 @@ export function DataImport() {
                 />
 
                 <Button
-                  onClick={handleExpertUpload}
-                  disabled={!expertFile || expertMutation.isPending}
+                  onClick={handleExpertAnalyze}
+                  disabled={!expertFile || expertPreviewMutation.isPending || expertMergeState === "applying"}
                 >
-                  {expertMutation.isPending ? "Загрузка..." : "Загрузить"}
+                  {expertPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
                 </Button>
 
-                {expertConflict && (
-                  <Card className="border-yellow-300 bg-yellow-50">
-                    <CardContent className="pt-4 space-y-3">
-                      <p className="text-sm">{expertConflict.message}</p>
-                      <div className="flex gap-2">
-                        <Button variant="destructive" size="sm" onClick={handleExpertReplace}>
-                          Заменить
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setExpertConflict(null)}
-                        >
-                          Отмена
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {expertError && (
+                  <p className="text-sm text-red-500">Ошибка: {expertError}</p>
                 )}
 
-                {(expertMutation.isError || expertError) && (
-                  <p className="text-sm text-red-500">
-                    Ошибка загрузки: {expertError || "Неизвестная ошибка"}
-                  </p>
+                {expertMergeState === "preview" && expertPreview && (
+                  <MergePreviewCard
+                    preview={expertPreview}
+                    type="experts"
+                    onApply={handleExpertMergeApply}
+                    onReplaceAll={handleExpertReplaceAll}
+                    onCancel={handleExpertCancelPreview}
+                    isApplying={expertUploadMutation.isPending}
+                  />
                 )}
 
-                {expertResult?.duplicate_warning && (
-                  <Card className="border-amber-400 bg-amber-50">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-amber-800">{expertResult.duplicate_warning}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
+                {expertMergeResult && <MergeResultCard result={expertMergeResult} type="experts" />}
                 {expertResult && <ImportSummary result={expertResult} type="experts" />}
+
+                <div className="pt-4 border-t">
+                  <DeleteAllButton
+                    label="всех экспертов"
+                    count={dashboardData?.experts?.total}
+                    deleteFn={deleteAllExperts}
+                    onDeleted={(n) => {
+                      setDeleteMessage(`Удалено экспертов: ${n}`)
+                      setExpertResult(null)
+                      setExpertMergeResult(null)
+                      refreshAllStats()
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
@@ -552,59 +680,56 @@ export function DataImport() {
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setStudentFile}
                   label="Перетащите файл со студентами или нажмите кнопку"
+                  disabled={studentMergeState === "analyzing" || studentMergeState === "applying"}
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["ФИО", "Телеграм"]}
                   templateUrl="/templates/students_template.xlsx"
                 />
 
                 <Button
-                  onClick={handleStudentUpload}
-                  disabled={!studentFile || studentMutation.isPending}
+                  onClick={handleStudentAnalyze}
+                  disabled={!studentFile || studentPreviewMutation.isPending || studentMergeState === "applying"}
                 >
-                  {studentMutation.isPending ? "Загрузка..." : "Загрузить"}
+                  {studentPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
                 </Button>
 
-                {studentConflict && (
-                  <Card className="border-yellow-300 bg-yellow-50">
-                    <CardContent className="pt-4 space-y-3">
-                      <p className="text-sm">{studentConflict.message}</p>
-                      <div className="flex gap-2">
-                        <Button variant="destructive" size="sm" onClick={handleStudentReplace}>
-                          Заменить
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setStudentConflict(null)}
-                        >
-                          Отмена
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {studentError && (
+                  <p className="text-sm text-red-500">Ошибка: {studentError}</p>
                 )}
 
-                {(studentMutation.isError || studentError) && (
-                  <p className="text-sm text-red-500">
-                    Ошибка загрузки: {studentError || "Неизвестная ошибка"}
-                  </p>
+                {studentMergeState === "preview" && studentPreview && (
+                  <MergePreviewCard
+                    preview={studentPreview}
+                    type="students"
+                    onApply={handleStudentMergeApply}
+                    onReplaceAll={handleStudentReplaceAll}
+                    onCancel={handleStudentCancelPreview}
+                    isApplying={studentUploadMutation.isPending}
+                  />
                 )}
 
-                {studentResult?.duplicate_warning && (
-                  <Card className="border-amber-400 bg-amber-50">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-amber-800">{studentResult.duplicate_warning}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
+                {studentMergeResult && <MergeResultCard result={studentMergeResult} type="students" />}
                 {studentResult && <ImportSummary result={studentResult} type="students" />}
+
+                <div className="pt-4 border-t">
+                  <DeleteAllButton
+                    label="всех студентов"
+                    count={dashboardData?.students?.total}
+                    deleteFn={() => deleteAllGuests("student")}
+                    onDeleted={(n) => {
+                      setDeleteMessage(`Удалено студентов: ${n}`)
+                      setStudentResult(null)
+                      setStudentMergeResult(null)
+                      refreshAllStats()
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Tab 5: Partners */}
+        {/* Tab 4: Partners */}
         <TabsContent value="partners">
           {!hasEvent ? (
             <NoEventHint />
@@ -625,53 +750,50 @@ export function DataImport() {
                   accept=".csv,.json,.xlsx"
                   onFileSelect={setPartnerFile}
                   label="Перетащите файл с партнёрами или нажмите кнопку"
+                  disabled={partnerMergeState === "analyzing" || partnerMergeState === "applying"}
                   formats={["XLSX", "CSV", "JSON"]}
                   requiredColumns={["ФИО", "Телеграм"]}
                   templateUrl="/templates/partners_template.xlsx"
                 />
 
                 <Button
-                  onClick={handlePartnerUpload}
-                  disabled={!partnerFile || partnerMutation.isPending}
+                  onClick={handlePartnerAnalyze}
+                  disabled={!partnerFile || partnerPreviewMutation.isPending || partnerMergeState === "applying"}
                 >
-                  {partnerMutation.isPending ? "Загрузка..." : "Загрузить"}
+                  {partnerPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
                 </Button>
 
-                {partnerConflict && (
-                  <Card className="border-yellow-300 bg-yellow-50">
-                    <CardContent className="pt-4 space-y-3">
-                      <p className="text-sm">{partnerConflict.message}</p>
-                      <div className="flex gap-2">
-                        <Button variant="destructive" size="sm" onClick={handlePartnerReplace}>
-                          Заменить
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPartnerConflict(null)}
-                        >
-                          Отмена
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {partnerError && (
+                  <p className="text-sm text-red-500">Ошибка: {partnerError}</p>
                 )}
 
-                {(partnerMutation.isError || partnerError) && (
-                  <p className="text-sm text-red-500">
-                    Ошибка загрузки: {partnerError || "Неизвестная ошибка"}
-                  </p>
+                {partnerMergeState === "preview" && partnerPreview && (
+                  <MergePreviewCard
+                    preview={partnerPreview}
+                    type="partners"
+                    onApply={handlePartnerMergeApply}
+                    onReplaceAll={handlePartnerReplaceAll}
+                    onCancel={handlePartnerCancelPreview}
+                    isApplying={partnerUploadMutation.isPending}
+                  />
                 )}
 
-                {partnerResult?.duplicate_warning && (
-                  <Card className="border-amber-400 bg-amber-50">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-amber-800">{partnerResult.duplicate_warning}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
+                {partnerMergeResult && <MergeResultCard result={partnerMergeResult} type="partners" />}
                 {partnerResult && <ImportSummary result={partnerResult} type="partners" />}
+
+                <div className="pt-4 border-t">
+                  <DeleteAllButton
+                    label="всех партнёров"
+                    count={dashboardData?.partners?.total}
+                    deleteFn={() => deleteAllGuests("business_partner")}
+                    onDeleted={(n) => {
+                      setDeleteMessage(`Удалено партнёров: ${n}`)
+                      setPartnerResult(null)
+                      setPartnerMergeResult(null)
+                      refreshAllStats()
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}

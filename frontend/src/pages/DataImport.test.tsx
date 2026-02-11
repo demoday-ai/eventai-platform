@@ -20,6 +20,15 @@ const mockGetDashboard = vi.fn()
 const mockGetProjects = vi.fn()
 const mockGetUploadJobStatus = vi.fn()
 const mockGetCurrentEvent = vi.fn()
+const mockPreviewProjectUpload = vi.fn()
+const mockPreviewExpertUpload = vi.fn()
+const mockPreviewGuestUpload = vi.fn()
+const mockMergeProjects = vi.fn()
+const mockMergeExperts = vi.fn()
+const mockMergeGuests = vi.fn()
+const mockDeleteAllProjects = vi.fn()
+const mockDeleteAllExperts = vi.fn()
+const mockDeleteAllGuests = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   uploadProjects: (...args: unknown[]) => mockUploadProjects(...args),
@@ -29,6 +38,15 @@ vi.mock("../lib/api-client", () => ({
   getProjects: () => mockGetProjects(),
   getUploadJobStatus: (...args: unknown[]) => mockGetUploadJobStatus(...args),
   getCurrentEvent: () => mockGetCurrentEvent(),
+  previewProjectUpload: (...args: unknown[]) => mockPreviewProjectUpload(...args),
+  previewExpertUpload: (...args: unknown[]) => mockPreviewExpertUpload(...args),
+  previewGuestUpload: (...args: unknown[]) => mockPreviewGuestUpload(...args),
+  mergeProjects: (...args: unknown[]) => mockMergeProjects(...args),
+  mergeExperts: (...args: unknown[]) => mockMergeExperts(...args),
+  mergeGuests: (...args: unknown[]) => mockMergeGuests(...args),
+  deleteAllProjects: (...args: unknown[]) => mockDeleteAllProjects(...args),
+  deleteAllExperts: (...args: unknown[]) => mockDeleteAllExperts(...args),
+  deleteAllGuests: (...args: unknown[]) => mockDeleteAllGuests(...args),
   isNoEventError: (error: unknown) => {
     if (error && typeof error === "object" && "response" in error) {
       const resp = (error as { response?: { status?: number } }).response
@@ -57,6 +75,8 @@ describe("DataImport", () => {
       experts: { total: 0, confirmed: 0, pending: 0, invited: 0 },
       guests: { total: 0, by_subtype: [] },
       rooms: { total: 0, with_experts: 0, without_experts: 0 },
+      projects: { total: 0 },
+      partners: { total: 0, from_bot: 0, from_import: 0 },
       alerts: [],
     })
     mockGetProjects.mockResolvedValue([])
@@ -137,100 +157,59 @@ describe("DataImport", () => {
     })
   })
 
-  it("shows upload sections on projects tab when event exists", async () => {
+  it("shows analyze button on projects tab when event exists", async () => {
     render(<DataImport />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
     })
   })
 
-  it("handles successful project upload", async () => {
+  it("handles project preview and shows merge preview card", async () => {
     const user = userEvent.setup()
 
-    mockUploadProjects.mockResolvedValue({
-      job_id: "test-job-123",
-      status: "pending",
-      total: 10,
-    })
-    mockGetUploadJobStatus.mockResolvedValue({
-      job_id: "test-job-123",
-      status: "completed",
-      result: {
-        loaded: 10,
-        tags_generated: 5,
-        errors: 0,
-        duplicates: 0,
-        error_details: [],
-        duplicate_titles: [],
-      },
-    })
-
-    render(<DataImport />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
-    })
-
-    const file = new File(["test"], "projects.csv", { type: "text/csv" })
-    const inputs = document.querySelectorAll('input[type="file"]')
-    await user.upload(inputs[0] as HTMLInputElement, file)
-
-    const uploadBtn = screen.getByText("Загрузить")
-    await user.click(uploadBtn)
-
-    await waitFor(() => {
-      expect(screen.getByText("Результат импорта проектов")).toBeInTheDocument()
-      expect(screen.getByText("10")).toBeInTheDocument()
-    }, { timeout: 3000 })
-  })
-
-  it("handles project upload 409 conflict", async () => {
-    const user = userEvent.setup()
-    const error = new AxiosError("Conflict", "409", undefined, undefined, {
-      status: 409,
-      statusText: "Conflict",
-      headers: {},
-      config: { headers: new AxiosHeaders() },
-      data: {
-        detail: {
-          message: "Заменить предыдущие данные (5 проектов) новыми (10 проектов)?",
-          existing_count: 5,
-          new_count: 10,
-        },
-      },
-    })
-    mockUploadProjects.mockRejectedValue(error)
-
-    render(<DataImport />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
-    })
-
-    const file = new File(["test"], "projects.csv", { type: "text/csv" })
-    const inputs = document.querySelectorAll('input[type="file"]')
-    await user.upload(inputs[0] as HTMLInputElement, file)
-
-    const uploadBtn = screen.getByText("Загрузить")
-    await user.click(uploadBtn)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Заменить предыдущие данные (5 проектов) новыми (10 проектов)?")
-      ).toBeInTheDocument()
-      expect(screen.getByText("Заменить")).toBeInTheDocument()
-    })
-  })
-
-  it("handles successful expert upload", async () => {
-    const user = userEvent.setup()
-    mockUploadExperts.mockResolvedValue({
-      total_parsed: 20,
-      imported: 18,
-      with_tags: 15,
-      without_tags: 3,
+    mockPreviewProjectUpload.mockResolvedValue({
+      new_count: 5,
+      duplicate_count: 3,
+      updated_count: 2,
+      error_count: 0,
+      new_items: [{ name: "Проект 1", telegram: null }],
+      updated_items: [],
       errors: [],
+      with_tags_in_db: 10,
+      missing_tags_in_db: 2,
+    })
+
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
+    })
+
+    const file = new File(["test"], "projects.csv", { type: "text/csv" })
+    const inputs = document.querySelectorAll('input[type="file"]')
+    await user.upload(inputs[0] as HTMLInputElement, file)
+
+    await user.click(screen.getByText("Анализировать"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Результат анализа файла")).toBeInTheDocument()
+      expect(screen.getByText("5")).toBeInTheDocument() // new_count
+    })
+  })
+
+  it("handles expert preview", async () => {
+    const user = userEvent.setup()
+    mockPreviewExpertUpload.mockResolvedValue({
+      new_count: 10,
+      duplicate_count: 5,
+      updated_count: 3,
+      error_count: 0,
+      new_items: [],
+      updated_items: [],
+      errors: [],
+      with_tags_in_db: null,
+      missing_tags_in_db: null,
     })
 
     render(<DataImport />, { wrapper: createWrapper() })
@@ -238,51 +217,54 @@ describe("DataImport", () => {
     await user.click(screen.getByRole("tab", { name: "Эксперты" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
     })
 
     const file = new File(["[]"], "experts.json", { type: "application/json" })
     const inputs = document.querySelectorAll('input[type="file"]')
     await user.upload(inputs[0] as HTMLInputElement, file)
 
-    const uploadBtn = screen.getByText("Загрузить")
-    await user.click(uploadBtn)
+    await user.click(screen.getByText("Анализировать"))
 
     await waitFor(() => {
-      expect(screen.getByText("Результат импорта экспертов")).toBeInTheDocument()
-      expect(screen.getByText("18")).toBeInTheDocument()
+      expect(screen.getByText("Результат анализа файла")).toBeInTheDocument()
     })
   })
 
-  it("renders Students tab with upload area", async () => {
+  it("renders Students tab with analyze button", async () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
     await user.click(screen.getByRole("tab", { name: "Студенты" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
     })
   })
 
-  it("renders Partners tab with upload area", async () => {
+  it("renders Partners tab with analyze button", async () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
     await user.click(screen.getByRole("tab", { name: "Партнёры" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
     })
   })
 
-  it("uploads students with student subtype", async () => {
+  it("calls previewGuestUpload for students", async () => {
     const user = userEvent.setup()
-    mockUploadGuests.mockResolvedValue({
-      total_parsed: 5,
-      imported: 5,
-      duplicates: 0,
+    mockPreviewGuestUpload.mockResolvedValue({
+      new_count: 5,
+      duplicate_count: 0,
+      updated_count: 0,
+      error_count: 0,
+      new_items: [],
+      updated_items: [],
       errors: [],
+      with_tags_in_db: null,
+      missing_tags_in_db: null,
     })
 
     render(<DataImport />, { wrapper: createWrapper() })
@@ -290,27 +272,32 @@ describe("DataImport", () => {
     await user.click(screen.getByRole("tab", { name: "Студенты" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
     })
 
     const file = new File(["test"], "students.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
     const inputs = document.querySelectorAll('input[type="file"]')
     await user.upload(inputs[0] as HTMLInputElement, file)
 
-    await user.click(screen.getByText("Загрузить"))
+    await user.click(screen.getByText("Анализировать"))
 
     await waitFor(() => {
-      expect(mockUploadGuests).toHaveBeenCalledWith(file, "student", false)
+      expect(mockPreviewGuestUpload).toHaveBeenCalledWith(file, "student")
     })
   })
 
-  it("uploads partners with business_partner subtype", async () => {
+  it("calls previewGuestUpload for partners", async () => {
     const user = userEvent.setup()
-    mockUploadGuests.mockResolvedValue({
-      total_parsed: 3,
-      imported: 3,
-      duplicates: 0,
+    mockPreviewGuestUpload.mockResolvedValue({
+      new_count: 3,
+      duplicate_count: 0,
+      updated_count: 0,
+      error_count: 0,
+      new_items: [],
+      updated_items: [],
       errors: [],
+      with_tags_in_db: null,
+      missing_tags_in_db: null,
     })
 
     render(<DataImport />, { wrapper: createWrapper() })
@@ -318,17 +305,17 @@ describe("DataImport", () => {
     await user.click(screen.getByRole("tab", { name: "Партнёры" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+      expect(screen.getByText("Анализировать")).toBeInTheDocument()
     })
 
     const file = new File(["test"], "partners.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
     const inputs = document.querySelectorAll('input[type="file"]')
     await user.upload(inputs[0] as HTMLInputElement, file)
 
-    await user.click(screen.getByText("Загрузить"))
+    await user.click(screen.getByText("Анализировать"))
 
     await waitFor(() => {
-      expect(mockUploadGuests).toHaveBeenCalledWith(file, "business_partner", false)
+      expect(mockPreviewGuestUpload).toHaveBeenCalledWith(file, "business_partner")
     })
   })
 
