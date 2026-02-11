@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 import uuid
 from datetime import datetime, timezone
 
@@ -24,6 +25,9 @@ from app.prompts.admin.clustering import (
 from app.services.core import llm_client
 
 logger = logging.getLogger(__name__)
+
+# Sample size for Phase 1 (theme suggestion)
+THEME_ANALYSIS_SAMPLE_SIZE = 100
 
 
 async def suggest_room_themes(
@@ -48,9 +52,13 @@ async def suggest_room_themes(
     if len(projects) < 2:
         raise ValueError(f"Недостаточно проектов для анализа: {len(projects)}")
 
-    # 2. Build data for LLM (tags + descriptions)
+    # 2. Sample projects for analysis (limit context size)
+    sample_size = min(THEME_ANALYSIS_SAMPLE_SIZE, len(projects))
+    sampled_projects = random.sample(projects, sample_size) if len(projects) > sample_size else projects
+
+    # 3. Build data for LLM (tags + descriptions)
     projects_data = []
-    for p in projects:
+    for p in sampled_projects:
         tags = [pt.tag.name for pt in p.tags if pt.tag]
         projects_data.append(
             {
@@ -61,19 +69,19 @@ async def suggest_room_themes(
             }
         )
 
-    # 3. Build prompt
+    # 4. Build prompt
     system_prompt = SUGGEST_THEMES_SYSTEM
     user_prompt = build_suggest_themes_prompt(projects_data, num_rooms)
 
-    # 4. Call LLM
-    logger.info("Suggesting themes: %d projects → %d rooms", len(projects), num_rooms)
+    # 5. Call LLM
+    logger.info("Suggesting themes: %d sampled projects → %d rooms", sample_size, num_rooms)
     llm_response = await llm_client.send_chat_completion(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         json_mode=True,
     )
 
-    # 5. Validate response
+    # 6. Validate response
     themes = llm_response.get("themes", [])
     if not themes or len(themes) != num_rooms:
         logger.warning("LLM returned %d themes, expected %d", len(themes), num_rooms)
