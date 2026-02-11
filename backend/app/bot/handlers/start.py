@@ -56,6 +56,7 @@ from app.bot.utils import safe_send_long_message
 from app.database import async_session
 from app.models.role import RoleCode
 from app.models.user import GuestSubtype
+from app.prompts.bot.agent import build_agent_system_prompt
 from app.services.core import user_service
 from app.services.guest import business_followup_service, followup_service, profiling_service, qa_service
 
@@ -1090,30 +1091,11 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     role_code = context.user_data.get("pending_role_code", "")
     is_business = role_code == RoleCode.BUSINESS.value
 
-    if is_business:
-        role_tools = "- get_pipeline — показать бизнес-пайплайн (статусы проектов)\n"
-    else:
-        role_tools = "- get_followup — follow-up пакет (итоги, контакты, next steps)\n"
-
-    system_prompt = (
-        "Ты — AI-куратор Demo Day. Пользователь получил персональную программу проектов.\n"
-        "Отвечай кратко, по делу, на русском. Без эмодзи.\n\n"
-        f"РОЛЬ ПОЛЬЗОВАТЕЛЯ: {'бизнес-партнёр' if is_business else 'гость'}\n\n"
-        "ИНСТРУМЕНТЫ (tools):\n"
-        "- show_project — показать детали ОДНОГО проекта по номеру\n"
-        "- show_profile — показать профиль пользователя\n"
-        "- compare_projects — сравнить 2-5 проектов (генерирует матрицу сравнения)\n"
-        "- generate_questions — подготовить вопросы для Q&A к проекту\n"
-        f"{role_tools}"
-        "- rebuild_profile — перезапустить профилирование\n\n"
-        "ПРАВИЛА:\n"
-        "- Для сравнения проектов ВСЕГДА вызывай compare_projects, НЕ пиши текстом\n"
-        "- show_project — ТОЛЬКО для одного проекта, НЕ для сравнения\n"
-        "- Если пользователь хочет изменить интересы — вызови rebuild_profile\n"
-        "- Для простых вопросов о проектах отвечай текстом, используя данные из РЕКОМЕНДАЦИЙ\n"
-        "- Помогай планировать маршрут по залам\n\n"
-        f"ПРОФИЛЬ:\n{profile_info}\n\n"
-        f"РЕКОМЕНДАЦИИ ({len(all_recs)} проектов):\n{recs_summary}"
+    system_prompt = build_agent_system_prompt(
+        is_business=is_business,
+        profile_info=profile_info,
+        recs_summary=recs_summary,
+        num_recommendations=len(all_recs),
     )
 
     # Maintain conversation history

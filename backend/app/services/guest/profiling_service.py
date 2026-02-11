@@ -15,21 +15,15 @@ from app.models.project_tag import ProjectTag
 from app.models.recommendation import Recommendation
 from app.models.room_project import RoomProject
 from app.models.tag import Tag
+from app.prompts.guest.profiling import (
+    SUMMARY_SYSTEM,
+    TEXT_EXTRACTION_SYSTEM,
+    build_role_context,
+    get_profile_agent_system,
+)
 from app.services.core import llm_client
 
 logger = logging.getLogger(__name__)
-
-# --- LLM Prompts ---
-
-TEXT_EXTRACTION_SYSTEM = """Ты AI-ассистент для Demo Day. Проанализируй текст гостя и извлеки интересы.
-Допустимые теги: {tag_list}
-Верни JSON строго в формате:
-{{"tags": ["tag1", "tag2"], "keywords": ["keyword1", "keyword2"]}}
-tags --только из списка допустимых. keywords --дополнительные ключевые слова не из списка."""
-
-SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерируй краткое описание (2-3 предложения) каждого проекта, адаптированное под интересы гостя. Подчеркни аспекты релевантные для гостя.
-Верни JSON строго в формате:
-{{"summaries": [{{"project_id": "...", "summary": "..."}}, ...]}}"""
 
 
 def _get_profile_agent_system() -> str:
@@ -234,6 +228,10 @@ async def chat_for_profile(
       {"action": "reply", "message": "..."} - continue conversation
       {"action": "profile", "interests": [...], "goals": [...], "summary": "...", ...} - done
     """
+    from app.services.admin.tag_service import DEFAULT_TAGS
+
+    tag_list = ", ".join(f"{k} ({v})" for k, v in DEFAULT_TAGS.items())
+
     if selected_tags:
         tags_block = (
             f"Посетитель уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
@@ -241,13 +239,13 @@ async def chat_for_profile(
     else:
         tags_block = "Посетитель пока не выбрал теги. Помоги определиться."
 
-    role_context_block, partner_profile_fields = _build_role_context(
+    role_context_block, partner_profile_fields = build_role_context(
         role_code,
         guest_subtype,
         custom_subtype,
     )
 
-    system_prompt = _get_profile_agent_system().format(
+    system_prompt = get_profile_agent_system(tag_list).format(
         selected_tags_block=tags_block,
         role_context_block=role_context_block,
         partner_profile_fields=partner_profile_fields,

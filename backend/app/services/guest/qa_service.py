@@ -16,6 +16,11 @@ from app.models.project import Project
 from app.models.project_recommendation import ProjectRecommendation
 from app.models.qa_suggestion import QASuggestion, QuestionType
 from app.models.user import GuestSubtype, User
+from app.prompts.guest.qa import (
+    build_business_qa_prompt,
+    build_comparison_matrix_prompt,
+    build_guest_qa_prompt,
+)
 from app.services.core import llm_client
 
 logger = logging.getLogger(__name__)
@@ -68,28 +73,13 @@ def build_guest_prompt(
         if guest_profile.keywords:
             interests += f"\nКлючевые слова: {', '.join(guest_profile.keywords)}"
 
-    system_prompt = """Ты — помощник для гостей Demo Day. Генерируй вопросы на русском языке.
-Вопросы должны быть конкретными, содержательными и учитывать профиль гостя.
-Формат ответа: JSON объект с полем "questions" — массив строк."""
-
-    user_prompt = f"""Сгенерируй 3-5 вопросов для гостя, который хочет посетить проект.
-
-Профиль гостя:
-- Тип: {subtype_desc}{interests}
-
-Проект:
-- Название: {project.title}
-- Описание: {project.description[:500] if project.description else "Не указано"}
-- Технологии: {project.tech_stack or "Не указано"}
-
-Правила генерации:
-- Абитуриент: фокус на обучении, команде, технологиях для изучения, карьерном пути
-- AI-практик: фокус на архитектуре, подходах, метриках, воспроизводимости, инновациях
-- Гость: общие вопросы про ценность проекта, применимость, планы развития
-
-Ответь JSON: {{"questions": ["вопрос1", "вопрос2", ...]}}"""
-
-    return system_prompt, user_prompt
+    return build_guest_qa_prompt(
+        subtype_desc=subtype_desc,
+        interests=interests,
+        project_title=project.title,
+        project_description=project.description[:500] if project.description else "Не указано",
+        project_tech_stack=project.tech_stack or "Не указано",
+    )
 
 
 def build_business_prompt(
@@ -97,42 +87,14 @@ def build_business_prompt(
     project: Project,
 ) -> tuple[str, str]:
     """Build LLM prompt for business partner questions."""
-    objective_map = {
-        BusinessObjective.INVESTMENT: "Инвестор",
-        BusinessObjective.HIRING: "HR / нанимающий менеджер",
-        BusinessObjective.TECHNOLOGY: "Технологический партнёр",
-        BusinessObjective.PARTNERSHIP: "Бизнес-партнёр",
-    }
-    objective_desc = objective_map.get(business_profile.objective, "Партнёр")
-
-    system_prompt = """Ты — помощник для бизнес-партнёров Demo Day. Генерируй вопросы на русском языке.
-Вопросы должны быть бизнес-ориентированными и учитывать цель партнёра.
-Формат ответа: JSON объект с полем "questions" — массив строк."""
-
-    industries_str = ", ".join(business_profile.industries) if business_profile.industries else "Не указано"
-    tech_str = ", ".join(business_profile.tech_stack) if business_profile.tech_stack else "Не указано"
-
-    user_prompt = f"""Сгенерируй 3-5 бизнес-вопросов для партнёра, оценивающего проект.
-
-Профиль партнёра:
-- Цель: {objective_desc}
-- Отрасли: {industries_str}
-- Технологический фокус: {tech_str}
-
-Проект:
-- Название: {project.title}
-- Описание: {project.description[:500] if project.description else "Не указано"}
-- Технологии: {project.tech_stack or "Не указано"}
-
-Правила генерации по цели:
-- Инвестор: unit-экономика, рынок, команда, стадия, раунд, метрики
-- HR: стек, опыт команды, готовность к работе, интересы, мотивация
-- Технологический партнёр: интеграция, API, масштабирование, лицензия
-- Бизнес-партнёр: бизнес-модель, готовность к пилоту, условия сотрудничества
-
-Ответь JSON: {{"questions": ["вопрос1", "вопрос2", ...]}}"""
-
-    return system_prompt, user_prompt
+    return build_business_qa_prompt(
+        objective=business_profile.objective,
+        industries=business_profile.industries or [],
+        tech_stack=business_profile.tech_stack or [],
+        project_title=project.title,
+        project_description=project.description[:500] if project.description else "Не указано",
+        project_tech_stack=project.tech_stack or "Не указано",
+    )
 
 
 async def get_cached_questions(
@@ -317,24 +279,7 @@ def build_matrix_prompt(
     project_list = "\n".join(
         [f"- {p.title}: {p.description[:200] if p.description else 'Нет описания'}" for p in projects]
     )
-
-    criteria_list = ", ".join(criteria)
-
-    system_prompt = """Ты — аналитик Demo Day. Создай матрицу сравнения проектов.
-Оцени каждый проект по каждому критерию кратко (1-3 слова или оценка).
-Формат ответа: JSON объект с полем "matrix" — словарь {project_title: {criterion: value}}."""
-
-    user_prompt = f"""Сравни проекты по критериям.
-
-Проекты:
-{project_list}
-
-Критерии: {criteria_list}
-
-Для каждого проекта укажи значение по каждому критерию.
-Ответь JSON: {{"matrix": {{"Название проекта": {{"Критерий1": "значение", ...}}, ...}}}}"""
-
-    return system_prompt, user_prompt
+    return build_comparison_matrix_prompt(project_list, criteria)
 
 
 async def generate_comparison_matrix(

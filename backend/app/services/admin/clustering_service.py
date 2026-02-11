@@ -15,87 +15,15 @@ from app.models.project import Project
 from app.models.project_tag import ProjectTag
 from app.models.room import Room
 from app.models.room_project import RoomProject
+from app.prompts.admin.clustering import (
+    CLUSTERING_SYSTEM,
+    SUGGEST_THEMES_SYSTEM,
+    build_clustering_prompt,
+    build_suggest_themes_prompt,
+)
 from app.services.core import llm_client
 
 logger = logging.getLogger(__name__)
-
-SYSTEM_PROMPT = """Ты AI-ассистент для организации Demo Day. Твоя задача — распределить проекты по тематическим залам.
-
-Constraints:
-- Каждый проект должен быть ровно в одном зале
-- Разница между самым большим и маленьким залом ≤ 5 проектов
-- Группируй по тематической близости (NLP, CV, Agents, EdTech, FinTech и т.д.)
-- Для каждого зала дай краткое название темы и обоснование (2-3 предложения)
-- Названия залов должны быть информативными, например: "NLP и языковые модели", "Автономные агенты"
-
-Верни JSON строго в формате:
-{
-  "rooms": [
-    {
-      "name": "Название темы зала",
-      "theme_rationale": "Обоснование тематики зала (2-3 предложения)",
-      "project_ids": ["id1", "id2", ...]
-    }
-  ]
-}"""
-
-SUGGEST_THEMES_SYSTEM_PROMPT = """Ты AI-ассистент для организации Demo Day.
-Твоя задача — предложить тематики залов на основе анализа проектов.
-
-Проанализируй теги и описания проектов, выяви основные тематические кластеры
-(NLP, CV, Agents, EdTech, FinTech, Healthcare, etc).
-
-Constraints:
-- Количество тем должно быть ровно равно запрошенному числу залов
-- Темы должны быть информативными и отражать содержание проектов (не "Зал 1", "Зал 2")
-- Темы должны охватывать все проекты (не создавай слишком узкие темы)
-- Учитывай И теги, И descriptions проектов (теги могут быть неполными)
-
-Примеры хороших тем:
-- "NLP и языковые модели"
-- "Автономные агенты и RAG"
-- "Computer Vision и мультимодальные модели"
-- "AI в образовании и EdTech"
-- "FinTech и предиктивная аналитика"
-
-Верни JSON строго в формате:
-{
-  "themes": ["Тема зала 1", "Тема зала 2", ...]
-}"""
-
-
-def _build_user_prompt(
-    projects: list[dict],
-    num_rooms: int,
-    feedback: str | None = None,
-    room_themes: list[str] | None = None,
-) -> str:
-    """Build the user prompt for clustering."""
-    prompt = f"Распредели {len(projects)} проектов по {num_rooms} залам.\n\n"
-    if room_themes:
-        themes = ", ".join(room_themes)
-        prompt += f"Тематики залов заданы организатором: {themes}.\n"
-        prompt += "Используй эти тематики как названия залов и ориентиры для распределения.\n\n"
-    prompt += "Проекты:\n"
-    prompt += json.dumps(projects, ensure_ascii=False, indent=None)
-
-    if feedback:
-        prompt += f"\n\nФидбэк организатора: {feedback}"
-
-    prompt += "\n\nВерни JSON с распределением."
-    return prompt
-
-
-def _build_suggest_themes_user_prompt(
-    projects: list[dict],
-    num_rooms: int,
-) -> str:
-    """Build user prompt for theme suggestion."""
-    prompt = f"Предложи {num_rooms} тематик для залов на основе {len(projects)} проектов.\n\n"
-    prompt += "Проекты:\n"
-    prompt += json.dumps(projects, ensure_ascii=False, indent=None)
-    prompt += "\n\nВерни JSON со списком тем."
-    return prompt
 
 
 async def suggest_room_themes(
@@ -134,8 +62,8 @@ async def suggest_room_themes(
         )
 
     # 3. Build prompt
-    system_prompt = SUGGEST_THEMES_SYSTEM_PROMPT
-    user_prompt = _build_suggest_themes_user_prompt(projects_data, num_rooms)
+    system_prompt = SUGGEST_THEMES_SYSTEM
+    user_prompt = build_suggest_themes_prompt(projects_data, num_rooms)
 
     # 4. Call LLM
     logger.info("Suggesting themes: %d projects → %d rooms", len(projects), num_rooms)
@@ -199,12 +127,12 @@ async def run_clustering(
         )
         project_map[pid] = p
 
-    user_prompt = _build_user_prompt(projects_data, num_rooms, feedback, room_themes=room_themes)
+    user_prompt = build_clustering_prompt(projects_data, num_rooms, feedback, room_themes=room_themes)
 
     # 3. Call LLM
     logger.info("Running clustering: %d projects → %d rooms", len(projects), num_rooms)
     llm_response = await llm_client.send_chat_completion(
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=CLUSTERING_SYSTEM,
         user_prompt=user_prompt,
         json_mode=True,
     )

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Project
+from app.prompts.admin.tags import TAG_SUGGEST_SYSTEM, build_tag_suggest_prompt
 from app.repos import tag_repo
 
 logger = logging.getLogger(__name__)
@@ -39,15 +40,6 @@ DEFAULT_TAGS = {
 # Generate formatted tag list for prompts
 _tag_list_with_desc = ", ".join(f"{k} ({v})" for k, v in DEFAULT_TAGS.items())
 _tag_list_plain = ", ".join(DEFAULT_TAGS.keys())
-
-TAG_SUGGEST_SYSTEM = (
-    "Ты AI-ассистент для организатора Demo Day. "
-    "Проанализируй названия и описания проектов и предложи 10-20 тегов "
-    "для классификации этих проектов по тематикам. "
-    f"Доступные теги: {_tag_list_plain}. "
-    "Верни JSON строго в формате:\n"
-    '{"tags": ["EdTech", "NLP", "CV", ...]}'
-)
 
 
 async def list_tags(db: AsyncSession) -> list[str]:
@@ -102,16 +94,17 @@ async def suggest_tags(db: AsyncSession, event_id: UUID) -> dict:
     if not projects:
         return {"suggested_tags": [], "project_count": 0}
 
-    summaries = []
-    for title, description in projects:
-        desc_short = (description or "")[:200]
-        summaries.append(f"- {title}: {desc_short}")
+    projects_data = [
+        {"id": str(i), "title": title, "description": (description or "")[:200]}
+        for i, (title, description) in enumerate(projects)
+    ]
 
-    user_prompt = "Проекты:\n" + "\n".join(summaries)
+    system_prompt = TAG_SUGGEST_SYSTEM.format(available_tags=_tag_list_plain)
+    user_prompt = build_tag_suggest_prompt(projects_data)
 
     try:
         response = await llm_client.send_chat_completion(
-            system_prompt=TAG_SUGGEST_SYSTEM,
+            system_prompt=system_prompt,
             user_prompt=user_prompt,
             json_mode=True,
         )
