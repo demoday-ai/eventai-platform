@@ -88,10 +88,11 @@ async def analyze_guest_merge(
     guest_role_result = await session.execute(
         select(UserRole)
         .join(UserRole.role)
+        .join(User, UserRole.user_id == User.id)
         .where(
             UserRole.event_id == event_id,
             UserRole.role.has(code=RoleCode.GUEST),
-            UserRole.guest_subtype == subtype,
+            User.guest_subtype == subtype,
         )
         .options(selectinload(UserRole.user))
     )

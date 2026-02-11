@@ -172,14 +172,21 @@ export function DataImport() {
     },
   })
 
-  const handleProjectAnalyze = () => {
+  const projectHasData = (dashboardData?.projects?.total ?? 0) > 0
+
+  const handleProjectAction = () => {
     if (!projectFile) return
     setProjectResult(null)
     setProjectMergeResult(null)
     setProjectError(null)
     setDeleteMessage(null)
-    setProjectMergeState("analyzing")
-    projectPreviewMutation.mutate(projectFile)
+    if (projectHasData) {
+      setProjectMergeState("analyzing")
+      projectPreviewMutation.mutate(projectFile)
+    } else {
+      setProjectMergeState("applying")
+      projectUploadMutation.mutate({ file: projectFile, replace: false })
+    }
   }
 
   const handleProjectMergeApply = (addNew: boolean, updateExisting: boolean) => {
@@ -239,14 +246,38 @@ export function DataImport() {
       uploadExperts(file, confirmReplace),
   })
 
-  const handleExpertAnalyze = () => {
+  const expertHasData = (dashboardData?.experts?.total ?? 0) > 0
+
+  const handleExpertAction = () => {
     if (!expertFile) return
     setExpertResult(null)
     setExpertMergeResult(null)
     setExpertError(null)
     setDeleteMessage(null)
-    setExpertMergeState("analyzing")
-    expertPreviewMutation.mutate(expertFile)
+    if (expertHasData) {
+      setExpertMergeState("analyzing")
+      expertPreviewMutation.mutate(expertFile)
+    } else {
+      setExpertMergeState("applying")
+      expertUploadMutation.mutate(
+        { file: expertFile, confirmReplace: false },
+        {
+          onSuccess: (data) => {
+            if (!("existing_count" in data)) {
+              setExpertResult(data)
+              setExpertFile(null)
+            }
+            setExpertMergeState("idle")
+            refreshAllStats()
+          },
+          onError: (error: Error) => {
+            const axErr = error as AxiosError<{ detail: string }>
+            setExpertError(axErr.response?.data?.detail || error.message)
+            setExpertMergeState("idle")
+          },
+        },
+      )
+    }
   }
 
   const handleExpertMergeApply = async (addNew: boolean, updateExisting: boolean) => {
@@ -326,14 +357,38 @@ export function DataImport() {
       uploadGuests(file, "student", confirmReplace),
   })
 
-  const handleStudentAnalyze = () => {
+  const studentHasData = (getGuestCount("student") ?? 0) > 0
+
+  const handleStudentAction = () => {
     if (!studentFile) return
     setStudentResult(null)
     setStudentMergeResult(null)
     setStudentError(null)
     setDeleteMessage(null)
-    setStudentMergeState("analyzing")
-    studentPreviewMutation.mutate(studentFile)
+    if (studentHasData) {
+      setStudentMergeState("analyzing")
+      studentPreviewMutation.mutate(studentFile)
+    } else {
+      setStudentMergeState("applying")
+      studentUploadMutation.mutate(
+        { file: studentFile, confirmReplace: false },
+        {
+          onSuccess: (data) => {
+            if (!("existing_count" in data)) {
+              setStudentResult(data)
+              setStudentFile(null)
+            }
+            setStudentMergeState("idle")
+            refreshAllStats()
+          },
+          onError: (error: Error) => {
+            const axErr = error as AxiosError<{ detail: string }>
+            setStudentError(axErr.response?.data?.detail || error.message)
+            setStudentMergeState("idle")
+          },
+        },
+      )
+    }
   }
 
   const handleStudentMergeApply = async (addNew: boolean, updateExisting: boolean) => {
@@ -412,14 +467,38 @@ export function DataImport() {
       uploadGuests(file, "business_partner", confirmReplace),
   })
 
-  const handlePartnerAnalyze = () => {
+  const partnerHasData = (dashboardData?.partners?.total ?? 0) > 0
+
+  const handlePartnerAction = () => {
     if (!partnerFile) return
     setPartnerResult(null)
     setPartnerMergeResult(null)
     setPartnerError(null)
     setDeleteMessage(null)
-    setPartnerMergeState("analyzing")
-    partnerPreviewMutation.mutate(partnerFile)
+    if (partnerHasData) {
+      setPartnerMergeState("analyzing")
+      partnerPreviewMutation.mutate(partnerFile)
+    } else {
+      setPartnerMergeState("applying")
+      partnerUploadMutation.mutate(
+        { file: partnerFile, confirmReplace: false },
+        {
+          onSuccess: (data) => {
+            if (!("existing_count" in data)) {
+              setPartnerResult(data)
+              setPartnerFile(null)
+            }
+            setPartnerMergeState("idle")
+            refreshAllStats()
+          },
+          onError: (error: Error) => {
+            const axErr = error as AxiosError<{ detail: string }>
+            setPartnerError(axErr.response?.data?.detail || error.message)
+            setPartnerMergeState("idle")
+          },
+        },
+      )
+    }
   }
 
   const handlePartnerMergeApply = async (addNew: boolean, updateExisting: boolean) => {
@@ -548,10 +627,12 @@ export function DataImport() {
                 />
 
                 <Button
-                  onClick={handleProjectAnalyze}
+                  onClick={handleProjectAction}
                   disabled={!projectFile || projectPreviewMutation.isPending || !!isProjectBusy}
                 >
-                  {projectPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
+                  {projectPreviewMutation.isPending ? "Анализ..."
+                    : !!isProjectBusy ? "Загрузка..."
+                    : projectHasData ? "Анализировать" : "Загрузить"}
                 </Button>
 
                 {projectError && (
@@ -620,10 +701,12 @@ export function DataImport() {
                 />
 
                 <Button
-                  onClick={handleExpertAnalyze}
+                  onClick={handleExpertAction}
                   disabled={!expertFile || expertPreviewMutation.isPending || expertMergeState === "applying"}
                 >
-                  {expertPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
+                  {expertPreviewMutation.isPending ? "Анализ..."
+                    : expertMergeState === "applying" ? "Загрузка..."
+                    : expertHasData ? "Анализировать" : "Загрузить"}
                 </Button>
 
                 {expertError && (
@@ -690,10 +773,12 @@ export function DataImport() {
                 />
 
                 <Button
-                  onClick={handleStudentAnalyze}
+                  onClick={handleStudentAction}
                   disabled={!studentFile || studentPreviewMutation.isPending || studentMergeState === "applying"}
                 >
-                  {studentPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
+                  {studentPreviewMutation.isPending ? "Анализ..."
+                    : studentMergeState === "applying" ? "Загрузка..."
+                    : studentHasData ? "Анализировать" : "Загрузить"}
                 </Button>
 
                 {studentError && (
@@ -760,10 +845,12 @@ export function DataImport() {
                 />
 
                 <Button
-                  onClick={handlePartnerAnalyze}
+                  onClick={handlePartnerAction}
                   disabled={!partnerFile || partnerPreviewMutation.isPending || partnerMergeState === "applying"}
                 >
-                  {partnerPreviewMutation.isPending ? "Анализ..." : "Анализировать"}
+                  {partnerPreviewMutation.isPending ? "Анализ..."
+                    : partnerMergeState === "applying" ? "Загрузка..."
+                    : partnerHasData ? "Анализировать" : "Загрузить"}
                 </Button>
 
                 {partnerError && (

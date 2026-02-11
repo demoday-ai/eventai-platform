@@ -56,6 +56,24 @@ vi.mock("../lib/api-client", () => ({
   },
 }))
 
+const EMPTY_DASHBOARD = {
+  students: { total: 0, confirmed: 0, pending: 0, declined: 0 },
+  experts: { total: 0, confirmed: 0, pending: 0, invited: 0 },
+  guests: { total: 0, by_subtype: [] },
+  rooms: { total: 0, with_experts: 0, without_experts: 0 },
+  projects: { total: 0 },
+  partners: { total: 0, from_bot: 0, from_import: 0 },
+  alerts: [],
+}
+
+const DASHBOARD_WITH_DATA = {
+  ...EMPTY_DASHBOARD,
+  projects: { total: 10 },
+  experts: { total: 5, confirmed: 3, pending: 1, invited: 1 },
+  guests: { total: 20, by_subtype: [{ subtype: "student", count: 15 }, { subtype: "business_partner", count: 5 }] },
+  partners: { total: 5, from_bot: 0, from_import: 5 },
+}
+
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -70,15 +88,7 @@ const createWrapper = () => {
 describe("DataImport", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetDashboard.mockResolvedValue({
-      students: { total: 0, confirmed: 0, pending: 0, declined: 0 },
-      experts: { total: 0, confirmed: 0, pending: 0, invited: 0 },
-      guests: { total: 0, by_subtype: [] },
-      rooms: { total: 0, with_experts: 0, without_experts: 0 },
-      projects: { total: 0 },
-      partners: { total: 0, from_bot: 0, from_import: 0 },
-      alerts: [],
-    })
+    mockGetDashboard.mockResolvedValue(EMPTY_DASHBOARD)
     mockGetProjects.mockResolvedValue([])
     mockGetCurrentEvent.mockResolvedValue({
       id: "test-event-id",
@@ -157,7 +167,17 @@ describe("DataImport", () => {
     })
   })
 
-  it("shows analyze button on projects tab when event exists", async () => {
+  it("shows upload button when DB is empty", async () => {
+    render(<DataImport />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
+    })
+  })
+
+  it("shows analyze button when DB has data", async () => {
+    mockGetDashboard.mockResolvedValue(DASHBOARD_WITH_DATA)
+
     render(<DataImport />, { wrapper: createWrapper() })
 
     await waitFor(() => {
@@ -167,6 +187,7 @@ describe("DataImport", () => {
 
   it("handles project preview and shows merge preview card", async () => {
     const user = userEvent.setup()
+    mockGetDashboard.mockResolvedValue(DASHBOARD_WITH_DATA)
 
     mockPreviewProjectUpload.mockResolvedValue({
       new_count: 5,
@@ -200,6 +221,8 @@ describe("DataImport", () => {
 
   it("handles expert preview", async () => {
     const user = userEvent.setup()
+    mockGetDashboard.mockResolvedValue(DASHBOARD_WITH_DATA)
+
     mockPreviewExpertUpload.mockResolvedValue({
       new_count: 10,
       duplicate_count: 5,
@@ -231,30 +254,32 @@ describe("DataImport", () => {
     })
   })
 
-  it("renders Students tab with analyze button", async () => {
+  it("renders Students tab with upload button when empty", async () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
     await user.click(screen.getByRole("tab", { name: "Студенты" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Анализировать")).toBeInTheDocument()
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
     })
   })
 
-  it("renders Partners tab with analyze button", async () => {
+  it("renders Partners tab with upload button when empty", async () => {
     const user = userEvent.setup()
     render(<DataImport />, { wrapper: createWrapper() })
 
     await user.click(screen.getByRole("tab", { name: "Партнёры" }))
 
     await waitFor(() => {
-      expect(screen.getByText("Анализировать")).toBeInTheDocument()
+      expect(screen.getByText("Загрузить")).toBeInTheDocument()
     })
   })
 
-  it("calls previewGuestUpload for students", async () => {
+  it("calls previewGuestUpload for students when data exists", async () => {
     const user = userEvent.setup()
+    mockGetDashboard.mockResolvedValue(DASHBOARD_WITH_DATA)
+
     mockPreviewGuestUpload.mockResolvedValue({
       new_count: 5,
       duplicate_count: 0,
@@ -286,8 +311,10 @@ describe("DataImport", () => {
     })
   })
 
-  it("calls previewGuestUpload for partners", async () => {
+  it("calls previewGuestUpload for partners when data exists", async () => {
     const user = userEvent.setup()
+    mockGetDashboard.mockResolvedValue(DASHBOARD_WITH_DATA)
+
     mockPreviewGuestUpload.mockResolvedValue({
       new_count: 3,
       duplicate_count: 0,
