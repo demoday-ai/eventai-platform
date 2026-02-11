@@ -139,11 +139,8 @@ function AlertsCard({ alerts }: { alerts: AlertType[] }) {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {alerts.map((alert, idx) => (
-            <div
-              key={idx}
-              className={`p-3 rounded-lg border ${getSeverityColor(alert.severity)}`}
-            >
+          {alerts.map((alert, idx) => {
+            const content = (
               <div className="flex items-start gap-2">
                 <span className="shrink-0">{getSeverityIcon(alert.severity)}</span>
                 <div className="flex-1">
@@ -154,9 +151,35 @@ function AlertsCard({ alerts }: { alerts: AlertType[] }) {
                     </p>
                   )}
                 </div>
+                {alert.link && (
+                  <button className="text-sm underline opacity-75 hover:opacity-100">
+                    Перейти
+                  </button>
+                )}
               </div>
-            </div>
-          ))}
+            )
+
+            if (alert.link) {
+              return (
+                <a
+                  key={idx}
+                  href={alert.link}
+                  className={`p-3 rounded-lg border ${getSeverityColor(alert.severity)} hover:opacity-90 transition-opacity block`}
+                >
+                  {content}
+                </a>
+              )
+            }
+
+            return (
+              <div
+                key={idx}
+                className={`p-3 rounded-lg border ${getSeverityColor(alert.severity)}`}
+              >
+                {content}
+              </div>
+            )
+          })}
         </div>
       </CardContent>
     </Card>

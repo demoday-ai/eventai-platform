@@ -64,6 +64,7 @@ export interface Alert {
   message: string
   room_id?: string
   room_name?: string
+  link?: string
 }
 
 export interface ProjectStats {

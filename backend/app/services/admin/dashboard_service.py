@@ -282,6 +282,19 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     if pending_students > 10:
         alerts.append(Alert(severity="warning", message=f"Не подтвердили участие: {pending_students} студентов"))
 
+    # Check for LLM API keys
+    from app.models.llm_api_key import LlmApiKey
+
+    active_keys_count = await db.scalar(select(func.count(LlmApiKey.id)).where(LlmApiKey.is_active)) or 0
+    if active_keys_count == 0:
+        alerts.append(
+            Alert(
+                severity="critical",
+                message="Нет активных API ключей для LLM. Добавьте ключ в настройках.",
+                link="/settings",
+            )
+        )
+
     return DashboardResponse(
         event=event_summary,
         projects=projects,

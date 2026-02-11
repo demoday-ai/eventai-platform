@@ -54,6 +54,7 @@ class Alert(BaseModel):
     message: str
     room_id: str | None = None
     room_name: str | None = None
+    link: str | None = None  # Optional link to action page
 
 
 class ProjectStats(BaseModel):
