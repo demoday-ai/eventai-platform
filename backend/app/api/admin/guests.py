@@ -154,7 +154,7 @@ async def delete_all_guests(
     if not guest_role:
         raise HTTPException(status_code=500, detail="Guest role not found")
 
-    query = select(UserRole).where(
+    query = select(UserRole).join(User, UserRole.user_id == User.id).where(
         UserRole.event_id == event.id,
         UserRole.role_id == guest_role.id,
     )
@@ -164,7 +164,7 @@ async def delete_all_guests(
         except ValueError:
             valid = [s.value for s in GuestSubtype]
             raise HTTPException(status_code=422, detail=f"Invalid subtype. Valid: {valid}")
-        query = query.where(UserRole.guest_subtype == subtype_enum)
+        query = query.where(User.guest_subtype == subtype_enum)
 
     result = await db.execute(query)
     roles = list(result.scalars().all())

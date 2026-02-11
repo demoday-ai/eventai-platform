@@ -81,6 +81,9 @@ export function DataImport() {
     retry: false,
   })
 
+  const getGuestCount = (subtype: string) =>
+    dashboardData?.guests?.by_subtype?.find((s) => s.subtype === subtype)?.count
+
   const refreshAllStats = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     queryClient.invalidateQueries({ queryKey: ["projects"] })
@@ -668,9 +671,9 @@ export function DataImport() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   Студенты
-                  {dashboardData?.students?.total ? (
+                  {getGuestCount("student") ? (
                     <span className="text-sm font-normal text-muted-foreground">
-                      (загружено: {dashboardData.students.total})
+                      (загружено: {getGuestCount("student")})
                     </span>
                   ) : null}
                 </CardTitle>
@@ -714,7 +717,7 @@ export function DataImport() {
                 <div className="pt-4 border-t">
                   <DeleteAllButton
                     label="всех студентов"
-                    count={dashboardData?.students?.total}
+                    count={getGuestCount("student")}
                     deleteFn={() => deleteAllGuests("student")}
                     onDeleted={(n) => {
                       setDeleteMessage(`Удалено студентов: ${n}`)
