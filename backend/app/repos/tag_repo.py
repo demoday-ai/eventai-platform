@@ -36,7 +36,8 @@ async def create(session: AsyncSession, name: str) -> Tag:
 
 async def get_by_name(session: AsyncSession, name: str) -> Tag | None:
     """Get a tag by exact name."""
-    return await session.scalar(select(Tag).where(Tag.name == name))
+    name_normalized = name.strip()
+    return await session.scalar(select(Tag).where(Tag.name == name_normalized))
 
 
 async def delete_by_id(session: AsyncSession, tag_id: UUID) -> None:
