@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""  # single key (backward compat)
     openrouter_api_keys: str = ""  # comma-separated list of keys for rotation
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    openrouter_model: str = "openai/gpt-4.1"
+    openrouter_model: str = "anthropic/claude-opus-4-5-20251101"
     team_chat_id: str = ""  # Telegram chat ID for lead notifications
     team_bot_token: str = ""  # Separate bot token for team notifications (optional)
     rabbitmq_url: str = "amqp://demoday:demoday@localhost:5672//"

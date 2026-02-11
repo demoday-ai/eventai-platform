@@ -139,11 +139,14 @@ async def get_api_keys(
     user: User = Depends(get_current_user),
 ):
     """Get all LLM API keys with status."""
+    # Sync key stats from memory to DB before fetching
+    from app.services.core.llm_client import get_key_manager, sync_key_stats_to_db
+    await sync_key_stats_to_db(session)
+
     result = await session.execute(select(LlmApiKey).where(LlmApiKey.is_active))
     keys = result.scalars().all()
 
     # Get live stats from KeyManager
-    from app.services.core.llm_client import get_key_manager
     key_manager = get_key_manager()
     stats = key_manager.get_stats()
 

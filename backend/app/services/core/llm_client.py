@@ -5,14 +5,17 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 import httpx
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_MODEL = "anthropic/claude-sonnet-4-20250514"
+FALLBACK_MODEL = "anthropic/claude-opus-4-5-20251101"
 TIMEOUT = 120.0
 MAX_RETRIES = 3
 KEY_COOLDOWN_SECONDS = 60  # Time to wait before retrying a failed key
@@ -449,3 +452,34 @@ async def check_api_health() -> dict:
         "total": len(results),
         "healthy": sum(1 for r in results if r["status"] == "ok"),
     }
+
+
+async def sync_key_stats_to_db(session: AsyncSession) -> None:
+    """Sync key usage stats from memory to database.
+
+    Updates last_success_at for keys that were successfully used.
+    Call this periodically or after important LLM operations.
+    """
+    from app.models.llm_api_key import LlmApiKey
+
+    for key_state in _key_manager._keys:
+        # Update last_success_at if key was used successfully
+        if key_state.last_success > 0:
+            key_suffix = key_state.key[-8:]
+            stmt = select(LlmApiKey).where(LlmApiKey.key_suffix == key_suffix)
+            key_obj = (await session.execute(stmt)).scalar_one_or_none()
+
+            if key_obj:
+                # Convert timestamp to datetime
+                last_success_dt = datetime.fromtimestamp(key_state.last_success, tz=timezone.utc)
+
+                # Only update if memory timestamp is newer than DB
+                if key_obj.last_success_at is None or last_success_dt > key_obj.last_success_at:
+                    key_obj.last_success_at = last_success_dt
+                    logger.debug(
+                        "Updated last_success_at for key ...%s: %s",
+                        key_suffix,
+                        last_success_dt.isoformat()
+                    )
+
+    await session.commit()
