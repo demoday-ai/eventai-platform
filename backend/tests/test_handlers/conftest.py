@@ -115,14 +115,10 @@ async def app():
         application = ApplicationBuilder().token("0:TEST_TOKEN_FOR_TESTING").build()
 
         # Import and register handlers
-        from app.bot.handlers.qa import get_qa_handlers
         from app.bot.handlers.start import get_onboarding_handler
 
         # get_onboarding_handler now includes all profiling logic
         application.add_handler(get_onboarding_handler())
-
-        for handler in get_qa_handlers():
-            application.add_handler(handler)
 
         await application.initialize()
         yield application
