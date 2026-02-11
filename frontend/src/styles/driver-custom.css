@@ -39,35 +39,38 @@
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  border: none;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  cursor: pointer;
 }
 
 .driver-popover-custom .driver-popover-next-btn {
-  background: #2563eb;
-  color: white;
+  background: #2563eb !important;
+  color: white !important;
 }
 
 .driver-popover-custom .driver-popover-next-btn:hover {
-  background: #1d4ed8;
+  background: #1d4ed8 !important;
 }
 
 .driver-popover-custom .driver-popover-prev-btn {
-  background: #f3f4f6;
-  color: #374151;
+  background: #f3f4f6 !important;
+  color: #374151 !important;
 }
 
 .driver-popover-custom .driver-popover-prev-btn:hover {
-  background: #e5e7eb;
+  background: #e5e7eb !important;
 }
 
 .driver-popover-custom .driver-popover-close-btn {
-  background: transparent;
-  color: #6b7280;
+  background: transparent !important;
+  color: #6b7280 !important;
   padding: 4px;
 }
 
 .driver-popover-custom .driver-popover-close-btn:hover {
-  color: #374151;
+  color: #374151 !important;
 }
 
 /* Highlight color */
