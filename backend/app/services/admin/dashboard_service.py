@@ -105,20 +105,19 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
         from_import=partners_from_import,
     )
 
-    # Students stats
-    student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
-
-    total_students = 0
-    if student_role:
-        total_students = (
-            await db.scalar(
-                select(func.count(UserRole.id)).where(
-                    UserRole.event_id == event_id,
-                    UserRole.role_id == student_role.id,
-                )
+    # Students stats - count users with guest_subtype=STUDENT
+    total_students = (
+        await db.scalar(
+            select(func.count(User.id.distinct()))
+            .select_from(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .where(
+                UserRole.event_id == event_id,
+                User.guest_subtype == GuestSubtype.STUDENT,
             )
-            or 0
         )
+        or 0
+    )
 
     confirmed_students = (
         await db.scalar(
@@ -349,19 +348,19 @@ async def get_pipeline_status(
         projects_count = await db.scalar(select(func.count(Project.id)).where(Project.event_id == event_id)) or 0
         step_statuses["projects"] = "completed" if projects_count > 0 else "not_started"
 
-        # students step - check for UserRole with student role
-        student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
-        students_count = 0
-        if student_role:
-            students_count = (
-                await db.scalar(
-                    select(func.count(UserRole.id)).where(
-                        UserRole.event_id == event_id,
-                        UserRole.role_id == student_role.id,
-                    )
+        # students step - check for users with guest_subtype=STUDENT
+        students_count = (
+            await db.scalar(
+                select(func.count(User.id.distinct()))
+                .select_from(User)
+                .join(UserRole, UserRole.user_id == User.id)
+                .where(
+                    UserRole.event_id == event_id,
+                    User.guest_subtype == GuestSubtype.STUDENT,
                 )
-                or 0
             )
+            or 0
+        )
         step_statuses["students"] = "completed" if students_count > 0 else "not_started"
 
         # experts step
