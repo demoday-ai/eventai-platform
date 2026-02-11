@@ -282,7 +282,8 @@ export function DataImport() {
   }
 
   useEffect(() => {
-    saveToStorage("import_student_result", studentResult)
+    const isEmpty = studentResult && studentResult.total_parsed === 0 && studentResult.imported === 0
+    saveToStorage("import_student_result", isEmpty ? null : studentResult)
   }, [studentResult])
 
   // --- Partners ---
@@ -597,7 +598,7 @@ export function DataImport() {
                   </Card>
                 )}
 
-                {studentResult && <ImportSummary result={studentResult} type="guests" />}
+                {studentResult && <ImportSummary result={studentResult} type="students" />}
               </CardContent>
             </Card>
           )}
@@ -670,7 +671,7 @@ export function DataImport() {
                   </Card>
                 )}
 
-                {partnerResult && <ImportSummary result={partnerResult} type="guests" />}
+                {partnerResult && <ImportSummary result={partnerResult} type="partners" />}
               </CardContent>
             </Card>
           )}

@@ -3,7 +3,7 @@ import type { UploadResult, ExpertUploadResult, GuestUploadResult } from "../../
 
 interface ImportSummaryProps {
   result: UploadResult | ExpertUploadResult | GuestUploadResult
-  type: "projects" | "experts" | "guests"
+  type: "projects" | "experts" | "guests" | "students" | "partners"
 }
 
 function isUploadResult(result: UploadResult | ExpertUploadResult | GuestUploadResult): result is UploadResult {
@@ -67,12 +67,13 @@ export function ImportSummary({ result, type }: ImportSummaryProps) {
     )
   }
 
-  // Guest upload result
-  if (type === "guests" && isGuestUploadResult(result)) {
+  // Guest/Student/Partner upload result
+  const guestLabel = type === "students" ? "студентов" : type === "partners" ? "партнёров" : "гостей"
+  if ((type === "guests" || type === "students" || type === "partners") && isGuestUploadResult(result)) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Результат импорта гостей</CardTitle>
+          <CardTitle className="text-base">Результат импорта {guestLabel}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-3 gap-4 text-sm">
