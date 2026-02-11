@@ -1,6 +1,7 @@
 import { driver, type DriveStep } from "driver.js"
 import "driver.js/dist/driver.css"
 import "../styles/driver-custom.css"
+import { markTourCompleted as apiMarkTourCompleted } from "./api-client"
 
 interface TourStep extends DriveStep {
   route?: string // Add route metadata
@@ -206,7 +207,10 @@ export function startAdminTour() {
       driverObj.movePrevious()
     },
     onDestroyStarted: () => {
-      localStorage.setItem("admin_tour_completed", "true")
+      // Mark as completed via API
+      apiMarkTourCompleted().catch((err) => {
+        console.error("Failed to mark tour as completed:", err)
+      })
       // Return to dashboard when tour ends
       if (globalNavigate) {
         globalNavigate("/dashboard")
@@ -218,19 +222,22 @@ export function startAdminTour() {
   driverObj.drive()
 }
 
+// Note: These functions are now just for compatibility
+// Real status comes from backend via getTourStatus()
 export function shouldShowTourPrompt(): boolean {
-  return !localStorage.getItem("admin_tour_prompted")
+  // This is now checked via API in Dashboard component
+  return false
 }
 
 export function shouldShowTour(): boolean {
-  return !localStorage.getItem("admin_tour_completed")
+  // This is now checked via API
+  return false
 }
 
 export function markTourPrompted() {
-  localStorage.setItem("admin_tour_prompted", "true")
+  // This is now handled via API in Dashboard component
 }
 
 export function resetTour() {
-  localStorage.removeItem("admin_tour_completed")
-  localStorage.removeItem("admin_tour_prompted")
+  // This is now handled via API (resetTourStatus)
 }

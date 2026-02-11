@@ -1698,3 +1698,33 @@ export const checkLlmKeys = async (): Promise<unknown> => {
   const { data } = await apiClient.post("/admin/llm/keys/check")
   return data
 }
+// ============================================================================
+// Admin Tour Status API
+// ============================================================================
+
+export interface TourStatus {
+  prompted: boolean
+  completed: boolean
+  prompted_at: string | null
+  completed_at: string | null
+}
+
+export const getTourStatus = async (): Promise<TourStatus> => {
+  const { data } = await apiClient.get("/admin/tour/status")
+  return data
+}
+
+export const markTourPrompted = async (): Promise<{ success: boolean }> => {
+  const { data } = await apiClient.post("/admin/tour/mark-prompted")
+  return data
+}
+
+export const markTourCompleted = async (): Promise<{ success: boolean }> => {
+  const { data } = await apiClient.post("/admin/tour/mark-completed")
+  return data
+}
+
+export const resetTourStatus = async (): Promise<{ success: boolean }> => {
+  const { data } = await apiClient.post("/admin/tour/reset")
+  return data
+}

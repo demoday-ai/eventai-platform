@@ -8,6 +8,7 @@ import { Sidebar } from "./Sidebar"
 import { GlobalStepper } from "../dashboard/GlobalStepper"
 import { BackgroundJobsBanner } from "./BackgroundJobsBanner"
 import { startAdminTour, setTourNavigate } from "../../lib/adminTour"
+import { resetTourStatus } from "../../lib/api-client"
 
 export function AppLayout() {
   const { telegramId, logout } = useAuth()
@@ -18,6 +19,25 @@ export function AppLayout() {
   const handleLogout = () => {
     logout()
     navigate("/login")
+  }
+
+  const handleStartTour = async () => {
+    // Reset tour status so it can be taken again
+    try {
+      await resetTourStatus()
+    } catch (err) {
+      console.error("Failed to reset tour status:", err)
+    }
+    // Navigate to dashboard first
+    if (location.pathname !== "/dashboard") {
+      navigate("/dashboard")
+      // Wait for navigation then start tour
+      setTimeout(() => {
+        startAdminTour()
+      }, 300)
+    } else {
+      startAdminTour()
+    }
   }
 
   // Set navigate function for tour
@@ -62,7 +82,7 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => startAdminTour()}
+              onClick={handleStartTour}
               className="hidden sm:flex items-center gap-1.5"
               title="Обучалка по админке"
             >
@@ -72,7 +92,7 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => startAdminTour()}
+              onClick={handleStartTour}
               className="sm:hidden"
               title="Обучалка по админке"
               aria-label="Обучалка"

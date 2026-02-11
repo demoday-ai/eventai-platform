@@ -4,13 +4,21 @@ import { RefreshCw, AlertTriangle, AlertCircle, Info } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { APP_NAME } from "../lib/constants"
-import { getDashboard, getCoverage, type DashboardData, type RoomCoverage, type Alert as AlertType } from "../lib/api-client"
+import {
+  getDashboard,
+  getCoverage,
+  getTourStatus,
+  markTourPrompted,
+  type DashboardData,
+  type RoomCoverage,
+  type Alert as AlertType,
+} from "../lib/api-client"
 import { EmptyState } from "../components/dashboard/EmptyState"
 import { QuickAction } from "../components/dashboard/QuickAction"
 import { MetricCards } from "../components/dashboard/MetricCards"
 import { EventCountdown } from "../components/dashboard/EventCountdown"
 import { DashboardCoverageTable } from "../components/dashboard/CoverageTable"
-import { startAdminTour, shouldShowTourPrompt, markTourPrompted } from "../lib/adminTour"
+import { startAdminTour } from "../lib/adminTour"
 import { TourWelcomeDialog } from "../components/tour/TourWelcomeDialog"
 
 export function Dashboard() {
@@ -33,29 +41,45 @@ export function Dashboard() {
     placeholderData: keepPreviousData,
   })
 
+  // Check tour status from backend
+  const { data: tourStatus } = useQuery({
+    queryKey: ["tourStatus"],
+    queryFn: getTourStatus,
+  })
+
   // Show tour prompt dialog on first visit (after data loads)
   useEffect(() => {
-    if (data && !isLoading && shouldShowTourPrompt()) {
+    if (data && !isLoading && tourStatus && !tourStatus.prompted) {
       // Delay to ensure UI is fully rendered
       const timer = setTimeout(() => {
         setShowTourDialog(true)
       }, 1000)
       return () => clearTimeout(timer)
     }
-  }, [data, isLoading])
+  }, [data, isLoading, tourStatus])
 
-  const handleStartTour = () => {
+  const handleStartTour = async () => {
     setShowTourDialog(false)
-    markTourPrompted()
+    // Mark as prompted via API
+    try {
+      await markTourPrompted()
+    } catch (err) {
+      console.error("Failed to mark tour as prompted:", err)
+    }
     // Small delay to let dialog close animation finish
     setTimeout(() => {
       startAdminTour()
     }, 200)
   }
 
-  const handleSkipTour = () => {
+  const handleSkipTour = async () => {
     setShowTourDialog(false)
-    markTourPrompted()
+    // Mark as prompted via API
+    try {
+      await markTourPrompted()
+    } catch (err) {
+      console.error("Failed to mark tour as prompted:", err)
+    }
   }
 
   const {
