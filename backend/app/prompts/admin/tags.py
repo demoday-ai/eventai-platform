@@ -24,6 +24,7 @@ TAG_SUGGEST_SYSTEM = (
 # User Prompt Builder
 # =============================================================================
 
+
 def build_tag_suggest_prompt(projects: list[dict]) -> str:
     """Build user prompt for tag suggestion.
 

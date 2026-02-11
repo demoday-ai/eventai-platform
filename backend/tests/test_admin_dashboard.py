@@ -175,11 +175,7 @@ async def test_pipeline_status_with_data(db, seed_event, seed_project):
         db.add(guest_role)
         await db.flush()
 
-    user = User(
-        telegram_user_id="student123",
-        full_name="Student User",
-        guest_subtype=GuestSubtype.STUDENT
-    )
+    user = User(telegram_user_id="student123", full_name="Student User", guest_subtype=GuestSubtype.STUDENT)
     db.add(user)
     await db.flush()
 
@@ -222,11 +218,7 @@ async def test_pipeline_status_next_action_none_when_all_complete(
         db.add(guest_role)
         await db.flush()
 
-    student_user = User(
-        telegram_user_id="student456",
-        full_name="Student User",
-        guest_subtype=GuestSubtype.STUDENT
-    )
+    student_user = User(telegram_user_id="student456", full_name="Student User", guest_subtype=GuestSubtype.STUDENT)
     db.add(student_user)
     await db.flush()
 

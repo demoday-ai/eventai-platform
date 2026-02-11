@@ -65,6 +65,7 @@ Constraints:
 # User Prompt Builders
 # =============================================================================
 
+
 def build_clustering_prompt(
     projects: list[dict],
     num_rooms: int,

@@ -8,6 +8,7 @@ Last updated: 2026-02-11
 # Agent Mode System Prompt
 # =============================================================================
 
+
 def build_agent_system_prompt(
     is_business: bool,
     profile_info: str,

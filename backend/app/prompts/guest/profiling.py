@@ -99,6 +99,7 @@ DEFAULT_ROLE_CONTEXT = (
 # Dynamic Prompts (Functions)
 # =============================================================================
 
+
 def get_profile_agent_system(tag_list: str) -> str:
     """Generate PROFILE_AGENT_SYSTEM with current tags.
 
