@@ -1,4 +1,0 @@
-[     232ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://evt-ai.ru/api/v1/admin/guests:0
-[     235ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://evt-ai.ru/api/v1/admin/pipeline-status:0
-[    1357ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://evt-ai.ru/api/v1/admin/guests:0
-[    1357ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://evt-ai.ru/api/v1/admin/pipeline-status:0

@@ -1,2 +1,0 @@
-[     472ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://evt-ai.ru/api/v1/clustering/current:0
-[     473ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://evt-ai.ru/api/v1/schedule:0
