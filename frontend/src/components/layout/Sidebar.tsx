@@ -6,6 +6,7 @@ import {
   Tag,
   Layers,
   Users,
+  UsersRound,
   Calendar,
   FolderOpen,
   MessageSquare,
@@ -43,6 +44,7 @@ const navGroups: NavGroup[] = [
       { to: "/import", label: "Импорт данных", icon: Upload, pipelineSteps: ["projects", "students", "experts"] },
       { to: "/tags", label: "Теги", icon: Tag },
       { to: "/projects", label: "Проекты", icon: FolderOpen },
+      { to: "/participants", label: "Участники", icon: UsersRound },
     ],
   },
   {
@@ -63,7 +65,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Аналитика",
     items: [
-      { to: "/guests", label: "Аудитория", icon: UserCheck },
+      { to: "/guests", label: "Аудитория бота", icon: UserCheck },
     ],
   },
   {

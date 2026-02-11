@@ -234,7 +234,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     async with async_session() as session:
         user = await user_service.upsert_user(
-            session, telegram_user_id, full_name, username
+            session, telegram_user_id, full_name, username, source="bot",
         )
 
         event = await user_service.get_current_event(session)

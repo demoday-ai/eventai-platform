@@ -50,6 +50,18 @@ describe("GuestList", () => {
     })
   })
 
+  it("calls API with source='bot'", async () => {
+    mockGetGuests.mockResolvedValue([])
+
+    render(<GuestList />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(mockGetGuests).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "bot" })
+      )
+    })
+  })
+
   it("shows informational empty state when no guests", async () => {
     mockGetGuests.mockResolvedValue([])
 

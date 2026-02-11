@@ -38,6 +38,7 @@ async def list_guests(
     search: str | None = None,
     subtype: str | None = None,
     role_filter: str | None = None,
+    source: str | None = None,
 ) -> list[GuestListItem]:
     """List all guests and business partners for an event."""
     guest_role = await db.scalar(select(Role).where(Role.code == RoleCode.GUEST.value))
@@ -115,6 +116,9 @@ async def list_guests(
     if subtype:
         query = query.where(User.guest_subtype == subtype)
 
+    if source:
+        query = query.where(User.source == source)
+
     query = query.order_by(User.created_at.desc())
     result = await db.execute(query)
     rows = result.all()
@@ -153,6 +157,7 @@ async def list_guests(
                 telegram_user_id=user.telegram_user_id,
                 role=role_code,
                 guest_subtype=user.guest_subtype.value if user.guest_subtype else None,
+                source=user.source,
                 tags=tags,
                 keywords=keywords,
                 profile_summary=profile_summary,
@@ -273,6 +278,7 @@ async def get_guest_detail(
         telegram_user_id=user.telegram_user_id,
         role=role_code,
         guest_subtype=user.guest_subtype.value if user.guest_subtype else None,
+        source=user.source,
         tags=(profile.selected_tags or []) + (profile.extracted_tags or []) if profile else [],
         keywords=profile.keywords or [] if profile else [],
         profile_summary=_extract_summary(profile.extra_data) if profile else None,

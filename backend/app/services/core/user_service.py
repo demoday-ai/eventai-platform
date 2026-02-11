@@ -18,8 +18,9 @@ async def upsert_user(
     telegram_user_id: str,
     full_name: str,
     username: str | None = None,
+    source: str | None = None,
 ) -> User:
-    user = await user_repo.upsert(session, telegram_user_id, full_name, username)
+    user = await user_repo.upsert(session, telegram_user_id, full_name, username, source=source)
     await session.commit()
     return user
 

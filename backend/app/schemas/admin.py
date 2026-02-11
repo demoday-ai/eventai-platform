@@ -447,6 +447,7 @@ class GuestListItem(BaseModel):
     telegram_user_id: str
     role: str = "guest"  # "guest" or "business"
     guest_subtype: str | None = None
+    source: str | None = None  # "bot" | "import"
     tags: list[str] = []
     keywords: list[str] = []
     profile_summary: str | None = None

@@ -1553,6 +1553,7 @@ export interface GuestListItem {
   telegram_user_id: string
   role: string
   guest_subtype: string | null
+  source: string | null
   tags: string[]
   keywords: string[]
   profile_summary: string | null
@@ -1600,7 +1601,7 @@ export interface GuestDetailResponse {
 
 // --- Guest list API ---
 
-export const getGuests = async (params?: { search?: string; subtype?: string; role?: string }): Promise<GuestListItem[]> => {
+export const getGuests = async (params?: { search?: string; subtype?: string; role?: string; source?: string }): Promise<GuestListItem[]> => {
   const { data } = await apiClient.get<GuestListItem[]>("/admin/guests", { params })
   return data
 }
@@ -1610,7 +1611,7 @@ export const getGuestDetail = async (id: string): Promise<GuestDetailResponse> =
   return data
 }
 
-export const exportGuests = async (params?: { search?: string; subtype?: string; role?: string }): Promise<Blob> => {
+export const exportGuests = async (params?: { search?: string; subtype?: string; role?: string; source?: string }): Promise<Blob> => {
   const { data } = await apiClient.get<Blob>("/admin/guests/export", {
     params,
     responseType: "blob",

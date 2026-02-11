@@ -39,6 +39,7 @@ async def list_guests(
     search: str | None = None,
     subtype: str | None = None,
     role: str | None = None,
+    source: str | None = None,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -49,7 +50,7 @@ async def list_guests(
             status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
         )
 
-    return await admin_service.list_guests(db, event.id, search, subtype, role)
+    return await admin_service.list_guests(db, event.id, search, subtype, role, source=source)
 
 
 @router.get("/guests/export")
@@ -57,6 +58,7 @@ async def export_guests(
     search: str | None = None,
     subtype: str | None = None,
     role: str | None = None,
+    source: str | None = None,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -67,7 +69,7 @@ async def export_guests(
             status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
         )
 
-    guests = await admin_service.list_guests(db, event.id, search, subtype, role)
+    guests = await admin_service.list_guests(db, event.id, search, subtype, role, source=source)
 
     # Create Excel workbook
     wb = openpyxl.Workbook()
@@ -366,6 +368,7 @@ async def upload_guests(
             telegram_user_id=synthetic_id,
             full_name=name,
             username=username,
+            source="import",
         )
 
         await user_service.set_role(

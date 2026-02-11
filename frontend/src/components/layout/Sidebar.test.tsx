@@ -69,7 +69,8 @@ describe("Sidebar", () => {
     expect(screen.getByText("Эксперты")).toBeInTheDocument()
     expect(screen.getByText("Расписание")).toBeInTheDocument()
     expect(screen.getByText("Рассылки")).toBeInTheDocument()
-    expect(screen.getByText("Аудитория")).toBeInTheDocument()
+    expect(screen.getByText("Участники")).toBeInTheDocument()
+    expect(screen.getByText("Аудитория бота")).toBeInTheDocument()
     expect(screen.getByText("Настройки")).toBeInTheDocument()
   })
 

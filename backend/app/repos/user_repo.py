@@ -18,16 +18,21 @@ async def upsert(
     telegram_user_id: str,
     full_name: str,
     username: str | None = None,
+    source: str | None = None,
 ) -> User:
     """Create or update user by telegram_user_id."""
+    values: dict = {
+        "id": uuid.uuid4(),
+        "telegram_user_id": telegram_user_id,
+        "full_name": full_name,
+        "username": username,
+    }
+    if source is not None:
+        values["source"] = source
+
     stmt = (
         pg_insert(User)
-        .values(
-            id=uuid.uuid4(),
-            telegram_user_id=telegram_user_id,
-            full_name=full_name,
-            username=username,
-        )
+        .values(**values)
         .on_conflict_do_update(
             index_elements=["telegram_user_id"],
             set_={"full_name": full_name, "username": username},

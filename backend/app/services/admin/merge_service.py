@@ -189,6 +189,7 @@ async def apply_guest_merge(
                 telegram_user_id=synthetic_id,
                 full_name=row["name"],
                 username=row["username"],
+                source="import",
             )
             await user_service.set_role(
                 session,

@@ -9,6 +9,7 @@ import { DataImport } from "./pages/DataImport"
 import { Clustering } from "./pages/Clustering"
 import { Experts } from "./pages/Experts"
 import { GuestList } from "./pages/GuestList"
+import { Participants } from "./pages/Participants"
 import { Schedule } from "./pages/Schedule"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
 import { Messaging } from "./pages/Messaging/index"
@@ -46,6 +47,7 @@ function App() {
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/messaging" element={<Messaging />} />
           <Route path="/reminders" element={<Reminders />} />
+          <Route path="/participants" element={<Participants />} />
           <Route path="/guests" element={<GuestList />} />
           <Route path="/projects" element={<ProjectsList />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />

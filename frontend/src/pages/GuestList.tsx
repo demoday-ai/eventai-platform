@@ -180,7 +180,7 @@ export function GuestList() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    document.title = `${APP_NAME} - Гости и партнёры`
+    document.title = `${APP_NAME} - Аудитория бота`
   }, [])
 
   const exportMutation = useMutation({
@@ -203,9 +203,10 @@ export function GuestList() {
 
   const roleParam = roleFilter !== "all" ? roleFilter : ""
   const { data: guests, isLoading, isError, error } = useQuery({
-    queryKey: ["guests", search, roleParam],
+    queryKey: ["guests", "bot", search, roleParam],
     queryFn: () =>
       getGuests({
+        source: "bot",
         ...(search ? { search } : {}),
         ...(roleParam ? { role: roleParam } : {}),
       }),
@@ -272,7 +273,7 @@ export function GuestList() {
     <div className="grid gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold">
-          Гости и партнёры {filteredGuests && <span className="text-muted-foreground text-lg font-normal">({filteredGuests.length}{guests && filteredGuests.length !== guests.length ? ` из ${guests.length}` : ""})</span>}
+          Аудитория бота {filteredGuests && <span className="text-muted-foreground text-lg font-normal">({filteredGuests.length}{guests && filteredGuests.length !== guests.length ? ` из ${guests.length}` : ""})</span>}
         </h2>
         <div className="flex gap-2 flex-wrap">
           {selectedIds.size > 0 && (
@@ -296,7 +297,7 @@ export function GuestList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => exportMutation.mutate({ search, role: roleFilter !== "all" ? roleFilter : undefined })}
+              onClick={() => exportMutation.mutate({ search, role: roleFilter !== "all" ? roleFilter : undefined, source: "bot" })}
               disabled={exportMutation.isPending}
             >
               <Download className="h-4 w-4 mr-1" />
