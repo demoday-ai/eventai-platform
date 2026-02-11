@@ -17,6 +17,9 @@ venv/
 *.tmp
 .DS_Store
 
+# MCP tools
+.playwright-mcp/
+
 # Runtime data
 telegram-log/messages.json
 telegram-log/pending.json
