@@ -49,3 +49,8 @@ Screenshot.png
 
 # Core dumps
 /core
+
+# Root npm artifacts (from installing driver.js)
+/node_modules/
+/package.json
+/package-lock.json

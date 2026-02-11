@@ -117,7 +117,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const allSteps: PipelineStep[] = data?.phases.flatMap((p) => p.steps) ?? []
 
   return (
-    <nav className="flex-1 py-4">
+    <nav id="sidebar-nav" className="flex-1 py-4">
       <div className="space-y-6 px-2">
         {navGroups.map((group) => (
           <div key={group.label}>
