@@ -46,6 +46,7 @@ def _parse_file(content: bytes, filename: str) -> list[dict]:
         ws = wb.active
         rows_iter = ws.iter_rows(values_only=True)
         headers = [str(h).strip() if h else f"col_{i}" for i, h in enumerate(next(rows_iter))]
+        num_headers = len(headers)
         rows = []
         for row_values in rows_iter:
             if all(v is None for v in row_values):
@@ -53,6 +54,7 @@ def _parse_file(content: bytes, filename: str) -> list[dict]:
             rows.append({
                 headers[i]: (str(v).strip() if v is not None else "")
                 for i, v in enumerate(row_values)
+                if i < num_headers
             })
         wb.close()
         return rows

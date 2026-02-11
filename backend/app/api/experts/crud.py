@@ -247,8 +247,11 @@ async def preview_expert_upload(
         preview, _ = await merge_service.analyze_expert_merge(
             session, event.id, content, filename,
         )
-    except ValueError as e:
+    except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Expert preview failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Ошибка анализа файла: {e}")
 
     return preview
 
@@ -274,8 +277,11 @@ async def merge_expert_upload(
         _, internal = await merge_service.analyze_expert_merge(
             session, event.id, content, filename,
         )
-    except ValueError as e:
+    except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Expert merge analyze failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Ошибка анализа файла: {e}")
 
     result = await merge_service.apply_expert_merge(
         session, event.id, internal,

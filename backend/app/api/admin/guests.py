@@ -3,6 +3,7 @@
 import csv
 import io
 import json
+import logging
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -27,6 +28,8 @@ from app.schemas.expert import RowError
 from app.schemas.merge import MergeApplyResult
 from app.services.admin import admin_service, audit_service, dedup_service, merge_service
 from app.services.core import user_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -418,8 +421,11 @@ async def preview_guest_upload(
         preview, _ = await merge_service.analyze_guest_merge(
             db, event.id, content, filename, subtype_enum,
         )
-    except ValueError as e:
+    except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Guest preview failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Ошибка анализа файла: {e}")
 
     return preview
 
@@ -454,8 +460,11 @@ async def merge_guest_upload(
         _, internal = await merge_service.analyze_guest_merge(
             db, event.id, content, filename, subtype_enum,
         )
-    except ValueError as e:
+    except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Guest merge analyze failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Ошибка анализа файла: {e}")
 
     result = await merge_service.apply_guest_merge(
         db, event.id, subtype_enum, internal,

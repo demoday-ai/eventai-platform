@@ -120,9 +120,11 @@ export function DataImport() {
           // Check if this is a merge result or legacy upload result
           if ("added" in status.result) {
             setProjectMergeResult(status.result as unknown as MergeApplyResult)
+            setProjectResult(null)
             setProjectMergeState("result")
           } else {
             setProjectResult(status.result)
+            setProjectMergeResult(null)
           }
           setProjectJobId(null)
           setProjectJobStatus(null)
@@ -148,6 +150,8 @@ export function DataImport() {
       setProjectPreview(data)
       setProjectMergeState("preview")
       setProjectError(null)
+      setProjectResult(null)
+      setProjectMergeResult(null)
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       setProjectError(error.response?.data?.detail || error.message)
@@ -176,8 +180,6 @@ export function DataImport() {
 
   const handleProjectAction = () => {
     if (!projectFile) return
-    setProjectResult(null)
-    setProjectMergeResult(null)
     setProjectError(null)
     setDeleteMessage(null)
     if (projectHasData) {
@@ -234,6 +236,8 @@ export function DataImport() {
       setExpertPreview(data)
       setExpertMergeState("preview")
       setExpertError(null)
+      setExpertResult(null)
+      setExpertMergeResult(null)
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       setExpertError(error.response?.data?.detail || error.message)
@@ -250,8 +254,6 @@ export function DataImport() {
 
   const handleExpertAction = () => {
     if (!expertFile) return
-    setExpertResult(null)
-    setExpertMergeResult(null)
     setExpertError(null)
     setDeleteMessage(null)
     if (expertHasData) {
@@ -265,6 +267,7 @@ export function DataImport() {
           onSuccess: (data) => {
             if (!("existing_count" in data)) {
               setExpertResult(data)
+              setExpertMergeResult(null)
               setExpertFile(null)
             }
             setExpertMergeState("idle")
@@ -286,6 +289,7 @@ export function DataImport() {
     try {
       const result = await mergeExperts(expertFile, addNew, updateExisting)
       setExpertMergeResult(result)
+      setExpertResult(null)
       setExpertMergeState("result")
       setExpertPreview(null)
       setExpertFile(null)
@@ -305,10 +309,10 @@ export function DataImport() {
       {
         onSuccess: (data) => {
           if ("existing_count" in data) {
-            // Should not happen with confirmReplace=true, but handle gracefully
             setExpertError("Unexpected conflict response")
           } else {
             setExpertResult(data)
+            setExpertMergeResult(null)
             setExpertPreview(null)
             setExpertFile(null)
             setExpertMergeState("idle")
@@ -345,6 +349,8 @@ export function DataImport() {
       setStudentPreview(data)
       setStudentMergeState("preview")
       setStudentError(null)
+      setStudentResult(null)
+      setStudentMergeResult(null)
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       setStudentError(error.response?.data?.detail || error.message)
@@ -361,8 +367,6 @@ export function DataImport() {
 
   const handleStudentAction = () => {
     if (!studentFile) return
-    setStudentResult(null)
-    setStudentMergeResult(null)
     setStudentError(null)
     setDeleteMessage(null)
     if (studentHasData) {
@@ -376,6 +380,7 @@ export function DataImport() {
           onSuccess: (data) => {
             if (!("existing_count" in data)) {
               setStudentResult(data)
+              setStudentMergeResult(null)
               setStudentFile(null)
             }
             setStudentMergeState("idle")
@@ -397,6 +402,7 @@ export function DataImport() {
     try {
       const result = await mergeGuests(studentFile, "student", addNew, updateExisting)
       setStudentMergeResult(result)
+      setStudentResult(null)
       setStudentMergeState("result")
       setStudentPreview(null)
       setStudentFile(null)
@@ -419,6 +425,7 @@ export function DataImport() {
             setStudentError("Unexpected conflict response")
           } else {
             setStudentResult(data)
+            setStudentMergeResult(null)
             setStudentPreview(null)
             setStudentFile(null)
             setStudentMergeState("idle")
@@ -455,6 +462,8 @@ export function DataImport() {
       setPartnerPreview(data)
       setPartnerMergeState("preview")
       setPartnerError(null)
+      setPartnerResult(null)
+      setPartnerMergeResult(null)
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       setPartnerError(error.response?.data?.detail || error.message)
@@ -471,8 +480,6 @@ export function DataImport() {
 
   const handlePartnerAction = () => {
     if (!partnerFile) return
-    setPartnerResult(null)
-    setPartnerMergeResult(null)
     setPartnerError(null)
     setDeleteMessage(null)
     if (partnerHasData) {
@@ -486,6 +493,7 @@ export function DataImport() {
           onSuccess: (data) => {
             if (!("existing_count" in data)) {
               setPartnerResult(data)
+              setPartnerMergeResult(null)
               setPartnerFile(null)
             }
             setPartnerMergeState("idle")
@@ -507,6 +515,7 @@ export function DataImport() {
     try {
       const result = await mergeGuests(partnerFile, "business_partner", addNew, updateExisting)
       setPartnerMergeResult(result)
+      setPartnerResult(null)
       setPartnerMergeState("result")
       setPartnerPreview(null)
       setPartnerFile(null)
@@ -529,6 +538,7 @@ export function DataImport() {
             setPartnerError("Unexpected conflict response")
           } else {
             setPartnerResult(data)
+            setPartnerMergeResult(null)
             setPartnerPreview(null)
             setPartnerFile(null)
             setPartnerMergeState("idle")
