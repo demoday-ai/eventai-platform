@@ -18,7 +18,7 @@ from app.models.expert import Expert
 from app.models.expert_briefing import ExpertBriefing
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.notification import Notification
-from app.models.participation import ParticipationRequest, ParticipationStatus
+from app.models.participation import ParticipationRequest
 from app.models.project import Project
 from app.models.role import Role, RoleCode
 from app.models.room import Room
