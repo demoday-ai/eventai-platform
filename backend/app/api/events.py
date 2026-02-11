@@ -12,7 +12,5 @@ router = APIRouter(prefix="/events", tags=["Events"])
 async def get_current_event(session: AsyncSession = Depends(get_session)):
     event = await user_service.get_current_event(session)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события")
     return event

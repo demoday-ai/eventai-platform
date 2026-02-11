@@ -27,9 +27,7 @@ class ContactRequest(Base):
     """Request to exchange contact with a project author."""
 
     __tablename__ = "contact_requests"
-    __table_args__ = (
-        UniqueConstraint("requester_id", "project_id", name="uq_contact_request_requester_project"),
-    )
+    __table_args__ = (UniqueConstraint("requester_id", "project_id", name="uq_contact_request_requester_project"),)
 
     requester_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

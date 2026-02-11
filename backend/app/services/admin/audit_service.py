@@ -52,11 +52,7 @@ async def get_audit_log(
 
     total = await session.scalar(count_base) or 0
 
-    result = await session.execute(
-        base.order_by(AdminAuditLog.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    result = await session.execute(base.order_by(AdminAuditLog.created_at.desc()).offset(offset).limit(limit))
     entries = list(result.scalars().all())
 
     return entries, total

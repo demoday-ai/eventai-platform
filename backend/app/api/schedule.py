@@ -46,7 +46,6 @@ async def generate_schedule(
 ):
     """Auto-generate schedule from approved clustering."""
 
-
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
@@ -66,7 +65,9 @@ async def generate_schedule(
             force=request.force if request else False,
         )
         await audit_service.log_action(
-            db, current_user, "schedule_generate",
+            db,
+            current_user,
+            "schedule_generate",
             entity_type="schedule",
             details={"total_slots": result.total_slots},
         )
@@ -91,9 +92,7 @@ async def get_schedule(
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
 
-    return await schedule_service.get_schedule(
-        db, event.id, room_id=room_id, day=day, status=status
-    )
+    return await schedule_service.get_schedule(db, event.id, room_id=room_id, day=day, status=status)
 
 
 @router.get("/schedule/export.ics")
@@ -160,7 +159,6 @@ async def approve_schedule(
 ):
     """Approve the schedule."""
 
-
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
@@ -168,7 +166,9 @@ async def approve_schedule(
     try:
         result = await schedule_service.approve_schedule(db, event.id)
         await audit_service.log_action(
-            db, current_user, "schedule_approve",
+            db,
+            current_user,
+            "schedule_approve",
             entity_type="schedule",
         )
         await db.commit()
@@ -185,7 +185,6 @@ async def update_slot(
     current_user: User = Depends(get_current_user),
 ):
     """Update a schedule slot (T030)."""
-
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -207,13 +206,14 @@ async def update_slot(
         # Queue timing shift notifications
         notifications_queued = 0
         if change_log:
-            notifications_queued = await notification_service.queue_timing_shift_notifications(
-                db, change_log, event.id
-            )
+            notifications_queued = await notification_service.queue_timing_shift_notifications(db, change_log, event.id)
 
         await audit_service.log_action(
-            db, current_user, "slot_update",
-            entity_type="schedule_slot", entity_id=str(slot_id),
+            db,
+            current_user,
+            "slot_update",
+            entity_type="schedule_slot",
+            entity_id=str(slot_id),
             details={"notifications_queued": notifications_queued},
         )
 
@@ -249,9 +249,7 @@ async def get_schedule_changes(
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
 
-    changes = await schedule_service.get_change_log(
-        db, event.id, slot_id=slot_id, limit=limit
-    )
+    changes = await schedule_service.get_change_log(db, event.id, slot_id=slot_id, limit=limit)
 
     items = [
         ScheduleChangeItem(
@@ -284,7 +282,6 @@ async def preview_reminders(
 ):
     """Preview pending reminders."""
 
-
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
@@ -305,15 +302,12 @@ async def cancel_reminders(
 ):
     """Cancel pending eve-of-DD reminders."""
 
-
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
 
     try:
-        cancelled = await notification_service.cancel_reminders(
-            db, event.id, request.day
-        )
+        cancelled = await notification_service.cancel_reminders(db, event.id, request.day)
         return ReminderCancelResult(cancelled_count=cancelled, day=request.day)
     except CancellationWindowClosedError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -327,7 +321,6 @@ async def send_reminders(
     current_user: User = Depends(get_current_user),
 ):
     """Manually trigger reminder send."""
-
 
     event = await user_service.get_current_event(db)
     if not event:
@@ -343,9 +336,7 @@ async def send_reminders(
         raise HTTPException(status_code=503, detail="Bot is not configured")
 
     try:
-        result = await notification_service.send_eve_reminders(
-            db, event.id, request.day, bot=bot
-        )
+        result = await notification_service.send_eve_reminders(db, event.id, request.day, bot=bot)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -363,14 +354,11 @@ async def get_notification_dashboard(
 ):
     """Notification delivery dashboard (T032)."""
 
-
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(status_code=400, detail="No active event")
 
-    return await notification_service.get_notification_dashboard(
-        db, event.id, type_filter=type, day_filter=day
-    )
+    return await notification_service.get_notification_dashboard(db, event.id, type_filter=type, day_filter=day)
 
 
 @router.get("/notifications", response_model=NotificationListResponse)

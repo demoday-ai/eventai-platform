@@ -29,9 +29,7 @@ def init_db_engine():
         pool_recycle=600,
         pool_pre_ping=True,
     )
-    _async_session_factory = async_sessionmaker(
-        _engine, class_=AsyncSession, expire_on_commit=False
-    )
+    _async_session_factory = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
     logger.info("Worker DB engine initialized (pool_size=3, max_overflow=2)")
 
 
@@ -73,6 +71,7 @@ async def worker_session():
         yield session
     finally:
         await session.close()
+
 
 DEFAULT_TIMEOUT = 30
 SHORT_TIMEOUT = 15

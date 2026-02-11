@@ -38,16 +38,22 @@ async def send_with_retry(
         except Exception as e:
             error_msg = str(e)
             if attempt < max_retries - 1:
-                delay = 2 ** attempt  # 1s, 2s, 4s
+                delay = 2**attempt  # 1s, 2s, 4s
                 logger.warning(
                     "Retry %d/%d sending to %s: %s (waiting %ds)",
-                    attempt + 1, max_retries, chat_id, error_msg, delay,
+                    attempt + 1,
+                    max_retries,
+                    chat_id,
+                    error_msg,
+                    delay,
                 )
                 await asyncio.sleep(delay)
             else:
                 logger.error(
                     "Failed to send to %s after %d attempts: %s",
-                    chat_id, max_retries, error_msg,
+                    chat_id,
+                    max_retries,
+                    error_msg,
                 )
                 return False, error_msg[:500]
     return False, "Max retries exceeded"

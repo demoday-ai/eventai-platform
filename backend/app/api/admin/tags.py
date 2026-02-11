@@ -40,7 +40,9 @@ async def add_tags(
     added, skipped = await admin_service.add_tags(db, request.tags)
 
     await audit_service.log_action(
-        db, current_user, "tags_add",
+        db,
+        current_user,
+        "tags_add",
         entity_type="tags",
         details={"added": added, "skipped": skipped},
     )
@@ -57,7 +59,9 @@ async def seed_default_tags(
     added, skipped = await admin_service.seed_default_tags(db)
 
     await audit_service.log_action(
-        db, current_user, "tags_seed",
+        db,
+        current_user,
+        "tags_seed",
         entity_type="tags",
         details={"added": added, "skipped": skipped},
     )
@@ -73,13 +77,16 @@ async def delete_tag(
 ):
     """Delete a single tag and its project associations."""
     from urllib.parse import unquote
+
     tag_name = unquote(tag_name)
     deleted = await admin_service.delete_tag(db, tag_name)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
 
     await audit_service.log_action(
-        db, current_user, "tags_delete",
+        db,
+        current_user,
+        "tags_delete",
         entity_type="tags",
         details={"deleted": tag_name},
     )
@@ -93,9 +100,7 @@ async def suggest_tags(
     """Suggest tags based on project descriptions using LLM."""
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     result = await admin_service.suggest_tags(db, event.id)
     return TagSuggestResponse(**result)
@@ -111,7 +116,9 @@ async def replace_tags(
     result = await admin_service.replace_tags(db, request.tags)
 
     await audit_service.log_action(
-        db, current_user, "tags_replace",
+        db,
+        current_user,
+        "tags_replace",
         entity_type="tags",
         details={"added": result["added"], "removed": result["removed"]},
     )

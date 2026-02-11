@@ -23,15 +23,11 @@ async def get_briefing_preview(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     result = await briefing_service.get_briefing_preview(db, event.id)
     if "error" in result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=result["error"]
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
 
     return BriefingPreview(**result)
 
@@ -45,9 +41,7 @@ async def send_briefings(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     from telegram import Bot
 
@@ -55,7 +49,9 @@ async def send_briefings(
     result = await briefing_service.send_all_briefings(db, event.id, bot)
 
     await audit_service.log_action(
-        db, current_user, "send_briefing",
+        db,
+        current_user,
+        "send_briefing",
         entity_type="briefing",
         details={"sent": result["sent"], "failed": result["failed"], "skipped": result["skipped"]},
     )

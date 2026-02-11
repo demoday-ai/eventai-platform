@@ -76,9 +76,7 @@ async def get_recipients(
                 .options(selectinload(ExpertRoomAssignment.expert))
             )
             assignments = era_result.scalars().all()
-            allowed_user_ids = {
-                a.expert.user_id for a in assignments if a.expert and a.expert.user_id
-            }
+            allowed_user_ids = {a.expert.user_id for a in assignments if a.expert and a.expert.user_id}
 
             # Remove expert users not in this room
             to_remove = []
@@ -160,7 +158,9 @@ async def send_messages(
         text = render_template(template, user)
 
         success, error = await send_with_retry(
-            bot, int(user.telegram_user_id), text,
+            bot,
+            int(user.telegram_user_id),
+            text,
         )
         if success:
             sent += 1

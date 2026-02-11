@@ -88,40 +88,47 @@ async def _run_tag_generation(task_id: str, event_id: UUID):
 
     try:
         async with async_session() as db:
+
             def progress_callback(progress: dict):
                 # Check if task was cancelled
                 if _tag_generation_tasks.get(task_id, {}).get("status") == "cancelled":
                     raise asyncio.CancelledError("Tag generation cancelled by user")
 
-                _tag_generation_tasks[task_id].update({
-                    "current": progress.get("current", 0),
-                    "total": progress.get("total", 0),
-                    "tagged": progress.get("tagged", 0),
-                })
+                _tag_generation_tasks[task_id].update(
+                    {
+                        "current": progress.get("current", 0),
+                        "total": progress.get("total", 0),
+                        "tagged": progress.get("tagged", 0),
+                    }
+                )
 
-            result = await project_service.generate_missing_tags(
-                db, event_id, progress_callback=progress_callback
+            result = await project_service.generate_missing_tags(db, event_id, progress_callback=progress_callback)
+            _tag_generation_tasks[task_id].update(
+                {
+                    "status": "completed",
+                    "processed": result.get("processed", 0),
+                    "tagged": result.get("tagged", 0),
+                    "current": result.get("processed", 0),
+                    "total": result.get("processed", 0),
+                    "message": result.get("message"),
+                }
             )
-            _tag_generation_tasks[task_id].update({
-                "status": "completed",
-                "processed": result.get("processed", 0),
-                "tagged": result.get("tagged", 0),
-                "current": result.get("processed", 0),
-                "total": result.get("processed", 0),
-                "message": result.get("message"),
-            })
     except asyncio.CancelledError:
         logger.info("Tag generation cancelled: task_id=%s", task_id)
-        _tag_generation_tasks[task_id].update({
-            "status": "cancelled",
-            "error": "Генерация тегов отменена пользователем",
-        })
+        _tag_generation_tasks[task_id].update(
+            {
+                "status": "cancelled",
+                "error": "Генерация тегов отменена пользователем",
+            }
+        )
     except Exception as e:
         logger.exception("Tag generation failed")
-        _tag_generation_tasks[task_id].update({
-            "status": "failed",
-            "error": str(e),
-        })
+        _tag_generation_tasks[task_id].update(
+            {
+                "status": "failed",
+                "error": str(e),
+            }
+        )
     finally:
         # Cleanup asyncio task reference
         _tag_generation_async_tasks.pop(task_id, None)

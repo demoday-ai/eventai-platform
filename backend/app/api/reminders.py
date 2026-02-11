@@ -64,9 +64,7 @@ async def list_batches(
 
     event = await user_service.get_current_event(session)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события")
 
     query = select(ReminderBatch).where(ReminderBatch.event_id == event.id)
 
@@ -114,16 +112,12 @@ async def get_batch(
         )
 
     result = await session.execute(
-        select(ReminderBatch)
-        .where(ReminderBatch.id == batch_id)
-        .options(selectinload(ReminderBatch.notifications))
+        select(ReminderBatch).where(ReminderBatch.id == batch_id).options(selectinload(ReminderBatch.notifications))
     )
     batch = result.scalars().first()
 
     if not batch:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Пакет рассылки не найден"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пакет рассылки не найден")
 
     # Aggregate by recipient type
     by_recipient_type = {}
@@ -168,9 +162,7 @@ async def preview_reminders(
 
     event = await user_service.get_current_event(session)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события")
 
     preview = await reminder_service.get_preview(session, event.id, request.reminder_type)
 

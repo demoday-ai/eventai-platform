@@ -141,7 +141,7 @@ async def embed_projects(session: AsyncSession, event_id: uuid.UUID) -> int:
     # Embed in batches
     all_embeddings: list[list[float]] = []
     for i in range(0, len(texts), EMBED_BATCH_SIZE):
-        batch = texts[i:i + EMBED_BATCH_SIZE]
+        batch = texts[i : i + EMBED_BATCH_SIZE]
         embeddings = await embed_texts_batch(batch)
         all_embeddings.extend(embeddings)
 
@@ -166,11 +166,13 @@ async def embed_projects(session: AsyncSession, event_id: uuid.UUID) -> int:
             "room_name": room_name,
             "room_number": room_number,
         }
-        points.append(PointStruct(
-            id=str(p.id),
-            vector=embedding,
-            payload=payload,
-        ))
+        points.append(
+            PointStruct(
+                id=str(p.id),
+                vector=embedding,
+                payload=payload,
+            )
+        )
 
     # Upsert into Qdrant
     client = _get_qdrant()
@@ -197,9 +199,7 @@ async def find_similar(
     results = await client.search(
         collection_name=COLLECTION_NAME,
         query_vector=profile_embedding,
-        query_filter=Filter(
-            must=[FieldCondition(key="event_id", match=MatchValue(value=str(event_id)))]
-        ),
+        query_filter=Filter(must=[FieldCondition(key="event_id", match=MatchValue(value=str(event_id)))]),
         limit=limit,
     )
 

@@ -17,11 +17,7 @@ class ParticipationStatus(str, enum.Enum):
 
 class ParticipationRequest(Base):
     __tablename__ = "participation_requests"
-    __table_args__ = (
-        UniqueConstraint(
-            "event_id", "project_id", name="uq_participation_event_project"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("event_id", "project_id", name="uq_participation_event_project"),)
 
     event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -48,18 +44,10 @@ class ParticipationRequest(Base):
         nullable=False,
         default=ParticipationStatus.PENDING,
     )
-    reminder_sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    escalated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    acknowledged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    telegram_message_id: Mapped[int | None] = mapped_column(
-        BigInteger, nullable=True
-    )
+    reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    telegram_message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     project = relationship("Project")
     room_project = relationship("RoomProject")

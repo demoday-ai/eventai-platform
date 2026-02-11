@@ -10,13 +10,9 @@ from app.models.base import Base
 
 class GuestProfile(Base):
     __tablename__ = "guest_profiles"
-    __table_args__ = (
-        UniqueConstraint("user_id", "event_id", name="uq_guest_profiles_user_event"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "event_id", name="uq_guest_profiles_user_event"),)
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("events.id", ondelete="CASCADE"),

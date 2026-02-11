@@ -22,7 +22,9 @@ async def _reminder_job(bot, session_factory):
             event = await us.get_current_event(session)
             if event:
                 sent = await invite_service.check_and_send_reminders(
-                    session, event.id, bot,
+                    session,
+                    event.id,
+                    bot,
                 )
                 if sent:
                     logger.info("Reminders sent: %d", sent)
@@ -39,7 +41,9 @@ async def _escalation_job(bot, session_factory):
             event = await us.get_current_event(session)
             if event:
                 created = await invite_service.check_and_escalate(
-                    session, event.id, bot,
+                    session,
+                    event.id,
+                    bot,
                 )
                 if created:
                     logger.info("Escalations created: %d", created)
@@ -56,7 +60,9 @@ async def _participation_reminder_job(bot, session_factory):
             event = await us.get_current_event(session)
             if event:
                 sent = await participation_service.send_reminders(
-                    session, event, bot,
+                    session,
+                    event,
+                    bot,
                 )
                 if sent:
                     logger.info("Participation reminders sent: %d", sent)
@@ -73,13 +79,15 @@ async def _participation_escalation_job(bot, session_factory):
             event = await us.get_current_event(session)
             if event:
                 count = await participation_service.escalate_to_organizers(
-                    session, event, bot, settings.organizer_ids,
+                    session,
+                    event,
+                    bot,
+                    settings.organizer_ids,
                 )
                 if count:
                     logger.info("Participation escalations: %d", count)
     except Exception:
         logger.exception("Participation escalation job failed")
-
 
 
 async def _eve_reminder_preview_job(bot, session_factory):
@@ -97,9 +105,7 @@ async def _eve_reminder_preview_job(bot, session_factory):
             tomorrow = (now + timedelta(days=1)).date()
             if event.start_date and tomorrow >= event.start_date:
                 if event.end_date is None or tomorrow <= event.end_date:
-                    preview = await notification_service.preview_reminders(
-                        session, event.id, tomorrow
-                    )
+                    preview = await notification_service.preview_reminders(session, event.id, tomorrow)
                     for org_id in settings.organizer_ids:
                         try:
                             msg = (
@@ -134,12 +140,12 @@ async def _eve_reminder_send_job(bot, session_factory):
             if event.start_date and tomorrow >= event.start_date:
                 if event.end_date is None or tomorrow <= event.end_date:
                     if await schedule_service.is_schedule_approved(session, event.id):
-                        result = await notification_service.send_eve_reminders(
-                            session, event.id, tomorrow, bot
-                        )
+                        result = await notification_service.send_eve_reminders(session, event.id, tomorrow, bot)
                         logger.info(
                             "Eve-of-DD reminders sent: %d sent, %d failed, %d skipped",
-                            result.sent, result.failed, result.skipped
+                            result.sent,
+                            result.failed,
+                            result.skipped,
                         )
     except Exception:
         logger.exception("Eve reminder send job failed")
@@ -161,9 +167,7 @@ async def _pre_slot_reminder_job(bot, session_factory):
 
             if event.start_date and today >= event.start_date:
                 if event.end_date is None or today <= event.end_date:
-                    sent, failed = await notification_service.check_and_send_pre_slot_reminders(
-                        session, event.id, bot
-                    )
+                    sent, failed = await notification_service.check_and_send_pre_slot_reminders(session, event.id, bot)
                     if sent or failed:
                         logger.info("Pre-slot reminders: %d sent, %d failed", sent, failed)
     except Exception:
@@ -176,9 +180,7 @@ async def _batch_processor_job(bot, session_factory):
         from app.services.admin import notification_service
 
         async with session_factory() as session:
-            sent, failed = await notification_service.process_pending_batches(
-                session, bot
-            )
+            sent, failed = await notification_service.process_pending_batches(session, bot)
             if sent or failed:
                 logger.info("Batch processor: %d sent, %d failed", sent, failed)
     except Exception:
@@ -200,12 +202,12 @@ async def _expert_briefing_job(bot, session_factory):
             tomorrow = (now + timedelta(days=1)).date()
 
             if event.start_date and tomorrow == event.start_date:
-                result = await briefing_service.send_all_briefings(
-                    session, event.id, bot
-                )
+                result = await briefing_service.send_all_briefings(session, event.id, bot)
                 logger.info(
                     "Expert briefings sent: %d sent, %d failed, %d skipped",
-                    result["sent"], result["failed"], result["skipped"]
+                    result["sent"],
+                    result["failed"],
+                    result["skipped"],
                 )
     except Exception:
         logger.exception("Expert briefing job failed")
@@ -216,43 +218,58 @@ def setup_scheduler(bot, session_factory) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=MSK)
 
     scheduler.add_job(
-        _reminder_job, IntervalTrigger(hours=12),
-        args=[bot, session_factory], id="expert_reminders",
+        _reminder_job,
+        IntervalTrigger(hours=12),
+        args=[bot, session_factory],
+        id="expert_reminders",
     )
     scheduler.add_job(
-        _escalation_job, IntervalTrigger(hours=12),
-        args=[bot, session_factory], id="escalations",
+        _escalation_job,
+        IntervalTrigger(hours=12),
+        args=[bot, session_factory],
+        id="escalations",
     )
     scheduler.add_job(
-        _participation_reminder_job, IntervalTrigger(hours=1),
-        args=[bot, session_factory], id="participation_reminders",
+        _participation_reminder_job,
+        IntervalTrigger(hours=1),
+        args=[bot, session_factory],
+        id="participation_reminders",
     )
     scheduler.add_job(
-        _participation_escalation_job, IntervalTrigger(hours=1),
-        args=[bot, session_factory], id="participation_escalations",
+        _participation_escalation_job,
+        IntervalTrigger(hours=1),
+        args=[bot, session_factory],
+        id="participation_escalations",
     )
     scheduler.add_job(
         _eve_reminder_preview_job,
         CronTrigger(hour=17, minute=0, timezone=MSK),
-        args=[bot, session_factory], id="eve_reminder_preview",
+        args=[bot, session_factory],
+        id="eve_reminder_preview",
     )
     scheduler.add_job(
         _eve_reminder_send_job,
         CronTrigger(hour=18, minute=0, timezone=MSK),
-        args=[bot, session_factory], id="eve_reminder_send",
+        args=[bot, session_factory],
+        id="eve_reminder_send",
     )
     scheduler.add_job(
-        _pre_slot_reminder_job, IntervalTrigger(minutes=5),
-        args=[bot, session_factory], id="pre_slot_reminders",
+        _pre_slot_reminder_job,
+        IntervalTrigger(minutes=5),
+        args=[bot, session_factory],
+        id="pre_slot_reminders",
     )
     scheduler.add_job(
-        _batch_processor_job, IntervalTrigger(seconds=60),
-        args=[bot, session_factory], id="batch_processor",
+        _batch_processor_job,
+        IntervalTrigger(seconds=60),
+        args=[bot, session_factory],
+        id="batch_processor",
     )
     scheduler.add_job(
         _expert_briefing_job,
         CronTrigger(hour=18, minute=0, timezone=MSK),
-        args=[bot, session_factory], id="expert_briefing",
+        args=[bot, session_factory],
+        id="expert_briefing",
     )
 
     return scheduler

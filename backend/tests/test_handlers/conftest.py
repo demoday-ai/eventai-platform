@@ -22,9 +22,11 @@ from app.models.role import RoleCode
 # Mock Update Factories (T004, T005)
 # =============================================================================
 
+
 @pytest.fixture(scope="session")
 def make_message_update():
     """Factory for creating message Update dicts."""
+
     def _make(
         user_id: int,
         chat_id: int,
@@ -49,12 +51,14 @@ def make_message_update():
                 "text": text,
             },
         }
+
     return _make
 
 
 @pytest.fixture(scope="session")
 def make_callback_update():
     """Factory for creating callback query Update dicts."""
+
     def _make(
         user_id: int,
         chat_id: int,
@@ -85,12 +89,14 @@ def make_callback_update():
                 },
             },
         }
+
     return _make
 
 
 # =============================================================================
 # Application Fixture (T006)
 # =============================================================================
+
 
 @pytest_asyncio.fixture
 async def app():
@@ -129,6 +135,7 @@ async def app():
 # Bot Method Mocks (T007)
 # =============================================================================
 
+
 @pytest.fixture
 def mock_bot_methods():
     """Mock bot methods to capture responses without sending real messages.
@@ -139,11 +146,12 @@ def mock_bot_methods():
     mock_message = MagicMock()
     mock_message.message_id = 1
 
-    with patch.object(Bot, "send_message", new_callable=AsyncMock) as send_msg, \
-         patch.object(Bot, "edit_message_text", new_callable=AsyncMock) as edit_msg, \
-         patch.object(Bot, "answer_callback_query", new_callable=AsyncMock) as answer, \
-         patch.object(Bot, "send_chat_action", new_callable=AsyncMock) as action:
-
+    with (
+        patch.object(Bot, "send_message", new_callable=AsyncMock) as send_msg,
+        patch.object(Bot, "edit_message_text", new_callable=AsyncMock) as edit_msg,
+        patch.object(Bot, "answer_callback_query", new_callable=AsyncMock) as answer,
+        patch.object(Bot, "send_chat_action", new_callable=AsyncMock) as action,
+    ):
         # Configure return values to return proper message objects
         send_msg.return_value = mock_message
         edit_msg.return_value = mock_message
@@ -163,6 +171,7 @@ def mock_bot_methods():
 # Note: Using mock objects instead of real DB for smoke tests
 # (PostgreSQL-specific types like ARRAY/JSONB don't work with SQLite)
 # =============================================================================
+
 
 @pytest.fixture
 def db_session():
@@ -202,9 +211,11 @@ def test_event():
 # LLM Mocks (T010, T011)
 # =============================================================================
 
+
 @pytest.fixture
 def mock_llm():
     """Mock LLM client with predefined responses."""
+
     async def fake_llm(*args, **kwargs):
         # Return predefined responses based on context
         return {
@@ -221,16 +232,14 @@ def mock_llm():
 @pytest.fixture
 def mock_llm_unavailable():
     """Mock LLM client to simulate unavailability."""
-    with patch(
-        "app.services.core.llm_client.send_chat_completion",
-        side_effect=Exception("LLM unavailable")
-    ) as mock:
+    with patch("app.services.core.llm_client.send_chat_completion", side_effect=Exception("LLM unavailable")) as mock:
         yield mock
 
 
 # =============================================================================
 # User Fixtures (T016, T023)
 # =============================================================================
+
 
 @pytest.fixture
 def registered_guest(test_roles, test_event):
@@ -260,6 +269,7 @@ def registered_business(test_roles, test_event):
 # Profile Fixtures (T017, T024)
 # =============================================================================
 
+
 @pytest.fixture
 def guest_with_profile(registered_guest, test_event):
     """Create a guest with filled GuestProfile mock."""
@@ -276,6 +286,7 @@ def guest_with_profile(registered_guest, test_event):
 # =============================================================================
 # Tags and Projects Fixtures (T018, T029, T030)
 # =============================================================================
+
 
 @pytest.fixture
 def test_tags():
@@ -300,10 +311,10 @@ def test_projects(test_event):
     for i in range(5):
         project = MagicMock()
         project.id = uuid.uuid4()
-        project.title = f"Test Project {i+1}"
-        project.description = f"Description for project {i+1}"
-        project.author = f"Author {i+1}"
-        project.telegram_contact = f"@author{i+1}"
+        project.title = f"Test Project {i + 1}"
+        project.description = f"Description for project {i + 1}"
+        project.author = f"Author {i + 1}"
+        project.telegram_contact = f"@author{i + 1}"
         project.event_id = test_event.id
         project.tags = []
         projects.append(project)
@@ -314,6 +325,7 @@ def test_projects(test_event):
 # =============================================================================
 # Service Layer Mocks for Handlers
 # =============================================================================
+
 
 @pytest.fixture
 def override_db_session(test_event, test_roles):

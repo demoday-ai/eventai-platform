@@ -59,6 +59,7 @@ async def get_current_matching(
     current_user: User = Depends(get_current_user),
 ):
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -76,7 +77,6 @@ async def move_expert_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     assignment = await matching_service.move_expert(session, assignment_id, body.target_room_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -105,9 +105,7 @@ async def assign_expert_endpoint(
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
 
-    assignment = await matching_service.assign_expert_to_room(
-        session, event.id, body.expert_id, body.room_id
-    )
+    assignment = await matching_service.assign_expert_to_room(session, event.id, body.expert_id, body.room_id)
     if not assignment:
         raise HTTPException(
             status_code=400,
@@ -130,8 +128,8 @@ async def approve_matching_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")

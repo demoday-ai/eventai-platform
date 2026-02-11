@@ -135,13 +135,15 @@ class RoomCoverageSummary(BaseModel):
 class CoverageDashboard(BaseModel):
     event_date: date | None = None
     rooms: list[RoomCoverageSummary] = []
-    totals: dict = Field(default_factory=lambda: {
-        "total_needed": 0,
-        "confirmed": 0,
-        "declined": 0,
-        "no_response": 0,
-        "coverage_percent": 0.0,
-    })
+    totals: dict = Field(
+        default_factory=lambda: {
+            "total_needed": 0,
+            "confirmed": 0,
+            "declined": 0,
+            "no_response": 0,
+            "coverage_percent": 0.0,
+        }
+    )
 
 
 class RoomExpertDetail(BaseModel):

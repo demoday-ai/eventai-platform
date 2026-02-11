@@ -1,4 +1,5 @@
 """Pydantic schemas for schedule and notification endpoints."""
+
 from datetime import date, datetime
 from uuid import UUID
 
@@ -26,12 +27,12 @@ class ScheduleSlotResponse(BaseModel):
 class RoomTimeOverride(BaseModel):
     room_id: UUID
     start_time: str  # "HH:MM"
-    end_time: str    # "HH:MM"
+    end_time: str  # "HH:MM"
 
 
 class BreakTime(BaseModel):
     start_time: str  # "HH:MM"
-    end_time: str    # "HH:MM"
+    end_time: str  # "HH:MM"
 
 
 class ScheduleGenerateRequest(BaseModel):

@@ -47,7 +47,9 @@ async def create_event(
     db.add(event)
 
     await audit_service.log_action(
-        db, current_user, "event_create",
+        db,
+        current_user,
+        "event_create",
         entity_type="event",
         details={"name": request.name, "start_date": str(request.start_date), "end_date": str(request.end_date)},
     )
@@ -67,9 +69,7 @@ async def update_current_event(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     # Determine effective dates for validation
     new_start = request.start_date if request.start_date is not None else event.start_date
@@ -89,8 +89,11 @@ async def update_current_event(
             setattr(event, field, value)
 
     await audit_service.log_action(
-        db, current_user, "event_update",
-        entity_type="event", entity_id=str(event.id),
+        db,
+        current_user,
+        "event_update",
+        entity_type="event",
+        entity_id=str(event.id),
         details=changes,
     )
 

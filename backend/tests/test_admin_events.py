@@ -36,9 +36,7 @@ async def engine():
 
 @pytest.fixture
 async def session(engine):
-    async_session_factory = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session_factory() as session:
         # Clean up events and audit logs before each test
         await session.execute(delete(AdminAuditLog))
@@ -85,11 +83,14 @@ async def client(session, mock_user):
 
 @pytest.mark.asyncio
 async def test_create_event_success(client: AsyncClient):
-    resp = await client.post("/api/v1/admin/events", json={
-        "name": "Demo Day 2026",
-        "start_date": "2026-03-15",
-        "end_date": "2026-03-16",
-    })
+    resp = await client.post(
+        "/api/v1/admin/events",
+        json={
+            "name": "Demo Day 2026",
+            "start_date": "2026-03-15",
+            "end_date": "2026-03-16",
+        },
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["name"] == "Demo Day 2026"
@@ -100,12 +101,15 @@ async def test_create_event_success(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_create_event_with_description(client: AsyncClient):
-    resp = await client.post("/api/v1/admin/events", json={
-        "name": "Test Event",
-        "start_date": "2026-04-01",
-        "end_date": "2026-04-02",
-        "description": "A test event",
-    })
+    resp = await client.post(
+        "/api/v1/admin/events",
+        json={
+            "name": "Test Event",
+            "start_date": "2026-04-01",
+            "end_date": "2026-04-02",
+            "description": "A test event",
+        },
+    )
     assert resp.status_code == 201
     assert resp.json()["description"] == "A test event"
 
@@ -120,20 +124,26 @@ async def test_create_event_conflict(client: AsyncClient, session: AsyncSession)
     session.add(event)
     await session.commit()
 
-    resp = await client.post("/api/v1/admin/events", json={
-        "name": "Another",
-        "start_date": "2026-05-01",
-        "end_date": "2026-05-02",
-    })
+    resp = await client.post(
+        "/api/v1/admin/events",
+        json={
+            "name": "Another",
+            "start_date": "2026-05-01",
+            "end_date": "2026-05-02",
+        },
+    )
     assert resp.status_code == 409
     assert "already exists" in resp.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_create_event_invalid_dates(client: AsyncClient):
-    resp = await client.post("/api/v1/admin/events", json={
-        "name": "Bad Dates",
-        "start_date": "2026-03-20",
-        "end_date": "2026-03-15",
-    })
+    resp = await client.post(
+        "/api/v1/admin/events",
+        json={
+            "name": "Bad Dates",
+            "start_date": "2026-03-20",
+            "end_date": "2026-03-15",
+        },
+    )
     assert resp.status_code == 422

@@ -15,9 +15,7 @@ async def get_by_id(session: AsyncSession, room_id: UUID) -> Room | None:
     return await session.get(Room, room_id)
 
 
-async def get_by_event(
-    session: AsyncSession, room_id: UUID, event_id: UUID
-) -> Room | None:
+async def get_by_event(session: AsyncSession, room_id: UUID, event_id: UUID) -> Room | None:
     """Get room that belongs to a clustering run of the given event."""
     return await session.scalar(
         select(Room)
@@ -26,25 +24,17 @@ async def get_by_event(
     )
 
 
-async def get_rooms_by_clustering(
-    session: AsyncSession, clustering_run_id: UUID
-) -> list[Room]:
-    result = await session.execute(
-        select(Room).where(Room.clustering_run_id == clustering_run_id)
-    )
+async def get_rooms_by_clustering(session: AsyncSession, clustering_run_id: UUID) -> list[Room]:
+    result = await session.execute(select(Room).where(Room.clustering_run_id == clustering_run_id))
     return list(result.scalars().all())
 
 
 async def count_rooms(session: AsyncSession, clustering_run_id: UUID) -> int:
-    return await session.scalar(
-        select(func.count(Room.id)).where(Room.clustering_run_id == clustering_run_id)
-    ) or 0
+    return await session.scalar(select(func.count(Room.id)).where(Room.clustering_run_id == clustering_run_id)) or 0
 
 
 async def count_projects_in_room(session: AsyncSession, room_id: UUID) -> int:
-    return await session.scalar(
-        select(func.count(RoomProject.id)).where(RoomProject.room_id == room_id)
-    ) or 0
+    return await session.scalar(select(func.count(RoomProject.id)).where(RoomProject.room_id == room_id)) or 0
 
 
 async def count_experts_in_room(

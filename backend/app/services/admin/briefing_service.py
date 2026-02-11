@@ -82,33 +82,19 @@ async def format_project_card(project: Project, github_status: github_service.Gi
     return "\n".join(lines)
 
 
-async def format_briefing(
-    expert: Expert, room_name: str, projects: list[Project]
-) -> list[str]:
+async def format_briefing(expert: Expert, room_name: str, projects: list[Project]) -> list[str]:
     """Format full briefing for an expert.
 
     Returns list of message texts (split if too long).
     """
     if not projects:
-        return [
-            f"📋 *Брифинг для {expert.name}*\n\n"
-            f"Зал: {room_name}\n\n"
-            f"В вашей комнате пока нет проектов."
-        ]
+        return [f"📋 *Брифинг для {expert.name}*\n\nЗал: {room_name}\n\nВ вашей комнате пока нет проектов."]
 
     # Header
-    header = (
-        f"📋 *Брифинг для {expert.name}*\n\n"
-        f"Зал: {room_name}\n"
-        f"Проектов: {len(projects)}\n\n"
-        f"{'─' * 20}\n"
-    )
+    header = f"📋 *Брифинг для {expert.name}*\n\nЗал: {room_name}\nПроектов: {len(projects)}\n\n{'─' * 20}\n"
 
     # Fetch GitHub statuses in parallel
-    github_tasks = [
-        github_service.get_repo_status(p.github_url)
-        for p in projects
-    ]
+    github_tasks = [github_service.get_repo_status(p.github_url) for p in projects]
     github_statuses = await asyncio.gather(*github_tasks)
 
     # Format project cards
@@ -182,7 +168,9 @@ async def send_briefing(
 
     for msg in messages:
         success, error = await send_with_retry(
-            bot, int(tg_id), msg,
+            bot,
+            int(tg_id),
+            msg,
             parse_mode="Markdown",
             disable_web_page_preview=True,
         )
@@ -242,9 +230,7 @@ async def send_all_briefings(
             skipped += 1
             continue
 
-        briefing = await send_briefing(
-            session, expert, room.id, room.name, event_id, bot
-        )
+        briefing = await send_briefing(session, expert, room.id, room.name, event_id, bot)
 
         if briefing.status == BriefingStatus.SENT:
             sent += 1

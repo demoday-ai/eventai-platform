@@ -76,7 +76,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     async with async_session() as session:
         user = await user_service.upsert_user(
-            session, telegram_user_id, full_name, username, source="bot",
+            session,
+            telegram_user_id,
+            full_name,
+            username,
+            source="bot",
         )
 
         event = await user_service.get_current_event(session)
@@ -111,9 +115,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         context.user_data["profile_user_id"] = str(user.id)
         context.user_data["profile_event_id"] = str(event.id)
 
-        await update.message.reply_text(
-            f"С возвращением, {full_name}! Загружаю вашу программу..."
-        )
+        await update.message.reply_text(f"С возвращением, {full_name}! Загружаю вашу программу...")
         return await _do_generate_from_message(update, context)
 
     # Returning user with role but no profile → continue profiling
@@ -136,8 +138,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     context.user_data["nl_conversation"] = []
 
     await update.message.reply_text(
-        f"Добро пожаловать на Demo Day, {full_name}!\n\n"
-        f"Кто вы?",
+        f"Добро пожаловать на Demo Day, {full_name}!\n\nКто вы?",
         reply_markup=role_keyboard(),
     )
     return CHOOSE_ROLE
@@ -182,7 +183,11 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
                 return ConversationHandler.END
 
             await user_service.set_role(
-                session, user.id, event.id, role, guest_subtype=guest_subtype,
+                session,
+                user.id,
+                event.id,
+                role,
+                guest_subtype=guest_subtype,
             )
 
         logger.info("role_chosen: tg_id=%s role=guest subtype=%s", telegram_user_id, subtype_str)
@@ -248,13 +253,12 @@ async def _onb_agent_turn(
     custom_subtype = context.user_data.get("custom_subtype")
 
     # Show typing indicator
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id, action=ChatAction.TYPING
-    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
     # Submit to Celery
     task = chat_for_profile_task.delay(
-        conversation, [],
+        conversation,
+        [],
         role_code=role_code,
         guest_subtype=guest_subtype,
         custom_subtype=custom_subtype,
@@ -278,7 +282,8 @@ async def _onb_agent_turn(
             if not is_message:
                 await update.callback_query.edit_message_reply_markup(reply_markup=None)
             await context.bot.send_message(
-                chat_id=update.effective_chat.id, text=fallback_question,
+                chat_id=update.effective_chat.id,
+                text=fallback_question,
             )
             return ONBOARD_NL_PROFILE
 
@@ -293,7 +298,8 @@ async def _onb_agent_turn(
     if not is_message:
         await update.callback_query.edit_message_reply_markup(reply_markup=None)
     await context.bot.send_message(
-        chat_id=update.effective_chat.id, text=reply_text,
+        chat_id=update.effective_chat.id,
+        text=reply_text,
     )
 
     return ONBOARD_NL_PROFILE
@@ -378,10 +384,7 @@ async def onb_confirm_profile_callback(update: Update, context: ContextTypes.DEF
 
     if choice == "retry":
         context.user_data["nl_conversation"] = []
-        await query.edit_message_text(
-            "Давайте попробуем заново.\n\n"
-            "Расскажите, что вас интересует на Demo Day:"
-        )
+        await query.edit_message_text("Давайте попробуем заново.\n\nРасскажите, что вас интересует на Demo Day:")
         return ONBOARD_NL_PROFILE
 
     # choice == "yes" — save profile and generate program
@@ -392,10 +395,7 @@ async def onb_confirm_profile_callback(update: Update, context: ContextTypes.DEF
 
     # Build raw_text from full conversation history
     conversation = context.user_data.get("nl_conversation", [])
-    raw_text = "\n".join(
-        f"{'Гость' if m['role'] == 'user' else 'Куратор'}: {m['content']}"
-        for m in conversation
-    )
+    raw_text = "\n".join(f"{'Гость' if m['role'] == 'user' else 'Куратор'}: {m['content']}" for m in conversation)
 
     all_tags = list(dict.fromkeys(interests))
 
@@ -418,9 +418,7 @@ async def onb_confirm_profile_callback(update: Update, context: ContextTypes.DEF
         if not extra_data:
             extra_data = None
 
-        profile = await profiling_service.get_or_create_profile(
-            session, user.id, event.id
-        )
+        profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
         await profiling_service.save_profile(
             session,
             profile,
@@ -454,9 +452,7 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     from app.worker.utils import wait_for_task
 
     # Show typing indicator
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id, action=ChatAction.TYPING
-    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
     user_id = context.user_data["profile_user_id"]
     event_id = context.user_data["profile_event_id"]
@@ -474,7 +470,7 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="Генерация программы занимает больше времени, чем обычно. "
-                 "Нажмите кнопку ниже, чтобы проверить готовность.",
+            "Нажмите кнопку ниже, чтобы проверить готовность.",
             reply_markup=check_readiness_keyboard(),
         )
         return VIEW_PROGRAM
@@ -483,14 +479,12 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         if data and data.get("no_projects"):
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="Проекты ещё не загружены организаторами. "
-                     "Мы пришлём уведомление, когда программа будет готова!",
+                text="Проекты ещё не загружены организаторами. Мы пришлём уведомление, когда программа будет готова!",
             )
         else:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="Не удалось найти подходящие проекты. "
-                     "Попробуйте обновить профиль через /start.",
+                text="Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start.",
             )
         return ConversationHandler.END
 
@@ -505,9 +499,7 @@ async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAUL
     from app.worker.utils import wait_for_task
 
     # Show typing indicator
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id, action=ChatAction.TYPING
-    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
     user_id = context.user_data["profile_user_id"]
     event_id = context.user_data["profile_event_id"]
@@ -523,8 +515,7 @@ async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAUL
         # Task still running - save task_id for later polling
         context.user_data["pending_task_id"] = task.id
         await update.message.reply_text(
-            "Генерация программы занимает больше времени, чем обычно. "
-            "Нажмите кнопку ниже, чтобы проверить готовность.",
+            "Генерация программы занимает больше времени, чем обычно. Нажмите кнопку ниже, чтобы проверить готовность.",
             reply_markup=check_readiness_keyboard(),
         )
         return VIEW_PROGRAM
@@ -532,13 +523,11 @@ async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAUL
     if not data or data.get("total", 0) == 0:
         if data and data.get("no_projects"):
             await update.message.reply_text(
-                "Проекты ещё не загружены организаторами. "
-                "Мы пришлём уведомление, когда программа будет готова!"
+                "Проекты ещё не загружены организаторами. Мы пришлём уведомление, когда программа будет готова!"
             )
         else:
             await update.message.reply_text(
-                "Не удалось найти подходящие проекты. "
-                "Попробуйте обновить профиль через /start."
+                "Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start."
             )
         return ConversationHandler.END
 
@@ -563,12 +552,16 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     for i, msg in enumerate(messages):
         if i == len(messages) - 1:
             await context.bot.send_message(
-                chat_id=chat_id, text=msg, parse_mode="Markdown",
+                chat_id=chat_id,
+                text=msg,
+                parse_mode="Markdown",
                 reply_markup=keyboard,
             )
         else:
             await context.bot.send_message(
-                chat_id=chat_id, text=msg, parse_mode="Markdown",
+                chat_id=chat_id,
+                text=msg,
+                parse_mode="Markdown",
             )
 
     return VIEW_PROGRAM
@@ -588,7 +581,9 @@ async def _show_program_from_message(update: Update, context: ContextTypes.DEFAU
     for i, msg in enumerate(messages):
         if i == len(messages) - 1:
             await update.message.reply_text(
-                msg, parse_mode="Markdown", reply_markup=keyboard,
+                msg,
+                parse_mode="Markdown",
+                reply_markup=keyboard,
             )
         else:
             await update.message.reply_text(msg, parse_mode="Markdown")
@@ -718,6 +713,7 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     # Check readiness of pending generation task
     if data == "prof:check_ready":
         from app.worker.utils import get_task_status
+
         pending_task_id = context.user_data.get("pending_task_id")
         if not pending_task_id:
             await query.edit_message_text("Нет ожидающих задач. Используйте /start.")
@@ -732,8 +728,7 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 context.user_data.pop("pending_task_id", None)
                 await query.edit_message_text(
-                    "К сожалению, генерация не удалась. "
-                    "Попробуйте заново или измените профиль.",
+                    "К сожалению, генерация не удалась. Попробуйте заново или измените профиль.",
                     reply_markup=retry_generation_keyboard(),
                 )
                 return VIEW_PROGRAM
@@ -759,12 +754,16 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
         for i, msg in enumerate(if_time_msgs):
             if i == len(if_time_msgs) - 1:
                 await context.bot.send_message(
-                    chat_id=chat_id, text=msg, parse_mode="Markdown",
+                    chat_id=chat_id,
+                    text=msg,
+                    parse_mode="Markdown",
                     reply_markup=keyboard,
                 )
             else:
                 await context.bot.send_message(
-                    chat_id=chat_id, text=msg, parse_mode="Markdown",
+                    chat_id=chat_id,
+                    text=msg,
+                    parse_mode="Markdown",
                 )
         return VIEW_PROGRAM
 
@@ -855,17 +854,18 @@ async def _handle_compare_projects(
         business_profile = None
         if is_business:
             business_profile = await business_followup_service.get_business_profile(
-                session, user.id,
+                session,
+                user.id,
             )
 
-    criteria = tool_args.get("criteria") or qa_service.get_default_criteria(
-        user, business_profile
-    )
+    criteria = tool_args.get("criteria") or qa_service.get_default_criteria(user, business_profile)
 
     await update.message.reply_text("Генерирую матрицу сравнения...")
 
     task = generate_comparison_matrix_task.delay(
-        str(user.id), project_ids, criteria,
+        str(user.id),
+        project_ids,
+        criteria,
     )
     completed, matrix = await wait_for_task(task.id, timeout=25, poll_interval=0.5)
 
@@ -877,7 +877,9 @@ async def _handle_compare_projects(
 
     text = qa_service.format_matrix_text(matrix, criteria)
     await safe_send_long_message(
-        context.bot, update.effective_chat.id, text,
+        context.bot,
+        update.effective_chat.id,
+        text,
     )
     return ""  # already sent
 
@@ -943,7 +945,9 @@ async def _handle_get_followup(
 
     async with async_session() as session:
         package = await followup_service.get_or_create_package(
-            session, _uuid.UUID(user_id), _uuid.UUID(event_id),
+            session,
+            _uuid.UUID(user_id),
+            _uuid.UUID(event_id),
         )
         await session.commit()
 
@@ -952,7 +956,9 @@ async def _handle_get_followup(
 
     text = followup_service.format_package_message(package)
     await safe_send_long_message(
-        context.bot, update.effective_chat.id, text,
+        context.bot,
+        update.effective_chat.id,
+        text,
     )
     return ""  # already sent
 
@@ -976,22 +982,29 @@ async def _handle_get_pipeline(
 
     async with async_session() as session:
         user = await user_service.get_user_by_telegram_id(
-            session, str(update.effective_user.id),
+            session,
+            str(update.effective_user.id),
         )
         if not user:
             return "Пользователь не найден. Используйте /start."
 
         followups = await business_followup_service.get_pipeline_projects(
-            session, user.id, _uuid.UUID(event_id),
+            session,
+            user.id,
+            _uuid.UUID(event_id),
         )
 
         if not followups:
             added = await business_followup_service.init_pipeline_from_recommendations(
-                session, user.id, _uuid.UUID(event_id),
+                session,
+                user.id,
+                _uuid.UUID(event_id),
             )
             if added:
                 followups = await business_followup_service.get_pipeline_projects(
-                    session, user.id, _uuid.UUID(event_id),
+                    session,
+                    user.id,
+                    _uuid.UUID(event_id),
                 )
 
         if not followups:
@@ -1002,7 +1015,9 @@ async def _handle_get_pipeline(
         await session.commit()
 
     await safe_send_long_message(
-        context.bot, update.effective_chat.id, text,
+        context.bot,
+        update.effective_chat.id,
+        text,
     )
     return ""  # already sent
 
@@ -1025,8 +1040,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             else:
                 context.user_data.pop("pending_task_id", None)
                 await update.message.reply_text(
-                    "К сожалению, генерация не удалась. "
-                    "Попробуйте заново или измените профиль.",
+                    "К сожалению, генерация не удалась. Попробуйте заново или измените профиль.",
                     reply_markup=retry_generation_keyboard(),
                 )
                 return VIEW_PROGRAM
@@ -1047,9 +1061,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     event_id = context.user_data.get("profile_event_id")
     if user_id and event_id:
         async with async_session() as session:
-            profile = await profiling_service.get_or_create_profile(
-                session, _uuid.UUID(user_id), _uuid.UUID(event_id)
-            )
+            profile = await profiling_service.get_or_create_profile(session, _uuid.UUID(user_id), _uuid.UUID(event_id))
             profile_info = (
                 f"Теги: {', '.join(profile.selected_tags) if profile.selected_tags else 'нет'}\n"
                 f"Ключевые слова: {', '.join(profile.keywords) if profile.keywords else 'нет'}"
@@ -1110,9 +1122,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if len(chat_history) > 20:
         chat_history = chat_history[-20:]
 
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id, action=ChatAction.TYPING
-    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
     # Submit agent chat to Celery
     task = agent_chat_task.delay(system_prompt, chat_history, AGENT_TOOLS)
@@ -1150,12 +1160,19 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
                 elif tool_name == "compare_projects":
                     reply = await _handle_compare_projects(
-                        update, context, tool_args, all_recs, is_business,
+                        update,
+                        context,
+                        tool_args,
+                        all_recs,
+                        is_business,
                     )
 
                 elif tool_name == "generate_questions":
                     reply = await _handle_generate_questions(
-                        update, context, tool_args, all_recs,
+                        update,
+                        context,
+                        tool_args,
+                        all_recs,
                     )
 
                 elif tool_name == "get_followup":
@@ -1227,44 +1244,39 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
     tags_str = ", ".join(detail.get("tags", []))
     score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
-    title = escape_markdown(detail['title'])
+    title = escape_markdown(detail["title"])
 
     # Use LLM summary as main description, fallback to truncated original
     if detail.get("llm_summary"):
-        summary = escape_markdown(detail['llm_summary'])
+        summary = escape_markdown(detail["llm_summary"])
     else:
-        summary = escape_markdown(truncate(detail['description'], 300))
+        summary = escape_markdown(truncate(detail["description"], 300))
 
-    text = (
-        f"*{title}*\n\n"
-        f"{summary}\n\n"
-        f"Теги: {tags_str}\n"
-        f"{room_info}\n"
-        f"Релевантность: {score_pct}%"
-    )
+    text = f"*{title}*\n\n{summary}\n\nТеги: {tags_str}\n{room_info}\nРелевантность: {score_pct}%"
 
     # Store project info for Q&A
     context.user_data["current_project_id"] = str(project_id)
-    context.user_data["current_project_title"] = detail['title']
+    context.user_data["current_project_title"] = detail["title"]
     context.user_data["current_project_rank"] = project_rank
 
     pid_short_btn = str(project_id)[:12]
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
-        [contact_button(project_id)],
-        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
+            [contact_button(project_id)],
+            [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+        ]
+    )
 
     await query.edit_message_text(
-        text, parse_mode="Markdown",
+        text,
+        parse_mode="Markdown",
         reply_markup=keyboard,
     )
     return VIEW_DETAIL
 
 
-async def _show_project_detail_from_text(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, pid_short: str
-) -> int:
+async def _show_project_detail_from_text(update: Update, context: ContextTypes.DEFAULT_TYPE, pid_short: str) -> int:
     """Show project detail triggered from text message (not callback)."""
     profile_id_str = context.user_data.get("profile_id", "")
     if not profile_id_str:
@@ -1301,9 +1313,9 @@ async def _show_project_detail_from_text(
 
     # Use LLM summary as main description, fallback to truncated original
     if detail.get("llm_summary"):
-        summary = detail['llm_summary']
+        summary = detail["llm_summary"]
     else:
-        summary = truncate(detail['description'], 300)
+        summary = truncate(detail["description"], 300)
 
     text = (
         f"*{escape_markdown(detail['title'])}*\n\n"
@@ -1315,15 +1327,17 @@ async def _show_project_detail_from_text(
 
     # Store project info for Q&A
     context.user_data["current_project_id"] = str(project_id)
-    context.user_data["current_project_title"] = detail['title']
+    context.user_data["current_project_title"] = detail["title"]
     context.user_data["current_project_rank"] = project_rank
 
     pid_short_btn = str(project_id)[:12]
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
-        [contact_button(project_id)],
-        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
+            [contact_button(project_id)],
+            [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+        ]
+    )
 
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
     return VIEW_DETAIL
@@ -1388,11 +1402,13 @@ async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         text += f"{i}. {q}\n\n"
 
     pid_short_btn = str(project_id)[:12]
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ещё вопросы", callback_data=f"qa:more:{pid_short_btn}")],
-        [InlineKeyboardButton("Назад к проекту", callback_data=f"pdetail:{pid_short_btn}")],
-        [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Ещё вопросы", callback_data=f"qa:more:{pid_short_btn}")],
+            [InlineKeyboardButton("Назад к проекту", callback_data=f"pdetail:{pid_short_btn}")],
+            [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
+        ]
+    )
 
     await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
     return VIEW_DETAIL
@@ -1416,9 +1432,7 @@ async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TY
 
     auth = await check_guest_or_business(telegram_user_id)
     if not auth:
-        await update.message.reply_text(
-            "Сначала выберите роль через /start"
-        )
+        await update.message.reply_text("Сначала выберите роль через /start")
         return VIEW_PROGRAM
 
     user, event, role_code = auth
@@ -1431,10 +1445,7 @@ async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.pop("recommendations", None)
     context.user_data.pop("program_chat", None)
 
-    await update.message.reply_text(
-        "Пересобираем профиль.\n\n"
-        "Что вас интересует на Demo Day?"
-    )
+    await update.message.reply_text("Пересобираем профиль.\n\nЧто вас интересует на Demo Day?")
 
     return NL_REBUILD
 
@@ -1447,9 +1458,7 @@ async def _restart_nl_profiling_from_callback(update: Update, context: ContextTy
 
     auth = await check_guest_or_business(telegram_user_id)
     if not auth:
-        await query.edit_message_text(
-            "Сначала выберите роль через /start"
-        )
+        await query.edit_message_text("Сначала выберите роль через /start")
         return VIEW_PROGRAM
 
     user, event, role_code = auth
@@ -1462,10 +1471,7 @@ async def _restart_nl_profiling_from_callback(update: Update, context: ContextTy
     context.user_data.pop("recommendations", None)
     context.user_data.pop("program_chat", None)
 
-    await query.edit_message_text(
-        "Пересобираем профиль.\n\n"
-        "Что вас интересует на Demo Day?"
-    )
+    await query.edit_message_text("Пересобираем профиль.\n\nЧто вас интересует на Demo Day?")
 
     return NL_REBUILD
 
@@ -1492,13 +1498,13 @@ async def _rebuild_agent_turn(
     role_code = context.user_data.get("pending_role_code")
 
     # Show typing indicator
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id, action=ChatAction.TYPING
-    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
     # Submit to Celery
     task = chat_for_profile_task.delay(
-        conversation, [], role_code=role_code,
+        conversation,
+        [],
+        role_code=role_code,
     )
 
     # Wait for result
@@ -1560,31 +1566,23 @@ async def orphan_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         event = await user_service.get_current_event(session)
 
         if not user or not event:
-            await update.message.reply_text(
-                "Отправьте /start для начала работы с ботом."
-            )
+            await update.message.reply_text("Отправьте /start для начала работы с ботом.")
             return
 
         role = await user_service.get_user_role_with_info(session, user.id, event.id)
         if not role:
-            await update.message.reply_text(
-                "Отправьте /start для начала работы с ботом."
-            )
+            await update.message.reply_text("Отправьте /start для начала работы с ботом.")
             return
 
         profile = await profiling_service.get_or_create_profile(session, user.id, event.id)
         has_profile = bool(profile.selected_tags)
 
     if not has_profile:
-        await update.message.reply_text(
-            "Отправьте /start для продолжения."
-        )
+        await update.message.reply_text("Отправьте /start для продолжения.")
         return
 
     # User has a profile — tell them to /start to restore session
-    await update.message.reply_text(
-        "Сессия была перезапущена. Отправьте /start — я восстановлю вашу программу."
-    )
+    await update.message.reply_text("Сессия была перезапущена. Отправьте /start — я восстановлю вашу программу.")
 
 
 # =============================================================================

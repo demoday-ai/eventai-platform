@@ -9,9 +9,7 @@ from app.models.base import Base
 
 class ProjectTag(Base):
     __tablename__ = "project_tags"
-    __table_args__ = (
-        UniqueConstraint("project_id", "tag_id", name="uq_project_tags_project_tag"),
-    )
+    __table_args__ = (UniqueConstraint("project_id", "tag_id", name="uq_project_tags_project_tag"),)
 
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False

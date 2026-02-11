@@ -25,15 +25,11 @@ async def upsert_user(
     return user
 
 
-async def get_user_by_telegram_id(
-    session: AsyncSession, telegram_user_id: str
-) -> User | None:
+async def get_user_by_telegram_id(session: AsyncSession, telegram_user_id: str) -> User | None:
     return await user_repo.get_by_telegram_id(session, telegram_user_id)
 
 
-async def get_user_by_id(
-    session: AsyncSession, user_id: uuid.UUID
-) -> User | None:
+async def get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> User | None:
     return await user_repo.get_by_id(session, user_id)
 
 
@@ -45,15 +41,11 @@ async def get_role_by_code(session: AsyncSession, code: RoleCode) -> Role | None
     return await user_repo.get_role_by_code(session, code)
 
 
-async def get_user_role(
-    session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID
-) -> UserRole | None:
+async def get_user_role(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> UserRole | None:
     return await user_repo.get_user_role(session, user_id, event_id)
 
 
-async def get_user_role_with_info(
-    session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID
-) -> Role | None:
+async def get_user_role_with_info(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> Role | None:
     return await user_repo.get_user_role_with_info(session, user_id, event_id)
 
 
@@ -82,21 +74,15 @@ async def set_role(
     await session.commit()
 
 
-async def set_guest_subtype(
-    session: AsyncSession, user_id: uuid.UUID, guest_subtype: GuestSubtype
-) -> None:
+async def set_guest_subtype(session: AsyncSession, user_id: uuid.UUID, guest_subtype: GuestSubtype) -> None:
     user = await session.get(User, user_id)
     user.guest_subtype = guest_subtype
     await session.commit()
 
 
-async def get_guest_profile(
-    session: AsyncSession, user_id: uuid.UUID
-) -> GuestProfile | None:
+async def get_guest_profile(session: AsyncSession, user_id: uuid.UUID) -> GuestProfile | None:
     return await user_repo.get_guest_profile(session, user_id)
 
 
-async def get_business_profile(
-    session: AsyncSession, user_id: uuid.UUID
-) -> BusinessProfile | None:
+async def get_business_profile(session: AsyncSession, user_id: uuid.UUID) -> BusinessProfile | None:
     return await user_repo.get_business_profile(session, user_id)

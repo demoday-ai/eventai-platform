@@ -146,8 +146,7 @@ async def handle_expert_start(
     if assignment and assignment.room:
         # Count projects in room
         project_count_result = await session.execute(
-            select(func.count(RoomProject.id))
-            .where(RoomProject.room_id == assignment.room_id)
+            select(func.count(RoomProject.id)).where(RoomProject.room_id == assignment.room_id)
         )
         project_count = project_count_result.scalar() or 0
 
@@ -165,9 +164,7 @@ async def handle_expert_start(
 
 async def confirm_attendance(session: AsyncSession, assignment_id) -> None:
     """Set assignment status to confirmed."""
-    result = await session.execute(
-        select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id)
-    )
+    result = await session.execute(select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id))
     assignment = result.scalars().first()
     if assignment:
         assignment.status = "confirmed"
@@ -177,9 +174,7 @@ async def confirm_attendance(session: AsyncSession, assignment_id) -> None:
 
 async def decline_attendance(session: AsyncSession, assignment_id) -> None:
     """Set assignment status to declined."""
-    result = await session.execute(
-        select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id)
-    )
+    result = await session.execute(select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id))
     assignment = result.scalars().first()
     if assignment:
         assignment.status = "declined"
@@ -187,9 +182,7 @@ async def decline_attendance(session: AsyncSession, assignment_id) -> None:
         await session.commit()
 
 
-async def request_reassignment(
-    session: AsyncSession, assignment_id
-) -> list[tuple[uuid.UUID, str, int]]:
+async def request_reassignment(session: AsyncSession, assignment_id) -> list[tuple[uuid.UUID, str, int]]:
     """Set status to reassign_requested. Return list of alternative rooms."""
     result = await session.execute(
         select(ExpertRoomAssignment)
@@ -205,9 +198,7 @@ async def request_reassignment(
 
     # Get all rooms for the same clustering run (excluding current)
     rooms_result = await session.execute(
-        select(Room).where(
-            Room.clustering_run_id == assignment.room.clustering_run_id
-        )
+        select(Room).where(Room.clustering_run_id == assignment.room.clustering_run_id)
     )
     all_rooms = rooms_result.scalars().all()
 
@@ -216,10 +207,7 @@ async def request_reassignment(
         if room.id == assignment.room_id:
             continue
         # Count projects
-        count_result = await session.execute(
-            select(func.count(RoomProject.id))
-            .where(RoomProject.room_id == room.id)
-        )
+        count_result = await session.execute(select(func.count(RoomProject.id)).where(RoomProject.room_id == room.id))
         count = count_result.scalar() or 0
         alternatives.append((room.id, room.name, count))
 
@@ -227,13 +215,9 @@ async def request_reassignment(
     return alternatives
 
 
-async def reassign_expert(
-    session: AsyncSession, assignment_id, new_room_id
-) -> None:
+async def reassign_expert(session: AsyncSession, assignment_id, new_room_id) -> None:
     """Update room_id, set is_manual=true, status=confirmed."""
-    result = await session.execute(
-        select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id)
-    )
+    result = await session.execute(select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id))
     assignment = result.scalars().first()
     if assignment:
         assignment.room_id = new_room_id
@@ -243,14 +227,10 @@ async def reassign_expert(
         await session.commit()
 
 
-async def get_experts_without_telegram(
-    session: AsyncSession, event_id
-) -> list[Expert]:
+async def get_experts_without_telegram(session: AsyncSession, event_id) -> list[Expert]:
     """List experts without telegram_username."""
     result = await session.execute(
-        select(Expert)
-        .where(Expert.event_id == event_id)
-        .where(Expert.telegram_username.is_(None))
+        select(Expert).where(Expert.event_id == event_id).where(Expert.telegram_username.is_(None))
     )
     return list(result.scalars().all())
 
@@ -266,8 +246,7 @@ async def get_coverage_dashboard(session: AsyncSession, event_id) -> dict | None
 
     # Get all rooms
     rooms_result = await session.execute(
-        select(Room).where(Room.clustering_run_id == clustering.id)
-        .order_by(Room.display_order)
+        select(Room).where(Room.clustering_run_id == clustering.id).order_by(Room.display_order)
     )
     rooms = rooms_result.scalars().all()
     if not rooms:
@@ -290,10 +269,7 @@ async def get_coverage_dashboard(session: AsyncSession, event_id) -> dict | None
 
         confirmed = sum(1 for a in room_assignments if a.status == "confirmed")
         declined = sum(1 for a in room_assignments if a.status == "declined")
-        no_response = sum(
-            1 for a in room_assignments
-            if a.status in ("invite_ready", "invited", "approved")
-        )
+        no_response = sum(1 for a in room_assignments if a.status in ("invite_ready", "invited", "approved"))
         needed = 2  # minimum 2 experts per room
 
         if confirmed >= needed:
@@ -303,16 +279,18 @@ async def get_coverage_dashboard(session: AsyncSession, event_id) -> dict | None
         else:
             coverage_level = "uncovered"
 
-        rooms_data.append({
-            "room_id": str(room.id),
-            "room_name": room.name,
-            "confirmed": confirmed,
-            "declined": declined,
-            "no_response": no_response,
-            "needed": needed,
-            "total_assigned": len(room_assignments),
-            "coverage_level": coverage_level,
-        })
+        rooms_data.append(
+            {
+                "room_id": str(room.id),
+                "room_name": room.name,
+                "confirmed": confirmed,
+                "declined": declined,
+                "no_response": no_response,
+                "needed": needed,
+                "total_assigned": len(room_assignments),
+                "coverage_level": coverage_level,
+            }
+        )
 
         total_confirmed += confirmed
         total_declined += declined
@@ -333,9 +311,7 @@ async def get_coverage_dashboard(session: AsyncSession, event_id) -> dict | None
     }
 
 
-async def get_room_coverage_detail(
-    session: AsyncSession, event_id, room_id
-) -> dict | None:
+async def get_room_coverage_detail(session: AsyncSession, event_id, room_id) -> dict | None:
     """Detailed expert list for a room with statuses and adjacent suggestions."""
     clustering = await matching_service.get_approved_clustering(session, event_id)
     if not clustering:
@@ -347,23 +323,23 @@ async def get_room_coverage_detail(
         .where(ExpertRoomAssignment.room_id == room_id)
         .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
         .options(
-            selectinload(ExpertRoomAssignment.expert)
-            .selectinload(Expert.tags)
-            .selectinload(ExpertTag.tag),
+            selectinload(ExpertRoomAssignment.expert).selectinload(Expert.tags).selectinload(ExpertTag.tag),
         )
     )
     assignments = asgn_result.scalars().all()
 
     experts = []
     for a in assignments:
-        experts.append({
-            "expert_id": str(a.expert.id),
-            "name": a.expert.name,
-            "match_score": a.match_score,
-            "status": a.status,
-            "bot_started": a.expert.bot_started,
-            "tags": [et.tag.name for et in a.expert.tags],
-        })
+        experts.append(
+            {
+                "expert_id": str(a.expert.id),
+                "name": a.expert.name,
+                "match_score": a.match_score,
+                "status": a.status,
+                "bot_started": a.expert.bot_started,
+                "tags": [et.tag.name for et in a.expert.tags],
+            }
+        )
 
     # Find suggested adjacent experts (not assigned to this room)
     # Get room's project tags
@@ -387,9 +363,7 @@ async def get_room_coverage_detail(
             .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
             .where(ExpertRoomAssignment.room_id != room_id)
             .options(
-                selectinload(ExpertRoomAssignment.expert)
-                .selectinload(Expert.tags)
-                .selectinload(ExpertTag.tag),
+                selectinload(ExpertRoomAssignment.expert).selectinload(Expert.tags).selectinload(ExpertTag.tag),
             )
         )
         other_assignments = other_result.scalars().all()
@@ -398,12 +372,14 @@ async def get_room_coverage_detail(
             expert_tags = {et.tag.name for et in oa.expert.tags}
             adjacent = expert_tags & room_tags
             if adjacent:
-                suggested.append({
-                    "expert_id": str(oa.expert.id),
-                    "name": oa.expert.name,
-                    "adjacent_tags": list(adjacent)[:5],
-                    "current_room_id": str(oa.room_id),
-                })
+                suggested.append(
+                    {
+                        "expert_id": str(oa.expert.id),
+                        "name": oa.expert.name,
+                        "adjacent_tags": list(adjacent)[:5],
+                        "current_room_id": str(oa.room_id),
+                    }
+                )
 
         # Sort by number of matching tags, limit to 5
         suggested.sort(key=lambda x: len(x["adjacent_tags"]), reverse=True)
@@ -451,7 +427,9 @@ async def check_and_send_reminders(session: AsyncSession, event_id, bot) -> int:
             # We'd need user_id stored somewhere; for now log and create escalation
             logger.info(
                 "Reminder needed for expert %s (room %s), %d days since invite viewed",
-                a.expert.name, a.room.name if a.room else "?", days_since,
+                a.expert.name,
+                a.room.name if a.room else "?",
+                days_since,
             )
             a.reminder_count += 1
             a.last_reminder_at = now
@@ -475,9 +453,7 @@ async def check_and_send_reminders(session: AsyncSession, event_id, bot) -> int:
     return sent
 
 
-async def check_and_escalate(
-    session: AsyncSession, event_id, bot, dd_date: datetime | None = None
-) -> int:
+async def check_and_escalate(session: AsyncSession, event_id, bot, dd_date: datetime | None = None) -> int:
     """Check for critical escalations: 5+ days no response, uncovered rooms."""
     now = datetime.now(timezone.utc)
     created = 0
@@ -522,9 +498,7 @@ async def check_and_escalate(
     # 2. Check rooms with 0 confirmed (uncovered)
     clustering = await matching_service.get_approved_clustering(session, event_id)
     if clustering:
-        rooms_result = await session.execute(
-            select(Room).where(Room.clustering_run_id == clustering.id)
-        )
+        rooms_result = await session.execute(select(Room).where(Room.clustering_run_id == clustering.id))
         rooms = rooms_result.scalars().all()
 
         for room in rooms:
@@ -589,9 +563,7 @@ async def resolve_escalation(session: AsyncSession, escalation_id) -> None:
         except ValueError:
             return
 
-    result = await session.execute(
-        select(Escalation).where(Escalation.id == escalation_id)
-    )
+    result = await session.execute(select(Escalation).where(Escalation.id == escalation_id))
     escalation = result.scalars().first()
     if escalation:
         escalation.resolved = True
@@ -601,9 +573,7 @@ async def resolve_escalation(session: AsyncSession, escalation_id) -> None:
 
 async def mark_no_show(session: AsyncSession, assignment_id) -> None:
     """Mark a confirmed expert as no-show."""
-    result = await session.execute(
-        select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id)
-    )
+    result = await session.execute(select(ExpertRoomAssignment).where(ExpertRoomAssignment.id == assignment_id))
     assignment = result.scalars().first()
     if assignment and assignment.status == "confirmed":
         assignment.status = "no_show"
@@ -611,9 +581,7 @@ async def mark_no_show(session: AsyncSession, assignment_id) -> None:
         await session.commit()
 
 
-async def get_escalations(
-    session: AsyncSession, event_id, resolved: bool = False
-) -> list[dict]:
+async def get_escalations(session: AsyncSession, event_id, resolved: bool = False) -> list[dict]:
     """List escalations with expert/room info."""
     result = await session.execute(
         select(Escalation)

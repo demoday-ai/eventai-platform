@@ -9,9 +9,7 @@ from app.models.base import Base
 
 class ExpertTag(Base):
     __tablename__ = "expert_tags"
-    __table_args__ = (
-        UniqueConstraint("expert_id", "tag_id", name="uq_expert_tags_expert_tag"),
-    )
+    __table_args__ = (UniqueConstraint("expert_id", "tag_id", name="uq_expert_tags_expert_tag"),)
 
     expert_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("experts.id", ondelete="CASCADE"), nullable=False

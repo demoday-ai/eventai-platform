@@ -1,4 +1,5 @@
 """Schedule change log model - audit trail for schedule modifications."""
+
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -39,29 +40,19 @@ class ScheduleChangeLog(Base):
 
     change_type: Mapped[str] = mapped_column(String(30), nullable=False)
 
-    old_start_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    old_end_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    old_start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    old_end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     old_room_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True
     )
 
-    new_start_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    new_end_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    new_start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    new_end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     new_room_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True
     )
 
-    notifications_sent: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    notifications_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Relationships
     schedule_slot = relationship("ScheduleSlot", back_populates="change_logs")

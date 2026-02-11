@@ -45,10 +45,10 @@ def escape_markdown(text: str) -> str:
     """Escape Markdown special characters (idempotent — won't double-escape)."""
     if not text:
         return ""
-    for char in ['*', '_', '`', '[', ']', '(', ')']:
+    for char in ["*", "_", "`", "[", "]", "(", ")"]:
         # Remove existing escapes first, then re-escape uniformly
-        text = text.replace('\\' + char, char)
-        text = text.replace(char, '\\' + char)
+        text = text.replace("\\" + char, char)
+        text = text.replace(char, "\\" + char)
     return text
 
 
@@ -73,11 +73,7 @@ def format_recommendations(data: dict) -> list[str]:
         if room_num:
             prev_rooms.add(room_num)
 
-        entry = (
-            f"*{rec['rank']}.* *{title}*\n"
-            f"   {room_info} · {tags_str}\n"
-            f"   → {summary}{conflict}\n\n"
-        )
+        entry = f"*{rec['rank']}.* *{title}*\n   {room_info} · {tags_str}\n   → {summary}{conflict}\n\n"
         must_text += entry
 
     must_text += (
@@ -104,11 +100,7 @@ def format_recommendations(data: dict) -> list[str]:
                 conflict = "\n   _пересекается с проектом выше_"
             if room_num:
                 prev_rooms_split.add(room_num)
-            entry = (
-                f"*{rec['rank']}.* *{title}*\n"
-                f"   {room_info} · {tags_str}\n"
-                f"   → {summary}{conflict}\n\n"
-            )
+            entry = f"*{rec['rank']}.* *{title}*\n   {room_info} · {tags_str}\n   → {summary}{conflict}\n\n"
             if i < mid:
                 part1 += entry
             else:
@@ -133,11 +125,7 @@ def format_if_time(data: dict) -> list[str]:
         tags_str = ", ".join(rec.get("tags", [])[:3])
 
         score = int(rec.get("relevance_score", 0))
-        entry = (
-            f"*{rec['rank']}. {title}* — {score}%\n"
-            f"{summary}\n"
-            f"{room_info} · {tags_str}\n\n"
-        )
+        entry = f"*{rec['rank']}. {title}* — {score}%\n{summary}\n{room_info} · {tags_str}\n\n"
         if_time_text += entry
 
     if len(if_time_text) > MAX_MESSAGE_LEN:
@@ -150,11 +138,7 @@ def format_if_time(data: dict) -> list[str]:
             summary = escape_markdown(truncate(rec["summary"], 150) if rec["summary"] else "")
             room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
             tags_str = ", ".join(rec.get("tags", [])[:3])
-            entry = (
-                f"*{rec['rank']}. {title}*\n"
-                f"{summary}\n"
-                f"{room_info} · {tags_str}\n\n"
-            )
+            entry = f"*{rec['rank']}. {title}*\n{summary}\n{room_info} · {tags_str}\n\n"
             if i < mid:
                 part1 += entry
             else:

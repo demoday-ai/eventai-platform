@@ -29,9 +29,7 @@ async def get_room_detail(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     try:
         return await admin_service.get_room_detail(db, event.id, room_id)
@@ -49,9 +47,7 @@ async def update_room(
     """Update room name/theme (organizer-managed)."""
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     if request.name is None and request.theme_rationale is None:
         raise HTTPException(
@@ -71,8 +67,11 @@ async def update_room(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     await audit_service.log_action(
-        db, current_user, "room_update",
-        entity_type="room", entity_id=str(room.id),
+        db,
+        current_user,
+        "room_update",
+        entity_type="room",
+        entity_id=str(room.id),
         details={
             "name": room.name,
             "theme_rationale": room.theme_rationale,

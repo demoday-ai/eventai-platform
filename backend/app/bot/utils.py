@@ -62,21 +62,21 @@ def _split_text(text: str, max_len: int) -> list[str]:
         split_pos = chunk.rfind("\n\n")
         if split_pos > max_len // 4:
             parts.append(remaining[:split_pos])
-            remaining = remaining[split_pos + 2:]
+            remaining = remaining[split_pos + 2 :]
             continue
 
         # Try single newline
         split_pos = chunk.rfind("\n")
         if split_pos > max_len // 4:
             parts.append(remaining[:split_pos])
-            remaining = remaining[split_pos + 1:]
+            remaining = remaining[split_pos + 1 :]
             continue
 
         # Try word boundary (space)
         split_pos = chunk.rfind(" ")
         if split_pos > max_len // 4:
             parts.append(remaining[:split_pos])
-            remaining = remaining[split_pos + 1:]
+            remaining = remaining[split_pos + 1 :]
             continue
 
         # Hard split as last resort

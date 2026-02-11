@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Shared file parsing helpers
 # ---------------------------------------------------------------------------
 
+
 def _parse_file(content: bytes, filename: str) -> list[dict]:
     """Parse uploaded file (CSV/JSON/XLSX) into list of row dicts."""
     filename = filename.lower()
@@ -42,6 +43,7 @@ def _parse_file(content: bytes, filename: str) -> list[dict]:
         return list(reader)
     elif filename.endswith(".xlsx"):
         import openpyxl
+
         wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
         ws = wb.active
         rows_iter = ws.iter_rows(values_only=True)
@@ -51,11 +53,13 @@ def _parse_file(content: bytes, filename: str) -> list[dict]:
         for row_values in rows_iter:
             if all(v is None for v in row_values):
                 continue
-            rows.append({
-                headers[i]: (str(v).strip() if v is not None else "")
-                for i, v in enumerate(row_values)
-                if i < num_headers
-            })
+            rows.append(
+                {
+                    headers[i]: (str(v).strip() if v is not None else "")
+                    for i, v in enumerate(row_values)
+                    if i < num_headers
+                }
+            )
         wb.close()
         return rows
     else:
@@ -75,6 +79,7 @@ def _get_field(row: dict, *keys: str) -> str:
 # ---------------------------------------------------------------------------
 # GUEST merge
 # ---------------------------------------------------------------------------
+
 
 async def analyze_guest_merge(
     session: AsyncSession,
@@ -136,17 +141,21 @@ async def analyze_guest_merge(
             _, db_user = db_map[name_key]
             changed: list[ChangedField] = []
             if username and (db_user.username or "") != (username or ""):
-                changed.append(ChangedField(
-                    field="telegram",
-                    old_value=db_user.username,
-                    new_value=username,
-                ))
+                changed.append(
+                    ChangedField(
+                        field="telegram",
+                        old_value=db_user.username,
+                        new_value=username,
+                    )
+                )
             if changed:
-                updated_items.append(UpdatedItem(
-                    name=name,
-                    db_id=str(db_user.id),
-                    changed_fields=changed,
-                ))
+                updated_items.append(
+                    UpdatedItem(
+                        name=name,
+                        db_id=str(db_user.id),
+                        changed_fields=changed,
+                    )
+                )
                 update_rows.append((name_key, {"username": username}))
             else:
                 duplicate_count += 1
@@ -215,13 +224,17 @@ async def apply_guest_merge(
 
     await session.commit()
     return MergeApplyResult(
-        added=added, updated=updated, skipped=skipped, errors=error_count,
+        added=added,
+        updated=updated,
+        skipped=skipped,
+        errors=error_count,
     )
 
 
 # ---------------------------------------------------------------------------
 # EXPERT merge
 # ---------------------------------------------------------------------------
+
 
 async def analyze_expert_merge(
     session: AsyncSession,
@@ -246,19 +259,19 @@ async def analyze_expert_merge(
         position = _get_field(raw, "position", "описание *", "описание", "должность")
         tags_str = _get_field(raw, "expertise_tags", "tags", "теги *", "теги", "тематики")
         tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
-        parsed.append({
-            "name": name,
-            "telegram": telegram,
-            "position": position,
-            "tags": tags_list,
-            "raw": raw,
-        })
+        parsed.append(
+            {
+                "name": name,
+                "telegram": telegram,
+                "position": position,
+                "tags": tags_list,
+                "raw": raw,
+            }
+        )
 
     # Load existing experts
     result = await session.execute(
-        select(Expert)
-        .where(Expert.event_id == event_id)
-        .options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
+        select(Expert).where(Expert.event_id == event_id).options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
     )
     existing = list(result.scalars().all())
     db_map: dict[str, Expert] = {e.name.lower(): e for e in existing}
@@ -286,33 +299,41 @@ async def analyze_expert_merge(
             changed: list[ChangedField] = []
 
             if item["telegram"] and (db_expert.telegram_username or "") != item["telegram"]:
-                changed.append(ChangedField(
-                    field="telegram",
-                    old_value=db_expert.telegram_username,
-                    new_value=item["telegram"],
-                ))
+                changed.append(
+                    ChangedField(
+                        field="telegram",
+                        old_value=db_expert.telegram_username,
+                        new_value=item["telegram"],
+                    )
+                )
             if item["position"] and (db_expert.position or "") != item["position"]:
-                changed.append(ChangedField(
-                    field="position",
-                    old_value=db_expert.position,
-                    new_value=item["position"],
-                ))
+                changed.append(
+                    ChangedField(
+                        field="position",
+                        old_value=db_expert.position,
+                        new_value=item["position"],
+                    )
+                )
 
             db_tags = sorted([et.tag.name for et in db_expert.tags]) if db_expert.tags else []
             file_tags = sorted(item["tags"])
             if file_tags and db_tags != file_tags:
-                changed.append(ChangedField(
-                    field="tags",
-                    old_value=", ".join(db_tags),
-                    new_value=", ".join(file_tags),
-                ))
+                changed.append(
+                    ChangedField(
+                        field="tags",
+                        old_value=", ".join(db_tags),
+                        new_value=", ".join(file_tags),
+                    )
+                )
 
             if changed:
-                updated_items.append(UpdatedItem(
-                    name=item["name"],
-                    db_id=str(db_expert.id),
-                    changed_fields=changed,
-                ))
+                updated_items.append(
+                    UpdatedItem(
+                        name=item["name"],
+                        db_id=str(db_expert.id),
+                        changed_fields=changed,
+                    )
+                )
                 update_rows.append((name_key, item))
             else:
                 duplicate_count += 1
@@ -407,6 +428,7 @@ async def apply_expert_merge(
 # PROJECT merge
 # ---------------------------------------------------------------------------
 
+
 async def analyze_project_merge(
     session: AsyncSession,
     event_id: uuid.UUID,
@@ -458,32 +480,46 @@ async def analyze_project_merge(
             if row.description and db_proj.description != row.description:
                 old_desc = (db_proj.description or "")[:50]
                 new_desc = row.description[:50]
-                changed.append(ChangedField(
-                    field="description",
-                    old_value=old_desc + ("..." if len(db_proj.description or "") > 50 else ""),
-                    new_value=new_desc + ("..." if len(row.description) > 50 else ""),
-                ))
+                changed.append(
+                    ChangedField(
+                        field="description",
+                        old_value=old_desc + ("..." if len(db_proj.description or "") > 50 else ""),
+                        new_value=new_desc + ("..." if len(row.description) > 50 else ""),
+                    )
+                )
             if row.author and db_proj.author != row.author:
-                changed.append(ChangedField(
-                    field="author", old_value=db_proj.author, new_value=row.author,
-                ))
+                changed.append(
+                    ChangedField(
+                        field="author",
+                        old_value=db_proj.author,
+                        new_value=row.author,
+                    )
+                )
             if row.telegram_contact and (db_proj.telegram_contact or "") != row.telegram_contact:
-                changed.append(ChangedField(
-                    field="telegram_contact",
-                    old_value=db_proj.telegram_contact,
-                    new_value=row.telegram_contact,
-                ))
+                changed.append(
+                    ChangedField(
+                        field="telegram_contact",
+                        old_value=db_proj.telegram_contact,
+                        new_value=row.telegram_contact,
+                    )
+                )
             if row.track and (db_proj.track or "") != (row.track or ""):
-                changed.append(ChangedField(
-                    field="track", old_value=db_proj.track, new_value=row.track,
-                ))
+                changed.append(
+                    ChangedField(
+                        field="track",
+                        old_value=db_proj.track,
+                        new_value=row.track,
+                    )
+                )
 
             if changed:
-                updated_items.append(UpdatedItem(
-                    name=row.title,
-                    db_id=str(db_proj.id),
-                    changed_fields=changed,
-                ))
+                updated_items.append(
+                    UpdatedItem(
+                        name=row.title,
+                        db_id=str(db_proj.id),
+                        changed_fields=changed,
+                    )
+                )
                 update_rows.append((title_key, row))
             else:
                 duplicate_count += 1

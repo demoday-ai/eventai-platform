@@ -63,7 +63,7 @@ def chat_for_profile_task(
         return result
     except Exception as exc:
         logger.exception("chat_for_profile_task failed")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 # =============================================================================
@@ -96,7 +96,7 @@ def extract_interests_from_text_task(
         return result
     except Exception as exc:
         logger.exception("extract_interests_from_text_task failed")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 # =============================================================================
@@ -156,9 +156,7 @@ def generate_recommendations_task(
 
     async def _run():
         async with worker_session() as session:
-            profile = await profiling_service.get_or_create_profile(
-                session, uuid.UUID(user_id), uuid.UUID(event_id)
-            )
+            profile = await profiling_service.get_or_create_profile(session, uuid.UUID(user_id), uuid.UUID(event_id))
             return await profiling_service.generate_recommendations(session, profile)
 
     try:
@@ -201,9 +199,7 @@ def generate_qa_questions_task(
             if not user:
                 return []
 
-            result = await session.execute(
-                select(Project).where(Project.id == uuid.UUID(project_id))
-            )
+            result = await session.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
             project = result.scalar_one_or_none()
             if not project:
                 return []
@@ -211,9 +207,7 @@ def generate_qa_questions_task(
             guest_profile = await user_service.get_guest_profile(session, user.id)
             business_profile = await user_service.get_business_profile(session, user.id)
 
-            return await qa_service.generate_questions(
-                session, user, project, guest_profile, business_profile
-            )
+            return await qa_service.generate_questions(session, user, project, guest_profile, business_profile)
 
     try:
         result = run_async(_run())
@@ -225,7 +219,7 @@ def generate_qa_questions_task(
         return result
     except Exception as exc:
         logger.exception("generate_qa_questions_task failed")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 # =============================================================================
@@ -267,7 +261,7 @@ def generate_comparison_matrix_task(
         return result
     except Exception as exc:
         logger.exception("generate_comparison_matrix_task failed")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 # =============================================================================
@@ -340,9 +334,7 @@ def run_matching_task(
 
     async def _run():
         async with worker_session() as session:
-            return await matching_service.run_matching(
-                session, uuid.UUID(event_id), use_adjacent_tags
-            )
+            return await matching_service.run_matching(session, uuid.UUID(event_id), use_adjacent_tags)
 
     try:
         result = run_async(_run())
@@ -388,4 +380,4 @@ def agent_chat_task(
         return result
     except Exception as exc:
         logger.exception("agent_chat_task failed")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)

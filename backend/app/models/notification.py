@@ -1,4 +1,5 @@
 """Notification model - tracks all messages sent to participants."""
+
 import uuid
 from datetime import date, datetime
 from enum import Enum
@@ -50,17 +51,11 @@ class Notification(Base):
 
     type: Mapped[str] = mapped_column(String(30), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=NotificationStatus.PENDING.value
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=NotificationStatus.PENDING.value)
 
-    scheduled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_day: Mapped[date | None] = mapped_column(Date, nullable=True)
-    sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     batch_key: Mapped[str | None] = mapped_column(String(100), nullable=True)

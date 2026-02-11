@@ -43,11 +43,7 @@ async def create_lead(lead: LeadCreate) -> LeadResponse:
     event_label = EVENT_TYPE_LABELS.get(lead.event_type, lead.event_type)
 
     # Format message for Telegram
-    text = (
-        f"🎯 <b>Новая заявка с лендинга</b>\n\n"
-        f"👤 <b>Имя:</b> {lead.name}\n"
-        f"📧 <b>Email:</b> {lead.email}\n"
-    )
+    text = f"🎯 <b>Новая заявка с лендинга</b>\n\n👤 <b>Имя:</b> {lead.name}\n📧 <b>Email:</b> {lead.email}\n"
 
     if lead.telegram:
         text += f"💬 <b>Telegram:</b> {lead.telegram}\n"

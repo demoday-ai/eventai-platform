@@ -18,8 +18,8 @@ async def coverage_dashboard_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -35,8 +35,8 @@ async def coverage_gaps_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -53,8 +53,8 @@ async def coverage_room_detail_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")

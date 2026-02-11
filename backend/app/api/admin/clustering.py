@@ -29,19 +29,13 @@ async def suggest_themes(
     """
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     try:
-        themes = await clustering_service.suggest_room_themes(
-            db, event.id, request.num_rooms
-        )
+        themes = await clustering_service.suggest_room_themes(db, event.id, request.num_rooms)
         return SuggestThemesResponse(themes=themes)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         # Graceful degradation: return generic themes
         logger.exception("Failed to suggest themes: %s", e)

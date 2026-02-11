@@ -40,9 +40,7 @@ async def api_engine():
 
 @pytest.fixture
 async def api_session(api_engine):
-    async_session_factory = sessionmaker(
-        api_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session_factory = sessionmaker(api_engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session_factory() as session:
         yield session
         await session.rollback()
@@ -110,8 +108,11 @@ async def test_get_audit_log_empty(api_client):
 @pytest.mark.asyncio
 async def test_get_audit_log_with_entries(api_client, api_session, mock_user):
     await audit_service.log_action(
-        api_session, mock_user, "test_action_api",
-        entity_type="test", details={"key": "value"},
+        api_session,
+        mock_user,
+        "test_action_api",
+        entity_type="test",
+        details={"key": "value"},
     )
     await api_session.flush()
 
@@ -143,9 +144,7 @@ async def test_get_audit_log_pagination(api_client, api_session, mock_user):
         await audit_service.log_action(api_session, mock_user, "api_paginate")
     await api_session.flush()
 
-    response = await api_client.get(
-        "/admin/audit-log", params={"action": "api_paginate", "limit": 2, "offset": 0}
-    )
+    response = await api_client.get("/admin/audit-log", params={"action": "api_paginate", "limit": 2, "offset": 0})
 
     assert response.status_code == 200
     data = response.json()
@@ -166,11 +165,14 @@ async def test_list_organizers_empty(api_client):
 
 @pytest.mark.asyncio
 async def test_add_organizer(api_client):
-    response = await api_client.post("/admin/organizers", json={
-        "telegram_id": "new_org_api_1",
-        "telegram_username": "new_user",
-        "name": "New Organizer",
-    })
+    response = await api_client.post(
+        "/admin/organizers",
+        json={
+            "telegram_id": "new_org_api_1",
+            "telegram_username": "new_user",
+            "name": "New Organizer",
+        },
+    )
 
     assert response.status_code == 201
     data = response.json()
@@ -183,10 +185,13 @@ async def test_add_organizer(api_client):
 
 @pytest.mark.asyncio
 async def test_add_and_list_organizer(api_client):
-    await api_client.post("/admin/organizers", json={
-        "telegram_id": "list_test_org",
-        "name": "Listed Org",
-    })
+    await api_client.post(
+        "/admin/organizers",
+        json={
+            "telegram_id": "list_test_org",
+            "name": "Listed Org",
+        },
+    )
 
     response = await api_client.get("/admin/organizers")
 
@@ -198,9 +203,12 @@ async def test_add_and_list_organizer(api_client):
 @pytest.mark.asyncio
 async def test_delete_organizer(api_client, api_session):
     # Add first
-    resp = await api_client.post("/admin/organizers", json={
-        "telegram_id": "delete_org_api",
-    })
+    resp = await api_client.post(
+        "/admin/organizers",
+        json={
+            "telegram_id": "delete_org_api",
+        },
+    )
     org_id = resp.json()["id"]
 
     # Delete

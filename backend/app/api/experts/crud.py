@@ -51,8 +51,8 @@ async def upload_experts(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -62,9 +62,7 @@ async def upload_experts(
 
     from app.models.expert import Expert
 
-    count = await session.scalar(
-        select(func.count(Expert.id)).where(Expert.event_id == event.id)
-    )
+    count = await session.scalar(select(func.count(Expert.id)).where(Expert.event_id == event.id))
 
     if count and count > 0 and not confirm_replace:
         return {
@@ -124,6 +122,7 @@ async def upload_experts(
     elif filename.endswith(".xlsx"):
         try:
             import openpyxl
+
             wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
             ws = wb.active
             rows_iter = ws.iter_rows(values_only=True)
@@ -211,7 +210,9 @@ async def upload_experts(
         imported += 1
 
     await audit_service.log_action(
-        session, current_user, "upload_experts",
+        session,
+        current_user,
+        "upload_experts",
         entity_type="experts",
         details={"imported": imported, "with_tags": with_tags, "without_tags": without_tags, "file_hash": file_hash},
     )
@@ -236,6 +237,7 @@ async def preview_expert_upload(
 ):
     """Dry-run analysis of expert file vs DB. Returns MergePreview."""
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -245,7 +247,10 @@ async def preview_expert_upload(
 
     try:
         preview, _ = await merge_service.analyze_expert_merge(
-            session, event.id, content, filename,
+            session,
+            event.id,
+            content,
+            filename,
         )
     except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -266,6 +271,7 @@ async def merge_expert_upload(
 ):
     """Smart merge: add new + update changed experts."""
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -275,7 +281,10 @@ async def merge_expert_upload(
 
     try:
         _, internal = await merge_service.analyze_expert_merge(
-            session, event.id, content, filename,
+            session,
+            event.id,
+            content,
+            filename,
         )
     except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -284,12 +293,17 @@ async def merge_expert_upload(
         raise HTTPException(status_code=500, detail=f"Ошибка анализа файла: {e}")
 
     result = await merge_service.apply_expert_merge(
-        session, event.id, internal,
-        add_new=add_new, update_existing=update_existing,
+        session,
+        event.id,
+        internal,
+        add_new=add_new,
+        update_existing=update_existing,
     )
 
     await audit_service.log_action(
-        session, current_user, "merge_experts",
+        session,
+        current_user,
+        "merge_experts",
         entity_type="experts",
         details={"added": result.added, "updated": result.updated, "skipped": result.skipped},
     )
@@ -304,6 +318,7 @@ async def delete_all_experts(
 ):
     """Delete all experts for current event."""
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -311,7 +326,9 @@ async def delete_all_experts(
     count = await expert_service.delete_all_experts(session, event.id)
 
     await audit_service.log_action(
-        session, current_user, "delete_all_experts",
+        session,
+        current_user,
+        "delete_all_experts",
         entity_type="experts",
         details={"deleted": count},
     )
@@ -325,8 +342,8 @@ async def create_expert(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -364,7 +381,6 @@ async def update_expert(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     expert = await expert_service.get_expert_detail(session, expert_id)
     if not expert:
         raise HTTPException(status_code=404, detail="Expert not found")
@@ -424,13 +440,12 @@ async def list_experts(
     current_user: User = Depends(get_current_user),
 ):
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
 
-    experts = await expert_service.get_experts(
-        session, event.id, has_tags=has_tags, tag_name=tag, search=search
-    )
+    experts = await expert_service.get_experts(session, event.id, has_tags=has_tags, tag_name=tag, search=search)
     return [_expert_to_response(e) for e in experts]
 
 

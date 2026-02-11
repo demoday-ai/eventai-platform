@@ -23,7 +23,6 @@ async def broadcast_slots(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="Нет текущего события")
@@ -49,14 +48,11 @@ async def get_summary(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="Нет текущего события")
 
-    summary = await participation_service.get_participation_summary(
-        session, event.id, room_id
-    )
+    summary = await participation_service.get_participation_summary(session, event.id, room_id)
     return ParticipationSummary(**summary)
 
 
@@ -66,14 +62,11 @@ async def get_unacknowledged(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="Нет текущего события")
 
-    items = await participation_service.get_unacknowledged_list(
-        session, event.id, room_id
-    )
+    items = await participation_service.get_unacknowledged_list(session, event.id, room_id)
     return UnacknowledgedList(items=items, total=len(items))
 
 
@@ -83,15 +76,16 @@ async def get_request_detail(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-
     from app.models.participation import ParticipationRequest
 
     pr = await session.get(ParticipationRequest, request_id)
     if not pr:
         raise HTTPException(status_code=404, detail="Запрос не найден")
 
-    project = pr.project if pr.project else await session.get(
-        __import__("app.models.project", fromlist=["Project"]).Project, pr.project_id
+    project = (
+        pr.project
+        if pr.project
+        else await session.get(__import__("app.models.project", fromlist=["Project"]).Project, pr.project_id)
     )
     from app.models.room import Room
     from app.models.room_project import RoomProject

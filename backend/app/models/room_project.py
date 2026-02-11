@@ -9,9 +9,7 @@ from app.models.base import Base
 
 class RoomProject(Base):
     __tablename__ = "room_projects"
-    __table_args__ = (
-        UniqueConstraint("room_id", "project_id", name="uq_room_projects_room_project"),
-    )
+    __table_args__ = (UniqueConstraint("room_id", "project_id", name="uq_room_projects_room_project"),)
 
     room_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False

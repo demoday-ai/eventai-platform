@@ -139,9 +139,7 @@ class KeyManager:
                     "available": k.is_available(),
                     "fail_count": k.fail_count,
                     "cooldown_remaining": (
-                        max(0, KEY_COOLDOWN_SECONDS - (time.time() - k.failed_at))
-                        if k.failed_at
-                        else 0
+                        max(0, KEY_COOLDOWN_SECONDS - (time.time() - k.failed_at)) if k.failed_at else 0
                     ),
                 }
                 for k in self._keys
@@ -271,9 +269,7 @@ async def send_chat_completion(
                 wait = 2 ** (attempt + 1)
                 await asyncio.sleep(wait)
 
-    raise RuntimeError(
-        f"LLM failed after {MAX_RETRIES} attempts (keys tried: {len(keys_tried)}): {last_error}"
-    )
+    raise RuntimeError(f"LLM failed after {MAX_RETRIES} attempts (keys tried: {len(keys_tried)}): {last_error}")
 
 
 async def send_chat_with_tools(
@@ -389,9 +385,7 @@ async def send_chat_with_tools(
                 wait = 2 ** (attempt + 1)
                 await asyncio.sleep(wait)
 
-    raise RuntimeError(
-        f"LLM tools failed after {MAX_RETRIES} attempts (keys tried: {len(keys_tried)}): {last_error}"
-    )
+    raise RuntimeError(f"LLM tools failed after {MAX_RETRIES} attempts (keys tried: {len(keys_tried)}): {last_error}")
 
 
 async def check_api_health() -> dict:
@@ -424,28 +418,34 @@ async def check_api_health() -> dict:
                 )
                 response.raise_for_status()
 
-            results.append({
-                "key_suffix": key[-8:],
-                "status": "ok",
-                "available": key_state.is_available(),
-            })
+            results.append(
+                {
+                    "key_suffix": key[-8:],
+                    "status": "ok",
+                    "available": key_state.is_available(),
+                }
+            )
             key_state.mark_success()
 
         except httpx.HTTPStatusError as e:
-            results.append({
-                "key_suffix": key[-8:],
-                "status": "error",
-                "error": f"HTTP {e.response.status_code}",
-                "available": key_state.is_available(),
-            })
+            results.append(
+                {
+                    "key_suffix": key[-8:],
+                    "status": "error",
+                    "error": f"HTTP {e.response.status_code}",
+                    "available": key_state.is_available(),
+                }
+            )
 
         except Exception as e:
-            results.append({
-                "key_suffix": key[-8:],
-                "status": "error",
-                "error": str(e),
-                "available": key_state.is_available(),
-            })
+            results.append(
+                {
+                    "key_suffix": key[-8:],
+                    "status": "error",
+                    "error": str(e),
+                    "available": key_state.is_available(),
+                }
+            )
 
     return {
         "keys": results,
@@ -476,10 +476,6 @@ async def sync_key_stats_to_db(session: AsyncSession) -> None:
                 # Only update if memory timestamp is newer than DB
                 if key_obj.last_success_at is None or last_success_dt > key_obj.last_success_at:
                     key_obj.last_success_at = last_success_dt
-                    logger.debug(
-                        "Updated last_success_at for key ...%s: %s",
-                        key_suffix,
-                        last_success_dt.isoformat()
-                    )
+                    logger.debug("Updated last_success_at for key ...%s: %s", key_suffix, last_success_dt.isoformat())
 
     await session.commit()

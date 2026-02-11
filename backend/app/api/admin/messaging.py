@@ -31,9 +31,7 @@ async def messaging_preview(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     if not request.roles:
         raise HTTPException(
@@ -55,8 +53,12 @@ async def messaging_preview(
         )
 
     result = await messaging_service.preview(
-        db, event.id, request.template, request.roles,
-        request.guest_subtype, request.room_id,
+        db,
+        event.id,
+        request.template,
+        request.roles,
+        request.guest_subtype,
+        request.room_id,
     )
     return MessagingPreviewResponse(**result)
 
@@ -71,9 +73,7 @@ async def messaging_send(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     if not request.roles:
         raise HTTPException(
@@ -98,12 +98,19 @@ async def messaging_send(
 
     bot = Bot(token=settings.bot_token)
     result = await messaging_service.send_messages(
-        db, event.id, request.template, request.roles, bot,
-        request.guest_subtype, request.room_id,
+        db,
+        event.id,
+        request.template,
+        request.roles,
+        bot,
+        request.guest_subtype,
+        request.room_id,
     )
 
     await audit_service.log_action(
-        db, current_user, "send_messaging",
+        db,
+        current_user,
+        "send_messaging",
         entity_type="messaging",
         details={"roles": request.roles, "sent": result["sent"], "failed": result["failed"]},
     )

@@ -285,6 +285,7 @@ async def get_user_recommendations(
 
 # Comparison matrix functions
 
+
 def get_default_criteria(
     user: User,
     business_profile: BusinessProfile | None = None,
@@ -313,10 +314,9 @@ def build_matrix_prompt(
     criteria: list[str],
 ) -> tuple[str, str]:
     """Build LLM prompt for comparison matrix."""
-    project_list = "\n".join([
-        f"- {p.title}: {p.description[:200] if p.description else 'Нет описания'}"
-        for p in projects
-    ])
+    project_list = "\n".join(
+        [f"- {p.title}: {p.description[:200] if p.description else 'Нет описания'}" for p in projects]
+    )
 
     criteria_list = ", ".join(criteria)
 

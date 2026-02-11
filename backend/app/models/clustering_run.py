@@ -18,11 +18,7 @@ class ClusteringRun(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    schedule_approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    schedule_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     rooms = relationship("Room", back_populates="clustering_run", cascade="all, delete-orphan")

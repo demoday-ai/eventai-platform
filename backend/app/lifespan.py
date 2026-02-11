@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
     try:
         from app.database import engine
         from app.models import Base
+
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables ensured")
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI):
             event = await user_service.get_current_event(session)
             if event:
                 from app.services.admin import organizer_service
+
                 org_seeded = await organizer_service.seed_from_env(session)
                 if org_seeded:
                     logger.info("Organizer seed loaded: %d organizers", org_seeded)
@@ -46,9 +48,7 @@ async def lifespan(app: FastAPI):
         from app.services.core.llm_client import get_key_manager
 
         async with async_session() as session:
-            result = await session.execute(
-                select(LlmApiKey).where(LlmApiKey.is_active)
-            )
+            result = await session.execute(select(LlmApiKey).where(LlmApiKey.is_active))
             db_keys = result.scalars().all()
 
             if db_keys:
@@ -95,6 +95,7 @@ async def lifespan(app: FastAPI):
 
             async def webhook_handler(request):
                 from starlette.responses import Response
+
                 data = await request.json()
                 update = Application.de_json(data, bot_app.bot)
                 await bot_app.process_update(update)

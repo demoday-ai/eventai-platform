@@ -31,8 +31,6 @@ def create_bot_app() -> Application:
 
     # Catch-all: text messages from users not in any ConversationHandler
     # Still useful as fallback for edge cases
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, orphan_text_handler)
-    )
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, orphan_text_handler))
 
     return application

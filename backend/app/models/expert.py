@@ -37,15 +37,9 @@ class Expert(Base):
     )
 
     bot_started: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    bot_started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    telegram_chat_id: Mapped[str | None] = mapped_column(
-        String(20), nullable=True, index=True
-    )
+    bot_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
 
     user = relationship("User")
     tags = relationship("ExpertTag", back_populates="expert", cascade="all, delete-orphan")
-    assignments = relationship(
-        "ExpertRoomAssignment", back_populates="expert", cascade="all, delete-orphan"
-    )
+    assignments = relationship("ExpertRoomAssignment", back_populates="expert", cascade="all, delete-orphan")

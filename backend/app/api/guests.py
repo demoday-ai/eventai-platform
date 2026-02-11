@@ -63,9 +63,7 @@ async def get_profile(
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(
-        select(GuestProfile)
-        .where(GuestProfile.user_id == user_id)
-        .where(GuestProfile.event_id == event_id)
+        select(GuestProfile).where(GuestProfile.user_id == user_id).where(GuestProfile.event_id == event_id)
     )
     profile = result.scalars().first()
     if not profile:
@@ -92,9 +90,7 @@ async def create_or_update_profile(
     from app.worker.tasks import extract_interests_from_text_task
     from app.worker.utils import wait_for_task
 
-    profile = await profiling_service.get_or_create_profile(
-        session, req.user_id, req.event_id
-    )
+    profile = await profiling_service.get_or_create_profile(session, req.user_id, req.event_id)
 
     # Extract interests from text if provided (via Celery)
     extracted_tags = []
@@ -112,9 +108,7 @@ async def create_or_update_profile(
             keywords = result.get("keywords", [])
 
     all_tags = list(dict.fromkeys(req.selected_tags + extracted_tags))
-    profile = await profiling_service.save_profile(
-        session, profile, all_tags, keywords, req.raw_text
-    )
+    profile = await profiling_service.save_profile(session, profile, all_tags, keywords, req.raw_text)
 
     all_interests = list(dict.fromkeys(profile.selected_tags))
     return {
@@ -146,9 +140,7 @@ async def generate_recommendations(
     from app.worker.utils import wait_for_task
 
     result = await session.execute(
-        select(GuestProfile)
-        .where(GuestProfile.user_id == user_id)
-        .where(GuestProfile.event_id == event_id)
+        select(GuestProfile).where(GuestProfile.user_id == user_id).where(GuestProfile.event_id == event_id)
     )
     profile = result.scalars().first()
     if not profile:
@@ -179,9 +171,7 @@ async def get_recommendations(
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(
-        select(GuestProfile)
-        .where(GuestProfile.user_id == user_id)
-        .where(GuestProfile.event_id == event_id)
+        select(GuestProfile).where(GuestProfile.user_id == user_id).where(GuestProfile.event_id == event_id)
     )
     profile = result.scalars().first()
     if not profile:
@@ -206,9 +196,7 @@ async def get_project_detail(
     from app.models.guest_profile import GuestProfile
 
     result = await session.execute(
-        select(GuestProfile)
-        .where(GuestProfile.user_id == user_id)
-        .where(GuestProfile.event_id == event_id)
+        select(GuestProfile).where(GuestProfile.user_id == user_id).where(GuestProfile.event_id == event_id)
     )
     profile = result.scalars().first()
     if not profile:

@@ -9,9 +9,7 @@ from app.models.base import Base
 
 class Project(Base):
     __tablename__ = "projects"
-    __table_args__ = (
-        UniqueConstraint("event_id", "title", name="uq_projects_event_title"),
-    )
+    __table_args__ = (UniqueConstraint("event_id", "title", name="uq_projects_event_title"),)
 
     event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False
@@ -30,6 +28,4 @@ class Project(Base):
     demo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     tags = relationship("ProjectTag", back_populates="project", cascade="all, delete-orphan")
-    room_assignments = relationship(
-        "RoomProject", back_populates="project", cascade="all, delete-orphan"
-    )
+    room_assignments = relationship("RoomProject", back_populates="project", cascade="all, delete-orphan")

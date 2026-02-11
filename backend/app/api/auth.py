@@ -44,9 +44,7 @@ def _verify_telegram_login(body: TelegramAuthRequest) -> None:
         if value:
             payload_fields[key] = value
 
-    data_check_string = "\n".join(
-        f"{key}={payload_fields[key]}" for key in sorted(payload_fields)
-    )
+    data_check_string = "\n".join(f"{key}={payload_fields[key]}" for key in sorted(payload_fields))
     secret = hashlib.sha256(settings.bot_token.encode()).digest()
     signature = hmac.new(secret, data_check_string.encode(), hashlib.sha256).hexdigest()
 

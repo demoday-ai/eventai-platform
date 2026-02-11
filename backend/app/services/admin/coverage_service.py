@@ -36,9 +36,7 @@ async def get_coverage_summary(session: AsyncSession, event_id) -> dict | None:
         return None
 
     rooms_result = await session.execute(
-        select(Room)
-        .where(Room.clustering_run_id == clustering.id)
-        .order_by(Room.display_order)
+        select(Room).where(Room.clustering_run_id == clustering.id).order_by(Room.display_order)
     )
     rooms = rooms_result.scalars().all()
     if not rooms:
@@ -53,8 +51,7 @@ async def get_coverage_summary(session: AsyncSession, event_id) -> dict | None:
     for room in rooms:
         # Project count
         project_count_result = await session.execute(
-            select(func.count(RoomProject.id))
-            .where(RoomProject.room_id == room.id)
+            select(func.count(RoomProject.id)).where(RoomProject.room_id == room.id)
         )
         project_count = project_count_result.scalar() or 0
 
@@ -89,17 +86,19 @@ async def get_coverage_summary(session: AsyncSession, event_id) -> dict | None:
         else:
             coverage_level = "uncovered"
 
-        rooms_data.append({
-            "room_id": str(room.id),
-            "room_name": room.name,
-            "project_count": project_count,
-            "top_tags": top_tags,
-            "confirmed": confirmed,
-            "pending": pending,
-            "declined": declined,
-            "total_assigned": len(room_assignments),
-            "coverage_level": coverage_level,
-        })
+        rooms_data.append(
+            {
+                "room_id": str(room.id),
+                "room_name": room.name,
+                "project_count": project_count,
+                "top_tags": top_tags,
+                "confirmed": confirmed,
+                "pending": pending,
+                "declined": declined,
+                "total_assigned": len(room_assignments),
+                "coverage_level": coverage_level,
+            }
+        )
 
         total_confirmed += confirmed
         total_pending += pending
@@ -131,9 +130,7 @@ async def get_room_detail(session: AsyncSession, event_id, room_id) -> dict | No
 
     # Verify room exists in this clustering
     room_result = await session.execute(
-        select(Room)
-        .where(Room.id == room_id)
-        .where(Room.clustering_run_id == clustering.id)
+        select(Room).where(Room.id == room_id).where(Room.clustering_run_id == clustering.id)
     )
     room = room_result.scalars().first()
     if not room:
@@ -141,8 +138,7 @@ async def get_room_detail(session: AsyncSession, event_id, room_id) -> dict | No
 
     # Project count
     project_count_result = await session.execute(
-        select(func.count(RoomProject.id))
-        .where(RoomProject.room_id == room_id)
+        select(func.count(RoomProject.id)).where(RoomProject.room_id == room_id)
     )
     project_count = project_count_result.scalar() or 0
 
@@ -162,9 +158,7 @@ async def get_room_detail(session: AsyncSession, event_id, room_id) -> dict | No
         .where(ExpertRoomAssignment.room_id == room_id)
         .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
         .options(
-            selectinload(ExpertRoomAssignment.expert)
-            .selectinload(Expert.tags)
-            .selectinload(ExpertTag.tag),
+            selectinload(ExpertRoomAssignment.expert).selectinload(Expert.tags).selectinload(ExpertTag.tag),
         )
     )
     assignments = asgn_result.scalars().all()
@@ -173,14 +167,16 @@ async def get_room_detail(session: AsyncSession, event_id, room_id) -> dict | No
     confirmed_expert_tags = set()
     for a in assignments:
         expert_tag_names = [et.tag.name for et in a.expert.tags]
-        experts.append({
-            "expert_id": str(a.expert.id),
-            "name": a.expert.name,
-            "status": a.status,
-            "match_score": a.match_score,
-            "tags": expert_tag_names,
-            "bot_started": a.expert.bot_started,
-        })
+        experts.append(
+            {
+                "expert_id": str(a.expert.id),
+                "name": a.expert.name,
+                "status": a.status,
+                "match_score": a.match_score,
+                "tags": expert_tag_names,
+                "bot_started": a.expert.bot_started,
+            }
+        )
         if a.status == "confirmed":
             confirmed_expert_tags.update(expert_tag_names)
 
@@ -190,9 +186,7 @@ async def get_room_detail(session: AsyncSession, event_id, room_id) -> dict | No
     # Find candidates for uncovered tags
     candidates = []
     if uncovered_tags:
-        candidates = await _find_candidates_for_tags(
-            session, uncovered_tags, room_id, clustering.id
-        )
+        candidates = await _find_candidates_for_tags(session, uncovered_tags, room_id, clustering.id)
 
     return {
         "room_id": str(room_id),
@@ -229,25 +223,22 @@ async def find_expert_candidates(
     for expert in experts:
         # Check if already assigned to the target room in this clustering
         assigned_to_target = any(
-            a.room_id == exclude_room_id and a.clustering_run_id == clustering_run_id
-            for a in expert.assignments
+            a.room_id == exclude_room_id and a.clustering_run_id == clustering_run_id for a in expert.assignments
         )
         if assigned_to_target:
             continue
 
-        current_rooms = [
-            a.room.name
-            for a in expert.assignments
-            if a.clustering_run_id == clustering_run_id and a.room
-        ]
+        current_rooms = [a.room.name for a in expert.assignments if a.clustering_run_id == clustering_run_id and a.room]
         matching_tags = [et.tag.name for et in expert.tags]
 
-        candidates.append({
-            "expert_id": str(expert.id),
-            "name": expert.name,
-            "matching_tags": matching_tags,
-            "current_rooms": current_rooms,
-        })
+        candidates.append(
+            {
+                "expert_id": str(expert.id),
+                "name": expert.name,
+                "matching_tags": matching_tags,
+                "current_rooms": current_rooms,
+            }
+        )
 
     return candidates
 
@@ -262,9 +253,7 @@ async def get_coverage_gaps(session: AsyncSession, event_id) -> dict | None:
         return None
 
     rooms_result = await session.execute(
-        select(Room)
-        .where(Room.clustering_run_id == clustering.id)
-        .order_by(Room.display_order)
+        select(Room).where(Room.clustering_run_id == clustering.id).order_by(Room.display_order)
     )
     rooms = rooms_result.scalars().all()
 
@@ -290,9 +279,7 @@ async def get_coverage_gaps(session: AsyncSession, event_id) -> dict | None:
             .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
             .where(ExpertRoomAssignment.status == "confirmed")
             .options(
-                selectinload(ExpertRoomAssignment.expert)
-                .selectinload(Expert.tags)
-                .selectinload(ExpertTag.tag),
+                selectinload(ExpertRoomAssignment.expert).selectinload(Expert.tags).selectinload(ExpertTag.tag),
             )
         )
         confirmed_assignments = confirmed_asgn.scalars().all()
@@ -306,16 +293,16 @@ async def get_coverage_gaps(session: AsyncSession, event_id) -> dict | None:
         uncovered = set(tag_counts.keys()) - confirmed_expert_tags
 
         for tag_name in sorted(uncovered):
-            candidates = await find_expert_candidates(
-                session, tag_name, room.id, clustering.id
+            candidates = await find_expert_candidates(session, tag_name, room.id, clustering.id)
+            gaps.append(
+                {
+                    "room_id": str(room.id),
+                    "room_name": room.name,
+                    "uncovered_tag": tag_name,
+                    "project_count_with_tag": tag_counts[tag_name],
+                    "candidates": candidates,
+                }
             )
-            gaps.append({
-                "room_id": str(room.id),
-                "room_name": room.name,
-                "uncovered_tag": tag_name,
-                "project_count_with_tag": tag_counts[tag_name],
-                "candidates": candidates,
-            })
 
     return {
         "total_gaps": len(gaps),
@@ -334,9 +321,7 @@ async def _find_candidates_for_tags(
     candidates = []
 
     for tag_name in uncovered_tags:
-        tag_candidates = await find_expert_candidates(
-            session, tag_name, exclude_room_id, clustering_run_id
-        )
+        tag_candidates = await find_expert_candidates(session, tag_name, exclude_room_id, clustering_run_id)
         for c in tag_candidates:
             if c["expert_id"] not in seen_expert_ids:
                 seen_expert_ids.add(c["expert_id"])

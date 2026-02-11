@@ -35,6 +35,7 @@ SUMMARY_SYSTEM = """Ты AI-ассистент для Demo Day. Сгенерир
 def _get_profile_agent_system() -> str:
     """Generate PROFILE_AGENT_SYSTEM with current tags."""
     from app.services.admin.tag_service import DEFAULT_TAGS
+
     tag_list = ", ".join(f"{k} ({v})" for k, v in DEFAULT_TAGS.items())
 
     return f"""Ты --AI-куратор Demo Day. Твоя задача --за 1-2 сообщения выяснить интересы посетителя и зафиксировать профиль.
@@ -234,12 +235,16 @@ async def chat_for_profile(
       {"action": "profile", "interests": [...], "goals": [...], "summary": "...", ...} - done
     """
     if selected_tags:
-        tags_block = f"Посетитель уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
+        tags_block = (
+            f"Посетитель уже выбрал теги: {', '.join(selected_tags)}. Учитывай это и уточняй детали по этим темам."
+        )
     else:
         tags_block = "Посетитель пока не выбрал теги. Помоги определиться."
 
     role_context_block, partner_profile_fields = _build_role_context(
-        role_code, guest_subtype, custom_subtype,
+        role_code,
+        guest_subtype,
+        custom_subtype,
     )
 
     system_prompt = _get_profile_agent_system().format(
@@ -284,9 +289,7 @@ async def chat_for_profile(
 # --- T005: Helper functions ---
 
 
-async def get_available_tags(
-    session: AsyncSession, event_id: uuid.UUID
-) -> list[tuple[str, int]]:
+async def get_available_tags(session: AsyncSession, event_id: uuid.UUID) -> list[tuple[str, int]]:
     """Get all tags used by projects in the event, with project count, sorted desc."""
     result = await session.execute(
         select(Tag.name, func.count(ProjectTag.project_id).label("cnt"))
@@ -299,14 +302,10 @@ async def get_available_tags(
     return [(row.name, row.cnt) for row in result.all()]
 
 
-async def get_or_create_profile(
-    session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID
-) -> GuestProfile:
+async def get_or_create_profile(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> GuestProfile:
     """Get existing profile or create a new empty one."""
     result = await session.execute(
-        select(GuestProfile)
-        .where(GuestProfile.user_id == user_id)
-        .where(GuestProfile.event_id == event_id)
+        select(GuestProfile).where(GuestProfile.user_id == user_id).where(GuestProfile.event_id == event_id)
     )
     profile = result.scalars().first()
     if profile:
@@ -341,16 +340,16 @@ async def save_profile(
         profile.extra_data = extra_data
 
     await session.commit()
-    logger.info("Profile saved: user=%s tags=%s keywords=%s extra_data=%s", profile.user_id, selected_tags, keywords, extra_data)
+    logger.info(
+        "Profile saved: user=%s tags=%s keywords=%s extra_data=%s", profile.user_id, selected_tags, keywords, extra_data
+    )
     return profile
 
 
 # --- T006: Text extraction ---
 
 
-async def extract_interests_from_text(
-    raw_text: str, available_tags: list[str]
-) -> dict:
+async def extract_interests_from_text(raw_text: str, available_tags: list[str]) -> dict:
     """Extract interests from free text using LLM. Graceful degradation on failure."""
     if not raw_text or not raw_text.strip():
         return {"tags": [], "keywords": []}
@@ -441,8 +440,7 @@ async def generate_llm_summaries(
     guest_interests = json.dumps(interests_data, ensure_ascii=False)
 
     projects_text = "\n".join(
-        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc}"
-        for pid, title, desc, tags in projects
+        f"- project_id: {pid}, title: {title}, tags: {tags}, description: {desc}" for pid, title, desc, tags in projects
     )
 
     user_prompt = f"Профиль гостя: {guest_interests}\n\nПроекты:\n{projects_text}"
@@ -473,9 +471,7 @@ async def generate_llm_summaries(
 # --- T011: Generate recommendations (orchestrator) ---
 
 
-async def generate_recommendations(
-    session: AsyncSession, profile: GuestProfile
-) -> dict:
+async def generate_recommendations(session: AsyncSession, profile: GuestProfile) -> dict:
     """Orchestrate: embedding search → schedule rerank → LLM summaries → save.
 
     Pipeline:
@@ -496,9 +492,7 @@ async def generate_recommendations(
     event_id = profile.event_id
 
     # 0. Early check: any projects loaded for this event?
-    project_count = await session.scalar(
-        select(func.count(Project.id)).where(Project.event_id == event_id)
-    )
+    project_count = await session.scalar(select(func.count(Project.id)).where(Project.event_id == event_id))
     if not project_count:
         return {"no_projects": True, "total": 0, "must_visit": [], "if_time": []}
 
@@ -533,18 +527,22 @@ async def generate_recommendations(
     if profile_embedding:
         try:
             scored_points = await embedding_service.find_similar(
-                profile_embedding, event_id, limit=30,
+                profile_embedding,
+                event_id,
+                limit=30,
             )
             for sp in scored_points:
-                candidates_raw.append({
-                    "project_id": sp.payload["project_id"],
-                    "score": sp.score * 100,  # Cosine similarity → 0-100
-                    "title": sp.payload.get("title", ""),
-                    "description": sp.payload.get("description", ""),
-                    "tags": sp.payload.get("tags", []),
-                    "room_name": sp.payload.get("room_name"),
-                    "room_number": sp.payload.get("room_number"),
-                })
+                candidates_raw.append(
+                    {
+                        "project_id": sp.payload["project_id"],
+                        "score": sp.score * 100,  # Cosine similarity → 0-100
+                        "title": sp.payload.get("title", ""),
+                        "description": sp.payload.get("description", ""),
+                        "tags": sp.payload.get("tags", []),
+                        "room_name": sp.payload.get("room_name"),
+                        "room_number": sp.payload.get("room_number"),
+                    }
+                )
         except Exception:
             logger.warning("Qdrant search failed")
 
@@ -570,15 +568,17 @@ async def generate_recommendations(
                 break
             # Simple tag overlap scoring as fallback
             overlap = len(set(tag_names) & set(profile.selected_tags or []))
-            candidates_raw.append({
-                "project_id": str(p.id),
-                "score": overlap * 20.0,
-                "title": p.title,
-                "description": p.description[:500],
-                "tags": tag_names,
-                "room_name": room_name,
-                "room_number": room_number,
-            })
+            candidates_raw.append(
+                {
+                    "project_id": str(p.id),
+                    "score": overlap * 20.0,
+                    "title": p.title,
+                    "description": p.description[:500],
+                    "tags": tag_names,
+                    "room_name": room_name,
+                    "room_number": room_number,
+                }
+            )
         candidates_raw.sort(key=lambda x: x["score"], reverse=True)
 
     # 4. Schedule-aware rerank
@@ -609,15 +609,17 @@ async def generate_recommendations(
                 room_name = ra.room.name
                 room_number = ra.room.display_order + 1
                 break
-            top15.append({
-                "project_id": str(p.id),
-                "score": 0.0,
-                "title": p.title,
-                "description": p.description[:500],
-                "tags": tag_names,
-                "room_name": room_name,
-                "room_number": room_number,
-            })
+            top15.append(
+                {
+                    "project_id": str(p.id),
+                    "score": 0.0,
+                    "title": p.title,
+                    "description": p.description[:500],
+                    "tags": tag_names,
+                    "room_name": room_name,
+                    "room_number": room_number,
+                }
+            )
         logger.info("Padded recommendations to %d with popular projects", len(top15))
 
     # 6. Load project details for LLM summaries
@@ -655,9 +657,7 @@ async def generate_recommendations(
             c["score"] = round(c["score"], 1)
 
     # 9. Delete old recommendations
-    await session.execute(
-        delete(Recommendation).where(Recommendation.guest_profile_id == profile.id)
-    )
+    await session.execute(delete(Recommendation).where(Recommendation.guest_profile_id == profile.id))
 
     # 10. Save new recommendations
     recs = []
@@ -690,7 +690,9 @@ async def generate_recommendations(
     elapsed = time.monotonic() - start
     logger.info(
         "Recommendations generated: %d projects in %.1fs (profile=%s)",
-        len(recs), elapsed, profile.id,
+        len(recs),
+        elapsed,
+        profile.id,
     )
 
     return await get_recommendations(session, profile.id)
@@ -699,20 +701,14 @@ async def generate_recommendations(
 # --- T012: Get recommendations ---
 
 
-async def get_recommendations(
-    session: AsyncSession, profile_id: uuid.UUID
-) -> dict | None:
+async def get_recommendations(session: AsyncSession, profile_id: uuid.UUID) -> dict | None:
     """Load existing recommendations with project details, split into categories."""
     result = await session.execute(
         select(Recommendation)
         .where(Recommendation.guest_profile_id == profile_id)
         .options(
-            selectinload(Recommendation.project)
-            .selectinload(Project.tags)
-            .selectinload(ProjectTag.tag),
-            selectinload(Recommendation.project)
-            .selectinload(Project.room_assignments)
-            .selectinload(RoomProject.room),
+            selectinload(Recommendation.project).selectinload(Project.tags).selectinload(ProjectTag.tag),
+            selectinload(Recommendation.project).selectinload(Project.room_assignments).selectinload(RoomProject.room),
         )
         .order_by(Recommendation.rank)
     )
@@ -771,21 +767,15 @@ async def get_recommendations(
 # --- T013: Get project detail ---
 
 
-async def get_project_detail(
-    session: AsyncSession, profile_id: uuid.UUID, project_id: uuid.UUID
-) -> dict | None:
+async def get_project_detail(session: AsyncSession, profile_id: uuid.UUID, project_id: uuid.UUID) -> dict | None:
     """Load full project detail for a project in guest recommendation list."""
     result = await session.execute(
         select(Recommendation)
         .where(Recommendation.guest_profile_id == profile_id)
         .where(Recommendation.project_id == project_id)
         .options(
-            selectinload(Recommendation.project)
-            .selectinload(Project.tags)
-            .selectinload(ProjectTag.tag),
-            selectinload(Recommendation.project)
-            .selectinload(Project.room_assignments)
-            .selectinload(RoomProject.room),
+            selectinload(Recommendation.project).selectinload(Project.tags).selectinload(ProjectTag.tag),
+            selectinload(Recommendation.project).selectinload(Project.room_assignments).selectinload(RoomProject.room),
         )
     )
     rec = result.scalars().first()

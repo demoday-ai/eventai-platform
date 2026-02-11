@@ -43,12 +43,8 @@ async def upsert(
     return result.scalars().one()
 
 
-async def get_by_telegram_id(
-    session: AsyncSession, telegram_user_id: str
-) -> User | None:
-    result = await session.execute(
-        select(User).where(User.telegram_user_id == telegram_user_id)
-    )
+async def get_by_telegram_id(session: AsyncSession, telegram_user_id: str) -> User | None:
+    result = await session.execute(select(User).where(User.telegram_user_id == telegram_user_id))
     return result.scalar_one_or_none()
 
 
@@ -61,9 +57,7 @@ async def get_role_by_code(session: AsyncSession, code: RoleCode) -> Role | None
     return result.scalar_one_or_none()
 
 
-async def get_user_role(
-    session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID
-) -> UserRole | None:
+async def get_user_role(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> UserRole | None:
     result = await session.execute(
         select(UserRole).where(
             UserRole.user_id == user_id,
@@ -73,9 +67,7 @@ async def get_user_role(
     return result.scalar_one_or_none()
 
 
-async def get_user_role_with_info(
-    session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID
-) -> Role | None:
+async def get_user_role_with_info(session: AsyncSession, user_id: uuid.UUID, event_id: uuid.UUID) -> Role | None:
     result = await session.execute(
         select(Role)
         .join(UserRole, UserRole.role_id == Role.id)
@@ -84,19 +76,11 @@ async def get_user_role_with_info(
     return result.scalar_one_or_none()
 
 
-async def get_guest_profile(
-    session: AsyncSession, user_id: uuid.UUID
-) -> GuestProfile | None:
-    result = await session.execute(
-        select(GuestProfile).where(GuestProfile.user_id == user_id)
-    )
+async def get_guest_profile(session: AsyncSession, user_id: uuid.UUID) -> GuestProfile | None:
+    result = await session.execute(select(GuestProfile).where(GuestProfile.user_id == user_id))
     return result.scalar_one_or_none()
 
 
-async def get_business_profile(
-    session: AsyncSession, user_id: uuid.UUID
-) -> BusinessProfile | None:
-    result = await session.execute(
-        select(BusinessProfile).where(BusinessProfile.user_id == user_id)
-    )
+async def get_business_profile(session: AsyncSession, user_id: uuid.UUID) -> BusinessProfile | None:
+    result = await session.execute(select(BusinessProfile).where(BusinessProfile.user_id == user_id))
     return result.scalar_one_or_none()

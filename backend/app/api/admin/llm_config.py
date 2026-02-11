@@ -86,14 +86,13 @@ async def get_current_model(
     user: User = Depends(get_current_user),
 ):
     """Get currently selected LLM model."""
-    result = await session.execute(
-        select(AppSettings).where(AppSettings.key == "llm_model")
-    )
+    result = await session.execute(select(AppSettings).where(AppSettings.key == "llm_model"))
     setting = result.scalar_one_or_none()
 
     if not setting:
         # Return default from config
         from app.config import settings
+
         return {"model_id": settings.openrouter_model}
 
     return {"model_id": setting.value}
@@ -111,9 +110,7 @@ async def update_model(
     if data.model_id not in valid_models:
         raise HTTPException(status_code=400, detail="Invalid model ID")
 
-    result = await session.execute(
-        select(AppSettings).where(AppSettings.key == "llm_model")
-    )
+    result = await session.execute(select(AppSettings).where(AppSettings.key == "llm_model"))
     setting = result.scalar_one_or_none()
 
     if setting:
@@ -141,6 +138,7 @@ async def get_api_keys(
     """Get all LLM API keys with status."""
     # Sync key stats from memory to DB before fetching
     from app.services.core.llm_client import get_key_manager, sync_key_stats_to_db
+
     await sync_key_stats_to_db(session)
 
     result = await session.execute(select(LlmApiKey).where(LlmApiKey.is_active))
@@ -154,22 +152,21 @@ async def get_api_keys(
     response = []
     for key_obj in keys:
         # Find matching live stats
-        live_stat = next(
-            (s for s in stats["keys"] if key_obj.api_key.endswith(s["suffix"])),
-            None
-        )
+        live_stat = next((s for s in stats["keys"] if key_obj.api_key.endswith(s["suffix"])), None)
 
-        response.append({
-            "id": str(key_obj.id),
-            "key_suffix": key_obj.key_suffix,
-            "is_active": key_obj.is_active,
-            "fail_count": live_stat["fail_count"] if live_stat else key_obj.fail_count,
-            "available": live_stat["available"] if live_stat else True,
-            "cooldown_remaining": live_stat.get("cooldown_remaining", 0) if live_stat else 0,
-            "failed_at": key_obj.failed_at.isoformat() if key_obj.failed_at else None,
-            "last_success_at": key_obj.last_success_at.isoformat() if key_obj.last_success_at else None,
-            "created_at": key_obj.created_at.isoformat(),
-        })
+        response.append(
+            {
+                "id": str(key_obj.id),
+                "key_suffix": key_obj.key_suffix,
+                "is_active": key_obj.is_active,
+                "fail_count": live_stat["fail_count"] if live_stat else key_obj.fail_count,
+                "available": live_stat["available"] if live_stat else True,
+                "cooldown_remaining": live_stat.get("cooldown_remaining", 0) if live_stat else 0,
+                "failed_at": key_obj.failed_at.isoformat() if key_obj.failed_at else None,
+                "last_success_at": key_obj.last_success_at.isoformat() if key_obj.last_success_at else None,
+                "created_at": key_obj.created_at.isoformat(),
+            }
+        )
 
     return {"keys": response}
 
@@ -187,9 +184,7 @@ async def add_api_key(
         raise HTTPException(status_code=400, detail="Invalid API key format")
 
     # Check if key already exists
-    result = await session.execute(
-        select(LlmApiKey).where(LlmApiKey.api_key == api_key)
-    )
+    result = await session.execute(select(LlmApiKey).where(LlmApiKey.api_key == api_key))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Key already exists")
 
@@ -209,6 +204,7 @@ async def add_api_key(
 
     # Reload KeyManager to pick up new key
     from app.services.core.llm_client import get_key_manager
+
     get_key_manager()._initialized = False
 
     return {
@@ -225,18 +221,14 @@ async def delete_api_key(
     user: User = Depends(get_current_user),
 ):
     """Delete LLM API key."""
-    result = await session.execute(
-        select(LlmApiKey).where(LlmApiKey.id == key_id)
-    )
+    result = await session.execute(select(LlmApiKey).where(LlmApiKey.id == key_id))
     key_obj = result.scalar_one_or_none()
 
     if not key_obj:
         raise HTTPException(status_code=404, detail="Key not found")
 
     # Check if this is the last active key
-    result = await session.execute(
-        select(LlmApiKey).where(LlmApiKey.is_active)
-    )
+    result = await session.execute(select(LlmApiKey).where(LlmApiKey.is_active))
     active_keys = result.scalars().all()
 
     if len(active_keys) <= 1:
@@ -249,6 +241,7 @@ async def delete_api_key(
 
     # Reload KeyManager
     from app.services.core.llm_client import get_key_manager
+
     get_key_manager()._initialized = False
 
     return {"status": "deleted"}

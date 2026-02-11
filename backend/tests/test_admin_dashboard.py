@@ -166,6 +166,7 @@ async def test_pipeline_status_with_data(db, seed_event, seed_project):
     """Event + projects completed."""
     # Add a student user role for students step
     from sqlalchemy import select
+
     student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
     if not student_role:
         student_role = Role(code=RoleCode.STUDENT.value, name="Студент")
@@ -197,11 +198,16 @@ async def test_pipeline_status_with_data(db, seed_event, seed_project):
 
 @pytest.mark.asyncio
 async def test_pipeline_status_next_action_none_when_all_complete(
-    db, seed_event, seed_project, seed_clustering, seed_room,
+    db,
+    seed_event,
+    seed_project,
+    seed_clustering,
+    seed_room,
 ):
     """All steps completed → next_action is None."""
     # Add student user role
     from sqlalchemy import select
+
     student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
     if not student_role:
         student_role = Role(code=RoleCode.STUDENT.value, name="Студент")
@@ -227,8 +233,11 @@ async def test_pipeline_status_next_action_none_when_all_complete(
 
     # Add expert assignment
     assignment = ExpertRoomAssignment(
-        expert_id=expert.id, room_id=seed_room.id, clustering_run_id=seed_clustering.id,
-        match_score=0.8, status="confirmed",
+        expert_id=expert.id,
+        room_id=seed_room.id,
+        clustering_run_id=seed_clustering.id,
+        match_score=0.8,
+        status="confirmed",
     )
     db.add(assignment)
     await db.flush()
@@ -243,16 +252,21 @@ async def test_pipeline_status_next_action_none_when_all_complete(
     await db.flush()
 
     notif = Notification(
-        event_id=seed_event.id, user_id=user.id,
-        type="eve_of_dd", content="Reminder", status="sent",
+        event_id=seed_event.id,
+        user_id=user.id,
+        type="eve_of_dd",
+        content="Reminder",
+        status="sent",
     )
     db.add(notif)
     await db.flush()
 
     # Add briefing
     briefing = ExpertBriefing(
-        expert_id=expert.id, event_id=seed_event.id,
-        room_id=seed_room.id, project_count=1,
+        expert_id=expert.id,
+        event_id=seed_event.id,
+        room_id=seed_room.id,
+        project_count=1,
     )
     db.add(briefing)
     await db.flush()
@@ -322,8 +336,11 @@ async def test_coverage_partial_status(db, seed_event, seed_clustering, seed_roo
     await db.flush()
 
     assignment = ExpertRoomAssignment(
-        expert_id=expert.id, room_id=seed_room.id,
-        clustering_run_id=seed_clustering.id, match_score=0.5, status="confirmed",
+        expert_id=expert.id,
+        room_id=seed_room.id,
+        clustering_run_id=seed_clustering.id,
+        match_score=0.5,
+        status="confirmed",
     )
     db.add(assignment)
     await db.flush()
