@@ -95,10 +95,35 @@ export function Tags() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteTag,
+    onMutate: async (tagToDelete) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["tags"] })
+
+      // Snapshot previous value
+      const previousTags = queryClient.getQueryData(["tags"])
+
+      // Optimistically update
+      queryClient.setQueryData(["tags"], (old: { tags: string[] } | undefined) => {
+        if (!old) return old
+        return { tags: old.tags.filter((t) => t !== tagToDelete) }
+      })
+
+      return { previousTags }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tags"] })
     },
-    onError: (err) => {
+    onError: (err, _tagToDelete, context) => {
+      // Ignore 404 errors (tag already deleted)
+      if (err instanceof Error && err.message.includes("404")) {
+        queryClient.invalidateQueries({ queryKey: ["tags"] })
+        return
+      }
+
+      // Rollback on other errors
+      if (context?.previousTags) {
+        queryClient.setQueryData(["tags"], context.previousTags)
+      }
       setTagError(err instanceof Error ? err.message : "Не удалось удалить тег")
     },
   })
