@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter } from "react-router-dom"
 import { ProjectsList } from "./ProjectsList"
 import * as apiClient from "../lib/api-client"
+import { BackgroundJobsProvider } from "../contexts/BackgroundJobsContext"
 
 // Mock hooks
 vi.mock("../hooks/useAuth", () => ({
@@ -73,9 +74,11 @@ const createWrapper = () => {
   })
 
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
-    </QueryClientProvider>
+    <BackgroundJobsProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>{children}</BrowserRouter>
+      </QueryClientProvider>
+    </BackgroundJobsProvider>
   )
 }
 
