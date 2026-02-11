@@ -631,7 +631,7 @@ export function DataImport() {
                   disabled={!projectFile || projectPreviewMutation.isPending || !!isProjectBusy}
                 >
                   {projectPreviewMutation.isPending ? "Анализ..."
-                    : !!isProjectBusy ? "Загрузка..."
+                    : isProjectBusy ? "Загрузка..."
                     : projectHasData ? "Анализировать" : "Загрузить"}
                 </Button>
 
