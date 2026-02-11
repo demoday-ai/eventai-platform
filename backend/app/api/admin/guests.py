@@ -139,6 +139,58 @@ async def export_guests(
     )
 
 
+@router.delete("/guests/all")
+async def delete_all_guests(
+    subtype: str | None = Query(None),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete all guests for current event, optionally filtered by subtype."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
+
+    guest_role = await user_service.get_role_by_code(db, RoleCode.GUEST)
+    if not guest_role:
+        raise HTTPException(status_code=500, detail="Guest role not found")
+
+    query = select(UserRole).where(
+        UserRole.event_id == event.id,
+        UserRole.role_id == guest_role.id,
+    )
+    if subtype:
+        try:
+            subtype_enum = GuestSubtype(subtype)
+        except ValueError:
+            valid = [s.value for s in GuestSubtype]
+            raise HTTPException(status_code=422, detail=f"Invalid subtype. Valid: {valid}")
+        query = query.where(UserRole.guest_subtype == subtype_enum)
+
+    result = await db.execute(query)
+    roles = list(result.scalars().all())
+    count = len(roles)
+
+    user_ids = [ur.user_id for ur in roles]
+    for ur in roles:
+        await db.delete(ur)
+
+    # Delete users with synthetic IDs (created by import)
+    for uid in user_ids:
+        user = await db.get(User, uid)
+        if user and user.telegram_user_id.startswith("guest-"):
+            await db.delete(user)
+
+    await db.commit()
+
+    await audit_service.log_action(
+        db, current_user, "delete_all_guests",
+        entity_type="guests",
+        details={"deleted": count, "subtype": subtype},
+    )
+
+    return {"deleted": count}
+
+
 @router.get("/guests/{user_id}", response_model=GuestDetailResponse)
 async def get_guest_detail(
     user_id: UUID,
@@ -420,55 +472,3 @@ async def merge_guest_upload(
     )
 
     return result
-
-
-@router.delete("/guests/all")
-async def delete_all_guests(
-    subtype: str | None = Query(None),
-    db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete all guests for current event, optionally filtered by subtype."""
-    event = await user_service.get_current_event(db)
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
-
-    guest_role = await user_service.get_role_by_code(db, RoleCode.GUEST)
-    if not guest_role:
-        raise HTTPException(status_code=500, detail="Guest role not found")
-
-    query = select(UserRole).where(
-        UserRole.event_id == event.id,
-        UserRole.role_id == guest_role.id,
-    )
-    if subtype:
-        try:
-            subtype_enum = GuestSubtype(subtype)
-        except ValueError:
-            valid = [s.value for s in GuestSubtype]
-            raise HTTPException(status_code=422, detail=f"Invalid subtype. Valid: {valid}")
-        query = query.where(UserRole.guest_subtype == subtype_enum)
-
-    result = await db.execute(query)
-    roles = list(result.scalars().all())
-    count = len(roles)
-
-    user_ids = [ur.user_id for ur in roles]
-    for ur in roles:
-        await db.delete(ur)
-
-    # Delete users with synthetic IDs (created by import)
-    for uid in user_ids:
-        user = await db.get(User, uid)
-        if user and user.telegram_user_id.startswith("guest-"):
-            await db.delete(user)
-
-    await db.commit()
-
-    await audit_service.log_action(
-        db, current_user, "delete_all_guests",
-        entity_type="guests",
-        details={"deleted": count, "subtype": subtype},
-    )
-
-    return {"deleted": count}
