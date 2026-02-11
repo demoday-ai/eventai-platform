@@ -34,3 +34,12 @@ async def check_organizer(
 ) -> User:
     """Dependency that checks if the current user is an organizer."""
     return current_user
+
+
+async def get_current_user_id(current_user: User = Depends(get_current_user)) -> str:
+    """Get telegram_id of the current user."""
+    return current_user.telegram_user_id
+
+
+# Alias for get_session (used in some routes)
+get_db = get_session
