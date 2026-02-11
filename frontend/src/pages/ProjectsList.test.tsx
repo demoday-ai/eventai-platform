@@ -174,6 +174,11 @@ describe("ProjectsList", () => {
       expect(screen.getByText("Чатбот для поддержки")).toBeInTheDocument()
     })
 
+    // Wait for room options to load in the select
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Зал 1: NLP" })).toBeInTheDocument()
+    })
+
     // Select room filter
     const roomFilter = screen.getByLabelText(/зал/i)
     await user.selectOptions(roomFilter, "room-1")
