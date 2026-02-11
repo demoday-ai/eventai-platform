@@ -347,6 +347,19 @@ async def generate_missing_tags(
     total = len(projects_without_tags)
 
     for project in projects_without_tags:
+        # Check for cancellation before each project
+        if progress_callback:
+            try:
+                progress_callback({
+                    "stage": "tagging",
+                    "current": processed,
+                    "total": total,
+                    "tagged": tagged,
+                })
+            except Exception:
+                # If progress_callback raises (e.g., CancelledError), stop processing
+                raise
+
         raw_text = f"{project.title}\n{project.description}"
         tag_names = _match_tags_heuristic(raw_text, candidate_tags)
 
