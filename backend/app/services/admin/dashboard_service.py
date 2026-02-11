@@ -339,16 +339,16 @@ async def get_pipeline_status(
         ) or 0
         step_statuses["projects"] = "completed" if projects_count > 0 else "not_started"
 
-        # students step - check for UserRole with student role
-        student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
-        students_count = 0
-        if student_role:
-            students_count = await db.scalar(
-                select(func.count(UserRole.id)).where(
-                    UserRole.event_id == event_id,
-                    UserRole.role_id == student_role.id,
-                )
-            ) or 0
+        # students step - check for users with guest_subtype=STUDENT
+        from app.models.user import GuestSubtype
+        students_count = await db.scalar(
+            select(func.count(User.id.distinct())).select_from(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .where(
+                UserRole.event_id == event_id,
+                User.guest_subtype == GuestSubtype.STUDENT,
+            )
+        ) or 0
         step_statuses["students"] = "completed" if students_count > 0 else "not_started"
 
         # experts step
