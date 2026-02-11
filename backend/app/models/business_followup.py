@@ -15,6 +15,7 @@ from app.models.base import Base
 
 class PipelineStatus(str, enum.Enum):
     """Status of a project in partner's pipeline."""
+
     interested = "interested"
     contacted = "contacted"
     negotiating = "negotiating"

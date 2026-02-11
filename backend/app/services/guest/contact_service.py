@@ -27,9 +27,7 @@ async def get_student_for_project(
     Uses telegram_contact from project to find the user.
     """
     # Get project
-    result = await session.execute(
-        select(Project).where(Project.id == project_id)
-    )
+    result = await session.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
         return None
@@ -40,9 +38,7 @@ async def get_student_for_project(
     if contact.startswith("@"):
         contact = contact[1:]
 
-    result = await session.execute(
-        select(User).where(User.username == contact)
-    )
+    result = await session.execute(select(User).where(User.username == contact))
     return result.scalar_one_or_none()
 
 
@@ -78,8 +74,7 @@ async def create_request(
     session.add(request)
     await session.flush()
     logger.info(
-        "Contact request created: requester=%s project=%s student=%s",
-        requester_id, project_id, student_user_id
+        "Contact request created: requester=%s project=%s student=%s", requester_id, project_id, student_user_id
     )
     return request
 

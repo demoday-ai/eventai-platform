@@ -20,6 +20,4 @@ class Room(Base):
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     clustering_run = relationship("ClusteringRun", back_populates="rooms")
-    project_assignments = relationship(
-        "RoomProject", back_populates="room", cascade="all, delete-orphan"
-    )
+    project_assignments = relationship("RoomProject", back_populates="room", cascade="all, delete-orphan")

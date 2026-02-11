@@ -15,18 +15,18 @@ async def get_by_id(session: AsyncSession, notification_id: UUID) -> Notificatio
 async def get_pending(session: AsyncSession, limit: int = 100) -> list[Notification]:
     """Get pending notifications for delivery."""
     result = await session.execute(
-        select(Notification)
-        .where(Notification.status == "PENDING")
-        .order_by(Notification.created_at)
-        .limit(limit)
+        select(Notification).where(Notification.status == "PENDING").order_by(Notification.created_at).limit(limit)
     )
     return list(result.scalars().all())
 
 
 async def count_by_status(session: AsyncSession, event_id: UUID, status: str) -> int:
-    return await session.scalar(
-        select(func.count(Notification.id)).where(
-            Notification.event_id == event_id,
-            Notification.status == status,
+    return (
+        await session.scalar(
+            select(func.count(Notification.id)).where(
+                Notification.event_id == event_id,
+                Notification.status == status,
+            )
         )
-    ) or 0
+        or 0
+    )

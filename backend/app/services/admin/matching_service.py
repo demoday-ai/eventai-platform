@@ -50,9 +50,7 @@ async def get_approved_clustering(session: AsyncSession, event_id) -> Clustering
     return result.scalars().first()
 
 
-async def get_room_tags(
-    session: AsyncSession, clustering_run_id
-) -> dict[uuid.UUID, tuple[Room, set[str]]]:
+async def get_room_tags(session: AsyncSession, clustering_run_id) -> dict[uuid.UUID, tuple[Room, set[str]]]:
     """For each room, compute tag set as union of project tags."""
     result = await session.execute(
         select(Room)
@@ -133,9 +131,7 @@ async def resolve_adjacent_tags(all_tags: list[str]) -> dict[str, set[str]]:
         return {}
 
 
-async def run_matching(
-    session: AsyncSession, event_id, use_adjacent_tags: bool = True
-) -> dict:
+async def run_matching(session: AsyncSession, event_id, use_adjacent_tags: bool = True) -> dict:
     """Run weighted tag-overlap matching. Returns matching result dict."""
 
     # 1. Get approved clustering
@@ -151,6 +147,7 @@ async def run_matching(
     )
     # Actually delete
     from sqlalchemy import delete
+
     await session.execute(
         delete(ExpertRoomAssignment)
         .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
@@ -171,9 +168,7 @@ async def run_matching(
 
     # 6. Get all experts with tags
     experts_result = await session.execute(
-        select(Expert)
-        .where(Expert.event_id == event_id)
-        .options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
+        select(Expert).where(Expert.event_id == event_id).options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
     )
     all_experts = experts_result.scalars().all()
 
@@ -255,12 +250,14 @@ async def run_matching(
             for exp, asgn, tags in assignments
             if asgn.room_id == room_id
         ]
-        rooms_result.append({
-            "room_id": str(room.id),
-            "room_name": room.name,
-            "expert_count": len(room_experts),
-            "experts": sorted(room_experts, key=lambda x: x["match_score"], reverse=True),
-        })
+        rooms_result.append(
+            {
+                "room_id": str(room.id),
+                "room_name": room.name,
+                "expert_count": len(room_experts),
+                "experts": sorted(room_experts, key=lambda x: x["match_score"], reverse=True),
+            }
+        )
 
     return {
         "clustering_run_id": str(clustering.id),
@@ -271,9 +268,7 @@ async def run_matching(
     }
 
 
-async def move_expert(
-    session: AsyncSession, assignment_id, target_room_id
-) -> ExpertRoomAssignment | None:
+async def move_expert(session: AsyncSession, assignment_id, target_room_id) -> ExpertRoomAssignment | None:
     """Move expert to a different room."""
     result = await session.execute(
         select(ExpertRoomAssignment)
@@ -313,9 +308,7 @@ async def approve_matching(session: AsyncSession, clustering_run_id) -> int:
     return count
 
 
-async def assign_expert_to_room(
-    session: AsyncSession, event_id, expert_id, room_id
-) -> ExpertRoomAssignment | None:
+async def assign_expert_to_room(session: AsyncSession, event_id, expert_id, room_id) -> ExpertRoomAssignment | None:
     """Manually assign an unmatched expert to a room."""
     clustering = await get_approved_clustering(session, event_id)
     if not clustering:
@@ -371,9 +364,7 @@ async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
         select(ExpertRoomAssignment)
         .where(ExpertRoomAssignment.clustering_run_id == clustering.id)
         .options(
-            selectinload(ExpertRoomAssignment.expert)
-            .selectinload(Expert.tags)
-            .selectinload(ExpertTag.tag),
+            selectinload(ExpertRoomAssignment.expert).selectinload(Expert.tags).selectinload(ExpertTag.tag),
             selectinload(ExpertRoomAssignment.room),
         )
     )
@@ -392,26 +383,28 @@ async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
         experts = []
         for a in room_assignments:
             tag_names = [et.tag.name for et in a.expert.tags]
-            experts.append({
-                "expert_id": str(a.expert.id),
-                "name": a.expert.name,
-                "match_score": round(a.match_score / max_score, 3),
-                "matching_tags": tag_names,
-                "is_manual": a.is_manual,
-                "status": a.status,
-            })
-        rooms_result.append({
-            "room_id": str(room.id),
-            "room_name": room.name,
-            "expert_count": len(experts),
-            "experts": sorted(experts, key=lambda x: x["match_score"], reverse=True),
-        })
+            experts.append(
+                {
+                    "expert_id": str(a.expert.id),
+                    "name": a.expert.name,
+                    "match_score": round(a.match_score / max_score, 3),
+                    "matching_tags": tag_names,
+                    "is_manual": a.is_manual,
+                    "status": a.status,
+                }
+            )
+        rooms_result.append(
+            {
+                "room_id": str(room.id),
+                "room_name": room.name,
+                "expert_count": len(experts),
+                "experts": sorted(experts, key=lambda x: x["match_score"], reverse=True),
+            }
+        )
 
     # Get all experts and find unmatched ones
     all_experts_result = await session.execute(
-        select(Expert)
-        .where(Expert.event_id == event_id)
-        .options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
+        select(Expert).where(Expert.event_id == event_id).options(selectinload(Expert.tags).selectinload(ExpertTag.tag))
     )
     all_experts = all_experts_result.scalars().all()
     matched_ids = {a.expert_id for a in assignments}
@@ -419,11 +412,13 @@ async def get_current_matching(session: AsyncSession, event_id) -> dict | None:
     unmatched = []
     for expert in all_experts:
         if expert.id not in matched_ids:
-            unmatched.append({
-                "expert_id": str(expert.id),
-                "name": expert.name,
-                "tags": [et.tag.name for et in expert.tags] if expert.tags else [],
-            })
+            unmatched.append(
+                {
+                    "expert_id": str(expert.id),
+                    "name": expert.name,
+                    "tags": [et.tag.name for et in expert.tags] if expert.tags else [],
+                }
+            )
 
     return {
         "clustering_run_id": str(clustering.id),

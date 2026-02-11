@@ -27,14 +27,14 @@ logger = logging.getLogger(__name__)
 
 def _acknowledge_slot_keyboard(request_id: str) -> InlineKeyboardMarkup:
     short_id = str(request_id)[:8]
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ознакомлен", callback_data=f"ack:{short_id}")],
-    ])
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Ознакомлен", callback_data=f"ack:{short_id}")],
+        ]
+    )
 
 
-async def get_approved_clustering_run(
-    session: AsyncSession, event_id: uuid.UUID
-) -> ClusteringRun | None:
+async def get_approved_clustering_run(session: AsyncSession, event_id: uuid.UUID) -> ClusteringRun | None:
     result = await session.execute(
         select(ClusteringRun)
         .where(
@@ -47,15 +47,11 @@ async def get_approved_clustering_run(
     return result.scalar_one_or_none()
 
 
-async def match_project_to_user(
-    session: AsyncSession, project: Project
-) -> User | None:
+async def match_project_to_user(session: AsyncSession, project: Project) -> User | None:
     contact = (project.telegram_contact or "").strip().lstrip("@").lower()
     if not contact:
         return None
-    result = await session.execute(
-        select(User).where(func.lower(User.username) == contact)
-    )
+    result = await session.execute(select(User).where(func.lower(User.username) == contact))
     return result.scalar_one_or_none()
 
 
@@ -91,7 +87,6 @@ async def broadcast_slots(
     event: Event,
     bot: MessageSender,
 ) -> dict:
-
     clustering_run = await get_approved_clustering_run(session, event.id)
     if not clustering_run:
         raise ValueError("Нет утверждённого расписания")
@@ -134,10 +129,12 @@ async def broadcast_slots(
         user = await match_project_to_user(session, project)
         if not user:
             unregistered += 1
-            unregistered_projects.append({
-                "project_title": project.title,
-                "telegram_contact": project.telegram_contact,
-            })
+            unregistered_projects.append(
+                {
+                    "project_title": project.title,
+                    "telegram_contact": project.telegram_contact,
+                }
+            )
             # Still create PR for tracking
             if not pr:
                 pr = ParticipationRequest(
@@ -218,9 +215,7 @@ async def acknowledge_participation(
 ) -> tuple[bool, str]:
     """Returns (success, message)."""
     result = await session.execute(
-        select(ParticipationRequest).where(
-            ParticipationRequest.id.cast(str).like(f"{short_id}%")
-        )
+        select(ParticipationRequest).where(ParticipationRequest.id.cast(str).like(f"{short_id}%"))
     )
     pr = result.scalar_one_or_none()
 
@@ -366,17 +361,13 @@ async def get_participation_summary(
     event_id: uuid.UUID,
     room_id: uuid.UUID | None = None,
 ) -> dict:
-    base_q = select(ParticipationRequest).where(
-        ParticipationRequest.event_id == event_id
-    )
+    base_q = select(ParticipationRequest).where(ParticipationRequest.event_id == event_id)
 
     if room_id:
         base_q = base_q.join(RoomProject).where(RoomProject.room_id == room_id)
 
     result = await session.execute(
-        base_q.options(
-            joinedload(ParticipationRequest.room_project).joinedload(RoomProject.room)
-        )
+        base_q.options(joinedload(ParticipationRequest.room_project).joinedload(RoomProject.room))
     )
     all_requests = result.unique().scalars().all()
 
@@ -441,15 +432,17 @@ async def get_unacknowledged_list(
     items = []
     for r in requests:
         room_name = r.room_project.room.name if r.room_project else "N/A"
-        items.append({
-            "request_id": r.id,
-            "project_title": r.project.title,
-            "author_name": r.project.author,
-            "telegram_contact": r.project.telegram_contact,
-            "room_name": room_name,
-            "status": r.status.value,
-            "sent_at": r.created_at,
-            "reminder_sent": r.reminder_sent_at is not None,
-            "escalated": r.escalated_at is not None,
-        })
+        items.append(
+            {
+                "request_id": r.id,
+                "project_title": r.project.title,
+                "author_name": r.project.author,
+                "telegram_contact": r.project.telegram_contact,
+                "room_name": room_name,
+                "status": r.status.value,
+                "sent_at": r.created_at,
+                "reminder_sent": r.reminder_sent_at is not None,
+                "escalated": r.escalated_at is not None,
+            }
+        )
     return items

@@ -58,9 +58,7 @@ async def test_move_project_reassigns_project(session):
 
     await clustering_service.move_project(session, run.id, project.id, target_room.id)
 
-    result = await session.execute(
-        select(RoomProject).where(RoomProject.project_id == project.id)
-    )
+    result = await session.execute(select(RoomProject).where(RoomProject.project_id == project.id))
     moved = result.scalar_one()
     assert moved.room_id == target_room.id
     assert moved.is_manual is True
@@ -111,9 +109,7 @@ async def test_move_project_rejects_invalid_target(session):
     await session.flush()
 
     with pytest.raises(ValueError, match="Целевой зал"):
-        await clustering_service.move_project(
-            session, run.id, project.id, room_other.id
-        )
+        await clustering_service.move_project(session, run.id, project.id, room_other.id)
 
 
 @pytest.mark.asyncio
@@ -138,9 +134,7 @@ async def test_suggest_room_themes_returns_themes(session):
 
     # Mock LLM
     with patch("app.services.admin.clustering_service.llm_client.send_chat_completion") as mock_llm:
-        mock_llm.return_value = {
-            "themes": ["NLP и языковые модели", "AI в образовании", "Computer Vision"]
-        }
+        mock_llm.return_value = {"themes": ["NLP и языковые модели", "AI в образовании", "Computer Vision"]}
 
         themes = await clustering_service.suggest_room_themes(session, event.id, num_rooms=3)
 

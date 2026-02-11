@@ -36,13 +36,15 @@ async def get_guest_recommendations(
     projects = []
     for rec in recommendations:
         if rec.project:
-            projects.append({
-                "id": str(rec.project.id),
-                "title": rec.project.title,
-                "description": rec.project.description[:200] if rec.project.description else "",
-                "score": rec.score,
-                "reason": rec.reason,
-            })
+            projects.append(
+                {
+                    "id": str(rec.project.id),
+                    "title": rec.project.title,
+                    "description": rec.project.description[:200] if rec.project.description else "",
+                    "score": rec.score,
+                    "reason": rec.reason,
+                }
+            )
     return projects
 
 
@@ -69,9 +71,7 @@ async def get_approved_contacts(
     for req in requests:
         if req.project and req.project.user_id:
             # Get student's telegram
-            student_result = await session.execute(
-                select(User).where(User.id == req.project.user_id)
-            )
+            student_result = await session.execute(select(User).where(User.id == req.project.user_id))
             student = student_result.scalar_one_or_none()
             if student and student.telegram_username:
                 contacts[req.project_id] = f"@{student.telegram_username}"
@@ -86,9 +86,7 @@ async def generate_package_content(
 ) -> dict:
     """Generate follow-up package content for a guest."""
     # Get guest profile
-    profile_result = await session.execute(
-        select(GuestProfile).where(GuestProfile.user_id == user_id)
-    )
+    profile_result = await session.execute(select(GuestProfile).where(GuestProfile.user_id == user_id))
     profile = profile_result.scalar_one_or_none()
 
     # Get recommended projects
@@ -136,9 +134,7 @@ async def get_or_create_package(
 
     # Create or update package
     result = await session.execute(
-        select(FollowupPackage)
-        .where(FollowupPackage.user_id == user_id)
-        .where(FollowupPackage.event_id == event_id)
+        select(FollowupPackage).where(FollowupPackage.user_id == user_id).where(FollowupPackage.event_id == event_id)
     )
     package = result.scalar_one_or_none()
 
@@ -154,8 +150,9 @@ async def get_or_create_package(
         session.add(package)
 
     await session.flush()
-    logger.info("Follow-up package generated: user=%s event=%s projects=%d",
-                user_id, event_id, len(content.get("projects", [])))
+    logger.info(
+        "Follow-up package generated: user=%s event=%s projects=%d", user_id, event_id, len(content.get("projects", []))
+    )
     return package
 
 
@@ -164,9 +161,7 @@ async def mark_package_sent(
     package_id: UUID,
 ) -> None:
     """Mark package as sent."""
-    result = await session.execute(
-        select(FollowupPackage).where(FollowupPackage.id == package_id)
-    )
+    result = await session.execute(select(FollowupPackage).where(FollowupPackage.id == package_id))
     package = result.scalar_one_or_none()
     if package:
         package.sent = True
@@ -203,12 +198,14 @@ def format_package_message(package: FollowupPackage) -> str:
     if len(projects) > 10:
         lines.append(f"... и ещё {len(projects) - 10} проектов")
 
-    lines.extend([
-        "\n━━━━━━━━━━━━━━━━━━━━",
-        "\n💡 *Шаблон для связи:*",
-        "_Здравствуйте! Видел(а) ваш проект на Demo Day._",
-        "_Интересует возможность сотрудничества._",
-    ])
+    lines.extend(
+        [
+            "\n━━━━━━━━━━━━━━━━━━━━",
+            "\n💡 *Шаблон для связи:*",
+            "_Здравствуйте! Видел(а) ваш проект на Demo Day._",
+            "_Интересует возможность сотрудничества._",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -220,17 +217,13 @@ async def get_guests_without_package(
     """Get guests who haven't received a follow-up package."""
     # Get all guests with profiles
     guests_result = await session.execute(
-        select(User)
-        .join(GuestProfile, GuestProfile.user_id == User.id)
-        .where(User.telegram_chat_id.isnot(None))
+        select(User).join(GuestProfile, GuestProfile.user_id == User.id).where(User.telegram_chat_id.isnot(None))
     )
     all_guests = list(guests_result.scalars().all())
 
     # Get guests who already have packages
     packages_result = await session.execute(
-        select(FollowupPackage.user_id)
-        .where(FollowupPackage.event_id == event_id)
-        .where(FollowupPackage.sent is True)
+        select(FollowupPackage.user_id).where(FollowupPackage.event_id == event_id).where(FollowupPackage.sent is True)
     )
     sent_user_ids = {row[0] for row in packages_result.all()}
 

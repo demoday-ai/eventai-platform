@@ -68,9 +68,10 @@ async def test_start_command_new_user(mock_event, mock_user):
     mock_context.args = []
     mock_context.user_data = {}
 
-    with patch("app.bot.handlers.start.async_session", mock_session), \
-         patch("app.bot.handlers.start.user_service") as mock_user_svc:
-
+    with (
+        patch("app.bot.handlers.start.async_session", mock_session),
+        patch("app.bot.handlers.start.user_service") as mock_user_svc,
+    ):
         mock_user_svc.upsert_user = AsyncMock(return_value=mock_user)
         mock_user_svc.get_current_event = AsyncMock(return_value=mock_event)
         mock_user_svc.get_user_role_with_info = AsyncMock(return_value=None)
@@ -112,10 +113,11 @@ async def test_start_command_existing_user(mock_event, mock_user, mock_role):
     mock_context.args = []
     mock_context.user_data = {}
 
-    with patch("app.bot.handlers.start.async_session", mock_session), \
-         patch("app.bot.handlers.start.user_service") as mock_user_svc, \
-         patch("app.bot.handlers.start.profiling_service") as mock_prof_svc:
-
+    with (
+        patch("app.bot.handlers.start.async_session", mock_session),
+        patch("app.bot.handlers.start.user_service") as mock_user_svc,
+        patch("app.bot.handlers.start.profiling_service") as mock_prof_svc,
+    ):
         mock_user_svc.upsert_user = AsyncMock(return_value=mock_user)
         mock_user_svc.get_current_event = AsyncMock(return_value=mock_event)
         mock_user_svc.get_user_role_with_info = AsyncMock(return_value=mock_role)
@@ -157,9 +159,7 @@ async def test_invalid_role_callback(mock_event, mock_user):
     mock_context = MagicMock()
     mock_context.user_data = {}
 
-    with patch("app.bot.handlers.start.async_session", mock_session), \
-         patch("app.bot.handlers.start.user_service"):
-
+    with patch("app.bot.handlers.start.async_session", mock_session), patch("app.bot.handlers.start.user_service"):
         # Should raise ValueError for invalid RoleCode
         try:
             result = await role_chosen(mock_update, mock_context)

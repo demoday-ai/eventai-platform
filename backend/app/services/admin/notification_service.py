@@ -53,6 +53,7 @@ TELEGRAM_MAX_LENGTH = 4096
 
 class CancellationWindowClosedError(Exception):
     """Raised when trying to cancel reminders after the deadline."""
+
     pass
 
 
@@ -70,9 +71,7 @@ async def send_notification(
     Returns True if sent successfully, False otherwise.
     """
     result = await session.execute(
-        select(Notification)
-        .where(Notification.id == notification_id)
-        .options(selectinload(Notification.user))
+        select(Notification).where(Notification.id == notification_id).options(selectinload(Notification.user))
     )
     notification = result.scalars().first()
 
@@ -110,14 +109,10 @@ async def send_notification(
 
         if notification.retry_count >= MAX_RETRIES:
             notification.status = NotificationStatus.FAILED.value
-            logger.warning(
-                "Notification %s failed after %d retries: %s",
-                notification_id, MAX_RETRIES, e
-            )
+            logger.warning("Notification %s failed after %d retries: %s", notification_id, MAX_RETRIES, e)
         else:
             logger.info(
-                "Notification %s failed (retry %d/%d): %s",
-                notification_id, notification.retry_count, MAX_RETRIES, e
+                "Notification %s failed (retry %d/%d): %s", notification_id, notification.retry_count, MAX_RETRIES, e
             )
 
         await session.commit()
@@ -180,7 +175,7 @@ async def retry_failed(
 
     for n in notifications:
         # Exponential backoff
-        backoff = 2 ** n.retry_count
+        backoff = 2**n.retry_count
         await asyncio.sleep(backoff)
 
         success = await send_notification(session, n.id, bot)
@@ -211,9 +206,7 @@ async def create_notification_escalation(
 
     if not user:
         # Reload user
-        result = await session.execute(
-            select(User).where(User.id == notification.user_id)
-        )
+        result = await session.execute(select(User).where(User.id == notification.user_id))
         user = result.scalars().first()
 
     if not user:
@@ -255,10 +248,7 @@ async def create_notification_escalation(
     # If no room, get any room from event
     if not room_id:
         room_result = await session.execute(
-            select(Room)
-            .join(ClusteringRun)
-            .where(ClusteringRun.event_id == event_id)
-            .limit(1)
+            select(Room).join(ClusteringRun).where(ClusteringRun.event_id == event_id).limit(1)
         )
         room = room_result.scalars().first()
         if room:
@@ -278,26 +268,19 @@ async def create_notification_escalation(
 
     # Check if user has expert role
     expert_result = await session.execute(
-        select(UserRole)
-        .join(Role)
-        .where(UserRole.user_id == user.id)
-        .where(Role.code == RoleCode.EXPERT.value)
+        select(UserRole).join(Role).where(UserRole.user_id == user.id).where(Role.code == RoleCode.EXPERT.value)
     )
     is_expert = expert_result.scalars().first() is not None
 
     if not is_expert:
         # Log but don't create escalation (EPIC-004 model limitation)
-        logger.info(
-            "Notification escalation for non-expert user %s (type=%s): %s",
-            user.id, esc_type, message
-        )
+        logger.info("Notification escalation for non-expert user %s (type=%s): %s", user.id, esc_type, message)
         return None
 
     # Get expert record
     from app.models import Expert
-    expert_result = await session.execute(
-        select(Expert).where(Expert.user_id == user.id)
-    )
+
+    expert_result = await session.execute(select(Expert).where(Expert.user_id == user.id))
     expert = expert_result.scalars().first()
 
     if not expert:
@@ -346,11 +329,7 @@ def build_eve_reminder(
     if role == "student":
         room_name = schedule_data.get("room_name", "...")
         time_str = schedule_data.get("time", "...")
-        return (
-            f"🎓 Завтра {event_name}!\n\n"
-            f"Ты выступаешь в {room_name}, время {time_str}.\n\n"
-            f"Удачи! 🍀"
-        )
+        return f"🎓 Завтра {event_name}!\n\nТы выступаешь в {room_name}, время {time_str}.\n\nУдачи! 🍀"
 
     elif role == "expert":
         room_name = schedule_data.get("room_name", "...")
@@ -370,29 +349,19 @@ def build_eve_reminder(
     elif role in ("guest", "business"):
         program = schedule_data.get("program", [])
         if not program:
-            return (
-                f"🎉 Завтра {event_name}!\n\n"
-                f"Используйте /program чтобы получить персональную подборку проектов."
-            )
+            return f"🎉 Завтра {event_name}!\n\nИспользуйте /program чтобы получить персональную подборку проектов."
 
         program_text = "\n".join(
-            f"• {p.get('time', '...')} — {p.get('project', '...')} ({p.get('room', '...')})"
-            for p in program[:15]
+            f"• {p.get('time', '...')} — {p.get('project', '...')} ({p.get('room', '...')})" for p in program[:15]
         )
         if len(program) > 15:
             program_text += f"\n... и ещё {len(program) - 15} проектов"
 
         icon = "💼" if role == "business" else "👤"
-        return (
-            f"{icon} Завтра {event_name}!\n\n"
-            f"Ваша персональная программа:\n{program_text}"
-        )
+        return f"{icon} Завтра {event_name}!\n\nВаша персональная программа:\n{program_text}"
 
     else:
-        return (
-            f"🎉 Завтра {event_name}!\n\n"
-            f"Используйте /program для просмотра расписания."
-        )
+        return f"🎉 Завтра {event_name}!\n\nИспользуйте /program для просмотра расписания."
 
 
 def build_pre_slot_reminder(
@@ -434,15 +403,14 @@ async def send_eve_reminders(
     Send eve-of-DD reminders to all participants for a specific day.
     """
     # Get event
-    event_result = await session.execute(
-        select(Event).where(Event.id == event_id)
-    )
+    event_result = await session.execute(select(Event).where(Event.id == event_id))
     event = event_result.scalars().first()
     if not event:
         raise ValueError("Event not found")
 
     # Check schedule is approved
     from app.services.admin import schedule_service
+
     if not await schedule_service.is_schedule_approved(session, event_id):
         raise ValueError("Schedule not approved")
 
@@ -459,9 +427,7 @@ async def send_eve_reminders(
         .join(UserRole)
         .join(Role)
         .where(UserRole.event_id == event_id)
-        .options(
-            selectinload(User.user_roles).selectinload(UserRole.role)
-        )
+        .options(selectinload(User.user_roles).selectinload(UserRole.role))
         .distinct()
     )
     users = list(users_result.scalars().all())
@@ -506,11 +472,15 @@ async def send_eve_reminders(
                     ),
                 )
             )
-            .where(Notification.status.notin_([
-                NotificationStatus.FAILED.value,
-                NotificationStatus.CANCELLED.value,
-                NotificationStatus.BATCHED.value,
-            ]))
+            .where(
+                Notification.status.notin_(
+                    [
+                        NotificationStatus.FAILED.value,
+                        NotificationStatus.CANCELLED.value,
+                        NotificationStatus.BATCHED.value,
+                    ]
+                )
+            )
         )
         if existing.scalars().first():
             skipped_count += 1
@@ -544,9 +514,7 @@ async def send_eve_reminders(
         # Filter out already-failed ones
         pending_ids = []
         for nid in notification_ids:
-            n_result = await session.execute(
-                select(Notification).where(Notification.id == nid)
-            )
+            n_result = await session.execute(select(Notification).where(Notification.id == nid))
             n = n_result.scalars().first()
             if n and n.status == NotificationStatus.PENDING.value:
                 pending_ids.append(nid)
@@ -600,9 +568,8 @@ async def _get_user_schedule_data(
     elif role == "expert":
         # Find expert's room assignment
         from app.models import Expert
-        expert_result = await session.execute(
-            select(Expert).where(Expert.user_id == user.id)
-        )
+
+        expert_result = await session.execute(select(Expert).where(Expert.user_id == user.id))
         expert = expert_result.scalars().first()
 
         if not expert:
@@ -662,24 +629,18 @@ async def preview_reminders(
 ) -> ReminderPreview:
     """Preview what eve-of-DD reminders will contain."""
     # Get event
-    event_result = await session.execute(
-        select(Event).where(Event.id == event_id)
-    )
+    event_result = await session.execute(select(Event).where(Event.id == event_id))
     event = event_result.scalars().first()
     if not event:
         raise ValueError("Event not found")
 
     # Calculate scheduled send time (18:00 MSK the day before target_day)
     send_date = target_day - timedelta(days=1)
-    scheduled_send_time = MSK.localize(
-        datetime.combine(send_date, datetime.min.time().replace(hour=18, minute=0))
-    )
+    scheduled_send_time = MSK.localize(datetime.combine(send_date, datetime.min.time().replace(hour=18, minute=0)))
 
     # Check if cancellation is still possible (before 17:00 MSK)
     now = datetime.now(MSK)
-    cancel_deadline = MSK.localize(
-        datetime.combine(send_date, datetime.min.time().replace(hour=17, minute=0))
-    )
+    cancel_deadline = MSK.localize(datetime.combine(send_date, datetime.min.time().replace(hour=17, minute=0)))
     can_cancel = now < cancel_deadline
 
     # Count recipients by role
@@ -747,12 +708,14 @@ async def _get_unreachable_participants(
         roles = [ur.role.code for ur in user.user_roles if ur.role]
         role = roles[0] if roles else "unknown"
         user_label = user.full_name or user.username or str(user.id)
-        unreachable.append(UnreachableParticipant(
-            user_id=user.id,
-            name=user_label,
-            role=role,
-            reason="Не запустил бот",
-        ))
+        unreachable.append(
+            UnreachableParticipant(
+                user_id=user.id,
+                name=user_label,
+                role=role,
+                reason="Не запустил бот",
+            )
+        )
 
     return unreachable
 
@@ -773,9 +736,7 @@ async def cancel_reminders(
     # Check cancellation window
     now = datetime.now(MSK)
     cancel_date = target_day - timedelta(days=1)
-    cancel_deadline = MSK.localize(
-        datetime.combine(cancel_date, datetime.min.time().replace(hour=17, minute=0))
-    )
+    cancel_deadline = MSK.localize(datetime.combine(cancel_date, datetime.min.time().replace(hour=17, minute=0)))
 
     if now >= cancel_deadline:
         raise CancellationWindowClosedError("Отмена рассылки возможна до 17:00")
@@ -871,7 +832,9 @@ async def check_and_send_pre_slot_reminders(
 
             # Build and create notification
             content = build_pre_slot_reminder(
-                user, role, slot,
+                user,
+                role,
+                slot,
                 room=slot.room,
                 project_title=slot.project.title if slot.project else None,
             )
@@ -916,9 +879,7 @@ async def _get_slot_participants(
     )
     for assignment in expert_result.scalars().all():
         if assignment.expert and assignment.expert.user_id:
-            user_result = await session.execute(
-                select(User).where(User.id == assignment.expert.user_id)
-            )
+            user_result = await session.execute(select(User).where(User.id == assignment.expert.user_id))
             user = user_result.scalars().first()
             if user:
                 participants.append((user, "expert"))
@@ -965,9 +926,7 @@ async def queue_timing_shift_notifications(
         content = f"🔄 {project_title} перенесён: было {old_time} → стало {new_time}"
 
         if change_log.old_room_id != change_log.new_room_id and change_log.new_room_id:
-            room_result = await session.execute(
-                select(Room).where(Room.id == change_log.new_room_id)
-            )
+            room_result = await session.execute(select(Room).where(Room.id == change_log.new_room_id))
             new_room = room_result.scalars().first()
             if new_room:
                 content += f", {new_room.name}"
@@ -1126,11 +1085,7 @@ async def get_notification_dashboard(
         # Get user role (simplified)
         role = "unknown"
         if n.user:
-            user_roles = await session.execute(
-                select(UserRole)
-                .join(Role)
-                .where(UserRole.user_id == n.user.id)
-            )
+            user_roles = await session.execute(select(UserRole).join(Role).where(UserRole.user_id == n.user.id))
             for ur in user_roles.scalars().all():
                 if ur.role:
                     role = ur.role.code
@@ -1164,14 +1119,8 @@ async def get_notification_dashboard(
 
     return NotificationDashboard(
         summary=StatusSummary(total=total, sent=sent, failed=failed, pending=pending),
-        by_role=[
-            RoleStats(role=role, **stats)
-            for role, stats in role_stats.items()
-        ],
-        by_type=[
-            TypeStats(type=t, **stats)
-            for t, stats in type_stats.items()
-        ],
+        by_role=[RoleStats(role=role, **stats) for role, stats in role_stats.items()],
+        by_type=[TypeStats(type=t, **stats) for t, stats in type_stats.items()],
         unreachable=unreachable,
     )
 

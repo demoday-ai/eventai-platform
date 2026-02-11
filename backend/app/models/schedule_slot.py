@@ -1,4 +1,5 @@
 """Schedule slot model - a time block for a project presentation."""
+
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -45,12 +46,8 @@ class ScheduleSlot(Base):
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=SlotStatus.SCHEDULED.value
-    )
-    status_changed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=SlotStatus.SCHEDULED.value)
+    status_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, onupdate=datetime.utcnow
     )
@@ -60,7 +57,5 @@ class ScheduleSlot(Base):
     room = relationship("Room")
     project = relationship("Project")
     clustering_run = relationship("ClusteringRun")
-    change_logs = relationship(
-        "ScheduleChangeLog", back_populates="schedule_slot", cascade="all, delete-orphan"
-    )
+    change_logs = relationship("ScheduleChangeLog", back_populates="schedule_slot", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="schedule_slot")

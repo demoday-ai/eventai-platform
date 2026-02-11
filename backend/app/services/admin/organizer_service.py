@@ -22,9 +22,7 @@ async def is_organizer(
 ) -> bool:
     """Check if user is an organizer by DB lookup, then env fallback."""
     # DB check
-    result = await session.scalar(
-        select(func.count(Organizer.id)).where(Organizer.telegram_id == telegram_id)
-    )
+    result = await session.scalar(select(func.count(Organizer.id)).where(Organizer.telegram_id == telegram_id))
     if result and result > 0:
         return True
 
@@ -40,9 +38,7 @@ async def seed_from_env(session: AsyncSession) -> int:
 
     seeded = 0
     for tid in settings.organizer_ids:
-        existing = await session.scalar(
-            select(Organizer).where(Organizer.telegram_id == tid)
-        )
+        existing = await session.scalar(select(Organizer).where(Organizer.telegram_id == tid))
         if not existing:
             organizer = Organizer(
                 telegram_id=tid,
@@ -60,9 +56,7 @@ async def seed_from_env(session: AsyncSession) -> int:
 
 async def list_organizers(session: AsyncSession) -> list[Organizer]:
     """List all organizers."""
-    result = await session.execute(
-        select(Organizer).order_by(Organizer.created_at)
-    )
+    result = await session.execute(select(Organizer).order_by(Organizer.created_at))
     return list(result.scalars().all())
 
 

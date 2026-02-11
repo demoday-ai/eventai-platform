@@ -109,9 +109,7 @@ async def list_guests(
 
     if search:
         pattern = f"%{search}%"
-        query = query.where(
-            (User.full_name.ilike(pattern)) | (User.username.ilike(pattern))
-        )
+        query = query.where((User.full_name.ilike(pattern)) | (User.username.ilike(pattern)))
 
     if subtype:
         query = query.where(User.guest_subtype == subtype)

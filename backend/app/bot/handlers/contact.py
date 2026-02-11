@@ -43,12 +43,14 @@ def _get_role_display(user) -> str | None:
 
 def contact_request_keyboard(request_id: UUID) -> InlineKeyboardMarkup:
     """Keyboard for student to respond to contact request."""
-    return InlineKeyboardMarkup([
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton("✅ Разрешаю", callback_data=f"contact:approve:{request_id}"),
-            InlineKeyboardButton("❌ Не сейчас", callback_data=f"contact:reject:{request_id}"),
+            [
+                InlineKeyboardButton("✅ Разрешаю", callback_data=f"contact:approve:{request_id}"),
+                InlineKeyboardButton("❌ Не сейчас", callback_data=f"contact:reject:{request_id}"),
+            ]
         ]
-    ])
+    )
 
 
 async def contact_request_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -61,9 +63,7 @@ async def contact_request_callback(update: Update, context: ContextTypes.DEFAULT
 
     async with async_session() as session:
         # Get requester user
-        requester = await user_service.get_user_by_telegram_id(
-            session, str(query.from_user.id)
-        )
+        requester = await user_service.get_user_by_telegram_id(session, str(query.from_user.id))
         if not requester:
             await query.edit_message_text("❌ Пользователь не найден. Начните с /start")
             return
@@ -75,9 +75,7 @@ async def contact_request_callback(update: Update, context: ContextTypes.DEFAULT
             return
 
         # Check for existing request
-        existing = await contact_service.get_existing_request(
-            session, requester.id, UUID(project_id)
-        )
+        existing = await contact_service.get_existing_request(session, requester.id, UUID(project_id))
         if existing:
             status_text = {
                 ContactRequestStatus.PENDING.value: "⏳ Ваш запрос уже отправлен. Ожидаем ответа автора.",
@@ -103,18 +101,15 @@ async def contact_request_callback(update: Update, context: ContextTypes.DEFAULT
         from sqlalchemy import select
 
         from app.models.project import Project
-        result = await session.execute(
-            select(Project).where(Project.id == UUID(project_id))
-        )
+
+        result = await session.execute(select(Project).where(Project.id == UUID(project_id)))
         project = result.scalar_one_or_none()
         if not project:
             await query.answer("❌ Проект не найден", show_alert=True)
             return
 
         # Create request
-        request = await contact_service.create_request(
-            session, requester.id, UUID(project_id), student.id
-        )
+        request = await contact_service.create_request(session, requester.id, UUID(project_id), student.id)
         await session.commit()
 
         # Notify requester
@@ -149,9 +144,7 @@ async def contact_approve_callback(update: Update, context: ContextTypes.DEFAULT
 
     async with async_session() as session:
         # Verify sender is the student
-        student = await user_service.get_user_by_telegram_id(
-            session, str(query.from_user.id)
-        )
+        student = await user_service.get_user_by_telegram_id(session, str(query.from_user.id))
         if not student:
             await query.edit_message_text("❌ Пользователь не найден")
             return
@@ -209,9 +202,7 @@ async def contact_reject_callback(update: Update, context: ContextTypes.DEFAULT_
     request_id = query.data.split(":")[-1]
 
     async with async_session() as session:
-        student = await user_service.get_user_by_telegram_id(
-            session, str(query.from_user.id)
-        )
+        student = await user_service.get_user_by_telegram_id(session, str(query.from_user.id))
         if not student:
             await query.edit_message_text("❌ Пользователь не найден")
             return
@@ -233,10 +224,7 @@ async def contact_reject_callback(update: Update, context: ContextTypes.DEFAULT_
         await contact_service.reject_request(session, UUID(request_id))
 
         # Notify student
-        await query.edit_message_text(
-            "❌ Запрос отклонён.\n\n"
-            "Партнёр получит уведомление."
-        )
+        await query.edit_message_text("❌ Запрос отклонён.\n\nПартнёр получит уведомление.")
 
         # Notify requester
         if request.requester.telegram_user_id:
@@ -256,10 +244,7 @@ async def contact_reject_callback(update: Update, context: ContextTypes.DEFAULT_
 
 def contact_button(project_id: UUID) -> InlineKeyboardButton:
     """Create contact request button for embedding in project cards."""
-    return InlineKeyboardButton(
-        "📞 Связаться с автором",
-        callback_data=f"contact:req:{project_id}"
-    )
+    return InlineKeyboardButton("📞 Связаться с автором", callback_data=f"contact:req:{project_id}")
 
 
 def get_contact_handlers() -> list:

@@ -46,9 +46,7 @@ async def list_guests(
     """List all guests and business partners with profile summaries."""
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     return await admin_service.list_guests(db, event.id, search, subtype, role, source=source)
 
@@ -65,9 +63,7 @@ async def export_guests(
     """Export guests to Excel file."""
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     guests = await admin_service.list_guests(db, event.id, search, subtype, role, source=source)
 
@@ -77,40 +73,44 @@ async def export_guests(
     ws.title = "Гости"
 
     # Header
-    ws.append([
-        "ФИО",
-        "Телеграм",
-        "Роль",
-        "Подтип",
-        "Интересы",
-        "Цели",
-        "Резюме профиля",
-        "Компания",
-        "Должность",
-        "Бизнес-цели",
-        "Статус партнёра",
-        "Рекомендаций",
-        "Запросов контактов",
-    ])
+    ws.append(
+        [
+            "ФИО",
+            "Телеграм",
+            "Роль",
+            "Подтип",
+            "Интересы",
+            "Цели",
+            "Резюме профиля",
+            "Компания",
+            "Должность",
+            "Бизнес-цели",
+            "Статус партнёра",
+            "Рекомендаций",
+            "Запросов контактов",
+        ]
+    )
 
     # Data rows
     for guest in guests:
         # GuestListItem doesn't have interests/goals/etc - only tags and keywords
-        ws.append([
-            guest.full_name,
-            f"@{guest.username}" if guest.username else "",
-            guest.role,
-            guest.guest_subtype or "",
-            ", ".join(guest.tags) if guest.tags else "",
-            ", ".join(guest.keywords) if guest.keywords else "",
-            guest.profile_summary or "",
-            "",  # company - not in GuestListItem
-            "",  # position - not in GuestListItem
-            "",  # business_objectives - not in GuestListItem
-            "",  # partner_status - not in GuestListItem
-            guest.recommendations_count or 0,
-            guest.contact_requests_count or 0,
-        ])
+        ws.append(
+            [
+                guest.full_name,
+                f"@{guest.username}" if guest.username else "",
+                guest.role,
+                guest.guest_subtype or "",
+                ", ".join(guest.tags) if guest.tags else "",
+                ", ".join(guest.keywords) if guest.keywords else "",
+                guest.profile_summary or "",
+                "",  # company - not in GuestListItem
+                "",  # position - not in GuestListItem
+                "",  # business_objectives - not in GuestListItem
+                "",  # partner_status - not in GuestListItem
+                guest.recommendations_count or 0,
+                guest.contact_requests_count or 0,
+            ]
+        )
 
     # Auto-adjust column widths
     for column in ws.columns:
@@ -132,7 +132,9 @@ async def export_guests(
     filename = f"guests_{event.name.replace(' ', '_')}_{timestamp}.xlsx"
 
     await audit_service.log_action(
-        db, current_user, "export_guests",
+        db,
+        current_user,
+        "export_guests",
         entity_type="guests",
         details={"count": len(guests), "filters": {"search": search, "subtype": subtype, "role": role}},
     )
@@ -159,9 +161,13 @@ async def delete_all_guests(
     if not guest_role:
         raise HTTPException(status_code=500, detail="Guest role not found")
 
-    query = select(UserRole).join(User, UserRole.user_id == User.id).where(
-        UserRole.event_id == event.id,
-        UserRole.role_id == guest_role.id,
+    query = (
+        select(UserRole)
+        .join(User, UserRole.user_id == User.id)
+        .where(
+            UserRole.event_id == event.id,
+            UserRole.role_id == guest_role.id,
+        )
     )
     if subtype:
         try:
@@ -188,7 +194,9 @@ async def delete_all_guests(
     await db.commit()
 
     await audit_service.log_action(
-        db, current_user, "delete_all_guests",
+        db,
+        current_user,
+        "delete_all_guests",
         entity_type="guests",
         details={"deleted": count, "subtype": subtype},
     )
@@ -205,9 +213,7 @@ async def get_guest_detail(
     """Get detailed guest profile."""
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     try:
         return await admin_service.get_guest_detail(db, event.id, user_id)
@@ -227,9 +233,7 @@ async def upload_guests(
 
     event = await user_service.get_current_event(db)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active event"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
     # Validate subtype
     try:
@@ -271,13 +275,17 @@ async def upload_guests(
     if existing_count and existing_count > 0 and confirm_replace:
         # Delete existing guest user_roles and their users for this event
         guest_user_roles = (
-            await db.execute(
-                select(UserRole).where(
-                    UserRole.event_id == event.id,
-                    UserRole.role_id == guest_role.id,
+            (
+                await db.execute(
+                    select(UserRole).where(
+                        UserRole.event_id == event.id,
+                        UserRole.role_id == guest_role.id,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         guest_user_ids = [ur.user_id for ur in guest_user_roles]
         for ur in guest_user_roles:
             await db.delete(ur)
@@ -313,6 +321,7 @@ async def upload_guests(
     elif filename.endswith(".xlsx"):
         try:
             import openpyxl
+
             wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
             ws = wb.active
             rows_iter = ws.iter_rows(values_only=True)
@@ -382,7 +391,9 @@ async def upload_guests(
         imported += 1
 
     await audit_service.log_action(
-        db, current_user, "upload_guests",
+        db,
+        current_user,
+        "upload_guests",
         entity_type="guests",
         details={"imported": imported, "duplicates": duplicates, "errors": len(errors), "file_hash": file_hash},
     )
@@ -422,7 +433,11 @@ async def preview_guest_upload(
 
     try:
         preview, _ = await merge_service.analyze_guest_merge(
-            db, event.id, content, filename, subtype_enum,
+            db,
+            event.id,
+            content,
+            filename,
+            subtype_enum,
         )
     except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -461,7 +476,11 @@ async def merge_guest_upload(
 
     try:
         _, internal = await merge_service.analyze_guest_merge(
-            db, event.id, content, filename, subtype_enum,
+            db,
+            event.id,
+            content,
+            filename,
+            subtype_enum,
         )
     except (ValueError, IndexError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -470,16 +489,24 @@ async def merge_guest_upload(
         raise HTTPException(status_code=500, detail=f"Ошибка анализа файла: {e}")
 
     result = await merge_service.apply_guest_merge(
-        db, event.id, subtype_enum, internal,
-        add_new=add_new, update_existing=update_existing,
+        db,
+        event.id,
+        subtype_enum,
+        internal,
+        add_new=add_new,
+        update_existing=update_existing,
     )
 
     await audit_service.log_action(
-        db, current_user, "merge_guests",
+        db,
+        current_user,
+        "merge_guests",
         entity_type="guests",
         details={
-            "added": result.added, "updated": result.updated,
-            "skipped": result.skipped, "subtype": default_subtype,
+            "added": result.added,
+            "updated": result.updated,
+            "skipped": result.skipped,
+            "subtype": default_subtype,
         },
     )
 

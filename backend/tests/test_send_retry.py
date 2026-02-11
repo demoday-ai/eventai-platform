@@ -29,9 +29,7 @@ async def test_send_with_retry_passes_parse_mode():
     bot = AsyncMock()
     bot.send_message = AsyncMock()
 
-    await send_with_retry(
-        bot, 456, "msg", parse_mode="HTML", disable_web_page_preview=True
-    )
+    await send_with_retry(bot, 456, "msg", parse_mode="HTML", disable_web_page_preview=True)
 
     bot.send_message.assert_awaited_once_with(
         chat_id=456,
@@ -44,9 +42,7 @@ async def test_send_with_retry_passes_parse_mode():
 @pytest.mark.asyncio
 async def test_send_with_retry_retries_on_failure():
     bot = AsyncMock()
-    bot.send_message = AsyncMock(
-        side_effect=[Exception("Network error"), None]
-    )
+    bot.send_message = AsyncMock(side_effect=[Exception("Network error"), None])
 
     with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         success, error = await send_with_retry(bot, 123, "hello", max_retries=3)
@@ -73,17 +69,15 @@ async def test_send_with_retry_fails_after_max_retries():
 @pytest.mark.asyncio
 async def test_send_with_retry_exponential_backoff():
     bot = AsyncMock()
-    bot.send_message = AsyncMock(
-        side_effect=[Exception("e1"), Exception("e2"), None]
-    )
+    bot.send_message = AsyncMock(side_effect=[Exception("e1"), Exception("e2"), None])
 
     with patch("app.services.core.send_retry.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         success, error = await send_with_retry(bot, 123, "hello", max_retries=3)
 
     assert success is True
     assert mock_sleep.await_count == 2
-    mock_sleep.assert_any_await(1)   # 2^0
-    mock_sleep.assert_any_await(2)   # 2^1
+    mock_sleep.assert_any_await(1)  # 2^0
+    mock_sleep.assert_any_await(2)  # 2^1
 
 
 @pytest.mark.asyncio

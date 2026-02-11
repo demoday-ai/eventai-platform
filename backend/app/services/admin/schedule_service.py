@@ -34,9 +34,7 @@ logger = logging.getLogger(__name__)
 MSK = pytz.timezone("Europe/Moscow")
 
 
-async def get_approved_clustering(
-    session: AsyncSession, event_id: UUID
-) -> ClusteringRun | None:
+async def get_approved_clustering(session: AsyncSession, event_id: UUID) -> ClusteringRun | None:
     """Get the latest approved clustering run for an event."""
     result = await session.execute(
         select(ClusteringRun)
@@ -113,23 +111,18 @@ async def generate_schedule(
 
     # Check if schedule already exists
     existing = await session.execute(
-        select(func.count(ScheduleSlot.id))
-        .where(ScheduleSlot.clustering_run_id == clustering.id)
+        select(func.count(ScheduleSlot.id)).where(ScheduleSlot.clustering_run_id == clustering.id)
     )
     if (existing.scalar() or 0) > 0:
         if force:
             await session.execute(
-                ScheduleSlot.__table__.delete().where(
-                    ScheduleSlot.clustering_run_id == clustering.id
-                )
+                ScheduleSlot.__table__.delete().where(ScheduleSlot.clustering_run_id == clustering.id)
             )
         else:
             raise ValueError("Schedule already exists for this clustering run")
 
     # Get event for dates
-    event_result = await session.execute(
-        select(Event).where(Event.id == event_id)
-    )
+    event_result = await session.execute(select(Event).where(Event.id == event_id))
     event = event_result.scalars().first()
     if not event:
         raise ValueError("Event not found")
@@ -162,9 +155,7 @@ async def generate_schedule(
     for room in sorted(rooms, key=lambda r: r.display_order):
         # Get projects for this room
         rp_result = await session.execute(
-            select(RoomProject)
-            .where(RoomProject.room_id == room.id)
-            .options(selectinload(RoomProject.project))
+            select(RoomProject).where(RoomProject.room_id == room.id).options(selectinload(RoomProject.project))
         )
         room_projects = list(rp_result.scalars().all())
 
@@ -174,12 +165,12 @@ async def generate_schedule(
         # Per-room start/end override
         if room.id in overrides_map:
             start_hm, end_hm = overrides_map[room.id]
-            room_day1_start = MSK.localize(datetime.combine(
-                event_start, datetime.min.time().replace(hour=start_hm[0], minute=start_hm[1])
-            ))
-            room_day1_end = MSK.localize(datetime.combine(
-                event_start, datetime.min.time().replace(hour=end_hm[0], minute=end_hm[1])
-            ))
+            room_day1_start = MSK.localize(
+                datetime.combine(event_start, datetime.min.time().replace(hour=start_hm[0], minute=start_hm[1]))
+            )
+            room_day1_end = MSK.localize(
+                datetime.combine(event_start, datetime.min.time().replace(hour=end_hm[0], minute=end_hm[1]))
+            )
         else:
             room_day1_start = day1_start
             room_day1_end = day1_end
@@ -190,12 +181,12 @@ async def generate_schedule(
             for brk in breaks:
                 bstart_hm = _parse_hm(brk.start_time)
                 bend_hm = _parse_hm(brk.end_time)
-                brk_start = MSK.localize(datetime.combine(
-                    event_start, datetime.min.time().replace(hour=bstart_hm[0], minute=bstart_hm[1])
-                ))
-                brk_end = MSK.localize(datetime.combine(
-                    event_start, datetime.min.time().replace(hour=bend_hm[0], minute=bend_hm[1])
-                ))
+                brk_start = MSK.localize(
+                    datetime.combine(event_start, datetime.min.time().replace(hour=bstart_hm[0], minute=bstart_hm[1]))
+                )
+                brk_end = MSK.localize(
+                    datetime.combine(event_start, datetime.min.time().replace(hour=bend_hm[0], minute=bend_hm[1]))
+                )
                 break_ranges_day1.append((brk_start, brk_end))
 
         # Distribute projects across available time
@@ -221,7 +212,8 @@ async def generate_schedule(
                     # No more time available
                     logger.warning(
                         "Room %s: not enough time for all projects, skipping %s",
-                        room.name, rp.project.title if rp.project else "?"
+                        room.name,
+                        rp.project.title if rp.project else "?",
                     )
                     continue
 
@@ -247,13 +239,15 @@ async def generate_schedule(
             slot_count += 1
             total_slots += 1
 
-        room_summaries.append(RoomSummary(
-            room_id=room.id,
-            room_name=room.name,
-            slot_count=slot_count,
-            first_slot=first_slot_time,
-            last_slot=last_slot_time,
-        ))
+        room_summaries.append(
+            RoomSummary(
+                room_id=room.id,
+                room_name=room.name,
+                slot_count=slot_count,
+                first_slot=first_slot_time,
+                last_slot=last_slot_time,
+            )
+        )
 
     await session.commit()
 
@@ -272,9 +266,7 @@ async def get_schedule(
 ) -> ScheduleResponse:
     """Get schedule grouped by day and room."""
     # Get event name
-    event_result = await session.execute(
-        select(Event).where(Event.id == event_id)
-    )
+    event_result = await session.execute(select(Event).where(Event.id == event_id))
     event = event_result.scalars().first()
     event_name = event.name if event else "Demo Day"
 
@@ -318,29 +310,33 @@ async def get_schedule(
             if not room_slots:
                 continue
             room = room_slots[0].room
-            rooms_for_day.append(RoomSchedule(
-                room_id=rid,
-                room_name=room.name if room else "Unknown",
-                slots=[
-                    ScheduleSlotResponse(
-                        id=s.id,
-                        room_id=s.room_id,
-                        room_name=room.name if room else "Unknown",
-                        project_id=s.project_id,
-                        project_title=s.project.title if s.project else "Unknown",
-                        project_author=s.project.author if s.project else None,
-                        start_time=s.start_time,
-                        end_time=s.end_time,
-                        display_order=s.display_order,
-                        status=s.status,
-                    )
-                    for s in sorted(room_slots, key=lambda x: x.display_order)
-                ],
-            ))
-        days.append(DaySchedule(
-            date=date,
-            rooms=sorted(rooms_for_day, key=lambda r: r.room_name),
-        ))
+            rooms_for_day.append(
+                RoomSchedule(
+                    room_id=rid,
+                    room_name=room.name if room else "Unknown",
+                    slots=[
+                        ScheduleSlotResponse(
+                            id=s.id,
+                            room_id=s.room_id,
+                            room_name=room.name if room else "Unknown",
+                            project_id=s.project_id,
+                            project_title=s.project.title if s.project else "Unknown",
+                            project_author=s.project.author if s.project else None,
+                            start_time=s.start_time,
+                            end_time=s.end_time,
+                            display_order=s.display_order,
+                            status=s.status,
+                        )
+                        for s in sorted(room_slots, key=lambda x: x.display_order)
+                    ],
+                )
+            )
+        days.append(
+            DaySchedule(
+                date=date,
+                rooms=sorted(rooms_for_day, key=lambda r: r.room_name),
+            )
+        )
 
     return ScheduleResponse(event_name=event_name, days=days)
 
@@ -438,9 +434,7 @@ async def approve_schedule(
 ) -> dict:
     """Mark the schedule as approved by setting schedule_approved_at on clustering_run."""
     if clustering_run_id:
-        result = await session.execute(
-            select(ClusteringRun).where(ClusteringRun.id == clustering_run_id)
-        )
+        result = await session.execute(select(ClusteringRun).where(ClusteringRun.id == clustering_run_id))
         clustering = result.scalars().first()
     else:
         clustering = await get_approved_clustering(session, event_id)
@@ -450,8 +444,7 @@ async def approve_schedule(
 
     # Check schedule exists
     slot_count = await session.execute(
-        select(func.count(ScheduleSlot.id))
-        .where(ScheduleSlot.clustering_run_id == clustering.id)
+        select(func.count(ScheduleSlot.id)).where(ScheduleSlot.clustering_run_id == clustering.id)
     )
     total_slots = slot_count.scalar() or 0
     if total_slots == 0:
@@ -459,15 +452,13 @@ async def approve_schedule(
 
     # Count rooms and days
     room_count = await session.execute(
-        select(func.count(func.distinct(ScheduleSlot.room_id)))
-        .where(ScheduleSlot.clustering_run_id == clustering.id)
+        select(func.count(func.distinct(ScheduleSlot.room_id))).where(ScheduleSlot.clustering_run_id == clustering.id)
     )
     rooms = room_count.scalar() or 0
 
     # Count distinct days
     slots_result = await session.execute(
-        select(ScheduleSlot.start_time)
-        .where(ScheduleSlot.clustering_run_id == clustering.id)
+        select(ScheduleSlot.start_time).where(ScheduleSlot.clustering_run_id == clustering.id)
     )
     all_times = slots_result.scalars().all()
     unique_days = len(set(t.astimezone(MSK).date() for t in all_times))

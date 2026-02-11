@@ -107,10 +107,13 @@ async def upload_projects(
     valid, errors, duplicate_titles = project_service.validate_rows(rows)
 
     if not valid:
-        raise HTTPException(status_code=400, detail={
-            "message": "Нет валидных записей",
-            "errors": [e.model_dump() for e in errors[:20]],
-        })
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Нет валидных записей",
+                "errors": [e.model_dump() for e in errors[:20]],
+            },
+        )
 
     # Check for existing projects (replace flow)
     existing_count = await project_service.get_project_count(session, event.id)
@@ -142,19 +145,20 @@ async def upload_projects(
             def progress_cb(progress):
                 update_job_progress(job_id, progress)
 
-            stats = await project_service.save_projects(
-                bg_session, event_id, valid, progress_callback=progress_cb
-            )
+            stats = await project_service.save_projects(bg_session, event_id, valid, progress_callback=progress_cb)
 
             # Trigger embedding of uploaded projects
             from app.worker.tasks import embed_projects_task
+
             embed_projects_task.delay(str(event_id))
 
             # Log audit
             bg_user = await bg_session.get(User, user_id)
             if bg_user:
                 await audit_service.log_action(
-                    bg_session, bg_user, "upload_projects",
+                    bg_session,
+                    bg_user,
+                    "upload_projects",
                     entity_type="projects",
                     details={
                         "loaded": stats["loaded"],
@@ -217,7 +221,10 @@ async def preview_project_upload(
 
     try:
         preview, _ = await merge_service.analyze_project_merge(
-            session, event.id, content, file.filename or "file.xlsx",
+            session,
+            event.id,
+            content,
+            file.filename or "file.xlsx",
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка анализа файла: {e}")
@@ -255,25 +262,34 @@ async def merge_project_upload(
         async with async_session() as bg_session:
             try:
                 _, internal = await merge_service.analyze_project_merge(
-                    bg_session, event_id, content, file.filename or "file.xlsx",
+                    bg_session,
+                    event_id,
+                    content,
+                    file.filename or "file.xlsx",
                 )
             except Exception as e:
                 raise ValueError(f"Ошибка анализа: {e}")
 
             result = await merge_service.apply_project_merge(
-                bg_session, event_id, internal,
-                add_new=add_new, update_existing=update_existing,
+                bg_session,
+                event_id,
+                internal,
+                add_new=add_new,
+                update_existing=update_existing,
             )
 
             # Trigger embedding if new projects were added
             if result.added > 0:
                 from app.worker.tasks import embed_projects_task
+
                 embed_projects_task.delay(str(event_id))
 
             bg_user = await bg_session.get(User, user_id)
             if bg_user:
                 await audit_service.log_action(
-                    bg_session, bg_user, "merge_projects",
+                    bg_session,
+                    bg_user,
+                    "merge_projects",
                     entity_type="projects",
                     details={
                         "added": result.added,
@@ -290,6 +306,7 @@ async def merge_project_upload(
             }
 
     import asyncio
+
     job = create_job(job_type="project_merge")
     asyncio.create_task(_run_upload_job(job.id, do_merge))
 
@@ -310,7 +327,9 @@ async def delete_all_projects(
     await clustering_service.invalidate_clustering_runs(session, event.id)
 
     await audit_service.log_action(
-        session, user, "delete_all_projects",
+        session,
+        user,
+        "delete_all_projects",
         entity_type="projects",
         details={"deleted": count},
     )
@@ -472,9 +491,7 @@ async def move_project(
         raise HTTPException(status_code=400, detail="Нет активного события")
 
     try:
-        await clustering_service.move_project(
-            session, run_id, request.project_id, request.target_room_id
-        )
+        await clustering_service.move_project(session, run_id, request.project_id, request.target_room_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -509,6 +526,7 @@ async def approve_clustering(
 
     # Re-embed projects with updated room assignments
     from app.worker.tasks import embed_projects_task
+
     embed_projects_task.delay(str(event.id))
 
     return {"status": "approved"}
@@ -524,23 +542,27 @@ def _clustering_to_response(run) -> dict:
             tags = []
             if hasattr(p, "tags") and p.tags:
                 tags = [pt.tag.name for pt in p.tags if pt.tag]
-            projects.append(ProjectResponse(
-                id=p.id,
-                title=p.title,
-                description=p.description,
-                tags=tags,
-                author=p.author,
-                telegram_contact=p.telegram_contact,
-                source=p.source,
-            ))
+            projects.append(
+                ProjectResponse(
+                    id=p.id,
+                    title=p.title,
+                    description=p.description,
+                    tags=tags,
+                    author=p.author,
+                    telegram_contact=p.telegram_contact,
+                    source=p.source,
+                )
+            )
 
-        rooms.append({
-            "id": room.id,
-            "name": room.name,
-            "theme_rationale": room.theme_rationale,
-            "project_count": len(room.project_assignments),
-            "projects": projects,
-        })
+        rooms.append(
+            {
+                "id": room.id,
+                "name": room.name,
+                "theme_rationale": room.theme_rationale,
+                "project_count": len(room.project_assignments),
+                "projects": projects,
+            }
+        )
 
     return {
         "id": run.id,

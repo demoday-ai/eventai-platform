@@ -78,9 +78,7 @@ async def get_business_profile(
     user_id: UUID,
 ) -> BusinessProfile | None:
     """Get business profile for user."""
-    result = await session.execute(
-        select(BusinessProfile).where(BusinessProfile.user_id == user_id)
-    )
+    result = await session.execute(select(BusinessProfile).where(BusinessProfile.user_id == user_id))
     return result.scalar_one_or_none()
 
 
@@ -135,9 +133,7 @@ async def update_status(
     status: PipelineStatus,
 ) -> BusinessFollowup | None:
     """Update pipeline status for a project."""
-    result = await session.execute(
-        select(BusinessFollowup).where(BusinessFollowup.id == followup_id)
-    )
+    result = await session.execute(select(BusinessFollowup).where(BusinessFollowup.id == followup_id))
     followup = result.scalar_one_or_none()
     if followup:
         followup.status = status
@@ -152,9 +148,7 @@ async def add_notes(
     notes: str,
 ) -> BusinessFollowup | None:
     """Add notes to a pipeline entry."""
-    result = await session.execute(
-        select(BusinessFollowup).where(BusinessFollowup.id == followup_id)
-    )
+    result = await session.execute(select(BusinessFollowup).where(BusinessFollowup.id == followup_id))
     followup = result.scalar_one_or_none()
     if followup:
         followup.notes = notes
@@ -174,24 +168,17 @@ async def generate_loi(
         return None
 
     # Get project
-    project_result = await session.execute(
-        select(Project).where(Project.id == project_id)
-    )
+    project_result = await session.execute(select(Project).where(Project.id == project_id))
     project = project_result.scalar_one_or_none()
     if not project:
         return None
 
     # Get user name
-    user_result = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+    user_result = await session.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
 
     # Get template
-    template = LOI_TEMPLATES.get(
-        profile.objective,
-        LOI_TEMPLATES[BusinessObjective.PARTNERSHIP]
-    )
+    template = LOI_TEMPLATES.get(profile.objective, LOI_TEMPLATES[BusinessObjective.PARTNERSHIP])
 
     # Fill template
     loi = template.format(
@@ -221,9 +208,7 @@ def format_pipeline_message(
     """Format pipeline for Telegram message."""
     if not followups:
         return (
-            "📊 *Ваш Pipeline*\n\n"
-            "У вас пока нет проектов в работе.\n"
-            "Используйте /recommend для получения рекомендаций."
+            "📊 *Ваш Pipeline*\n\nУ вас пока нет проектов в работе.\nИспользуйте /recommend для получения рекомендаций."
         )
 
     # Count by status
@@ -277,10 +262,7 @@ async def init_pipeline_from_recommendations(
 ) -> int:
     """Initialize pipeline from existing recommendations."""
     # Get recommendations
-    recs_result = await session.execute(
-        select(ProjectRecommendation)
-        .where(ProjectRecommendation.user_id == user_id)
-    )
+    recs_result = await session.execute(select(ProjectRecommendation).where(ProjectRecommendation.user_id == user_id))
     recommendations = list(recs_result.scalars().all())
 
     added = 0

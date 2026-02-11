@@ -1,6 +1,5 @@
 """Tests for dedup_service."""
 
-
 from app.services.admin.dedup_service import compute_file_hash
 
 
@@ -19,6 +18,7 @@ def test_compute_file_hash_different_content():
 
 def test_compute_file_hash_is_sha256():
     import hashlib
+
     content = b"test data"
     expected = hashlib.sha256(content).hexdigest()
     assert compute_file_hash(content) == expected

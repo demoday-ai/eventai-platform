@@ -116,6 +116,7 @@ def parse_json(content: bytes) -> list[dict]:
 def parse_xlsx(content: bytes) -> list[dict]:
     """Parse XLSX content into list of row dicts with normalized column names."""
     import openpyxl
+
     wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
     ws = wb.active
     rows_iter = ws.iter_rows(values_only=True)
@@ -176,14 +177,16 @@ def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowErr
 
         track = (row.get("track") or "").strip() or None
 
-        valid.append(ProjectUploadRow(
-            title=title,
-            description=description[:2000],
-            tags=tags_str,
-            author=author,
-            telegram_contact=tg,
-            track=track,
-        ))
+        valid.append(
+            ProjectUploadRow(
+                title=title,
+                description=description[:2000],
+                tags=tags_str,
+                author=author,
+                telegram_contact=tg,
+                track=track,
+            )
+        )
 
     return valid, errors, duplicate_titles
 
@@ -248,9 +251,7 @@ async def save_projects(
                     continue
 
                 if tag_name not in tag_cache:
-                    existing = await session.scalar(
-                        select(Tag).where(Tag.name == tag_name)
-                    )
+                    existing = await session.scalar(select(Tag).where(Tag.name == tag_name))
                     if existing:
                         tag_cache[tag_name] = existing
                     else:
@@ -264,11 +265,13 @@ async def save_projects(
 
         # Report progress every 10 items or at the end
         if progress_callback and (loaded % 10 == 0 or loaded == total):
-            progress_callback({
-                "stage": "saving",
-                "current": loaded,
-                "total": total,
-            })
+            progress_callback(
+                {
+                    "stage": "saving",
+                    "current": loaded,
+                    "total": total,
+                }
+            )
 
     await session.commit()
     return {"loaded": loaded, "tags_generated": 0}
@@ -301,18 +304,14 @@ async def get_projects(
 
 async def get_project_count(session: AsyncSession, event_id: uuid.UUID) -> int:
     """Count projects for event."""
-    result = await session.scalar(
-        select(func.count(Project.id)).where(Project.event_id == event_id)
-    )
+    result = await session.scalar(select(func.count(Project.id)).where(Project.event_id == event_id))
     return result or 0
 
 
 async def delete_all_projects(session: AsyncSession, event_id: uuid.UUID) -> int:
     """Delete all projects for event (cascade deletes tags, room assignments)."""
     count = await get_project_count(session, event_id)
-    await session.execute(
-        delete(Project).where(Project.event_id == event_id)
-    )
+    await session.execute(delete(Project).where(Project.event_id == event_id))
     await session.commit()
     return count
 
@@ -350,12 +349,14 @@ async def generate_missing_tags(
         # Check for cancellation before each project
         if progress_callback:
             try:
-                progress_callback({
-                    "stage": "tagging",
-                    "current": processed,
-                    "total": total,
-                    "tagged": tagged,
-                })
+                progress_callback(
+                    {
+                        "stage": "tagging",
+                        "current": processed,
+                        "total": total,
+                        "tagged": tagged,
+                    }
+                )
             except Exception:
                 # If progress_callback raises (e.g., CancelledError), stop processing
                 raise
@@ -381,9 +382,7 @@ async def generate_missing_tags(
                 continue
 
             if tag_name not in tag_cache:
-                existing = await session.scalar(
-                    select(Tag).where(Tag.name == tag_name)
-                )
+                existing = await session.scalar(select(Tag).where(Tag.name == tag_name))
                 if existing:
                     tag_cache[tag_name] = existing
                 else:
@@ -399,12 +398,14 @@ async def generate_missing_tags(
 
         # Report progress
         if progress_callback and (processed % 10 == 0 or processed == total):
-            progress_callback({
-                "stage": "tagging",
-                "current": processed,
-                "total": total,
-                "tagged": tagged,
-            })
+            progress_callback(
+                {
+                    "stage": "tagging",
+                    "current": processed,
+                    "total": total,
+                    "tagged": tagged,
+                }
+            )
 
     await session.commit()
     return {"processed": processed, "tagged": tagged}

@@ -124,12 +124,14 @@ async def suggest_room_themes(
     projects_data = []
     for p in projects:
         tags = [pt.tag.name for pt in p.tags if pt.tag]
-        projects_data.append({
-            "id": str(p.id),
-            "title": p.title,
-            "tags": tags,
-            "description": p.description[:500],
-        })
+        projects_data.append(
+            {
+                "id": str(p.id),
+                "title": p.title,
+                "tags": tags,
+                "description": p.description[:500],
+            }
+        )
 
     # 3. Build prompt
     system_prompt = SUGGEST_THEMES_SYSTEM_PROMPT
@@ -187,12 +189,14 @@ async def run_clustering(
     for p in projects:
         pid = str(p.id)
         tags = [pt.tag.name for pt in p.tags if pt.tag]
-        projects_data.append({
-            "id": pid,
-            "title": p.title,
-            "tags": tags,
-            "description": p.description[:500],  # increased from 200 for better context
-        })
+        projects_data.append(
+            {
+                "id": pid,
+                "title": p.title,
+                "tags": tags,
+                "description": p.description[:500],  # increased from 200 for better context
+            }
+        )
         project_map[pid] = p
 
     user_prompt = _build_user_prompt(projects_data, num_rooms, feedback, room_themes=room_themes)
@@ -277,9 +281,7 @@ async def run_clustering(
     return await get_clustering_run(session, run.id)
 
 
-async def get_clustering_run(
-    session: AsyncSession, run_id: uuid.UUID
-) -> ClusteringRun | None:
+async def get_clustering_run(session: AsyncSession, run_id: uuid.UUID) -> ClusteringRun | None:
     """Get a clustering run with rooms and project assignments."""
     stmt = (
         select(ClusteringRun)
@@ -296,9 +298,7 @@ async def get_clustering_run(
     return result.scalar_one_or_none()
 
 
-async def get_current_clustering(
-    session: AsyncSession, event_id: uuid.UUID
-) -> ClusteringRun | None:
+async def get_current_clustering(session: AsyncSession, event_id: uuid.UUID) -> ClusteringRun | None:
     """Get the latest clustering run for an event (draft or approved)."""
     stmt = (
         select(ClusteringRun)
@@ -320,9 +320,7 @@ async def get_current_clustering(
     return result.scalar_one_or_none()
 
 
-async def get_room_details(
-    session: AsyncSession, room_id: uuid.UUID
-) -> tuple:
+async def get_room_details(session: AsyncSession, room_id: uuid.UUID) -> tuple:
     """Get room with its projects (including tags)."""
     stmt = (
         select(Room)
@@ -388,9 +386,7 @@ async def move_project(
     await session.commit()
 
 
-async def approve_clustering(
-    session: AsyncSession, run_id: uuid.UUID
-) -> str:
+async def approve_clustering(session: AsyncSession, run_id: uuid.UUID) -> str:
     """Approve a clustering run. Returns 'approved' or 'already_approved'."""
     run = await session.get(ClusteringRun, run_id)
     if not run:
@@ -417,9 +413,7 @@ async def approve_clustering(
     return "approved"
 
 
-async def invalidate_clustering_runs(
-    session: AsyncSession, event_id: uuid.UUID
-) -> int:
+async def invalidate_clustering_runs(session: AsyncSession, event_id: uuid.UUID) -> int:
     """Invalidate all clustering runs for an event (when projects are replaced).
 
     Returns count of invalidated runs.

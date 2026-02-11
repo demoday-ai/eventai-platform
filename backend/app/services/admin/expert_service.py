@@ -22,9 +22,7 @@ SEED_FILE = _BASE / "data" / "seed" / "experts_seed.json"
 
 async def load_seed_experts(session: AsyncSession, event_id) -> int:
     """Load seed experts into DB if none exist for the given event."""
-    count = await session.scalar(
-        select(func.count(Expert.id)).where(Expert.event_id == event_id)
-    )
+    count = await session.scalar(select(func.count(Expert.id)).where(Expert.event_id == event_id))
     if count and count > 0:
         logger.info("Expert seed skipped: %d experts already exist for event %s", count, event_id)
         return 0
@@ -71,9 +69,7 @@ async def load_seed_experts(session: AsyncSession, event_id) -> int:
                 continue
 
             if tag_name not in tag_cache:
-                existing = await session.scalar(
-                    select(Tag).where(Tag.name == tag_name)
-                )
+                existing = await session.scalar(select(Tag).where(Tag.name == tag_name))
                 if existing:
                     tag_cache[tag_name] = existing
                 else:
@@ -111,9 +107,7 @@ async def get_experts(
 
     if search:
         pattern = f"%{search}%"
-        query = query.where(
-            Expert.name.ilike(pattern) | Expert.telegram_username.ilike(pattern)
-        )
+        query = query.where(Expert.name.ilike(pattern) | Expert.telegram_username.ilike(pattern))
 
     result = await session.execute(query)
     experts = list(result.scalars().all())
@@ -125,17 +119,12 @@ async def get_experts(
         experts = [e for e in experts if len(e.tags) == 0]
 
     if tag_name:
-        experts = [
-            e for e in experts
-            if any(et.tag.name == tag_name for et in e.tags)
-        ]
+        experts = [e for e in experts if any(et.tag.name == tag_name for et in e.tags)]
 
     return experts
 
 
-async def get_expert_by_telegram(
-    session: AsyncSession, event_id, username: str
-) -> Expert | None:
+async def get_expert_by_telegram(session: AsyncSession, event_id, username: str) -> Expert | None:
     """Lookup expert by telegram username (case-insensitive)."""
     result = await session.execute(
         select(Expert)
@@ -165,9 +154,7 @@ async def get_expert_detail(session: AsyncSession, expert_id) -> Expert | None:
 async def sync_expert_tags(session: AsyncSession, expert: Expert, tag_names: list[str]) -> None:
     """Delete existing tags for expert and set new ones."""
     # Delete existing ExpertTag rows
-    existing = await session.execute(
-        select(ExpertTag).where(ExpertTag.expert_id == expert.id)
-    )
+    existing = await session.execute(select(ExpertTag).where(ExpertTag.expert_id == expert.id))
     for et in existing.scalars().all():
         await session.delete(et)
     await session.flush()
@@ -179,9 +166,7 @@ async def sync_expert_tags(session: AsyncSession, expert: Expert, tag_names: lis
         if not tag_name:
             continue
         if tag_name not in tag_cache:
-            existing_tag = await session.scalar(
-                select(Tag).where(Tag.name == tag_name)
-            )
+            existing_tag = await session.scalar(select(Tag).where(Tag.name == tag_name))
             if existing_tag:
                 tag_cache[tag_name] = existing_tag
             else:
@@ -195,9 +180,7 @@ async def sync_expert_tags(session: AsyncSession, expert: Expert, tag_names: lis
 
 async def delete_all_experts(session: AsyncSession, event_id) -> int:
     """Delete all experts for an event (for replace flow)."""
-    result = await session.execute(
-        select(Expert).where(Expert.event_id == event_id)
-    )
+    result = await session.execute(select(Expert).where(Expert.event_id == event_id))
     experts = result.scalars().all()
     count = len(experts)
     for expert in experts:

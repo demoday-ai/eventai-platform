@@ -49,9 +49,7 @@ async def set_my_role(
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Нет активного события")
 
-    await user_service.set_role(
-        session, user.id, event.id, role, guest_subtype=body.guest_subtype
-    )
+    await user_service.set_role(session, user.id, event.id, role, guest_subtype=body.guest_subtype)
 
     await session.refresh(user)
     return _build_profile(user, RoleInfo(code=role.code, name=role.name))

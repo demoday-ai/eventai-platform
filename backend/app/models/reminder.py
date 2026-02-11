@@ -74,12 +74,8 @@ class ReminderBatch(Base):
     failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     skipped_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[ReminderBatchStatus] = mapped_column(
         Enum(ReminderBatchStatus, name="reminder_batch_status_enum"),
         nullable=False,
@@ -109,9 +105,7 @@ class ReminderNotification(Base):
         Enum(RecipientType, name="recipient_type_enum"),
         nullable=False,
     )
-    telegram_user_id: Mapped[str] = mapped_column(
-        String(20), nullable=False, index=True
-    )
+    telegram_user_id: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -137,14 +131,10 @@ class ReminderNotification(Base):
     )
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     message_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    batch: Mapped["ReminderBatch"] = relationship(
-        "ReminderBatch", back_populates="notifications"
-    )
+    batch: Mapped["ReminderBatch"] = relationship("ReminderBatch", back_populates="notifications")
     user = relationship("User")
     expert = relationship("Expert")
     participation = relationship("ParticipationRequest")

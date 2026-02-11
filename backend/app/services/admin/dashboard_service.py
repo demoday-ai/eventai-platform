@@ -69,16 +69,12 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
         )
 
     # Projects stats
-    total_projects = await db.scalar(
-        select(func.count(Project.id)).where(Project.event_id == event_id)
-    ) or 0
+    total_projects = await db.scalar(select(func.count(Project.id)).where(Project.event_id == event_id)) or 0
 
     projects = ProjectStats(total=total_projects)
 
     # Partners stats (guests with subtype business_partner)
-    guest_role_for_partners = await db.scalar(
-        select(Role).where(Role.code == RoleCode.GUEST.value)
-    )
+    guest_role_for_partners = await db.scalar(select(Role).where(Role.code == RoleCode.GUEST.value))
     total_partners = 0
     partners_from_bot = 0
     partners_from_import = 0
@@ -110,22 +106,38 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     )
 
     # Students stats
-    total_students = await db.scalar(
-        select(func.count(Project.id)).where(Project.event_id == event_id)
+    student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
+
+    total_students = 0
+    if student_role:
+        total_students = (
+            await db.scalar(
+                select(func.count(UserRole.id)).where(
+                    UserRole.event_id == event_id,
+                    UserRole.role_id == student_role.id,
+                )
+            )
+            or 0
+        )
+
+    confirmed_students = (
+        await db.scalar(
+            select(func.count(ParticipationRequest.id)).where(
+                ParticipationRequest.event_id == event_id,
+                ParticipationRequest.status == ParticipationStatus.ACKNOWLEDGED,
+            )
+        )
+        or 0
     )
 
-    confirmed_students = await db.scalar(
-        select(func.count(ParticipationRequest.id)).where(
-            ParticipationRequest.event_id == event_id,
-            ParticipationRequest.status == ParticipationStatus.ACKNOWLEDGED,
+    pending_students = (
+        await db.scalar(
+            select(func.count(ParticipationRequest.id)).where(
+                ParticipationRequest.event_id == event_id,
+                ParticipationRequest.status.in_([ParticipationStatus.PENDING, ParticipationStatus.SENT]),
+            )
         )
-    )
-
-    pending_students = await db.scalar(
-        select(func.count(ParticipationRequest.id)).where(
-            ParticipationRequest.event_id == event_id,
-            ParticipationRequest.status.in_([ParticipationStatus.PENDING, ParticipationStatus.SENT]),
-        )
+        or 0
     )
 
     declined_students = total_students - confirmed_students - pending_students
@@ -138,33 +150,40 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
     )
 
     # Expert stats
-    total_experts = await db.scalar(
-        select(func.count(Expert.id)).where(Expert.event_id == event_id)
-    ) or 0
+    total_experts = await db.scalar(select(func.count(Expert.id)).where(Expert.event_id == event_id)) or 0
 
     current_clustering = await event_repo.get_approved_clustering(db, event_id)
 
     if current_clustering:
-        confirmed_experts = await db.scalar(
-            select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
-                ExpertRoomAssignment.clustering_run_id == current_clustering.id,
-                ExpertRoomAssignment.status == "confirmed",
+        confirmed_experts = (
+            await db.scalar(
+                select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
+                    ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+                    ExpertRoomAssignment.status == "confirmed",
+                )
             )
-        ) or 0
+            or 0
+        )
 
-        pending_experts = await db.scalar(
-            select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
-                ExpertRoomAssignment.clustering_run_id == current_clustering.id,
-                ExpertRoomAssignment.status.in_(["proposed", "sent"]),
+        pending_experts = (
+            await db.scalar(
+                select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
+                    ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+                    ExpertRoomAssignment.status.in_(["proposed", "sent"]),
+                )
             )
-        ) or 0
+            or 0
+        )
 
-        invited_experts = await db.scalar(
-            select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
-                ExpertRoomAssignment.clustering_run_id == current_clustering.id,
-                ExpertRoomAssignment.status.in_(["sent", "confirmed"]),
+        invited_experts = (
+            await db.scalar(
+                select(func.count(ExpertRoomAssignment.expert_id.distinct())).where(
+                    ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+                    ExpertRoomAssignment.status.in_(["sent", "confirmed"]),
+                )
             )
-        ) or 0
+            or 0
+        )
     else:
         confirmed_experts = pending_experts = invited_experts = 0
 
@@ -200,9 +219,7 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
             .group_by(User.guest_subtype)
         )
 
-        by_subtype = [
-            GuestSubtypeCount(subtype=row[0], count=row[1]) for row in subtype_result.all()
-        ]
+        by_subtype = [GuestSubtypeCount(subtype=row[0], count=row[1]) for row in subtype_result.all()]
 
     guests = GuestStats(total=total_guests, by_subtype=by_subtype)
 
@@ -257,20 +274,14 @@ async def get_dashboard_stats(db: AsyncSession, event_id: UUID) -> DashboardResp
             )
 
     empty_slots = await db.scalar(
-        select(func.count(ScheduleSlot.id)).where(
-            ScheduleSlot.event_id == event_id, ScheduleSlot.project_id.is_(None)
-        )
+        select(func.count(ScheduleSlot.id)).where(ScheduleSlot.event_id == event_id, ScheduleSlot.project_id.is_(None))
     )
 
     if empty_slots > 0:
-        alerts.append(
-            Alert(severity="warning", message=f"Пустых слотов: {empty_slots}")
-        )
+        alerts.append(Alert(severity="warning", message=f"Пустых слотов: {empty_slots}"))
 
     if pending_students > 10:
-        alerts.append(
-            Alert(severity="warning", message=f"Не подтвердили участие: {pending_students} студентов")
-        )
+        alerts.append(Alert(severity="warning", message=f"Не подтвердили участие: {pending_students} студентов"))
 
     return DashboardResponse(
         event=event_summary,
@@ -317,7 +328,8 @@ _PHASE_LABELS = {
 
 
 async def get_pipeline_status(
-    db: AsyncSession, event_id: UUID | None,
+    db: AsyncSession,
+    event_id: UUID | None,
 ) -> PipelineStatusResponse:
     """Get pipeline preparation status for Global Stepper."""
 
@@ -334,84 +346,80 @@ async def get_pipeline_status(
         step_statuses["event"] = "completed" if event else "not_started"
 
         # projects step
-        projects_count = await db.scalar(
-            select(func.count(Project.id)).where(Project.event_id == event_id)
-        ) or 0
+        projects_count = await db.scalar(select(func.count(Project.id)).where(Project.event_id == event_id)) or 0
         step_statuses["projects"] = "completed" if projects_count > 0 else "not_started"
 
         # students step - check for UserRole with student role
         student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
         students_count = 0
         if student_role:
-            students_count = await db.scalar(
-                select(func.count(UserRole.id)).where(
-                    UserRole.event_id == event_id,
-                    UserRole.role_id == student_role.id,
+            students_count = (
+                await db.scalar(
+                    select(func.count(UserRole.id)).where(
+                        UserRole.event_id == event_id,
+                        UserRole.role_id == student_role.id,
+                    )
                 )
-            ) or 0
+                or 0
+            )
         step_statuses["students"] = "completed" if students_count > 0 else "not_started"
 
         # experts step
-        experts_count = await db.scalar(
-            select(func.count(Expert.id)).where(Expert.event_id == event_id)
-        ) or 0
+        experts_count = await db.scalar(select(func.count(Expert.id)).where(Expert.event_id == event_id)) or 0
         step_statuses["experts"] = "completed" if experts_count > 0 else "not_started"
 
         # clustering step
         current_clustering = await event_repo.get_approved_clustering(db, event_id)
-        step_statuses["clustering"] = (
-            "completed" if current_clustering else "not_started"
-        )
+        step_statuses["clustering"] = "completed" if current_clustering else "not_started"
 
         # matching step
         if current_clustering:
-            assignments_count = await db.scalar(
-                select(func.count(ExpertRoomAssignment.id)).where(
-                    ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+            assignments_count = (
+                await db.scalar(
+                    select(func.count(ExpertRoomAssignment.id)).where(
+                        ExpertRoomAssignment.clustering_run_id == current_clustering.id,
+                    )
                 )
-            ) or 0
-            step_statuses["matching"] = (
-                "completed" if assignments_count > 0 else "not_started"
+                or 0
             )
+            step_statuses["matching"] = "completed" if assignments_count > 0 else "not_started"
         else:
             step_statuses["matching"] = "not_started"
 
         # schedule step
         step_statuses["schedule"] = (
-            "completed"
-            if current_clustering and current_clustering.schedule_approved_at is not None
-            else "not_started"
+            "completed" if current_clustering and current_clustering.schedule_approved_at is not None else "not_started"
         )
 
         # reminders step
-        reminders_count = await db.scalar(
-            select(func.count(Notification.id)).where(
-                Notification.event_id == event_id,
-                Notification.type.in_(["eve_of_dd", "pre_slot"]),
+        reminders_count = (
+            await db.scalar(
+                select(func.count(Notification.id)).where(
+                    Notification.event_id == event_id,
+                    Notification.type.in_(["eve_of_dd", "pre_slot"]),
+                )
             )
-        ) or 0
-        step_statuses["reminders"] = (
-            "completed" if reminders_count > 0 else "not_started"
+            or 0
         )
+        step_statuses["reminders"] = "completed" if reminders_count > 0 else "not_started"
 
         # briefing step
         from app.models import ExpertBriefing
 
-        briefings_count = await db.scalar(
-            select(func.count(ExpertBriefing.id)).where(
-                ExpertBriefing.event_id == event_id,
+        briefings_count = (
+            await db.scalar(
+                select(func.count(ExpertBriefing.id)).where(
+                    ExpertBriefing.event_id == event_id,
+                )
             )
-        ) or 0
-        step_statuses["briefing"] = (
-            "completed" if briefings_count > 0 else "not_started"
+            or 0
         )
+        step_statuses["briefing"] = "completed" if briefings_count > 0 else "not_started"
 
     # Build phases
     phase_steps: dict[str, list[Step]] = {"data": [], "distribution": [], "launch": []}
     for step_name, label, phase, _ in _STEP_CONFIG:
-        phase_steps[phase].append(
-            Step(name=step_name, label=label, status=step_statuses[step_name])
-        )
+        phase_steps[phase].append(Step(name=step_name, label=label, status=step_statuses[step_name]))
 
     phases = []
     for phase_name in ["data", "distribution", "launch"]:
@@ -454,17 +462,13 @@ async def get_coverage_stats(db: AsyncSession, event_id: UUID) -> list[RoomCover
     if not current_clustering:
         return []
 
-    rooms_result = await db.execute(
-        select(Room).where(Room.clustering_run_id == current_clustering.id)
-    )
+    rooms_result = await db.execute(select(Room).where(Room.clustering_run_id == current_clustering.id))
     rooms = rooms_result.scalars().all()
 
     coverage_list = []
 
     for room in rooms:
-        projects_count = await db.scalar(
-            select(func.count(RoomProject.id)).where(RoomProject.room_id == room.id)
-        )
+        projects_count = await db.scalar(select(func.count(RoomProject.id)).where(RoomProject.room_id == room.id))
 
         total_experts = await db.scalar(
             select(func.count(ExpertRoomAssignment.id)).where(
@@ -659,9 +663,7 @@ async def get_projects_list(
 
         if search:
             search_pattern = f"%{search}%"
-            query = query.where(
-                (Project.title.ilike(search_pattern)) | (Project.author.ilike(search_pattern))
-            )
+            query = query.where((Project.title.ilike(search_pattern)) | (Project.author.ilike(search_pattern)))
 
         result = await db.execute(query.order_by(Project.title))
         projects = result.scalars().all()
@@ -707,9 +709,7 @@ async def get_projects_list(
 
     if search:
         search_pattern = f"%{search}%"
-        query = query.where(
-            (Project.title.ilike(search_pattern)) | (Project.author.ilike(search_pattern))
-        )
+        query = query.where((Project.title.ilike(search_pattern)) | (Project.author.ilike(search_pattern)))
 
     result = await db.execute(query.order_by(Room.name, ScheduleSlot.start_time.nulls_last()))
     rows = result.all()
@@ -792,21 +792,11 @@ async def get_project_detail(
             room_id = str(room.id)
             room_name = room.name
 
-        slot_result = await db.execute(
-            select(ScheduleSlot).where(ScheduleSlot.project_id == project.id)
-        )
+        slot_result = await db.execute(select(ScheduleSlot).where(ScheduleSlot.project_id == project.id))
         slot = slot_result.scalar_one_or_none()
         if slot:
-            start_time = (
-                slot.start_time.isoformat()
-                if hasattr(slot.start_time, "isoformat")
-                else str(slot.start_time)
-            )
-            end_time = (
-                slot.end_time.isoformat()
-                if hasattr(slot.end_time, "isoformat")
-                else str(slot.end_time)
-            )
+            start_time = slot.start_time.isoformat() if hasattr(slot.start_time, "isoformat") else str(slot.start_time)
+            end_time = slot.end_time.isoformat() if hasattr(slot.end_time, "isoformat") else str(slot.end_time)
             status = "confirmed"
 
     return ProjectDetailResponse(
@@ -847,9 +837,7 @@ async def update_project(
 
     if body.tags is not None:
         # Remove existing tags
-        existing_tags = await db.execute(
-            select(ProjectTag).where(ProjectTag.project_id == project.id)
-        )
+        existing_tags = await db.execute(select(ProjectTag).where(ProjectTag.project_id == project.id))
         for pt in existing_tags.scalars().all():
             await db.delete(pt)
         await db.flush()

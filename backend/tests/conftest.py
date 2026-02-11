@@ -40,9 +40,7 @@ async def async_engine():
 
 @pytest.fixture
 async def session(async_engine):
-    async_session = sessionmaker(
-        async_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
         yield session
         await session.rollback()

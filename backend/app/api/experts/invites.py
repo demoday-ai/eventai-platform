@@ -16,8 +16,8 @@ async def invite_preview_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -36,8 +36,8 @@ async def invite_confirm_endpoint(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-
     from app.services.core import user_service
+
     event = await user_service.get_current_event(session)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")

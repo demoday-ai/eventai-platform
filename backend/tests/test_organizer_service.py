@@ -52,6 +52,7 @@ async def test_remove_organizer(session):
 @pytest.mark.asyncio
 async def test_remove_organizer_not_found(session):
     import uuid
+
     deleted = await organizer_service.remove_organizer(session, uuid.uuid4())
     assert deleted is False
 

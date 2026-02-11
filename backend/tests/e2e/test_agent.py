@@ -7,7 +7,7 @@ import sys
 
 # Fix Windows console encoding
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 from telethon import TelegramClient
@@ -123,6 +123,7 @@ async def main():
     except Exception as e:
         print(f"\n[FAIL] {e}")
         import traceback
+
         traceback.print_exc()
         return 1
     finally:

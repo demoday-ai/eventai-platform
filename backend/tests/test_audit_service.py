@@ -21,8 +21,11 @@ async def test_user(session):
 @pytest.mark.asyncio
 async def test_log_action_creates_entry(session, test_user):
     entry = await audit_service.log_action(
-        session, test_user, "upload_projects",
-        entity_type="projects", entity_id="proj-1",
+        session,
+        test_user,
+        "upload_projects",
+        entity_type="projects",
+        entity_id="proj-1",
         details={"loaded": 10},
     )
 
@@ -37,7 +40,9 @@ async def test_log_action_creates_entry(session, test_user):
 @pytest.mark.asyncio
 async def test_log_action_without_user(session):
     entry = await audit_service.log_action(
-        session, None, "system_action",
+        session,
+        None,
+        "system_action",
     )
 
     assert entry.user_id is None
@@ -74,9 +79,7 @@ async def test_get_audit_log_pagination(session, test_user):
     for i in range(5):
         await audit_service.log_action(session, test_user, "paginate_test")
 
-    entries, total = await audit_service.get_audit_log(
-        session, action="paginate_test", limit=2, offset=0
-    )
+    entries, total = await audit_service.get_audit_log(session, action="paginate_test", limit=2, offset=0)
 
     assert total == 5
     assert len(entries) == 2
@@ -85,8 +88,11 @@ async def test_get_audit_log_pagination(session, test_user):
 @pytest.mark.asyncio
 async def test_get_audit_log_with_details(session, test_user):
     await audit_service.log_action(
-        session, test_user, "details_test",
-        entity_type="projects", entity_id="p-1",
+        session,
+        test_user,
+        "details_test",
+        entity_type="projects",
+        entity_id="p-1",
         details={"loaded": 42, "file_hash": "abc123"},
     )
 

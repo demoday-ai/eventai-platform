@@ -96,11 +96,7 @@ async def suggest_tags(db: AsyncSession, event_id: UUID) -> dict:
     """Analyze project descriptions and suggest tags via LLM."""
     from app.services.core import llm_client
 
-    result = await db.execute(
-        select(Project.title, Project.description)
-        .where(Project.event_id == event_id)
-        .limit(50)
-    )
+    result = await db.execute(select(Project.title, Project.description).where(Project.event_id == event_id).limit(50))
     projects = result.all()
 
     if not projects:

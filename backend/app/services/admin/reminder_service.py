@@ -68,10 +68,7 @@ def truncate_message(text: str, max_len: int = MAX_MESSAGE_LENGTH) -> str:
 
     if total_projects == 0:
         # No project lines found, simple truncation at word boundary
-        logger.warning(
-            "Message truncation: no project lines found, using simple cut. "
-            "Original length: %d", len(text)
-        )
+        logger.warning("Message truncation: no project lines found, using simple cut. Original length: %d", len(text))
         # Find last space before limit to avoid cutting words
         cut_point = max_len - 3
         while cut_point > 0 and text[cut_point] not in " \n\t":
@@ -106,7 +103,10 @@ def truncate_message(text: str, max_len: int = MAX_MESSAGE_LENGTH) -> str:
 
     logger.info(
         "Message truncated: %d → %d chars, kept %d/%d projects",
-        len(text), len(result), kept_project_count, total_projects
+        len(text),
+        len(result),
+        kept_project_count,
+        total_projects,
     )
 
     return result
@@ -123,15 +123,11 @@ def _is_project_line(line: str) -> bool:
     # - "🔹 Project name" or similar emoji bullets
     first_char = stripped[0]
     return (
-        first_char in "•-–—*▪▸►" or
-        first_char.isdigit() or
-        ord(first_char) > 0x1F000  # Emoji range
+        first_char in "•-–—*▪▸►" or first_char.isdigit() or ord(first_char) > 0x1F000  # Emoji range
     )
 
 
-async def check_duplicate(
-    session: AsyncSession, event_id: UUID, reminder_type: ReminderType
-) -> dict | None:
+async def check_duplicate(session: AsyncSession, event_id: UUID, reminder_type: ReminderType) -> dict | None:
     """Check if a reminder batch of same type was sent within 24h.
 
     Returns batch info if found, None otherwise.
@@ -199,9 +195,7 @@ async def get_student_recipients(session: AsyncSession, event_id: UUID) -> list[
     return recipients
 
 
-async def get_expert_recipients(
-    session: AsyncSession, event_id: UUID, clustering_id: UUID | None = None
-) -> list[dict]:
+async def get_expert_recipients(session: AsyncSession, event_id: UUID, clustering_id: UUID | None = None) -> list[dict]:
     """Get experts with room assignments for reminders.
 
     Excludes declined experts. Returns list with expert data and room info.
@@ -228,8 +222,7 @@ async def get_expert_recipients(
     for a in assignments:
         if a.room_id not in room_project_counts:
             count_result = await session.execute(
-                select(func.count(RoomProject.id))
-                .where(RoomProject.room_id == a.room_id)
+                select(func.count(RoomProject.id)).where(RoomProject.room_id == a.room_id)
             )
             room_project_counts[a.room_id] = count_result.scalar() or 0
 
@@ -261,10 +254,7 @@ async def get_guest_recipients(session: AsyncSession, event_id: UUID) -> list[di
 
     Returns list with user data and program placeholder.
     """
-    result = await session.execute(
-        select(User)
-        .where(User.guest_subtype.isnot(None))
-    )
+    result = await session.execute(select(User).where(User.guest_subtype.isnot(None)))
     users = result.scalars().all()
 
     recipients = []
@@ -281,9 +271,7 @@ async def get_guest_recipients(session: AsyncSession, event_id: UUID) -> list[di
     return recipients
 
 
-async def get_preview(
-    session: AsyncSession, event_id: UUID, reminder_type: ReminderType
-) -> dict:
+async def get_preview(session: AsyncSession, event_id: UUID, reminder_type: ReminderType) -> dict:
     """Get preview of reminder recipients by role.
 
     Aggregates all recipients, counts by role, detects skipped (no telegram),
@@ -403,12 +391,7 @@ async def execute_batch(
 
 def format_student_day_before(project_title: str, room_name: str, event_date: str, acknowledged: bool) -> str:
     """Format day-before message for student."""
-    msg = (
-        f"📅 Завтра ты выступаешь!\n\n"
-        f"Проект: {project_title}\n"
-        f"Зал: {room_name}\n"
-        f"Дата: {event_date}\n"
-    )
+    msg = f"📅 Завтра ты выступаешь!\n\nПроект: {project_title}\nЗал: {room_name}\nДата: {event_date}\n"
     if not acknowledged:
         msg += "\n⚠️ Пожалуйста, подтвердите участие."
     return msg
@@ -416,17 +399,10 @@ def format_student_day_before(project_title: str, room_name: str, event_date: st
 
 def format_expert_day_before(room_name: str, project_count: int) -> str:
     """Format day-before message for expert."""
-    return (
-        f"📅 Завтра Demo Day!\n\n"
-        f"Зал: {room_name}\n"
-        f"Проектов: {project_count}\n\n"
-        f"Ждём вас для оценки проектов!"
-    )
+    return f"📅 Завтра Demo Day!\n\nЗал: {room_name}\nПроектов: {project_count}\n\nЖдём вас для оценки проектов!"
 
 
-def format_guest_day_before(
-    full_name: str, has_program: bool, projects: list[dict] | None = None
-) -> str:
+def format_guest_day_before(full_name: str, has_program: bool, projects: list[dict] | None = None) -> str:
     """Format day-before message for guest.
 
     Args:
@@ -438,10 +414,7 @@ def format_guest_day_before(
         Formatted message, truncated if needed
     """
     if not has_program or not projects:
-        return (
-            "📅 Завтра Demo Day!\n\n"
-            "Пройдите профилирование, чтобы получить персональную программу."
-        )
+        return "📅 Завтра Demo Day!\n\nПройдите профилирование, чтобы получить персональную программу."
 
     # Build message with project list
     lines = [
@@ -463,9 +436,7 @@ def format_guest_day_before(
     return truncate_message(text)
 
 
-def format_business_day_before(
-    full_name: str, has_program: bool, projects: list[dict] | None = None
-) -> str:
+def format_business_day_before(full_name: str, has_program: bool, projects: list[dict] | None = None) -> str:
     """Format day-before message for business partner.
 
     Args:
@@ -477,10 +448,7 @@ def format_business_day_before(
         Formatted message, truncated if needed
     """
     if not has_program or not projects:
-        return (
-            "📅 Завтра Demo Day!\n\n"
-            "Пройдите профилирование, чтобы получить персональную подборку проектов."
-        )
+        return "📅 Завтра Demo Day!\n\nПройдите профилирование, чтобы получить персональную подборку проектов."
 
     # Build message with project list
     lines = [
@@ -504,12 +472,7 @@ def format_business_day_before(
 
 def format_student_hour_before(project_title: str, room_name: str) -> str:
     """Format hour-before message for student."""
-    return (
-        f"⏰ Через час — твоё выступление!\n\n"
-        f"Зал: {room_name}\n"
-        f"Проект: {project_title}\n\n"
-        f"Удачи! 🎯"
-    )
+    return f"⏰ Через час — твоё выступление!\n\nЗал: {room_name}\nПроект: {project_title}\n\nУдачи! 🎯"
 
 
 def format_expert_hour_before(room_name: str, first_project: str | None) -> str:
@@ -523,10 +486,7 @@ def format_expert_hour_before(room_name: str, first_project: str | None) -> str:
 
 def format_guest_hour_before(full_name: str) -> str:
     """Format hour-before message for guest."""
-    return (
-        "⏰ DD начинается через час!\n\n"
-        "Ждём вас!"
-    )
+    return "⏰ DD начинается через час!\n\nЖдём вас!"
 
 
 # Sending functions
@@ -712,13 +672,9 @@ async def send_guest_reminders(
         # Format message based on type and role
         if reminder_type == ReminderType.DAY_BEFORE:
             if is_business:
-                text = format_business_day_before(
-                    guest["full_name"], guest["has_program"], projects
-                )
+                text = format_business_day_before(guest["full_name"], guest["has_program"], projects)
             else:
-                text = format_guest_day_before(
-                    guest["full_name"], guest["has_program"], projects
-                )
+                text = format_guest_day_before(guest["full_name"], guest["has_program"], projects)
         else:
             text = format_guest_hour_before(guest["full_name"])
 
@@ -770,9 +726,7 @@ async def get_guest_program(session: AsyncSession, user_id: UUID) -> list[dict]:
     return []
 
 
-async def get_interrupted_batch(
-    session: AsyncSession, event_id: UUID
-) -> ReminderBatch | None:
+async def get_interrupted_batch(session: AsyncSession, event_id: UUID) -> ReminderBatch | None:
     """Find the newest interrupted (in_progress) batch for event.
 
     Returns the most recent batch with status=in_progress, or None if none found.
@@ -788,9 +742,7 @@ async def get_interrupted_batch(
     return result.scalars().first()
 
 
-async def resume_batch(
-    session: AsyncSession, batch: ReminderBatch, bot: MessageSender
-) -> ReminderBatch:
+async def resume_batch(session: AsyncSession, batch: ReminderBatch, bot: MessageSender) -> ReminderBatch:
     """Resume an interrupted batch - send only pending notifications.
 
     Queries notifications with status != sent and continues sending.

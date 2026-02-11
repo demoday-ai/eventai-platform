@@ -24,9 +24,7 @@ async def get_current_user(
     telegram_user_id = decode_token(credentials.credentials)
     user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
     return user
 
 

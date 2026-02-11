@@ -15,9 +15,7 @@ async def get_by_id(session: AsyncSession, project_id: UUID) -> Project | None:
 
 
 async def count_by_event(session: AsyncSession, event_id: UUID) -> int:
-    return await session.scalar(
-        select(func.count(Project.id)).where(Project.event_id == event_id)
-    ) or 0
+    return await session.scalar(select(func.count(Project.id)).where(Project.event_id == event_id)) or 0
 
 
 async def get_project_tags(session: AsyncSession, project_id: UUID) -> list[str]:
@@ -36,8 +34,6 @@ async def get_projects_with_descriptions(
 ) -> list[tuple[str, str | None]]:
     """Get project (title, description) pairs for LLM analysis."""
     result = await session.execute(
-        select(Project.title, Project.description)
-        .where(Project.event_id == event_id)
-        .limit(limit)
+        select(Project.title, Project.description).where(Project.event_id == event_id).limit(limit)
     )
     return list(result.all())

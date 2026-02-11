@@ -3,6 +3,7 @@
 Creates temporary test users → profiles → recommendations → cleanup.
 Tests: tag-based scoring, text-search scoring, skip-profiling, business partner with extra_data.
 """
+
 import asyncio
 import uuid
 
@@ -27,9 +28,7 @@ async def main():
 
     async with async_session() as session:
         # --- Setup ---
-        event_result = await session.execute(
-            select(Event).order_by(Event.created_at.desc()).limit(1)
-        )
+        event_result = await session.execute(select(Event).order_by(Event.created_at.desc()).limit(1))
         event = event_result.scalars().first()
         if not event:
             print("ERROR: No event found")
@@ -43,23 +42,30 @@ async def main():
             return 1
 
         # Check tag state
-        tag_result = await session.execute(text(
-            "SELECT name, count(*) FROM tags t "
-            "JOIN project_tags pt ON pt.tag_id = t.id "
-            "GROUP BY t.name ORDER BY count(*) DESC"
-        ))
+        tag_result = await session.execute(
+            text(
+                "SELECT name, count(*) FROM tags t "
+                "JOIN project_tags pt ON pt.tag_id = t.id "
+                "GROUP BY t.name ORDER BY count(*) DESC"
+            )
+        )
         tags = tag_result.all()
         print(f"\n[TAGS] {len(tags)} tags in DB:")
         for name, cnt in tags:
             print(f"  {name}: {cnt} projects")
 
-        project_count = (await session.execute(text(
-            "SELECT count(*) FROM projects WHERE event_id = :eid"
-        ), {"eid": event.id})).scalar()
-        tagged_count = (await session.execute(text(
-            "SELECT count(DISTINCT pt.project_id) FROM project_tags pt "
-            "JOIN projects p ON p.id = pt.project_id WHERE p.event_id = :eid"
-        ), {"eid": event.id})).scalar()
+        project_count = (
+            await session.execute(text("SELECT count(*) FROM projects WHERE event_id = :eid"), {"eid": event.id})
+        ).scalar()
+        tagged_count = (
+            await session.execute(
+                text(
+                    "SELECT count(DISTINCT pt.project_id) FROM project_tags pt "
+                    "JOIN projects p ON p.id = pt.project_id WHERE p.event_id = :eid"
+                ),
+                {"eid": event.id},
+            )
+        ).scalar()
         print(f"\n[COVERAGE] {tagged_count}/{project_count} projects have tags")
 
         # ============================================================
@@ -85,7 +91,8 @@ async def main():
 
         profile1 = await profiling_service.get_or_create_profile(session, user1.id, event.id)
         await profiling_service.save_profile(
-            session, profile1,
+            session,
+            profile1,
             selected_tags=["NLP", "FinTech"],
             keywords=["антифрод", "чат-бот"],
             raw_text="Интересуюсь антифродом в финтехе и чат-ботами",
@@ -164,7 +171,8 @@ async def main():
 
         profile2 = await profiling_service.get_or_create_profile(session, user2.id, event.id)
         await profiling_service.save_profile(
-            session, profile2,
+            session,
+            profile2,
             selected_tags=[],  # NO tags
             keywords=["антифрод", "fraud detection"],
             raw_text="Ищу проекты про антифрод и fraud detection в банковской сфере",
@@ -225,7 +233,8 @@ async def main():
 
             profile3 = await profiling_service.get_or_create_profile(session, user3.id, event.id)
             await profiling_service.save_profile(
-                session, profile3,
+                session,
+                profile3,
                 selected_tags=["EdTech", "LLM"],
                 keywords=["обучение", "адаптивные тесты", "LLM в образовании"],
                 raw_text="Ищем AI-решения для корпоративного обучения, адаптивное тестирование",
@@ -238,8 +247,10 @@ async def main():
             )
             await session.commit()
             print(f"  Profile: tags={profile3.selected_tags}, keywords={profile3.keywords}")
-            print(f"  Extra: company={profile3.extra_data.get('company')}, "
-                  f"objectives={profile3.extra_data.get('business_objectives')}")
+            print(
+                f"  Extra: company={profile3.extra_data.get('company')}, "
+                f"objectives={profile3.extra_data.get('business_objectives')}"
+            )
 
             print("  Generating recommendations (with business context)...")
             recs3 = await profiling_service.generate_recommendations(session, profile3)
@@ -258,8 +269,7 @@ async def main():
                     print(f"    #{rec['rank']} [{score_ok} score={score}] {rec['title'][:50]}")
                     print(f"       tags={rec['tags']}")
 
-                all_scores = [r["relevance_score"] for r in
-                              recs3.get("must_visit", []) + recs3.get("if_time", [])]
+                all_scores = [r["relevance_score"] for r in recs3.get("must_visit", []) + recs3.get("if_time", [])]
                 bad_scores = [s for s in all_scores if s < 0 or s > 100]
                 if bad_scores:
                     print(f"\n  FAIL: Scores out of 0-100 range: {bad_scores}")
@@ -279,14 +289,24 @@ async def main():
                         print(f"    Score: {min(int(detail['relevance_score']), 100)}%")
                         print(f"    Summary: {summary[:150]}...")
                         # Check if business context influenced the summary
-                        biz_keywords = ["educorp", "обучен", "lms", "корпоратив", "партнёр",
-                                        "образован", "edtech", "адаптив"]
+                        biz_keywords = [
+                            "educorp",
+                            "обучен",
+                            "lms",
+                            "корпоратив",
+                            "партнёр",
+                            "образован",
+                            "edtech",
+                            "адаптив",
+                        ]
                         found_biz = [k for k in biz_keywords if k.lower() in summary.lower()]
                         if found_biz:
                             print(f"    PASS: Summary references business context: {found_biz}")
                         else:
-                            print("    INFO: Summary doesn't explicitly mention business keywords "
-                                  "(may still be contextually relevant)")
+                            print(
+                                "    INFO: Summary doesn't explicitly mention business keywords "
+                                "(may still be contextually relevant)"
+                            )
 
         # ============================================================
         # Cleanup
@@ -296,11 +316,11 @@ async def main():
         print("=" * 60)
 
         for uid in created_user_ids:
-            await session.execute(delete(Recommendation).where(
-                Recommendation.guest_profile_id.in_(
-                    select(GuestProfile.id).where(GuestProfile.user_id == uid)
+            await session.execute(
+                delete(Recommendation).where(
+                    Recommendation.guest_profile_id.in_(select(GuestProfile.id).where(GuestProfile.user_id == uid))
                 )
-            ))
+            )
             await session.execute(delete(GuestProfile).where(GuestProfile.user_id == uid))
             await session.execute(delete(UserRole).where(UserRole.user_id == uid))
             await session.execute(delete(User).where(User.id == uid))

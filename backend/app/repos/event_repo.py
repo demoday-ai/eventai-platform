@@ -11,15 +11,11 @@ from app.models.event import Event
 
 async def get_current_event(session: AsyncSession) -> Event | None:
     """Get the most recent event."""
-    result = await session.execute(
-        select(Event).order_by(Event.start_date.desc()).limit(1)
-    )
+    result = await session.execute(select(Event).order_by(Event.start_date.desc()).limit(1))
     return result.scalar_one_or_none()
 
 
-async def get_approved_clustering(
-    session: AsyncSession, event_id: UUID
-) -> ClusteringRun | None:
+async def get_approved_clustering(session: AsyncSession, event_id: UUID) -> ClusteringRun | None:
     """Get the latest approved clustering run for an event."""
     result = await session.scalar(
         select(ClusteringRun)
