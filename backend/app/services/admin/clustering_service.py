@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 import uuid
 from datetime import datetime, timezone
 
@@ -18,6 +19,9 @@ from app.models.room_project import RoomProject
 from app.services.core import llm_client
 
 logger = logging.getLogger(__name__)
+
+# Sample size for Phase 1 (theme suggestion)
+THEME_ANALYSIS_SAMPLE_SIZE = 100
 
 SYSTEM_PROMPT = """Ты AI-ассистент для организации Demo Day. Твоя задача — распределить проекты по тематическим залам.
 
@@ -63,6 +67,25 @@ Constraints:
   "themes": ["Тема зала 1", "Тема зала 2", ...]
 }"""
 
+ASSIGNMENT_SYSTEM_PROMPT = """Ты AI-ассистент для организации Demo Day.
+Твоя задача — распределить проекты по заданным тематическим залам.
+
+Constraints:
+- Каждый проект должен быть ровно в одном зале
+- Разница между самым большим и маленьким залом ≤ 5 проектов
+- Группируй проекты по тематической близости к названию зала
+- Используй теги и названия проектов для определения соответствия
+
+Верни JSON строго в формате:
+{
+  "rooms": [
+    {
+      "name": "Название зала (из списка предложенных тем)",
+      "project_ids": ["id1", "id2", ...]
+    }
+  ]
+}"""
+
 
 def _build_user_prompt(
     projects: list[dict],
@@ -98,6 +121,21 @@ def _build_suggest_themes_user_prompt(
     return prompt
 
 
+def _build_assignment_user_prompt(
+    projects: list[dict],
+    room_themes: list[str],
+) -> str:
+    """Build user prompt for project assignment (compact format)."""
+    prompt = f"Распредели {len(projects)} проектов по {len(room_themes)} залам.\n\n"
+    prompt += f"Темы залов: {json.dumps(room_themes, ensure_ascii=False)}\n\n"
+    prompt += "Проекты (id, title, tags):\n"
+    # Compact format: only id, title, tags (no descriptions)
+    compact_projects = [{"id": p["id"], "title": p["title"], "tags": p.get("tags", [])} for p in projects]
+    prompt += json.dumps(compact_projects, ensure_ascii=False, indent=None)
+    prompt += "\n\nВерни JSON с распределением проектов по залам."
+    return prompt
+
+
 async def suggest_room_themes(
     session: AsyncSession,
     event_id: uuid.UUID,
@@ -105,7 +143,7 @@ async def suggest_room_themes(
 ) -> list[str]:
     """Suggest room themes based on project tags and descriptions.
 
-    Analyzes all projects using LLM and returns suggested theme names.
+    Analyzes a sample of projects using LLM and returns suggested theme names.
     Returns list[str] of length num_rooms.
     """
     # 1. Fetch projects with tags
@@ -120,9 +158,13 @@ async def suggest_room_themes(
     if len(projects) < 2:
         raise ValueError(f"Недостаточно проектов для анализа: {len(projects)}")
 
-    # 2. Build data for LLM (tags + descriptions)
+    # 2. Sample projects for analysis (limit context size)
+    sample_size = min(THEME_ANALYSIS_SAMPLE_SIZE, len(projects))
+    sampled_projects = random.sample(projects, sample_size) if len(projects) > sample_size else projects
+
+    # 3. Build data for LLM (tags + descriptions)
     projects_data = []
-    for p in projects:
+    for p in sampled_projects:
         tags = [pt.tag.name for pt in p.tags if pt.tag]
         projects_data.append(
             {
@@ -133,19 +175,21 @@ async def suggest_room_themes(
             }
         )
 
-    # 3. Build prompt
+    # 4. Build prompt
     system_prompt = SUGGEST_THEMES_SYSTEM_PROMPT
     user_prompt = _build_suggest_themes_user_prompt(projects_data, num_rooms)
 
-    # 4. Call LLM
-    logger.info("Suggesting themes: %d projects → %d rooms", len(projects), num_rooms)
+    # 5. Call LLM
+    logger.info(
+        "Suggesting themes: %d sampled projects (of %d total) → %d rooms", sample_size, len(projects), num_rooms
+    )
     llm_response = await llm_client.send_chat_completion(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         json_mode=True,
     )
 
-    # 5. Validate response
+    # 6. Validate response
     themes = llm_response.get("themes", [])
     if not themes or len(themes) != num_rooms:
         logger.warning("LLM returned %d themes, expected %d", len(themes), num_rooms)
@@ -162,11 +206,17 @@ async def run_clustering(
     feedback: str | None = None,
     room_themes: list[str] | None = None,
 ) -> ClusteringRun:
-    """Run AI clustering for projects in an event.
+    """Run two-phase AI clustering for projects in an event.
 
+    Phase 1: Theme suggestion (if themes not provided)
+      - Sample projects and suggest themes based on analysis
+    Phase 2: Project assignment
+      - Assign ALL projects to themes using compact prompt (no descriptions)
+
+    Steps:
     1. Fetch all projects
-    2. Build prompt
-    3. Call LLM
+    2. Phase 1: Suggest themes (if not provided)
+    3. Phase 2: Assign projects to themes
     4. Validate response
     5. Save ClusteringRun + Rooms + RoomProjects
     6. Supersede previous draft runs
@@ -183,7 +233,15 @@ async def run_clustering(
     if len(projects) < 2:
         raise ValueError(f"Недостаточно проектов для кластеризации: {len(projects)}")
 
-    # 2. Build prompt data
+    # 2. Phase 1: Suggest themes (if not provided)
+    if not room_themes:
+        logger.info("Phase 1: Suggesting themes for %d projects → %d rooms", len(projects), num_rooms)
+        room_themes = await suggest_room_themes(session, event_id, num_rooms)
+        logger.info("Phase 1 complete: themes = %s", room_themes)
+    else:
+        logger.info("Using provided themes: %s", room_themes)
+
+    # 3. Build compact project data (no descriptions for Phase 2)
     projects_data = []
     project_map = {}
     for p in projects:
@@ -194,20 +252,20 @@ async def run_clustering(
                 "id": pid,
                 "title": p.title,
                 "tags": tags,
-                "description": p.description[:500],  # increased from 200 for better context
             }
         )
         project_map[pid] = p
 
-    user_prompt = _build_user_prompt(projects_data, num_rooms, feedback, room_themes=room_themes)
+    # 4. Phase 2: Assign projects to themes
+    user_prompt = _build_assignment_user_prompt(projects_data, room_themes)
 
-    # 3. Call LLM
-    logger.info("Running clustering: %d projects → %d rooms", len(projects), num_rooms)
+    logger.info("Phase 2: Assigning %d projects to %d themes", len(projects), len(room_themes))
     llm_response = await llm_client.send_chat_completion(
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=ASSIGNMENT_SYSTEM_PROMPT,
         user_prompt=user_prompt,
         json_mode=True,
     )
+    logger.info("Phase 2 complete")
 
     # 4. Validate response
     rooms_data = llm_response.get("rooms", [])
@@ -254,10 +312,16 @@ async def run_clustering(
 
     assigned_project_ids: set[uuid.UUID] = set()
     for i, room_data in enumerate(rooms_data):
+        room_name = room_data.get("name", f"Зал {i + 1}")
+        # Generate simple rationale if not provided by LLM
+        theme_rationale = room_data.get("theme_rationale", "")
+        if not theme_rationale:
+            theme_rationale = f"Проекты по теме: {room_name}"
+
         room = Room(
             clustering_run_id=run.id,
-            name=room_data.get("name", f"Зал {i + 1}"),
-            theme_rationale=room_data.get("theme_rationale", ""),
+            name=room_name,
+            theme_rationale=theme_rationale,
             display_order=i,
         )
         session.add(room)

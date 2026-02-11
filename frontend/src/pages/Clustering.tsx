@@ -74,13 +74,27 @@ export function Clustering() {
     }
   }, [existingClustering, clusteringResult])
 
-  // Poll job status
+  // Poll job status with timeout limit
   useEffect(() => {
     if (!jobId || jobStatus === "completed" || jobStatus === "failed") {
       return
     }
 
+    let pollCount = 0
+    const MAX_POLLS = 150 // 150 * 2sec = 5 minutes max
+
     const interval = setInterval(async () => {
+      pollCount++
+
+      // Timeout after MAX_POLLS attempts
+      if (pollCount > MAX_POLLS) {
+        clearInterval(interval)
+        setJobError("Превышено время ожидания (5 минут). Попробуйте снова или уменьшите количество залов.")
+        setJobId(null)
+        setJobStatus(null)
+        return
+      }
+
       try {
         const status = await getClusteringJobStatus(jobId)
         setJobStatus(status.status)
