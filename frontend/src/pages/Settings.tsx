@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "../components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
@@ -19,8 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select"
-import { startAdminTour, resetTour } from "../lib/adminTour"
-import { GraduationCap } from "lucide-react"
 
 export function Settings() {
   useEffect(() => {
@@ -30,36 +28,9 @@ export function Settings() {
   return (
     <div className="grid gap-6">
       <h2 className="text-2xl font-bold">Настройки</h2>
-      <TourSection />
       <LlmConfigSection />
       <OrganizersSection />
     </div>
-  )
-}
-
-function TourSection() {
-  const handleRestart = () => {
-    resetTour()
-    startAdminTour()
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <GraduationCap className="w-5 h-5 text-blue-600" />
-          <CardTitle>Обучалка</CardTitle>
-        </div>
-        <CardDescription>
-          Интерактивный тур по всем функциям административной панели
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button onClick={handleRestart} variant="outline">
-          Запустить тур заново
-        </Button>
-      </CardContent>
-    </Card>
   )
 }
 

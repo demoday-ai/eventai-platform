@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
-import { Menu, X } from "lucide-react"
+import { Menu, X, GraduationCap } from "lucide-react"
 import { useAuth } from "../../hooks/useAuth"
 import { Button } from "../ui/button"
 import { APP_NAME } from "../../lib/constants"
 import { Sidebar } from "./Sidebar"
 import { GlobalStepper } from "../dashboard/GlobalStepper"
 import { BackgroundJobsBanner } from "./BackgroundJobsBanner"
+import { startAdminTour } from "../../lib/adminTour"
 
 export function AppLayout() {
   const { telegramId, logout } = useAuth()
@@ -53,6 +54,26 @@ export function AppLayout() {
             <h1 className="text-xl font-semibold">{APP_NAME}</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => startAdminTour()}
+              className="hidden sm:flex items-center gap-1.5"
+              title="Обучалка по админке"
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span className="hidden md:inline">Обучалка</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => startAdminTour()}
+              className="sm:hidden"
+              title="Обучалка по админке"
+              aria-label="Обучалка"
+            >
+              <GraduationCap className="w-5 h-5" />
+            </Button>
             <span className="text-sm text-muted-foreground hidden sm:inline">
               ID: {telegramId}
             </span>

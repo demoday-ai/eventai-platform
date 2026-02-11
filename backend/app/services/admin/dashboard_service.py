@@ -390,11 +390,11 @@ async def get_pipeline_status(
 
         # clustering step
         current_clustering = await db.scalar(
-        select(ClusteringRun)
-        .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
-        .order_by(ClusteringRun.created_at.desc())
-        .limit(1)
-    )
+            select(ClusteringRun)
+            .where(ClusteringRun.event_id == event_id, ClusteringRun.status == "approved")
+            .order_by(ClusteringRun.created_at.desc())
+            .limit(1)
+        )
         step_statuses["clustering"] = "completed" if current_clustering else "not_started"
 
         # matching step
