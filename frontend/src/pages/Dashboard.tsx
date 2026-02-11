@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { RefreshCw, AlertTriangle, AlertCircle, Info } from "lucide-react"
 import { Button } from "../components/ui/button"
@@ -10,9 +10,12 @@ import { QuickAction } from "../components/dashboard/QuickAction"
 import { MetricCards } from "../components/dashboard/MetricCards"
 import { EventCountdown } from "../components/dashboard/EventCountdown"
 import { DashboardCoverageTable } from "../components/dashboard/CoverageTable"
-import { startAdminTour, shouldShowTour } from "../lib/adminTour"
+import { startAdminTour, shouldShowTourPrompt, markTourPrompted } from "../lib/adminTour"
+import { TourWelcomeDialog } from "../components/tour/TourWelcomeDialog"
 
 export function Dashboard() {
+  const [showTourDialog, setShowTourDialog] = useState(false)
+
   useEffect(() => {
     document.title = `${APP_NAME} - Dashboard`
   }, [])
@@ -30,16 +33,30 @@ export function Dashboard() {
     placeholderData: keepPreviousData,
   })
 
-  // Auto-start tour on first visit (after data loads)
+  // Show tour prompt dialog on first visit (after data loads)
   useEffect(() => {
-    if (data && !isLoading && shouldShowTour()) {
+    if (data && !isLoading && shouldShowTourPrompt()) {
       // Delay to ensure UI is fully rendered
       const timer = setTimeout(() => {
-        startAdminTour()
+        setShowTourDialog(true)
       }, 1000)
       return () => clearTimeout(timer)
     }
   }, [data, isLoading])
+
+  const handleStartTour = () => {
+    setShowTourDialog(false)
+    markTourPrompted()
+    // Small delay to let dialog close animation finish
+    setTimeout(() => {
+      startAdminTour()
+    }, 200)
+  }
+
+  const handleSkipTour = () => {
+    setShowTourDialog(false)
+    markTourPrompted()
+  }
 
   const {
     data: coverageData,
@@ -64,9 +81,13 @@ export function Dashboard() {
   const hasNoEvent = !isLoading && data && !data.event
 
   return (
-    <div className="grid gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <>
+      {showTourDialog && (
+        <TourWelcomeDialog onStart={handleStartTour} onSkip={handleSkipTour} />
+      )}
+      <div className="grid gap-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Dashboard</h2>
         <div className="flex items-center gap-3">
           {dataUpdatedAt > 0 && (
@@ -117,7 +138,8 @@ export function Dashboard() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

@@ -140,10 +140,19 @@ export function startAdminTour() {
   driverObj.drive()
 }
 
+export function shouldShowTourPrompt(): boolean {
+  return !localStorage.getItem("admin_tour_prompted")
+}
+
 export function shouldShowTour(): boolean {
   return !localStorage.getItem("admin_tour_completed")
 }
 
+export function markTourPrompted() {
+  localStorage.setItem("admin_tour_prompted", "true")
+}
+
 export function resetTour() {
   localStorage.removeItem("admin_tour_completed")
+  localStorage.removeItem("admin_tour_prompted")
 }
