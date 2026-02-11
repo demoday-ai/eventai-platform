@@ -1,6 +1,5 @@
 """AI clustering service: build prompts, run LLM, save results."""
 
-import json
 import logging
 import random
 import uuid
