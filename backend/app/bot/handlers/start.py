@@ -29,6 +29,24 @@ from telegram.ext import (
 )
 
 from app.bot.handlers.contact import contact_button, contact_request_callback
+from app.bot.handlers.shared import (
+    MAX_MESSAGE_LEN,
+    add_to_conversation,
+    check_guest_or_business,
+    escape_markdown,
+    format_if_time,
+    format_recommendations,
+    get_conversation,
+    truncate,
+)
+from app.bot.handlers.states import (
+    CHOOSE_ROLE,
+    NL_REBUILD,
+    ONBOARD_CONFIRM,
+    ONBOARD_NL_PROFILE,
+    VIEW_DETAIL,
+    VIEW_PROGRAM,
+)
 from app.bot.keyboards import (
     check_readiness_keyboard,
     confirm_nl_profile_keyboard,
@@ -44,180 +62,6 @@ from app.services.core import user_service
 from app.services.guest import business_followup_service, followup_service, profiling_service, qa_service
 
 logger = logging.getLogger(__name__)
-
-# Conversation states (6 total)
-(
-    CHOOSE_ROLE,          # 0 - Role selection (4 buttons: student/applicant/business/other)
-    ONBOARD_NL_PROFILE,   # 1 - NL profiling (free text → LLM agent)
-    ONBOARD_CONFIRM,      # 2 - Profile confirmation + "show profile" button
-    VIEW_PROGRAM,         # 3 - Program + agent mode
-    VIEW_DETAIL,          # 4 - Project detail
-    NL_REBUILD,           # 5 - Profile rebuild → ONBOARD_CONFIRM
-) = range(6)
-
-MAX_MESSAGE_LEN = 4096
-
-
-# =============================================================================
-# Helpers (from guest_profiling.py)
-# =============================================================================
-
-
-async def _check_guest_or_business(telegram_user_id: str) -> tuple | None:
-    """Check if user has guest or business role. Returns (user, event, role_code) or None."""
-    async with async_session() as session:
-        user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
-        if not user:
-            return None
-        event = await user_service.get_current_event(session)
-        if not event:
-            return None
-        role_info = await user_service.get_user_role_with_info(session, user.id, event.id)
-        if not role_info or role_info.code not in (RoleCode.GUEST.value, RoleCode.BUSINESS.value):
-            return None
-        return user, event, role_info.code
-
-
-def _truncate(text: str, limit: int) -> str:
-    """Truncate text at sentence boundary, fallback to word boundary."""
-    if not text or len(text) <= limit:
-        return text
-    chunk = text[:limit]
-    for sep in (". ", "! ", "? ", ".\n"):
-        pos = chunk.rfind(sep)
-        if pos > limit // 3:
-            return chunk[: pos + 1]
-    pos = chunk.rfind(" ")
-    if pos > limit // 3:
-        return chunk[:pos] + "..."
-    return chunk + "..."
-
-
-def _escape_markdown(text: str) -> str:
-    """Escape Markdown special characters (idempotent — won't double-escape)."""
-    if not text:
-        return ""
-    for char in ['*', '_', '`', '[', ']', '(', ')']:
-        # Remove existing escapes first, then re-escape uniformly
-        text = text.replace('\\' + char, char)
-        text = text.replace(char, '\\' + char)
-    return text
-
-
-def _format_recommendations(data: dict) -> list[str]:
-    """Format must-visit recommendations into message parts (respecting 4096 char limit)."""
-    messages = []
-    must_recs = data.get("must_visit", [])
-    total = data.get("total", len(must_recs))
-
-    must_text = f"*Твоя программа ({len(must_recs)} из {total}):*\n\n"
-    prev_rooms: set[int] = set()
-    for rec in must_recs:
-        title = _escape_markdown(rec["title"])
-        summary = _escape_markdown(_truncate(rec["summary"], 120) if rec["summary"] else "")
-        room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
-        tags_str = ", ".join(rec.get("tags", [])[:3])
-
-        conflict = ""
-        room_num = rec.get("room_number")
-        if room_num and room_num in prev_rooms:
-            conflict = "\n   _пересекается с проектом выше_"
-        if room_num:
-            prev_rooms.add(room_num)
-
-        entry = (
-            f"*{rec['rank']}.* *{title}*\n"
-            f"   {room_info} · {tags_str}\n"
-            f"   → {summary}{conflict}\n\n"
-        )
-        must_text += entry
-
-    must_text += (
-        "Напиши мне:\n"
-        "• номер — подробности\n"
-        "• «сравни 1 и 3» — матрица\n"
-        "• «вопросы к 2» — подготовлю Q&A\n"
-        "• «хочу другое» — изменю подборку"
-    )
-
-    if len(must_text) > MAX_MESSAGE_LEN:
-        mid = len(must_recs) // 2
-        part1 = f"*Твоя программа ({len(must_recs)} из {total}):*\n\n"
-        part2 = ""
-        prev_rooms_split: set[int] = set()
-        for i, rec in enumerate(must_recs):
-            title = _escape_markdown(rec["title"])
-            summary = _escape_markdown(_truncate(rec["summary"], 120) if rec["summary"] else "")
-            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
-            tags_str = ", ".join(rec.get("tags", [])[:3])
-            conflict = ""
-            room_num = rec.get("room_number")
-            if room_num and room_num in prev_rooms_split:
-                conflict = "\n   _пересекается с проектом выше_"
-            if room_num:
-                prev_rooms_split.add(room_num)
-            entry = (
-                f"*{rec['rank']}.* *{title}*\n"
-                f"   {room_info} · {tags_str}\n"
-                f"   → {summary}{conflict}\n\n"
-            )
-            if i < mid:
-                part1 += entry
-            else:
-                part2 += entry
-        messages.append(part1)
-        if part2:
-            messages.append(part2)
-    else:
-        messages.append(must_text)
-
-    return messages
-
-
-def _format_if_time(data: dict) -> list[str]:
-    """Format if-time recommendations into message parts."""
-    messages = []
-    if_time_text = "*Дополнительно:*\n\n"
-    for rec in data.get("if_time", []):
-        title = _escape_markdown(rec["title"])
-        summary = _escape_markdown(_truncate(rec["summary"], 150) if rec["summary"] else "")
-        room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
-        tags_str = ", ".join(rec.get("tags", [])[:3])
-
-        score = int(rec.get("relevance_score", 0))
-        entry = (
-            f"*{rec['rank']}. {title}* — {score}%\n"
-            f"{summary}\n"
-            f"{room_info} · {tags_str}\n\n"
-        )
-        if_time_text += entry
-
-    if len(if_time_text) > MAX_MESSAGE_LEN:
-        if_recs = data.get("if_time", [])
-        mid = len(if_recs) // 2
-        part1 = "*Дополнительно:*\n\n"
-        part2 = ""
-        for i, rec in enumerate(if_recs):
-            title = _escape_markdown(rec["title"])
-            summary = _escape_markdown(_truncate(rec["summary"], 150) if rec["summary"] else "")
-            room_info = f"Зал {rec['room_number']}" if rec.get("room_number") else ""
-            tags_str = ", ".join(rec.get("tags", [])[:3])
-            entry = (
-                f"*{rec['rank']}. {title}*\n"
-                f"{summary}\n"
-                f"{room_info} · {tags_str}\n\n"
-            )
-            if i < mid:
-                part1 += entry
-            else:
-                part2 += entry
-        messages.append(part1)
-        if part2:
-            messages.append(part2)
-    else:
-        messages.append(if_time_text)
-
-    return messages
 
 
 # =============================================================================
@@ -384,25 +228,10 @@ async def role_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 # =============================================================================
 
 
-def _get_conversation(context: ContextTypes.DEFAULT_TYPE) -> list[dict]:
-    """Get conversation history from user_data."""
-    return context.user_data.get("nl_conversation", [])
-
-
-def _add_to_conversation(
-    context: ContextTypes.DEFAULT_TYPE, role: str, content: str
-) -> list[dict]:
-    """Append a message to conversation history and return it."""
-    conv = context.user_data.get("nl_conversation", [])
-    conv.append({"role": role, "content": content})
-    context.user_data["nl_conversation"] = conv
-    return conv
-
-
 async def onb_nl_free_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle free text input in onboarding NL profiling — conversational agent."""
     user_text = update.message.text
-    conv = _add_to_conversation(context, "user", user_text)
+    conv = add_to_conversation(context, "user", user_text)
     return await _onb_agent_turn(update, context, conv, is_message=True)
 
 
@@ -447,7 +276,7 @@ async def _onb_agent_turn(
         if len(user_messages) <= 1 and len(assistant_messages) == 0:
             # First turn - force a follow-up question instead of immediate profile
             fallback_question = "Отлично! А какую задачу ты хочешь решить или что хочешь узнать на Demo Day?"
-            _add_to_conversation(context, "assistant", fallback_question)
+            add_to_conversation(context, "assistant", fallback_question)
             if not is_message:
                 await update.callback_query.edit_message_reply_markup(reply_markup=None)
             await context.bot.send_message(
@@ -461,7 +290,7 @@ async def _onb_agent_turn(
 
     # Agent wants to continue the conversation
     reply_text = result["message"]
-    _add_to_conversation(context, "assistant", reply_text)
+    add_to_conversation(context, "assistant", reply_text)
 
     if not is_message:
         await update.callback_query.edit_message_reply_markup(reply_markup=None)
@@ -726,7 +555,7 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if not data:
         return ConversationHandler.END
 
-    messages = _format_recommendations(data)
+    messages = format_recommendations(data)
     must_recs = data.get("must_visit", [])
     has_if_time = bool(data.get("if_time"))
     keyboard = program_recommendation_keyboard(must_recs, has_if_time=has_if_time)
@@ -753,7 +582,7 @@ async def _show_program_from_message(update: Update, context: ContextTypes.DEFAU
     if not data:
         return ConversationHandler.END
 
-    messages = _format_recommendations(data)
+    messages = format_recommendations(data)
     must_recs = data.get("must_visit", [])
     has_if_time = bool(data.get("if_time"))
     keyboard = program_recommendation_keyboard(must_recs, has_if_time=has_if_time)
@@ -925,7 +754,7 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     # Show "if time" recommendations
     if data == "prof:show_if_time":
         recs_data = context.user_data.get("recommendations", {})
-        if_time_msgs = _format_if_time(recs_data)
+        if_time_msgs = format_if_time(recs_data)
         if_time_recs = recs_data.get("if_time", [])
         keyboard = program_recommendation_keyboard(if_time_recs, has_if_time=False)
         chat_id = update.effective_chat.id
@@ -1091,7 +920,7 @@ async def _handle_generate_questions(
     if not completed or not questions:
         return "Не удалось сгенерировать вопросы. Попробуйте позже."
 
-    text = f"*Вопросы для проекта #{rank}:*\n_{_escape_markdown(project_title)}_\n\n"
+    text = f"*Вопросы для проекта #{rank}:*\n_{escape_markdown(project_title)}_\n\n"
     for i, q in enumerate(questions, 1):
         text += f"{i}. {q}\n\n"
     return text
@@ -1394,19 +1223,19 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
         return VIEW_PROGRAM
 
     if detail.get("room_number"):
-        room_info = f"Зал {detail['room_number']}: {_escape_markdown(detail['room_name'])}"
+        room_info = f"Зал {detail['room_number']}: {escape_markdown(detail['room_name'])}"
     else:
         room_info = "Зал: н/д"
     tags_str = ", ".join(detail.get("tags", []))
     score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
 
-    title = _escape_markdown(detail['title'])
+    title = escape_markdown(detail['title'])
 
     # Use LLM summary as main description, fallback to truncated original
     if detail.get("llm_summary"):
-        summary = _escape_markdown(detail['llm_summary'])
+        summary = escape_markdown(detail['llm_summary'])
     else:
-        summary = _escape_markdown(_truncate(detail['description'], 300))
+        summary = escape_markdown(truncate(detail['description'], 300))
 
     text = (
         f"*{title}*\n\n"
@@ -1476,11 +1305,11 @@ async def _show_project_detail_from_text(
     if detail.get("llm_summary"):
         summary = detail['llm_summary']
     else:
-        summary = _truncate(detail['description'], 300)
+        summary = truncate(detail['description'], 300)
 
     text = (
-        f"*{_escape_markdown(detail['title'])}*\n\n"
-        f"{_escape_markdown(summary)}\n\n"
+        f"*{escape_markdown(detail['title'])}*\n\n"
+        f"{escape_markdown(summary)}\n\n"
         f"Теги: {tags_str}\n"
         f"{room_info}\n"
         f"Релевантность: {score_pct}%"
@@ -1556,7 +1385,7 @@ async def qa_prep_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         questions = ["Не удалось сгенерировать вопросы. Попробуйте позже."]
 
     # Format response
-    text = f"*Вопросы для проекта:*\n_{_escape_markdown(project_title)}_\n\n"
+    text = f"*Вопросы для проекта:*\n_{escape_markdown(project_title)}_\n\n"
     for i, q in enumerate(questions, 1):
         text += f"{i}. {q}\n\n"
 
@@ -1587,7 +1416,7 @@ async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TY
     tg_user = update.effective_user
     telegram_user_id = str(tg_user.id)
 
-    auth = await _check_guest_or_business(telegram_user_id)
+    auth = await check_guest_or_business(telegram_user_id)
     if not auth:
         await update.message.reply_text(
             "Сначала выберите роль через /start"
@@ -1618,7 +1447,7 @@ async def _restart_nl_profiling_from_callback(update: Update, context: ContextTy
     tg_user = query.from_user
     telegram_user_id = str(tg_user.id)
 
-    auth = await _check_guest_or_business(telegram_user_id)
+    auth = await check_guest_or_business(telegram_user_id)
     if not auth:
         await query.edit_message_text(
             "Сначала выберите роль через /start"
