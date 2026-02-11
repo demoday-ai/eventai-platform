@@ -30,13 +30,11 @@ from telegram.ext import (
 
 from app.bot.handlers.contact import contact_button, contact_request_callback
 from app.bot.handlers.shared import (
-    MAX_MESSAGE_LEN,
     add_to_conversation,
     check_guest_or_business,
     escape_markdown,
     format_if_time,
     format_recommendations,
-    get_conversation,
     truncate,
 )
 from app.bot.handlers.states import (
