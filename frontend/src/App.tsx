@@ -4,6 +4,7 @@ import { Login } from "./pages/Login"
 import { Dashboard } from "./pages/Dashboard"
 import { RoomDetail } from "./pages/RoomDetail"
 import { ProjectsList } from "./pages/ProjectsList"
+import { ProjectDetail } from "./pages/ProjectDetail"
 import { DataImport } from "./pages/DataImport"
 import { Clustering } from "./pages/Clustering"
 import { Experts } from "./pages/Experts"
@@ -47,6 +48,7 @@ function App() {
           <Route path="/reminders" element={<Reminders />} />
           <Route path="/guests" element={<GuestList />} />
           <Route path="/projects" element={<ProjectsList />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/audit-log" element={<AuditLog />} />

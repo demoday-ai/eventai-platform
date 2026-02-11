@@ -39,9 +39,11 @@ from app.schemas.admin import (
     PartnerStats,
     Phase,
     PipelineStatusResponse,
+    ProjectDetailResponse,
     ProjectInfo,
     ProjectListItem,
     ProjectStats,
+    ProjectUpdateRequest,
     RoomCoverage,
     RoomDetailResponse,
     RoomInfo,
@@ -743,3 +745,123 @@ async def get_projects_list(
         )
 
     return projects_list
+
+
+async def get_project_detail(
+    db: AsyncSession,
+    event_id: UUID,
+    project_id: UUID,
+) -> ProjectDetailResponse | None:
+    """Get detailed project info."""
+    project = await db.get(Project, project_id)
+    if not project or project.event_id != event_id:
+        return None
+
+    # Get tags
+    tags_result = await db.execute(
+        select(Tag.name)
+        .select_from(ProjectTag)
+        .join(Tag, ProjectTag.tag_id == Tag.id)
+        .where(ProjectTag.project_id == project.id)
+    )
+    tags = [tag[0] for tag in tags_result.all()]
+
+    # Get room info
+    current_clustering = await event_repo.get_approved_clustering(db, event_id)
+    room_id = None
+    room_name = None
+    start_time = None
+    end_time = None
+    status = "pending"
+
+    if current_clustering:
+        room_result = await db.execute(
+            select(Room)
+            .join(RoomProject, RoomProject.room_id == Room.id)
+            .where(
+                RoomProject.project_id == project.id,
+                Room.clustering_run_id == current_clustering.id,
+            )
+        )
+        room = room_result.scalar_one_or_none()
+        if room:
+            room_id = str(room.id)
+            room_name = room.name
+
+        slot_result = await db.execute(
+            select(ScheduleSlot).where(ScheduleSlot.project_id == project.id)
+        )
+        slot = slot_result.scalar_one_or_none()
+        if slot:
+            start_time = (
+                slot.start_time.isoformat()
+                if hasattr(slot.start_time, "isoformat")
+                else str(slot.start_time)
+            )
+            end_time = (
+                slot.end_time.isoformat()
+                if hasattr(slot.end_time, "isoformat")
+                else str(slot.end_time)
+            )
+            status = "confirmed"
+
+    return ProjectDetailResponse(
+        id=str(project.id),
+        title=project.title,
+        description=project.description,
+        author=project.author or "Unknown",
+        telegram_contact=project.telegram_contact or "",
+        track=project.track,
+        room_id=room_id,
+        room_name=room_name,
+        start_time=start_time,
+        end_time=end_time,
+        status=status,
+        tags=tags,
+        github_url=project.github_url,
+        tech_stack=project.tech_stack,
+        presentation_url=project.presentation_url,
+        demo_url=project.demo_url,
+    )
+
+
+async def update_project(
+    db: AsyncSession,
+    event_id: UUID,
+    project_id: UUID,
+    body: ProjectUpdateRequest,
+) -> ProjectDetailResponse | None:
+    """Update project fields and return updated detail."""
+    project = await db.get(Project, project_id)
+    if not project or project.event_id != event_id:
+        return None
+
+    if body.title is not None:
+        project.title = body.title
+    if body.description is not None:
+        project.description = body.description
+
+    if body.tags is not None:
+        # Remove existing tags
+        existing_tags = await db.execute(
+            select(ProjectTag).where(ProjectTag.project_id == project.id)
+        )
+        for pt in existing_tags.scalars().all():
+            await db.delete(pt)
+        await db.flush()
+
+        # Add new tags
+        for tag_name in body.tags:
+            tag_name = tag_name.strip()
+            if not tag_name:
+                continue
+            existing_tag = await db.scalar(select(Tag).where(Tag.name == tag_name))
+            if existing_tag:
+                pt = ProjectTag(project_id=project.id, tag_id=existing_tag.id)
+                db.add(pt)
+
+        await db.flush()
+
+    await db.commit()
+
+    return await get_project_detail(db, event_id, project_id)

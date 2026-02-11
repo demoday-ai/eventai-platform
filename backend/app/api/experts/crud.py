@@ -99,14 +99,14 @@ async def upload_experts(
 
         item = {
             "id": get_field("id", "ID", "ид"),
-            "name": get_field("name", "имя *", "имя", "фио"),
-            "telegram": get_field("telegram", "телеграм"),
-            "position": get_field("position", "описание", "должность"),
+            "name": get_field("name", "фио *", "фио", "имя *", "имя"),
+            "telegram": get_field("telegram", "телеграм *", "телеграм"),
+            "position": get_field("position", "описание *", "описание", "должность"),
             "inviter": get_field("inviter", "пригласивший"),
-            "dd_status": get_field("dd_status", "статус", "придет"),
-            "dd_comments": get_field("dd_comments", "комментарии", "заметки"),
+            "dd_status": get_field("dd_status", "статус *", "статус", "придет"),
+            "dd_comments": get_field("dd_comments", "комментарии *", "комментарии", "заметки"),
         }
-        tags_str = get_field("expertise_tags", "tags", "теги", "тематики")
+        tags_str = get_field("expertise_tags", "tags", "теги *", "теги", "тематики")
         if tags_str:
             item["expertise_tags"] = [t.strip() for t in tags_str.split(",") if t.strip()]
         else:

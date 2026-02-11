@@ -875,8 +875,62 @@ export const getProjects = async (params?: ProjectsListParams): Promise<ProjectL
   return data
 }
 
-export const generateProjectTags = async (): Promise<{ processed: number; tagged: number; message?: string }> => {
+export interface ProjectDetailData {
+  id: string
+  title: string
+  description: string
+  author: string
+  telegram_contact: string
+  track: string | null
+  room_id: string | null
+  room_name: string | null
+  start_time: string | null
+  end_time: string | null
+  status: string
+  tags: string[]
+  github_url: string | null
+  tech_stack: string | null
+  presentation_url: string | null
+  demo_url: string | null
+}
+
+export interface ProjectUpdateData {
+  title?: string
+  description?: string
+  tags?: string[]
+}
+
+export interface TagGenerationStatus {
+  status: string
+  current: number
+  total: number
+  tagged: number
+  processed: number
+  error?: string
+  message?: string
+}
+
+export const getProjectDetail = async (id: string): Promise<ProjectDetailData> => {
+  const { data } = await apiClient.get<ProjectDetailData>(`/admin/projects/${id}`)
+  return data
+}
+
+export const updateProject = async (id: string, body: ProjectUpdateData): Promise<ProjectDetailData> => {
+  const { data } = await apiClient.patch<ProjectDetailData>(`/admin/projects/${id}`, body)
+  return data
+}
+
+export const generateProjectTags = async (): Promise<{
+  processed: number; tagged: number; message?: string; task_id?: string
+}> => {
   const { data } = await apiClient.post("/admin/projects/generate-tags")
+  return data
+}
+
+export const getTagGenerationStatus = async (taskId: string): Promise<TagGenerationStatus> => {
+  const { data } = await apiClient.get<TagGenerationStatus>(
+    `/admin/projects/generate-tags/status/${taskId}`
+  )
   return data
 }
 

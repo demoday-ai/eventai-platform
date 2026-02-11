@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Link } from "react-router-dom"
 import { FolderOpen, Sparkles } from "lucide-react"
-import { getProjects, getCoverage, generateProjectTags, isNoEventError, type ProjectListItem } from "../lib/api-client"
+import { getProjects, getCoverage, generateProjectTags, getTagGenerationStatus, isNoEventError, type ProjectListItem } from "../lib/api-client"
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
@@ -16,6 +17,8 @@ export function ProjectsList() {
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [generateInfo, setGenerateInfo] = useState<string | null>(null)
+  const [tagTaskId, setTagTaskId] = useState<string | null>(null)
+  const [tagProgress, setTagProgress] = useState<{ current: number; total: number; status: string } | null>(null)
 
   // Set page title
   useEffect(() => {
@@ -25,19 +28,53 @@ export function ProjectsList() {
   const generateMutation = useMutation({
     mutationFn: generateProjectTags,
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] })
-      if (result.message) {
-        setGenerateInfo(result.message)
+      if (result.task_id) {
+        setTagTaskId(result.task_id)
+        setTagProgress({ current: 0, total: 0, status: "running" })
       } else {
-        setGenerateInfo(`Обработано: ${result.processed}, теги присвоены: ${result.tagged}`)
+        queryClient.invalidateQueries({ queryKey: ["projects"] })
+        if (result.message) {
+          setGenerateInfo(result.message)
+        } else {
+          setGenerateInfo(`Обработано: ${result.processed}, теги присвоены: ${result.tagged}`)
+        }
+        setTimeout(() => setGenerateInfo(null), 5000)
       }
-      setTimeout(() => setGenerateInfo(null), 5000)
     },
     onError: (err) => {
       setGenerateInfo(err instanceof Error ? err.message : "Ошибка генерации тегов")
       setTimeout(() => setGenerateInfo(null), 5000)
     },
   })
+
+  // Poll tag generation progress
+  useEffect(() => {
+    if (!tagTaskId) return
+
+    const interval = setInterval(async () => {
+      try {
+        const status = await getTagGenerationStatus(tagTaskId)
+        setTagProgress({ current: status.current, total: status.total, status: status.status })
+
+        if (status.status === "completed") {
+          setTagTaskId(null)
+          setTagProgress(null)
+          queryClient.invalidateQueries({ queryKey: ["projects"] })
+          setGenerateInfo(`Обработано: ${status.processed}, теги присвоены: ${status.tagged}`)
+          setTimeout(() => setGenerateInfo(null), 5000)
+        } else if (status.status === "failed") {
+          setTagTaskId(null)
+          setTagProgress(null)
+          setGenerateInfo(status.error || "Ошибка генерации тегов")
+          setTimeout(() => setGenerateInfo(null), 5000)
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [tagTaskId, queryClient])
 
   // Build query params
   const params = {
@@ -110,7 +147,7 @@ export function ProjectsList() {
       case "confirmed":
         return "Подтверждён"
       case "pending":
-        return "Ожидает"
+        return "Не распределён"
       case "cancelled":
         return "Отменён"
     }
@@ -141,16 +178,31 @@ export function ProjectsList() {
                   )}
                   <Button
                     onClick={() => generateMutation.mutate()}
-                    disabled={generateMutation.isPending}
+                    disabled={generateMutation.isPending || !!tagTaskId}
                     variant="outline"
                     size="sm"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    {generateMutation.isPending ? "Генерация..." : "Сгенерировать теги"}
+                    {generateMutation.isPending || tagTaskId ? "Генерация..." : "Сгенерировать теги"}
                   </Button>
                 </div>
               </div>
             </CardHeader>
+            {tagProgress && tagProgress.total > 0 && (
+              <div className="px-6 pb-2">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800 font-medium">
+                    Генерация тегов: {tagProgress.current}/{tagProgress.total} ({Math.round((tagProgress.current / tagProgress.total) * 100)}%)
+                  </p>
+                  <div className="mt-2 w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(tagProgress.current / tagProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             <CardContent>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 {/* Room Filter */}
@@ -181,7 +233,7 @@ export function ProjectsList() {
                     <SelectContent>
                       <SelectItem value="">Все статусы</SelectItem>
                       <SelectItem value="confirmed">Подтверждён</SelectItem>
-                      <SelectItem value="pending">Ожидает</SelectItem>
+                      <SelectItem value="pending">Не распределён</SelectItem>
                       <SelectItem value="cancelled">Отменён</SelectItem>
                     </SelectContent>
                   </Select>
@@ -219,9 +271,10 @@ export function ProjectsList() {
               ) : (
                 <div className="space-y-3">
                   {projects.map((project) => (
-                    <div
+                    <Link
                       key={project.id}
-                      className="p-4 border rounded-lg hover:bg-muted/30 cursor-pointer"
+                      to={`/projects/${project.id}`}
+                      className="block p-4 border rounded-lg hover:bg-muted/30 cursor-pointer"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -233,9 +286,11 @@ export function ProjectsList() {
                             </p>
                           )}
                           <p className="text-sm text-muted-foreground mt-1">{project.room_name}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {formatTime(project.start_time)} - {formatTime(project.end_time)}
-                          </p>
+                          {project.start_time && project.start_time !== "TBD" && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {formatTime(project.start_time)} - {formatTime(project.end_time)}
+                            </p>
+                          )}
                           <div className="flex flex-wrap gap-2 mt-2">
                             {project.tags.map((tag) => (
                               <span
@@ -255,7 +310,7 @@ export function ProjectsList() {
                           {getStatusText(project.status)}
                         </span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

@@ -230,6 +230,35 @@ class ProjectListItem(BaseModel):
     tags: list[str]
 
 
+class ProjectDetailResponse(BaseModel):
+    """Detailed project view for admin panel."""
+
+    id: str
+    title: str
+    description: str
+    author: str
+    telegram_contact: str
+    track: str | None = None
+    room_id: str | None = None
+    room_name: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    status: str = "pending"
+    tags: list[str] = []
+    github_url: str | None = None
+    tech_stack: str | None = None
+    presentation_url: str | None = None
+    demo_url: str | None = None
+
+
+class ProjectUpdateRequest(BaseModel):
+    """Update project fields."""
+
+    title: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+
+
 class EventCreateRequest(BaseModel):
     """Request to create a new event."""
 

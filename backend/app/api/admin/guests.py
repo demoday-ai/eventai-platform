@@ -197,7 +197,7 @@ async def upload_guests(
                     return val
             return ""
 
-        name = get_field("name", "имя", "фио").strip()
+        name = get_field("name", "фио *", "фио", "имя *", "имя").strip()
         if not name:
             errors.append(RowError(row=i + 1, field="name", message="Имя обязательно"))
             continue
@@ -209,7 +209,7 @@ async def upload_guests(
             continue
         seen_names.add(name_lower_key)
 
-        telegram = get_field("telegram", "телеграм").strip()
+        telegram = get_field("telegram", "телеграм *", "телеграм").strip()
         username = telegram.lstrip("@") if telegram else None
 
         # Generate synthetic telegram_user_id

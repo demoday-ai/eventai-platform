@@ -7,8 +7,10 @@ from app.services.admin.dashboard_service import (  # noqa: F401
     get_coverage_stats,
     get_dashboard_stats,
     get_pipeline_status,
+    get_project_detail,
     get_projects_list,
     get_room_detail,
+    update_project,
     update_room_theme,
 )
 from app.services.admin.guest_admin_service import (  # noqa: F401

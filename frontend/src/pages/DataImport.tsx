@@ -14,6 +14,7 @@ import {
   uploadGuests,
   getUploadJobStatus,
   getCurrentEvent,
+  getDashboard,
   isNoEventError,
   type UploadResult,
   type ExpertUploadResult,
@@ -78,6 +79,13 @@ export function DataImport() {
   })
 
   const hasEvent = !!currentEvent
+
+  const { data: dashboardData } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: getDashboard,
+    enabled: hasEvent,
+    retry: false,
+  })
 
   const refreshAllStats = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] })
@@ -347,7 +355,14 @@ export function DataImport() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Проекты</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Проекты
+                  {dashboardData?.projects?.total ? (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      (загружено: {dashboardData.projects.total})
+                    </span>
+                  ) : null}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {isProjectJobRunning && (
@@ -448,7 +463,14 @@ export function DataImport() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Эксперты</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Эксперты
+                  {dashboardData?.experts?.total ? (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      (загружено: {dashboardData.experts.total})
+                    </span>
+                  ) : null}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FileUpload
@@ -515,7 +537,14 @@ export function DataImport() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Студенты</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Студенты
+                  {dashboardData?.students?.total ? (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      (загружено: {dashboardData.students.total})
+                    </span>
+                  ) : null}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FileUpload
@@ -581,7 +610,14 @@ export function DataImport() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Партнёры</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Партнёры
+                  {dashboardData?.partners?.total ? (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      (загружено: {dashboardData.partners.total})
+                    </span>
+                  ) : null}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FileUpload
