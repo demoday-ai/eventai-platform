@@ -164,22 +164,28 @@ async def test_pipeline_status_event_only(db, seed_event):
 @pytest.mark.asyncio
 async def test_pipeline_status_with_data(db, seed_event, seed_project):
     """Event + projects completed."""
-    # Add a student user role for students step
+    # Add a student user (guest with subtype STUDENT)
     from sqlalchemy import select
 
-    student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
-    if not student_role:
-        student_role = Role(code=RoleCode.STUDENT.value, name="Студент")
-        db.add(student_role)
+    from app.models.user import GuestSubtype
+
+    guest_role = await db.scalar(select(Role).where(Role.code == RoleCode.GUEST.value))
+    if not guest_role:
+        guest_role = Role(code=RoleCode.GUEST.value, name="Гость")
+        db.add(guest_role)
         await db.flush()
 
-    user = User(telegram_user_id="student123", full_name="Student User")
+    user = User(
+        telegram_user_id="student123",
+        full_name="Student User",
+        guest_subtype=GuestSubtype.STUDENT
+    )
     db.add(user)
     await db.flush()
 
     user_role = UserRole(
         user_id=user.id,
-        role_id=student_role.id,
+        role_id=guest_role.id,
         event_id=seed_event.id,
     )
     db.add(user_role)
@@ -205,22 +211,28 @@ async def test_pipeline_status_next_action_none_when_all_complete(
     seed_room,
 ):
     """All steps completed → next_action is None."""
-    # Add student user role
+    # Add student user (guest with subtype STUDENT)
     from sqlalchemy import select
 
-    student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
-    if not student_role:
-        student_role = Role(code=RoleCode.STUDENT.value, name="Студент")
-        db.add(student_role)
+    from app.models.user import GuestSubtype
+
+    guest_role = await db.scalar(select(Role).where(Role.code == RoleCode.GUEST.value))
+    if not guest_role:
+        guest_role = Role(code=RoleCode.GUEST.value, name="Гость")
+        db.add(guest_role)
         await db.flush()
 
-    student_user = User(telegram_user_id="student456", full_name="Student User")
+    student_user = User(
+        telegram_user_id="student456",
+        full_name="Student User",
+        guest_subtype=GuestSubtype.STUDENT
+    )
     db.add(student_user)
     await db.flush()
 
     user_role = UserRole(
         user_id=student_user.id,
-        role_id=student_role.id,
+        role_id=guest_role.id,
         event_id=seed_event.id,
     )
     db.add(user_role)
