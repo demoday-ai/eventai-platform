@@ -16,7 +16,7 @@ export function BackgroundJobsBanner() {
   if (jobs.length === 0) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b">
+    <div className="bg-background border-b">
       {activeJobs.map((job) => (
         <div key={job.id} className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
