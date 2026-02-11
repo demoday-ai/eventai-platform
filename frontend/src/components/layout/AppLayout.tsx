@@ -6,6 +6,7 @@ import { Button } from "../ui/button"
 import { APP_NAME } from "../../lib/constants"
 import { Sidebar } from "./Sidebar"
 import { GlobalStepper } from "../dashboard/GlobalStepper"
+import { BackgroundJobsBanner } from "./BackgroundJobsBanner"
 
 export function AppLayout() {
   const { telegramId, logout } = useAuth()
@@ -61,6 +62,8 @@ export function AppLayout() {
           </div>
         </div>
       </header>
+
+      <BackgroundJobsBanner />
 
       <GlobalStepper />
 

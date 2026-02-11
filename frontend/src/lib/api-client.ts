@@ -973,6 +973,11 @@ export const getTagGenerationStatus = async (taskId: string): Promise<TagGenerat
   return data
 }
 
+export const cancelTagGeneration = async (taskId: string): Promise<{ status: string; message: string }> => {
+  const { data } = await apiClient.delete(`/admin/projects/generate-tags/${taskId}`)
+  return data
+}
+
 // --- Project Upload ---
 
 export interface UploadJobResponse {

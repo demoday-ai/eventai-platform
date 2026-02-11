@@ -88,6 +88,10 @@ async def _run_tag_generation(task_id: str, event_id: UUID):
     try:
         async with async_session() as db:
             def progress_callback(progress: dict):
+                # Check if task was cancelled
+                if _tag_generation_tasks.get(task_id, {}).get("status") == "cancelled":
+                    raise asyncio.CancelledError("Tag generation cancelled by user")
+
                 _tag_generation_tasks[task_id].update({
                     "current": progress.get("current", 0),
                     "total": progress.get("total", 0),
@@ -105,6 +109,12 @@ async def _run_tag_generation(task_id: str, event_id: UUID):
                 "total": result.get("processed", 0),
                 "message": result.get("message"),
             })
+    except asyncio.CancelledError:
+        logger.info("Tag generation cancelled: task_id=%s", task_id)
+        _tag_generation_tasks[task_id].update({
+            "status": "cancelled",
+            "error": "Генерация тегов отменена пользователем",
+        })
     except Exception as e:
         logger.exception("Tag generation failed")
         _tag_generation_tasks[task_id].update({
@@ -169,3 +179,26 @@ async def get_tag_generation_status(
         raise HTTPException(status_code=404, detail="Task not found")
 
     return task
+
+
+@router.delete("/projects/generate-tags/{task_id}")
+async def cancel_tag_generation(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel running tag generation task."""
+
+    task = _tag_generation_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task["status"] not in ("running", "pending"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel task with status: {task['status']}",
+        )
+
+    _tag_generation_tasks[task_id]["status"] = "cancelled"
+    logger.info("Cancelling tag generation: task_id=%s", task_id)
+
+    return {"status": "cancelled", "message": "Tag generation cancelled"}

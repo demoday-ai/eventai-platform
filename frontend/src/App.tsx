@@ -20,10 +20,12 @@ import { Settings } from "./pages/Settings"
 import { AuditLog } from "./pages/AuditLog"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { AppLayout } from "./components/layout/AppLayout"
+import { BackgroundJobsProvider } from "./contexts/BackgroundJobsContext"
 
 function App() {
   return (
-    <BrowserRouter>
+    <BackgroundJobsProvider>
+      <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -58,6 +60,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </BackgroundJobsProvider>
   )
 }
 
