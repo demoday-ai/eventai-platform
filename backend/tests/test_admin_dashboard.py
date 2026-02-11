@@ -20,7 +20,7 @@ from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.notification import Notification
 from app.models.participation import ParticipationRequest, ParticipationStatus
 from app.models.project import Project
-from app.models.role import Role
+from app.models.role import Role, RoleCode
 from app.models.room import Room
 from app.models.room_project import RoomProject
 from app.models.schedule_slot import ScheduleSlot
@@ -164,13 +164,24 @@ async def test_pipeline_status_event_only(db, seed_event):
 @pytest.mark.asyncio
 async def test_pipeline_status_with_data(db, seed_event, seed_project):
     """Event + projects completed."""
-    # Add a participation request for students step
-    pr = ParticipationRequest(
+    # Add a student user role for students step
+    from sqlalchemy import select
+    student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
+    if not student_role:
+        student_role = Role(code=RoleCode.STUDENT.value, name="Студент")
+        db.add(student_role)
+        await db.flush()
+
+    user = User(telegram_user_id="student123", full_name="Student User")
+    db.add(user)
+    await db.flush()
+
+    user_role = UserRole(
+        user_id=user.id,
+        role_id=student_role.id,
         event_id=seed_event.id,
-        project_id=seed_project.id,
-        status=ParticipationStatus.PENDING,
     )
-    db.add(pr)
+    db.add(user_role)
     await db.flush()
 
     result = await dashboard_service.get_pipeline_status(db, seed_event.id)
@@ -189,16 +200,29 @@ async def test_pipeline_status_next_action_none_when_all_complete(
     db, seed_event, seed_project, seed_clustering, seed_room,
 ):
     """All steps completed → next_action is None."""
+    # Add student user role
+    from sqlalchemy import select
+    student_role = await db.scalar(select(Role).where(Role.code == RoleCode.STUDENT.value))
+    if not student_role:
+        student_role = Role(code=RoleCode.STUDENT.value, name="Студент")
+        db.add(student_role)
+        await db.flush()
+
+    student_user = User(telegram_user_id="student456", full_name="Student User")
+    db.add(student_user)
+    await db.flush()
+
+    user_role = UserRole(
+        user_id=student_user.id,
+        role_id=student_role.id,
+        event_id=seed_event.id,
+    )
+    db.add(user_role)
+    await db.flush()
+
     # Add expert
     expert = Expert(seed_id="exp1", name="Expert One", event_id=seed_event.id)
     db.add(expert)
-    await db.flush()
-
-    # Add student participation
-    pr = ParticipationRequest(
-        event_id=seed_event.id, project_id=seed_project.id, status=ParticipationStatus.PENDING,
-    )
-    db.add(pr)
     await db.flush()
 
     # Add expert assignment
