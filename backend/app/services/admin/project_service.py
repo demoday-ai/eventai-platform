@@ -372,12 +372,14 @@ async def generate_missing_tags(
     processed = 0
     tagged = 0
 
-    # Report initial progress
-    if progress_callback:
-        try:
-            progress_callback({"stage": "tagging", "current": 0, "total": total, "tagged": 0})
-        except Exception:
-            raise
+    def _report_progress() -> None:
+        """Report progress and check for cancellation."""
+        if progress_callback:
+            progress_callback(
+                {"stage": "tagging", "current": processed, "total": total, "tagged": tagged}
+            )
+
+    _report_progress()
 
     # Phase 1: heuristic (fast, synchronous)
     needs_llm: list[tuple[Project, str]] = []
@@ -388,39 +390,37 @@ async def generate_missing_tags(
         tag_names = _match_tags_heuristic(raw_text, candidate_tags)
         if tag_names:
             heuristic_results[project.id] = tag_names
+            processed += 1
+            tagged += 1
         else:
             needs_llm.append((project, raw_text))
+
+    # Report after heuristic phase
+    _report_progress()
 
     # Phase 2: parallel LLM calls with semaphore
     semaphore = asyncio.Semaphore(LLM_CONCURRENCY)
     llm_results: dict[uuid.UUID, list[str]] = {}
 
     async def extract_one(project: Project, text: str) -> None:
+        nonlocal processed, tagged
         async with semaphore:
             tags = await _extract_tags_via_llm(text, candidate_tags)
             llm_results[project.id] = tags or ["Other"]
+            processed += 1
+            tagged += 1
+            _report_progress()
 
     if needs_llm:
         await asyncio.gather(*(extract_one(p, t) for p, t in needs_llm))
 
-    # Phase 3: write all results to DB
+    # Phase 3: write all results to DB (fast)
     all_results = {**heuristic_results, **llm_results}
     for project in projects_without_tags:
         tag_names = all_results.get(project.id, ["Other"])
-
         for tag_name in tag_names:
             if tag_name in tag_cache:
                 session.add(ProjectTag(project_id=project.id, tag_id=tag_cache[tag_name].id))
-
-        processed += 1
-        if tag_names:
-            tagged += 1
-
-        # Report progress every 10 items or at the end
-        if progress_callback and (processed % 10 == 0 or processed == total):
-            progress_callback(
-                {"stage": "tagging", "current": processed, "total": total, "tagged": tagged}
-            )
 
     await session.commit()
     return {"processed": processed, "tagged": tagged}
