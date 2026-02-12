@@ -6,11 +6,14 @@ from app.models.audit_log import AdminAuditLog
 from app.models.base import Base
 from app.models.clustering_run import ClusteringRun
 from app.models.event import Event
+from app.models.notification import Notification
 from app.models.organizer import Organizer
 from app.models.project import Project
 from app.models.project_tag import ProjectTag
 from app.models.room import Room
 from app.models.room_project import RoomProject
+from app.models.schedule_change_log import ScheduleChangeLog
+from app.models.schedule_slot import ScheduleSlot
 from app.models.tag import Tag
 from app.models.user import User
 
@@ -32,6 +35,9 @@ async def async_engine():
                 User.__table__,
                 AdminAuditLog.__table__,
                 Organizer.__table__,
+                ScheduleSlot.__table__,
+                ScheduleChangeLog.__table__,
+                Notification.__table__,
             ],
         )
     yield engine

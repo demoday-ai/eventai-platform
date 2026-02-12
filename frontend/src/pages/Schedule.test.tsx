@@ -16,16 +16,24 @@ const mockGenerateSchedule = vi.fn()
 const mockGetSchedule = vi.fn()
 const mockApproveSchedule = vi.fn()
 const mockUpdateSlot = vi.fn()
-const mockGetScheduleChanges = vi.fn()
 const mockGetCurrentClustering = vi.fn()
+const mockGetUnplacedProjects = vi.fn()
+const mockCreateSlot = vi.fn()
+const mockDeleteSlot = vi.fn()
+const mockConfigureScheduleFromText = vi.fn()
+const mockExportScheduleICS = vi.fn()
 
 vi.mock("../lib/api-client", () => ({
   generateSchedule: (...args: unknown[]) => mockGenerateSchedule(...args),
   getSchedule: (...args: unknown[]) => mockGetSchedule(...args),
   approveSchedule: (...args: unknown[]) => mockApproveSchedule(...args),
   updateSlot: (...args: unknown[]) => mockUpdateSlot(...args),
-  getScheduleChanges: (...args: unknown[]) => mockGetScheduleChanges(...args),
   getCurrentClustering: (...args: unknown[]) => mockGetCurrentClustering(...args),
+  getUnplacedProjects: (...args: unknown[]) => mockGetUnplacedProjects(...args),
+  createSlot: (...args: unknown[]) => mockCreateSlot(...args),
+  deleteSlot: (...args: unknown[]) => mockDeleteSlot(...args),
+  configureScheduleFromText: (...args: unknown[]) => mockConfigureScheduleFromText(...args),
+  exportScheduleICS: (...args: unknown[]) => mockExportScheduleICS(...args),
 }))
 
 let testQueryClient: QueryClient
@@ -62,6 +70,8 @@ const mockScheduleResponse = {
               end_time: "2026-02-06T10:15:00",
               display_order: 1,
               status: "scheduled",
+              slot_type: "project",
+              title: null,
             },
             {
               id: "slot-2",
@@ -74,6 +84,28 @@ const mockScheduleResponse = {
               end_time: "2026-02-06T10:30:00",
               display_order: 2,
               status: "scheduled",
+              slot_type: "project",
+              title: null,
+            },
+          ],
+        },
+        {
+          room_id: "room-2",
+          room_name: "Зал 2: CV",
+          slots: [
+            {
+              id: "slot-3",
+              room_id: "room-2",
+              room_name: "Зал 2: CV",
+              project_id: null,
+              project_title: null,
+              project_author: null,
+              start_time: "2026-02-06T12:30:00",
+              end_time: "2026-02-06T13:00:00",
+              display_order: 1,
+              status: "scheduled",
+              slot_type: "break",
+              title: "Обед",
             },
           ],
         },
@@ -88,31 +120,27 @@ const mockClusteringResult = {
   num_rooms: 2,
   feedback: null,
   rooms: [
-    {
-      id: "room-1",
-      name: "Зал 1: NLP",
-      theme_rationale: "",
-      project_count: 5,
-      projects: [],
-    },
-    {
-      id: "room-2",
-      name: "Зал 2: CV",
-      theme_rationale: "",
-      project_count: 3,
-      projects: [],
-    },
+    { id: "room-1", name: "Зал 1: NLP", theme_rationale: "", project_count: 5, projects: [] },
+    { id: "room-2", name: "Зал 2: CV", theme_rationale: "", project_count: 3, projects: [] },
   ],
   created_at: "2026-02-01T00:00:00",
   approved_at: "2026-02-02T00:00:00",
+}
+
+const mockUnplacedResponse = {
+  total: 2,
+  items: [
+    { id: "p10", title: "Неразмещённый проект", author: "Автор 1", tags: ["NLP"] },
+    { id: "p11", title: "Ещё один проект", author: "Автор 2", tags: ["CV", "ML"] },
+  ],
 }
 
 describe("Schedule", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetSchedule.mockRejectedValue(new Error("Not found"))
-    mockGetScheduleChanges.mockResolvedValue({ total: 0, items: [] })
     mockGetCurrentClustering.mockResolvedValue(mockClusteringResult)
+    mockGetUnplacedProjects.mockResolvedValue({ total: 0, items: [] })
   })
 
   it("shows empty state when no approved clustering", async () => {
@@ -126,38 +154,41 @@ describe("Schedule", () => {
     })
   })
 
-  it("renders generate step initially", () => {
+  it("renders toolbar buttons when clustering exists", async () => {
     render(<Schedule />, { wrapper: createWrapper() })
 
-    expect(screen.getByText("Расписание")).toBeInTheDocument()
-    expect(screen.getByText("Генерация расписания")).toBeInTheDocument()
-    expect(screen.getByLabelText("Длительность слота (минуты)")).toBeInTheDocument()
-    expect(screen.getByText("Сгенерировать")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText("Расписание")).toBeInTheDocument()
+      expect(screen.getByText("Авто-заполнить")).toBeInTheDocument()
+      expect(screen.getByText("AI-конфигурация")).toBeInTheDocument()
+      expect(screen.getByText("+ Перерыв")).toBeInTheDocument()
+      expect(screen.getByText("+ Секция")).toBeInTheDocument()
+    })
   })
 
-  it("generates schedule and shows result info", async () => {
-    const user = userEvent.setup()
-    mockGenerateSchedule.mockResolvedValue({
-      total_slots: 20,
-      rooms: [
-        { room_id: "room-1", room_name: "Зал 1", slot_count: 10, first_slot: null, last_slot: null },
-        { room_id: "room-2", room_name: "Зал 2", slot_count: 10, first_slot: null, last_slot: null },
-      ],
-    })
-    // After generate, getSchedule will return the schedule
+  it("renders timeline grid with rooms as columns", async () => {
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
 
     render(<Schedule />, { wrapper: createWrapper() })
 
-    const generateBtn = screen.getByText("Сгенерировать")
-    await user.click(generateBtn)
-
     await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
+      expect(screen.getByText("Зал 1: NLP")).toBeInTheDocument()
+      expect(screen.getByText("Зал 2: CV")).toBeInTheDocument()
     })
   })
 
-  it("loads existing schedule and shows view", async () => {
+  it("renders time labels in left column", async () => {
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Время")).toBeInTheDocument()
+      expect(screen.getByText("10:00")).toBeInTheDocument()
+    })
+  })
+
+  it("renders slots at correct positions", async () => {
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
 
     render(<Schedule />, { wrapper: createWrapper() })
@@ -168,217 +199,90 @@ describe("Schedule", () => {
     })
   })
 
-  it("shows error when generation fails", async () => {
-    const user = userEvent.setup()
-    mockGenerateSchedule.mockRejectedValue(new Error("Server error"))
-
-    render(<Schedule />, { wrapper: createWrapper() })
-
-    const generateBtn = screen.getByText("Сгенерировать")
-    await user.click(generateBtn)
-
-    await waitFor(() => {
-      expect(screen.getByText(/Ошибка/)).toBeInTheDocument()
-    })
-  })
-
-  it("shows slot details in schedule view", async () => {
+  it("renders break slot with title", async () => {
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
 
     render(<Schedule />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText("Зал 1: NLP")).toBeInTheDocument()
-      expect(screen.getByText("Команда А")).toBeInTheDocument()
-      expect(screen.getByText("Команда Б")).toBeInTheDocument()
+      expect(screen.getByText("Обед")).toBeInTheDocument()
     })
   })
 
-  it("shows edit button for each slot", async () => {
+  it("day tabs show with slot count", async () => {
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
 
     render(<Schedule />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      const editButtons = screen.getAllByTitle("Редактировать")
-      expect(editButtons.length).toBe(2)
+      // Total slots: 2 in room-1 + 1 in room-2 = 3
+      expect(screen.getByText("3")).toBeInTheDocument()
     })
   })
 
-  it("opens inline edit form on pencil click", async () => {
-    const user = userEvent.setup()
+  it("unplaced panel shows unplaced projects count", async () => {
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+    mockGetUnplacedProjects.mockResolvedValue(mockUnplacedResponse)
 
     render(<Schedule />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
-    })
-
-    const editBtn = screen.getByLabelText("Редактировать Чатбот")
-    await user.click(editBtn)
-
-    await waitFor(() => {
-      expect(screen.getByText("Сохранить")).toBeInTheDocument()
-      expect(screen.getByText("Отмена")).toBeInTheDocument()
+      expect(screen.getByText("Нераспределённые")).toBeInTheDocument()
+      expect(screen.getByText("2 из 2")).toBeInTheDocument()
+      expect(screen.getByText("Неразмещённый проект")).toBeInTheDocument()
+      expect(screen.getByText("Ещё один проект")).toBeInTheDocument()
     })
   })
 
-  it("shows change log when data exists", async () => {
-    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
-    mockGetScheduleChanges.mockResolvedValue({
-      total: 1,
-      items: [
-        {
-          id: "ch1",
-          slot_id: "slot-1",
-          project_title: "Чатбот",
-          change_type: "time_change",
-          old_start_time: "2026-02-06T10:00:00",
-          new_start_time: "2026-02-06T11:00:00",
-          old_room_name: null,
-          new_room_name: null,
-          changed_by: "admin",
-          created_at: "2026-02-05T15:00:00",
-          notifications_sent: 2,
-        },
-      ],
-    })
-
+  it("shows empty schedule message when no schedule", async () => {
     render(<Schedule />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(screen.getByText("История изменений")).toBeInTheDocument()
-      expect(screen.getByText("time_change")).toBeInTheDocument()
+      expect(screen.getByText(/Расписание пусто/)).toBeInTheDocument()
     })
   })
 
-  it("shows per-room time fields from clustering", async () => {
-    render(<Schedule />, { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(screen.getByText("Время по залам")).toBeInTheDocument()
-      expect(screen.getByLabelText("Начало Зал 1: NLP")).toBeInTheDocument()
-      expect(screen.getByLabelText("Конец Зал 1: NLP")).toBeInTheDocument()
-      expect(screen.getByLabelText("Начало Зал 2: CV")).toBeInTheDocument()
-      expect(screen.getByLabelText("Конец Зал 2: CV")).toBeInTheDocument()
-    })
-  })
-
-  it("adds and removes breaks", async () => {
-    const user = userEvent.setup()
-    render(<Schedule />, { wrapper: createWrapper() })
-
-    const addBtn = await screen.findByText("Добавить перерыв")
-    await user.click(addBtn)
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Начало перерыва 1")).toBeInTheDocument()
-      expect(screen.getByLabelText("Конец перерыва 1")).toBeInTheDocument()
-      expect(screen.getByLabelText("Удалить перерыв 1")).toBeInTheDocument()
-    })
-
-    // Remove the break
-    await user.click(screen.getByLabelText("Удалить перерыв 1"))
-
-    await waitFor(() => {
-      expect(screen.queryByLabelText("Начало перерыва 1")).not.toBeInTheDocument()
-    })
-  })
-
-  it("shows 'Далее' button on step 0 when schedule exists", async () => {
+  it("shows approve button and confirmation flow", async () => {
     const user = userEvent.setup()
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+    mockApproveSchedule.mockResolvedValue({ total_slots: 3, rooms: 2, days: 1 })
 
     render(<Schedule />, { wrapper: createWrapper() })
-
-    // Auto-advance takes us to step 1, go back to step 0
-    await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
-    })
-
-    // Click "Перегенерировать" to go back to step 0
-    await user.click(screen.getByText("Перегенерировать"))
-
-    await waitFor(() => {
-      expect(screen.getByText("Генерация расписания")).toBeInTheDocument()
-    })
-
-    // "Далее" button should be visible since schedule exists
-    const nextBtn = screen.getByText("Далее")
-    expect(nextBtn).toBeInTheDocument()
-
-    // Click "Далее" to go to step 1
-    await user.click(nextBtn)
-
-    await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
-    })
-  })
-
-  it("shows confirmation dialog when clicking approve", async () => {
-    const user = userEvent.setup()
-    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
-
-    render(<Schedule />, { wrapper: createWrapper() })
-
-    // Wait for schedule to load (auto-advance to step 1)
-    await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
-    })
-
-    // Navigate to step 2 (Одобрение)
-    await user.click(screen.getByText("Далее"))
-
-    await waitFor(() => {
-      expect(screen.getByText("Одобрение расписания")).toBeInTheDocument()
-    })
-
-    // Click Одобрить
-    await user.click(screen.getByText("Одобрить"))
-
-    // Should show confirmation dialog
-    await waitFor(() => {
-      expect(screen.getByText(/Вы уверены/)).toBeInTheDocument()
-      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
-      expect(screen.getByText("Отмена")).toBeInTheDocument()
-    })
-  })
-
-  it("shows next-step hint after approval", async () => {
-    const user = userEvent.setup()
-    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
-    mockApproveSchedule.mockResolvedValue({
-      total_slots: 2,
-      rooms: 1,
-      days: 1,
-    })
-
-    render(<Schedule />, { wrapper: createWrapper() })
-
-    // Wait for schedule to load
-    await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
-    })
-
-    // Navigate to approve step
-    await user.click(screen.getByText("Далее"))
 
     await waitFor(() => {
       expect(screen.getByText("Одобрить")).toBeInTheDocument()
     })
 
-    // Click approve, then confirm
     await user.click(screen.getByText("Одобрить"))
+
     await waitFor(() => {
+      expect(screen.getByText("Вы уверены?")).toBeInTheDocument()
       expect(screen.getByText("Подтвердить")).toBeInTheDocument()
     })
+
     await user.click(screen.getByText("Подтвердить"))
 
-    // Should show next-step hint
     await waitFor(() => {
-      expect(screen.getByText(/Расписание одобрено/)).toBeInTheDocument()
-      expect(screen.getByText("Расписание утверждено. Можно настроить авто-напоминания")).toBeInTheDocument()
+      expect(screen.getByText(/Одобрено: 3 слотов/)).toBeInTheDocument()
+    })
+  })
+
+  it("shows link to messaging after approval", async () => {
+    const user = userEvent.setup()
+    mockGetSchedule.mockResolvedValue(mockScheduleResponse)
+    mockApproveSchedule.mockResolvedValue({ total_slots: 3, rooms: 2, days: 1 })
+
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Одобрить")).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText("Одобрить"))
+    await waitFor(() => expect(screen.getByText("Подтвердить")).toBeInTheDocument())
+    await user.click(screen.getByText("Подтвердить"))
+
+    await waitFor(() => {
       expect(screen.getByRole("link", { name: "Перейти к авто-напоминаниям" })).toHaveAttribute("href", "/messaging")
     })
   })
@@ -386,75 +290,88 @@ describe("Schedule", () => {
   it("invalidates pipeline-status and dashboard after approval", async () => {
     const user = userEvent.setup()
     mockGetSchedule.mockResolvedValue(mockScheduleResponse)
-    mockApproveSchedule.mockResolvedValue({
-      total_slots: 2,
-      rooms: 1,
-      days: 1,
-    })
+    mockApproveSchedule.mockResolvedValue({ total_slots: 3, rooms: 2, days: 1 })
 
     render(<Schedule />, { wrapper: createWrapper() })
 
     const invalidateSpy = vi.spyOn(testQueryClient, "invalidateQueries")
 
-    // Wait for schedule to load
-    await waitFor(() => {
-      expect(screen.getByText("Чатбот")).toBeInTheDocument()
-    })
+    await waitFor(() => expect(screen.getByText("Одобрить")).toBeInTheDocument())
 
-    // Navigate to approve step
-    await user.click(screen.getByText("Далее"))
-    await waitFor(() => {
-      expect(screen.getByText("Одобрить")).toBeInTheDocument()
-    })
-
-    // Click approve → confirm
     await user.click(screen.getByText("Одобрить"))
-    await waitFor(() => {
-      expect(screen.getByText("Подтвердить")).toBeInTheDocument()
-    })
+    await waitFor(() => expect(screen.getByText("Подтвердить")).toBeInTheDocument())
     await user.click(screen.getByText("Подтвердить"))
 
     await waitFor(() => {
-      expect(screen.getByText(/Расписание одобрено/)).toBeInTheDocument()
+      expect(screen.getByText(/Одобрено/)).toBeInTheDocument()
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["pipeline-status"] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
   })
 
-  it("passes room_overrides and breaks to generateSchedule", async () => {
+  it("shows error when generation fails", async () => {
     const user = userEvent.setup()
-    mockGenerateSchedule.mockResolvedValue({
-      total_slots: 10,
-      rooms: [{ room_id: "room-1", room_name: "Зал 1", slot_count: 10, first_slot: null, last_slot: null }],
-    })
-    // Keep schedule empty so we stay on step 0
-    mockGetSchedule.mockRejectedValue(new Error("Not found"))
+    mockGenerateSchedule.mockRejectedValue(new Error("Server error"))
 
     render(<Schedule />, { wrapper: createWrapper() })
 
-    // Wait for rooms to load
+    await waitFor(() => expect(screen.getByText("Авто-заполнить")).toBeInTheDocument())
+
+    await user.click(screen.getByText("Авто-заполнить"))
+
     await waitFor(() => {
-      expect(screen.getByText("Время по залам")).toBeInTheDocument()
+      expect(screen.getByText(/Ошибка/)).toBeInTheDocument()
+    })
+  })
+
+  it("configure from text dialog opens and submits", async () => {
+    const user = userEvent.setup()
+    mockConfigureScheduleFromText.mockResolvedValue({
+      parsed_config: [
+        {
+          date_hint: "первый день",
+          start_time: "10:00",
+          end_time: "19:30",
+          slot_duration_minutes: 15,
+          format: "presentation_15min",
+          track_filter: "all_except_research",
+          breaks: [{ start_time: "12:30", end_time: "13:00", label: "Обед" }],
+          ceremonies: [],
+        },
+      ],
+      rooms_count: 6,
+      message: "Конфигурация на 1 день. Залов из кластеризации: 6",
     })
 
-    // Add a break
-    await user.click(screen.getByText("Добавить перерыв"))
+    render(<Schedule />, { wrapper: createWrapper() })
 
-    // Click generate
-    await user.click(screen.getByText("Сгенерировать"))
+    await waitFor(() => expect(screen.getByText("AI-конфигурация")).toBeInTheDocument())
+
+    await user.click(screen.getByText("AI-конфигурация"))
 
     await waitFor(() => {
-      expect(mockGenerateSchedule).toHaveBeenCalledWith(
-        expect.objectContaining({
-          slot_duration_minutes: 15,
-          room_overrides: expect.arrayContaining([
-            expect.objectContaining({ room_id: "room-1", start_time: "10:30", end_time: "19:30" }),
-            expect.objectContaining({ room_id: "room-2", start_time: "10:30", end_time: "19:30" }),
-          ]),
-          breaks: [{ start_time: "13:00", end_time: "14:00" }],
-        })
-      )
+      expect(screen.getByText("AI-конфигурация расписания")).toBeInTheDocument()
+    })
+
+    const textarea = screen.getByPlaceholderText(/Начинаем в 10/)
+    await user.type(textarea, "test input")
+
+    await user.click(screen.getByText("Настроить"))
+
+    await waitFor(() => {
+      expect(mockConfigureScheduleFromText).toHaveBeenCalled()
+      expect(mockConfigureScheduleFromText.mock.calls[0][0]).toEqual({ text: "test input" })
+    })
+  })
+
+  it("scale selector changes timeline scale", async () => {
+    render(<Schedule />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      const scaleSelect = screen.getByLabelText("Масштаб")
+      expect(scaleSelect).toBeInTheDocument()
+      expect(scaleSelect).toHaveValue("15")
     })
   })
 })

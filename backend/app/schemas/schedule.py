@@ -12,8 +12,10 @@ class ScheduleSlotResponse(BaseModel):
     id: UUID
     room_id: UUID
     room_name: str
-    project_id: UUID
-    project_title: str
+    slot_type: str = "project"
+    title: str | None = None
+    project_id: UUID | None = None
+    project_title: str | None = None
     project_author: str | None = None
     start_time: datetime
     end_time: datetime
@@ -57,6 +59,7 @@ class RoomSummary(BaseModel):
 
 class ScheduleGenerateResult(BaseModel):
     total_slots: int
+    unplaced_count: int = 0
     rooms: list[RoomSummary]
 
 
@@ -87,6 +90,80 @@ class DaySchedule(BaseModel):
 class ScheduleResponse(BaseModel):
     event_name: str
     days: list[DaySchedule]
+
+
+# === Schedule Builder Schemas ===
+
+
+class SlotCreateRequest(BaseModel):
+    """Create a slot manually (drag from sidebar or special block)."""
+    room_id: UUID
+    start_time: datetime
+    end_time: datetime
+    slot_type: str = "project"
+    project_id: UUID | None = None
+    title: str | None = None
+    description: str | None = None
+
+
+class SlotCreateResponse(BaseModel):
+    slot: ScheduleSlotResponse
+
+
+class UnplacedProject(BaseModel):
+    id: UUID
+    title: str
+    author: str
+    tags: list[str] = []
+
+
+class UnplacedResponse(BaseModel):
+    total: int
+    items: list[UnplacedProject]
+
+
+class BulkMoveRequest(BaseModel):
+    room_id: UUID
+    after_time: datetime
+    shift_minutes: int
+
+
+class BulkMoveResponse(BaseModel):
+    moved_count: int
+
+
+class ScheduleConfigBreak(BaseModel):
+    start_time: str  # "HH:MM"
+    end_time: str  # "HH:MM"
+    label: str = "Перерыв"
+
+
+class ScheduleConfigCeremony(BaseModel):
+    start_time: str  # "HH:MM"
+    end_time: str  # "HH:MM"
+    label: str
+
+
+class ScheduleConfigParsedDay(BaseModel):
+    """Временная рамка одного дня. Залы НЕ описываются — они уже есть из кластеризации."""
+    date_hint: str  # "первый день", "22 января", ...
+    start_time: str = "10:00"  # "HH:MM"
+    end_time: str = "19:30"  # "HH:MM"
+    slot_duration_minutes: int = 15
+    format: str = "presentation_15min"
+    track_filter: str | None = None  # "all_except_research" | "research_only" | "business" | "roasting" | null
+    breaks: list[ScheduleConfigBreak] = []
+    ceremonies: list[ScheduleConfigCeremony] = []
+
+
+class ScheduleConfigFromTextRequest(BaseModel):
+    text: str
+
+
+class ScheduleConfigFromTextResponse(BaseModel):
+    parsed_config: list[ScheduleConfigParsedDay]
+    rooms_count: int  # Сколько залов уже есть из кластеризации
+    message: str
 
 
 # === Reminder Schemas ===

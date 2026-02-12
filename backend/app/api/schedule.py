@@ -11,6 +11,8 @@ from app.api.deps import get_current_user
 from app.database import get_session
 from app.models import User
 from app.schemas.schedule import (
+    BulkMoveRequest,
+    BulkMoveResponse,
     NotificationDashboard,
     NotificationListResponse,
     ReminderCancelRequest,
@@ -21,12 +23,18 @@ from app.schemas.schedule import (
     ScheduleApproveResult,
     ScheduleChangeItem,
     ScheduleChangeListResponse,
+    ScheduleConfigFromTextRequest,
+    ScheduleConfigFromTextResponse,
     ScheduleGenerateRequest,
     ScheduleGenerateResult,
     ScheduleResponse,
     ScheduleSlotResponse,
+    SlotCreateRequest,
+    SlotCreateResponse,
     SlotUpdateRequest,
     SlotUpdateResult,
+    UnplacedResponse,
+    UnplacedProject,
 )
 from app.services.admin import audit_service, notification_service, schedule_service
 from app.services.admin.notification_service import CancellationWindowClosedError
@@ -269,6 +277,121 @@ async def get_schedule_changes(
     ]
 
     return ScheduleChangeListResponse(total=len(items), items=items)
+
+
+# ========== Schedule Builder Endpoints ==========
+
+
+@router.post("/schedule/slots", response_model=SlotCreateResponse, status_code=201)
+async def create_slot(
+    request: SlotCreateRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a schedule slot manually (drag from sidebar or special block)."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=400, detail="No active event")
+
+    try:
+        slot = await schedule_service.create_slot(db, event.id, request)
+        # Load relationships for response
+        room_name = "Unknown"
+        project_title = None
+        project_author = None
+        if slot.room_id:
+            from sqlalchemy import select as sa_select
+            from app.models import Room as RoomModel
+            room_result = await db.execute(sa_select(RoomModel).where(RoomModel.id == slot.room_id))
+            room_obj = room_result.scalars().first()
+            if room_obj:
+                room_name = room_obj.name
+        if slot.project_id:
+            from app.models import Project as ProjectModel
+            proj_result = await db.execute(sa_select(ProjectModel).where(ProjectModel.id == slot.project_id))
+            proj_obj = proj_result.scalars().first()
+            if proj_obj:
+                project_title = proj_obj.title
+                project_author = proj_obj.author
+
+        return SlotCreateResponse(
+            slot=ScheduleSlotResponse(
+                id=slot.id,
+                room_id=slot.room_id,
+                room_name=room_name,
+                slot_type=slot.slot_type or "project",
+                title=slot.title,
+                project_id=slot.project_id,
+                project_title=project_title or slot.title,
+                project_author=project_author,
+                start_time=slot.start_time,
+                end_time=slot.end_time,
+                display_order=slot.display_order,
+                status=slot.status,
+            )
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/schedule/slots/{slot_id}", status_code=204)
+async def delete_slot(
+    slot_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a schedule slot."""
+    try:
+        await schedule_service.delete_slot(db, slot_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/schedule/unplaced", response_model=UnplacedResponse)
+async def get_unplaced_projects(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get projects that are not placed in the schedule."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=400, detail="No active event")
+
+    items = await schedule_service.get_unplaced_projects(db, event.id)
+    return UnplacedResponse(
+        total=len(items),
+        items=[UnplacedProject(**item) for item in items],
+    )
+
+
+@router.post("/schedule/slots/bulk-move", response_model=BulkMoveResponse)
+async def bulk_move_slots(
+    request: BulkMoveRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Shift all slots in a room after a given time."""
+    moved = await schedule_service.bulk_move_slots(
+        db, request.room_id, request.after_time, request.shift_minutes
+    )
+    return BulkMoveResponse(moved_count=moved)
+
+
+@router.post("/schedule/configure-from-text", response_model=ScheduleConfigFromTextResponse)
+async def configure_from_text(
+    request: ScheduleConfigFromTextRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """AI-parse organizer text into schedule configuration."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=400, detail="No active event")
+
+    try:
+        return await schedule_service.configure_from_text(db, event.id, request.text)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ========== Reminder Endpoints (T016) ==========

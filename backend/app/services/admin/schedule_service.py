@@ -1,12 +1,13 @@
 """Schedule service - generation, CRUD, and change detection."""
 
+import json
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,20 +15,30 @@ from app.models import (
     ChangeType,
     ClusteringRun,
     Event,
+    Project,
+    Room,
     RoomProject,
     ScheduleChangeLog,
     ScheduleSlot,
     SlotStatus,
+    Tag,
 )
+from app.models.project_tag import ProjectTag
 from app.schemas.schedule import (
     BreakTime,
     DaySchedule,
     RoomSchedule,
     RoomSummary,
     RoomTimeOverride,
+    ScheduleConfigBreak,
+    ScheduleConfigCeremony,
+    ScheduleConfigFromTextResponse,
+    ScheduleConfigParsedDay,
     ScheduleGenerateResult,
     ScheduleResponse,
     ScheduleSlotResponse,
+    SlotCreateRequest,
+    UnplacedProject,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,13 +157,40 @@ async def generate_schedule(
         for ov in room_overrides:
             overrides_map[ov.room_id] = (_parse_hm(ov.start_time), _parse_hm(ov.end_time))
 
+    # Build break ranges for Day 1 and Day 2 separately
+    break_ranges_day1: list[tuple[datetime, datetime]] = []
+    break_ranges_day2: list[tuple[datetime, datetime]] = []
+    if breaks:
+        for brk in breaks:
+            bstart_hm = _parse_hm(brk.start_time)
+            bend_hm = _parse_hm(brk.end_time)
+            brk_start_d1 = MSK.localize(
+                datetime.combine(event_start, datetime.min.time().replace(hour=bstart_hm[0], minute=bstart_hm[1]))
+            )
+            brk_end_d1 = MSK.localize(
+                datetime.combine(event_start, datetime.min.time().replace(hour=bend_hm[0], minute=bend_hm[1]))
+            )
+            break_ranges_day1.append((brk_start_d1, brk_end_d1))
+            if event_end != event_start:
+                brk_start_d2 = MSK.localize(
+                    datetime.combine(event_end, datetime.min.time().replace(hour=bstart_hm[0], minute=bstart_hm[1]))
+                )
+                brk_end_d2 = MSK.localize(
+                    datetime.combine(event_end, datetime.min.time().replace(hour=bend_hm[0], minute=bend_hm[1]))
+                )
+                break_ranges_day2.append((brk_start_d2, brk_end_d2))
+
     # Get rooms and their projects
     rooms = clustering.rooms
     room_summaries = []
     total_slots = 0
-    slot_duration = timedelta(minutes=slot_duration_minutes)
+    unplaced_count = 0
 
     for room in sorted(rooms, key=lambda r: r.display_order):
+        # Use per-room slot_duration_minutes if set, otherwise global
+        room_slot_minutes = room.slot_duration_minutes if room.slot_duration_minutes else slot_duration_minutes
+        slot_duration = timedelta(minutes=room_slot_minutes)
+
         # Get projects for this room
         rp_result = await session.execute(
             select(RoomProject).where(RoomProject.room_id == room.id).options(selectinload(RoomProject.project))
@@ -175,24 +213,11 @@ async def generate_schedule(
             room_day1_start = day1_start
             room_day1_end = day1_end
 
-        # Build break ranges for this day
-        break_ranges_day1: list[tuple[datetime, datetime]] = []
-        if breaks:
-            for brk in breaks:
-                bstart_hm = _parse_hm(brk.start_time)
-                bend_hm = _parse_hm(brk.end_time)
-                brk_start = MSK.localize(
-                    datetime.combine(event_start, datetime.min.time().replace(hour=bstart_hm[0], minute=bstart_hm[1]))
-                )
-                brk_end = MSK.localize(
-                    datetime.combine(event_start, datetime.min.time().replace(hour=bend_hm[0], minute=bend_hm[1]))
-                )
-                break_ranges_day1.append((brk_start, brk_end))
-
         # Distribute projects across available time
         current_time = room_day1_start
         day1_limit = room_day1_end
         day2_available = day2_start is not None
+        on_day2 = False
 
         first_slot_time = None
         last_slot_time = None
@@ -200,21 +225,32 @@ async def generate_schedule(
         display_order = 0
 
         for rp in room_projects:
-            # Advance past breaks
-            current_time = _advance_past_breaks(current_time, slot_duration, break_ranges_day1)
+            # Choose break ranges based on current day
+            active_breaks = break_ranges_day2 if on_day2 else break_ranges_day1
+            current_time = _advance_past_breaks(current_time, slot_duration, active_breaks)
 
             # Check if we need to move to day 2
             if current_time + slot_duration > day1_limit:
-                if day2_available and current_time < day2_start:
+                if day2_available and not on_day2:
                     current_time = day2_start
                     day1_limit = day2_end
+                    on_day2 = True
+                    current_time = _advance_past_breaks(current_time, slot_duration, break_ranges_day2)
+                    if current_time + slot_duration > day1_limit:
+                        logger.warning(
+                            "Room %s: not enough time for project %s",
+                            room.name,
+                            rp.project.title if rp.project else "?",
+                        )
+                        unplaced_count += 1
+                        continue
                 else:
-                    # No more time available
                     logger.warning(
-                        "Room %s: not enough time for all projects, skipping %s",
+                        "Room %s: not enough time for project %s",
                         room.name,
                         rp.project.title if rp.project else "?",
                     )
+                    unplaced_count += 1
                     continue
 
             # Create slot
@@ -227,6 +263,7 @@ async def generate_schedule(
                 end_time=current_time + slot_duration,
                 display_order=display_order,
                 status=SlotStatus.SCHEDULED.value,
+                slot_type="project",
             )
             session.add(slot)
 
@@ -253,6 +290,7 @@ async def generate_schedule(
 
     return ScheduleGenerateResult(
         total_slots=total_slots,
+        unplaced_count=unplaced_count,
         rooms=room_summaries,
     )
 
@@ -319,8 +357,10 @@ async def get_schedule(
                             id=s.id,
                             room_id=s.room_id,
                             room_name=room.name if room else "Unknown",
+                            slot_type=s.slot_type or "project",
+                            title=s.title,
                             project_id=s.project_id,
-                            project_title=s.project.title if s.project else "Unknown",
+                            project_title=s.project.title if s.project else (s.title or None),
                             project_author=s.project.author if s.project else None,
                             start_time=s.start_time,
                             end_time=s.end_time,
@@ -507,3 +547,217 @@ async def is_schedule_approved(session: AsyncSession, event_id: UUID) -> bool:
     if not clustering:
         return False
     return clustering.schedule_approved_at is not None
+
+
+async def create_slot(
+    session: AsyncSession,
+    event_id: UUID,
+    data: SlotCreateRequest,
+) -> ScheduleSlot:
+    """Create a slot manually. For project slots, check uniqueness."""
+    # Get clustering run for the event
+    clustering = await get_approved_clustering(session, event_id)
+    if not clustering:
+        raise ValueError("No approved clustering run found")
+
+    # For project slots, check that project_id is provided and unique
+    if data.slot_type == "project":
+        if not data.project_id:
+            raise ValueError("project_id is required for project slots")
+        existing = await session.execute(
+            select(ScheduleSlot).where(
+                ScheduleSlot.project_id == data.project_id,
+                ScheduleSlot.clustering_run_id == clustering.id,
+                ScheduleSlot.status != SlotStatus.CANCELLED.value,
+            )
+        )
+        if existing.scalars().first():
+            raise ValueError("Project already has a scheduled slot")
+
+    slot = ScheduleSlot(
+        event_id=event_id,
+        room_id=data.room_id,
+        project_id=data.project_id,
+        clustering_run_id=clustering.id,
+        start_time=data.start_time,
+        end_time=data.end_time,
+        slot_type=data.slot_type,
+        title=data.title,
+        description=data.description,
+        display_order=0,
+        status=SlotStatus.SCHEDULED.value,
+    )
+    session.add(slot)
+    await session.commit()
+    await session.refresh(slot)
+    return slot
+
+
+async def delete_slot(session: AsyncSession, slot_id: UUID) -> None:
+    """Delete a slot. For project slots, the project becomes unplaced again."""
+    result = await session.execute(select(ScheduleSlot).where(ScheduleSlot.id == slot_id))
+    slot = result.scalars().first()
+    if not slot:
+        raise ValueError("Slot not found")
+    await session.delete(slot)
+    await session.commit()
+
+
+async def get_unplaced_projects(session: AsyncSession, event_id: UUID) -> list[dict]:
+    """Projects from approved clustering that have no active ScheduleSlot."""
+    clustering = await get_approved_clustering(session, event_id)
+    if not clustering:
+        return []
+
+    # Get all project IDs from room_projects for this clustering
+    rp_result = await session.execute(
+        select(RoomProject.project_id)
+        .join(Room, RoomProject.room_id == Room.id)
+        .where(Room.clustering_run_id == clustering.id)
+    )
+    all_project_ids = set(rp_result.scalars().all())
+
+    # Get project IDs that have active schedule slots
+    placed_result = await session.execute(
+        select(ScheduleSlot.project_id).where(
+            ScheduleSlot.clustering_run_id == clustering.id,
+            ScheduleSlot.project_id.isnot(None),
+            ScheduleSlot.status != SlotStatus.CANCELLED.value,
+        )
+    )
+    placed_ids = set(placed_result.scalars().all())
+
+    unplaced_ids = all_project_ids - placed_ids
+    if not unplaced_ids:
+        return []
+
+    # Fetch project details with tags
+    projects_result = await session.execute(
+        select(Project)
+        .where(Project.id.in_(unplaced_ids))
+        .options(selectinload(Project.tags).selectinload(ProjectTag.tag))
+    )
+    projects = projects_result.scalars().all()
+
+    items = []
+    for p in projects:
+        tag_names = []
+        if p.tags:
+            for pt in p.tags:
+                if hasattr(pt, "tag") and pt.tag:
+                    tag_names.append(pt.tag.name)
+        items.append({
+            "id": p.id,
+            "title": p.title,
+            "author": p.author,
+            "tags": tag_names,
+        })
+    return items
+
+
+async def bulk_move_slots(
+    session: AsyncSession,
+    room_id: UUID,
+    after_time: datetime,
+    shift_minutes: int,
+) -> int:
+    """Shift all slots in a room after a given time by N minutes."""
+    shift = timedelta(minutes=shift_minutes)
+
+    result = await session.execute(
+        select(ScheduleSlot).where(
+            ScheduleSlot.room_id == room_id,
+            ScheduleSlot.start_time >= after_time,
+            ScheduleSlot.status != SlotStatus.CANCELLED.value,
+        )
+    )
+    slots = list(result.scalars().all())
+
+    for slot in slots:
+        slot.start_time = slot.start_time + shift
+        slot.end_time = slot.end_time + shift
+
+    await session.commit()
+    return len(slots)
+
+
+async def configure_from_text(
+    session: AsyncSession,
+    event_id: UUID,
+    text: str,
+) -> ScheduleConfigFromTextResponse:
+    """Call LLM to parse organizer's natural-language description into schedule time config.
+
+    Rooms already exist from clustering — we only parse the TIME FRAME:
+    start/end times, breaks, ceremonies, track filters, slot duration.
+    The result is a preview that the organizer confirms before generation.
+    """
+    from app.prompts.admin.schedule import SCHEDULE_PARSE_SYSTEM
+    from app.services.core import llm_client
+
+    llm_response = await llm_client.send_chat_completion(
+        system_prompt=SCHEDULE_PARSE_SYSTEM,
+        user_prompt=text,
+        json_mode=True,
+    )
+
+    # Parse LLM response
+    days_data = llm_response.get("days", [])
+    parsed_days = []
+
+    for day_data in days_data:
+        config_breaks = []
+        for brk in day_data.get("breaks", []):
+            config_breaks.append(ScheduleConfigBreak(
+                start_time=brk.get("start_time", "12:30"),
+                end_time=brk.get("end_time", "13:00"),
+                label=brk.get("label", "Перерыв"),
+            ))
+
+        config_ceremonies = []
+        for cer in day_data.get("ceremonies", []):
+            config_ceremonies.append(ScheduleConfigCeremony(
+                start_time=cer.get("start_time", "10:00"),
+                end_time=cer.get("end_time", "10:30"),
+                label=cer.get("label", "Церемония"),
+            ))
+
+        parsed_days.append(ScheduleConfigParsedDay(
+            date_hint=day_data.get("date_hint", "день"),
+            start_time=day_data.get("start_time", "10:00"),
+            end_time=day_data.get("end_time", "19:30"),
+            slot_duration_minutes=day_data.get("slot_duration_minutes", 15),
+            format=day_data.get("format", "presentation_15min"),
+            track_filter=day_data.get("track_filter"),
+            breaks=config_breaks,
+            ceremonies=config_ceremonies,
+        ))
+
+    # Count existing rooms from clustering
+    clustering = await get_approved_clustering(session, event_id)
+    rooms_count = 0
+    if clustering:
+        result = await session.execute(
+            select(func.count(Room.id)).where(Room.clustering_run_id == clustering.id)
+        )
+        rooms_count = result.scalar() or 0
+
+    summary_parts = []
+    for i, day in enumerate(parsed_days):
+        day_label = day.date_hint
+        parts = [f"{day_label}: {day.start_time}–{day.end_time}"]
+        if day.ceremonies:
+            parts.append(f"{len(day.ceremonies)} церем.")
+        if day.breaks:
+            parts.append(f"{len(day.breaks)} перерыв(ов)")
+        if day.track_filter:
+            parts.append(f"фильтр: {day.track_filter}")
+        summary_parts.append(", ".join(parts))
+
+    message = f"{rooms_count} залов из кластеризации. " + " | ".join(summary_parts)
+
+    return ScheduleConfigFromTextResponse(
+        parsed_config=parsed_days,
+        rooms_count=rooms_count,
+        message=message,
+    )

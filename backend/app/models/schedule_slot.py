@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,7 +20,6 @@ class SlotStatus(str, Enum):
 class ScheduleSlot(Base):
     __tablename__ = "schedule_slots"
     __table_args__ = (
-        UniqueConstraint("project_id", "clustering_run_id", name="uq_slot_project_run"),
         Index("ix_schedule_slots_event_id", "event_id"),
         Index("ix_schedule_slots_room_id", "room_id"),
         Index("ix_schedule_slots_project_id", "project_id"),
@@ -34,14 +33,20 @@ class ScheduleSlot(Base):
     room_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False
     )
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True
     )
     clustering_run_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("clustering_runs.id", ondelete="CASCADE"),
         nullable=False,
     )
+
+    slot_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="project"
+    )  # "project" | "break" | "ceremony" | "section"
+    title: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

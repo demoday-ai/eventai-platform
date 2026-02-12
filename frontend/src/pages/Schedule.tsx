@@ -1,105 +1,77 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Calendar } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
+import { DndContext, DragEndEvent } from "@dnd-kit/core"
+import { Calendar, PanelRightOpen, PanelRightClose } from "lucide-react"
 import { Button } from "../components/ui/button"
-import { Input } from "../components/ui/input"
-import { Label } from "../components/ui/label"
-import { Stepper } from "../components/ui/stepper"
 import { PageEmptyState } from "../components/ui/PageEmptyState"
 import { APP_NAME } from "../lib/constants"
+import { DayTabs } from "../components/schedule/DayTabs"
+import { ScheduleTimeline } from "../components/schedule/ScheduleTimeline"
+import { UnplacedPanel } from "../components/schedule/UnplacedPanel"
+import { SlotPopover } from "../components/schedule/SlotPopover"
+import { ScheduleToolbar } from "../components/schedule/ScheduleToolbar"
+import { ConfigFromTextDialog } from "../components/schedule/ConfigFromTextDialog"
 import {
   generateSchedule,
   getSchedule,
   approveSchedule,
   updateSlot,
-  getScheduleChanges,
-  getCurrentClustering,
+  createSlot,
+  deleteSlot,
+  getUnplacedProjects,
   exportScheduleICS,
-  type ScheduleGenerateResult,
-  type ScheduleApproveResult,
+  configureScheduleFromText,
+  getCurrentClustering,
   type ScheduleSlotResponse,
-  type SlotUpdateRequest,
-  type RoomTimeOverride,
-  type BreakTime,
+  type ScheduleConfigFromTextResponse,
 } from "../lib/api-client"
-
-const STEPS = ["Генерация", "Просмотр", "Одобрение"]
 
 export function Schedule() {
   const queryClient = useQueryClient()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [slotDuration, setSlotDuration] = useState(15)
-  const [generateResult, setGenerateResult] = useState<ScheduleGenerateResult | null>(null)
-  const [approveResult, setApproveResult] = useState<ScheduleApproveResult | null>(null)
+  const [selectedDay, setSelectedDay] = useState("")
+  const [scaleMinutes, setScaleMinutes] = useState(15)
   const [editingSlot, setEditingSlot] = useState<ScheduleSlotResponse | null>(null)
-  const [editForm, setEditForm] = useState<SlotUpdateRequest>({})
   const [showApproveConfirm, setShowApproveConfirm] = useState(false)
-  const [roomOverrides, setRoomOverrides] = useState<Record<string, { start_time: string; end_time: string }>>({})
-  const [breaks, setBreaks] = useState<{ start_time: string; end_time: string }[]>([])
+  const [approveResult, setApproveResult] = useState<{ total_slots: number; rooms: number; days: number } | null>(null)
+  const [showConfigDialog, setShowConfigDialog] = useState(false)
+  const [configResult, setConfigResult] = useState<ScheduleConfigFromTextResponse | null>(null)
+  const [showSidebar, setShowSidebar] = useState(true)
 
   useEffect(() => {
     document.title = `${APP_NAME} - Расписание`
   }, [])
 
-  // Load clustering rooms for per-room time overrides
   const { data: clusteringData, isFetched: clusteringFetched } = useQuery({
     queryKey: ["clustering"],
     queryFn: () => getCurrentClustering(),
     retry: false,
   })
 
-  // Initialize roomOverrides from clustering rooms
-  useEffect(() => {
-    if (clusteringData?.rooms && Object.keys(roomOverrides).length === 0) {
-      const initial: Record<string, { start_time: string; end_time: string }> = {}
-      for (const room of clusteringData.rooms) {
-        initial[room.id] = { start_time: "10:30", end_time: "19:30" }
-      }
-      setRoomOverrides(initial)
-    }
-  }, [clusteringData]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Try to load existing schedule
-  const { data: existingSchedule } = useQuery({
+  const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
     queryKey: ["schedule"],
     queryFn: () => getSchedule(),
     retry: false,
   })
 
-  const hasAutoAdvanced = useRef(false)
-  useEffect(() => {
-    if (existingSchedule && existingSchedule.days.length > 0 && !hasAutoAdvanced.current) {
-      hasAutoAdvanced.current = true
-      setCurrentStep(1)
-    }
-  }, [existingSchedule])
-
-  // Change log query
-  const { data: changeLog } = useQuery({
-    queryKey: ["scheduleChanges"],
-    queryFn: () => getScheduleChanges(),
-    enabled: currentStep === 1,
+  const { data: unplacedData, isLoading: unplacedLoading } = useQuery({
+    queryKey: ["unplaced"],
+    queryFn: () => getUnplacedProjects(),
+    retry: false,
   })
 
+  // Auto-select first day
+  useEffect(() => {
+    if (scheduleData?.days?.length && !selectedDay) {
+      setSelectedDay(scheduleData.days[0].date)
+    }
+  }, [scheduleData, selectedDay])
+
   const generateMutation = useMutation({
-    mutationFn: () => {
-      const roomOverridesList: RoomTimeOverride[] = Object.entries(roomOverrides).map(
-        ([room_id, times]) => ({ room_id, ...times })
-      )
-      const breaksList: BreakTime[] = breaks.filter(b => b.start_time && b.end_time)
-      return generateSchedule({
-        slot_duration_minutes: slotDuration,
-        room_overrides: roomOverridesList.length > 0 ? roomOverridesList : undefined,
-        breaks: breaksList.length > 0 ? breaksList : undefined,
-        force: true,
-      })
-    },
-    onSuccess: (data) => {
-      setGenerateResult(data)
-      setCurrentStep(1)
+    mutationFn: () => generateSchedule({ force: true }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedule"] })
+      queryClient.invalidateQueries({ queryKey: ["unplaced"] })
     },
   })
 
@@ -115,19 +87,99 @@ export function Schedule() {
   })
 
   const updateSlotMutation = useMutation({
-    mutationFn: ({ slotId, body }: { slotId: string; body: SlotUpdateRequest }) =>
+    mutationFn: ({ slotId, body }: { slotId: string; body: Parameters<typeof updateSlot>[1] }) =>
       updateSlot(slotId, body),
     onSuccess: () => {
       setEditingSlot(null)
-      setEditForm({})
       queryClient.invalidateQueries({ queryKey: ["schedule"] })
-      queryClient.invalidateQueries({ queryKey: ["scheduleChanges"] })
+      queryClient.invalidateQueries({ queryKey: ["unplaced"] })
     },
   })
 
-  const scheduleData = existingSchedule
+  const createSlotMutation = useMutation({
+    mutationFn: createSlot,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedule"] })
+      queryClient.invalidateQueries({ queryKey: ["unplaced"] })
+    },
+  })
 
-  // Collect all room options from schedule for the edit form
+  const deleteSlotMutation = useMutation({
+    mutationFn: deleteSlot,
+    onSuccess: () => {
+      setEditingSlot(null)
+      queryClient.invalidateQueries({ queryKey: ["schedule"] })
+      queryClient.invalidateQueries({ queryKey: ["unplaced"] })
+    },
+  })
+
+  const configFromTextMutation = useMutation({
+    mutationFn: configureScheduleFromText,
+    onSuccess: (data) => {
+      setConfigResult(data)
+    },
+  })
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || !scheduleData) return
+
+      const activeData = active.data.current
+      const overData = over.data.current
+
+      if (!activeData || !overData) return
+
+      // Parse the target cell to figure out room and time
+      const overId = String(over.id)
+      if (!overId.startsWith("cell-")) return
+
+      const currentDay = scheduleData.days.find((d) => d.date === selectedDay)
+      if (!currentDay) return
+
+      const colIdx = overData.col as number
+      const rowIdx = overData.row as number
+
+      const targetRoom = currentDay.rooms[colIdx - 1]
+      if (!targetRoom) return
+
+      // Compute target time from row index
+      // Rows start at 2 (header = row 1). Row N = dayStart + (N - 2) * scaleMinutes
+      const dayDate = currentDay.date
+      const dayStart = computeDayStart(currentDay)
+      const targetStartMs = dayStart.getTime() + (rowIdx - 2) * scaleMinutes * 60 * 1000
+      const targetStart = new Date(targetStartMs)
+
+      if (activeData.type === "unplaced-project") {
+        // Drop from sidebar -> create slot
+        const project = activeData.project as { id: string }
+        const targetEnd = new Date(targetStartMs + scaleMinutes * 60 * 1000)
+        createSlotMutation.mutate({
+          room_id: targetRoom.room_id,
+          start_time: targetStart.toISOString(),
+          end_time: targetEnd.toISOString(),
+          slot_type: "project",
+          project_id: project.id,
+        })
+      } else if (activeData.type === "timeline-slot") {
+        // Move existing slot
+        const slot = activeData.slot as ScheduleSlotResponse
+        const durationMs = new Date(slot.end_time).getTime() - new Date(slot.start_time).getTime()
+        const targetEnd = new Date(targetStartMs + durationMs)
+        updateSlotMutation.mutate({
+          slotId: slot.id,
+          body: {
+            room_id: targetRoom.room_id,
+            start_time: targetStart.toISOString(),
+            end_time: targetEnd.toISOString(),
+          },
+        })
+      }
+    },
+    [scheduleData, selectedDay, scaleMinutes, createSlotMutation, updateSlotMutation]
+  )
+
+  // Collect all rooms for the edit form
   const allRooms = scheduleData
     ? Array.from(
         new Map(
@@ -138,42 +190,9 @@ export function Schedule() {
       )
     : []
 
-  const formatTime = (isoString: string) => {
-    try {
-      const date = new Date(isoString)
-      return date.toLocaleTimeString("ru-RU", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    } catch {
-      return isoString
-    }
-  }
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr)
-      return date.toLocaleDateString("ru-RU", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      })
-    } catch {
-      return dateStr
-    }
-  }
-
-  const startEdit = (slot: ScheduleSlotResponse) => {
-    setEditingSlot(slot)
-    setEditForm({
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      room_id: slot.room_id,
-      status: slot.status,
-    })
-  }
-
-  const hasNoApprovedClustering = clusteringFetched && !clusteringData?.approved_at && !existingSchedule?.days?.length
+  const currentDayData = scheduleData?.days.find((d) => d.date === selectedDay)
+  const hasSchedule = scheduleData && scheduleData.days.length > 0
+  const hasNoApprovedClustering = clusteringFetched && !clusteringData?.approved_at && !hasSchedule
 
   if (hasNoApprovedClustering) {
     return (
@@ -191,458 +210,179 @@ export function Schedule() {
   }
 
   return (
-    <div className="grid gap-6">
-      <h2 className="text-2xl font-bold">Расписание</h2>
-
-      <Stepper steps={STEPS} currentStep={currentStep} />
-
-      {/* Step 0: Generate */}
-      {currentStep === 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Генерация расписания</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="slot-duration">Длительность слота (минуты)</Label>
-              <Input
-                id="slot-duration"
-                type="number"
-                min={5}
-                max={60}
-                value={slotDuration}
-                onChange={(e) => setSlotDuration(Number(e.target.value))}
-              />
-            </div>
-
-            {/* Per-room time overrides */}
-            {clusteringData?.rooms && clusteringData.rooms.length > 0 && (
-              <div className="space-y-2">
-                <Label>Время по залам</Label>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="py-2 pr-4">Зал</th>
-                        <th className="py-2 pr-4">Начало</th>
-                        <th className="py-2">Конец</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clusteringData.rooms.map((room) => (
-                        <tr key={room.id} className="border-b">
-                          <td className="py-2 pr-4">{room.name}</td>
-                          <td className="py-2 pr-4">
-                            <Input
-                              type="time"
-                              value={roomOverrides[room.id]?.start_time || "10:30"}
-                              onChange={(e) =>
-                                setRoomOverrides((prev) => ({
-                                  ...prev,
-                                  [room.id]: { ...prev[room.id], start_time: e.target.value },
-                                }))
-                              }
-                              className="w-32"
-                              aria-label={`Начало ${room.name}`}
-                            />
-                          </td>
-                          <td className="py-2">
-                            <Input
-                              type="time"
-                              value={roomOverrides[room.id]?.end_time || "19:30"}
-                              onChange={(e) =>
-                                setRoomOverrides((prev) => ({
-                                  ...prev,
-                                  [room.id]: { ...prev[room.id], end_time: e.target.value },
-                                }))
-                              }
-                              className="w-32"
-                              aria-label={`Конец ${room.name}`}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Breaks */}
-            <div className="space-y-2">
-              <Label>Перерывы</Label>
-              {breaks.map((brk, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <Input
-                    type="time"
-                    value={brk.start_time}
-                    onChange={(e) => {
-                      const updated = [...breaks]
-                      updated[idx] = { ...updated[idx], start_time: e.target.value }
-                      setBreaks(updated)
-                    }}
-                    className="w-32"
-                    aria-label={`Начало перерыва ${idx + 1}`}
-                  />
-                  <span className="text-muted-foreground">—</span>
-                  <Input
-                    type="time"
-                    value={brk.end_time}
-                    onChange={(e) => {
-                      const updated = [...breaks]
-                      updated[idx] = { ...updated[idx], end_time: e.target.value }
-                      setBreaks(updated)
-                    }}
-                    className="w-32"
-                    aria-label={`Конец перерыва ${idx + 1}`}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBreaks(breaks.filter((_, i) => i !== idx))}
-                    aria-label={`Удалить перерыв ${idx + 1}`}
-                  >
-                    Удалить
-                  </Button>
-                </div>
-              ))}
+    <DndContext onDragEnd={handleDragEnd}>
+      <div className="grid gap-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Расписание</h2>
+          <div className="flex items-center gap-2">
+            {approveResult ? (
+              <span className="text-sm text-green-600 font-medium">
+                Одобрено: {approveResult.total_slots} слотов
+              </span>
+            ) : showApproveConfirm ? (
+              <>
+                <span className="text-sm">Вы уверены?</span>
+                <Button
+                  size="sm"
+                  onClick={() => approveMutation.mutate()}
+                  disabled={approveMutation.isPending}
+                >
+                  {approveMutation.isPending ? "..." : "Подтвердить"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowApproveConfirm(false)}>
+                  Отмена
+                </Button>
+              </>
+            ) : (
               <Button
-                variant="outline"
                 size="sm"
-                onClick={() => setBreaks([...breaks, { start_time: "13:00", end_time: "14:00" }])}
+                onClick={() => setShowApproveConfirm(true)}
+                disabled={!hasSchedule}
               >
-                Добавить перерыв
+                Одобрить
               </Button>
-            </div>
+            )}
+          </div>
+        </div>
 
-            <div className="flex gap-2">
-              <Button
-                onClick={() => generateMutation.mutate()}
-                disabled={generateMutation.isPending}
-              >
-                {generateMutation.isPending ? "Генерация..." : "Сгенерировать"}
+        {approveResult && (
+          <div className="rounded border border-green-200 bg-green-50 p-3 text-sm">
+            <p>
+              Расписание одобрено: {approveResult.total_slots} слотов, {approveResult.rooms} залов, {approveResult.days} дней
+            </p>
+            <Link to="/messaging">
+              <Button variant="outline" size="sm" className="mt-2">
+                Перейти к авто-напоминаниям
               </Button>
-              {existingSchedule && existingSchedule.days.length > 0 && (
-                <Button variant="outline" onClick={() => setCurrentStep(1)}>Далее</Button>
+            </Link>
+          </div>
+        )}
+
+        {approveMutation.isError && (
+          <p className="text-sm text-red-500">Ошибка одобрения</p>
+        )}
+
+        {/* Toolbar */}
+        <ScheduleToolbar
+          onAutoFill={() => generateMutation.mutate()}
+          onAddBreak={() => {
+            // TODO: Add break dialog
+          }}
+          onAddSection={() => {
+            // TODO: Add section dialog
+          }}
+          onExportICS={() => exportScheduleICS()}
+          onConfigFromText={() => {
+            setConfigResult(null)
+            setShowConfigDialog(true)
+          }}
+          isGenerating={generateMutation.isPending}
+          scaleMinutes={scaleMinutes}
+          onScaleChange={setScaleMinutes}
+        />
+
+        {generateMutation.isError && (
+          <p className="text-sm text-red-500">
+            Ошибка: {generateMutation.error instanceof Error ? generateMutation.error.message : "Неизвестная ошибка"}
+          </p>
+        )}
+
+        {/* Day tabs */}
+        {hasSchedule && (
+          <DayTabs
+            days={scheduleData.days}
+            selectedDay={selectedDay}
+            onDayChange={setSelectedDay}
+          />
+        )}
+
+        {/* Main content */}
+        {scheduleLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Загрузка расписания...</div>
+        ) : !hasSchedule ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              Расписание пусто. Используйте "Авто-заполнить" или "AI-конфигурация" для начала.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            {/* Timeline */}
+            <div className="flex-1 min-w-0">
+              {currentDayData && (
+                <ScheduleTimeline
+                  rooms={currentDayData.rooms}
+                  dayDate={currentDayData.date}
+                  scaleMinutes={scaleMinutes}
+                  onSlotClick={(slot) => setEditingSlot(slot)}
+                />
               )}
             </div>
-            {generateMutation.isError && (
-              <p className="text-sm text-red-500">
-                Ошибка:{" "}
-                {generateMutation.error instanceof Error
-                  ? generateMutation.error.message
-                  : "Неизвестная ошибка"}
-              </p>
-            )}
-            {generateResult && (
-              <div className="text-sm text-muted-foreground">
-                Создано {generateResult.total_slots} слотов в {generateResult.rooms.length} залах
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Step 1: View */}
-      {currentStep === 1 && scheduleData && (
-        <div className="space-y-4">
-          {scheduleData.days.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">Расписание пусто</p>
-              </CardContent>
-            </Card>
-          ) : (
-            scheduleData.days.map((day) => (
-              <div key={day.date} className="space-y-3">
-                <h3 className="text-lg font-semibold capitalize">{formatDate(day.date)}</h3>
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {day.rooms.map((room) => (
-                    <Card key={room.room_id}>
-                      <CardHeader>
-                        <CardTitle className="text-base">
-                          {room.room_name}{" "}
-                          <span className="text-muted-foreground font-normal">
-                            ({room.slots.length})
-                          </span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-1">
-                          {room.slots.map((slot) => (
-                            <div key={slot.id}>
-                              <div className="flex items-center gap-2 text-sm border rounded px-2 py-1">
-                                <span className="text-muted-foreground whitespace-nowrap">
-                                  {formatTime(slot.start_time)}–{formatTime(slot.end_time)}
-                                </span>
-                                <span className="truncate flex-1">{slot.project_title}</span>
-                                {slot.project_author && (
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                    {slot.project_author}
-                                  </span>
-                                )}
-                                <button
-                                  className="text-muted-foreground hover:text-foreground ml-1 flex-shrink-0"
-                                  title="Редактировать"
-                                  onClick={() => startEdit(slot)}
-                                  aria-label={`Редактировать ${slot.project_title}`}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                </button>
-                              </div>
-                              {/* Inline edit form */}
-                              {editingSlot?.id === slot.id && (
-                                <Card className="mt-1 border-primary">
-                                  <CardContent className="pt-4 space-y-3">
-                                    <div className="grid gap-2 grid-cols-2">
-                                      <div>
-                                        <Label>Начало</Label>
-                                        <Input
-                                          type="datetime-local"
-                                          value={editForm.start_time?.slice(0, 16) || ""}
-                                          onChange={(e) =>
-                                            setEditForm({ ...editForm, start_time: e.target.value })
-                                          }
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label>Конец</Label>
-                                        <Input
-                                          type="datetime-local"
-                                          value={editForm.end_time?.slice(0, 16) || ""}
-                                          onChange={(e) =>
-                                            setEditForm({ ...editForm, end_time: e.target.value })
-                                          }
-                                        />
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <Label>Зал</Label>
-                                      <select
-                                        className="w-full rounded-md border px-3 py-2 text-sm"
-                                        value={editForm.room_id || ""}
-                                        onChange={(e) =>
-                                          setEditForm({ ...editForm, room_id: e.target.value })
-                                        }
-                                      >
-                                        {allRooms.map((r) => (
-                                          <option key={r.id} value={r.id}>{r.name}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    <div>
-                                      <Label>Статус</Label>
-                                      <select
-                                        className="w-full rounded-md border px-3 py-2 text-sm"
-                                        value={editForm.status || ""}
-                                        onChange={(e) =>
-                                          setEditForm({ ...editForm, status: e.target.value })
-                                        }
-                                      >
-                                        <option value="scheduled">Запланирован</option>
-                                        <option value="cancelled">Отменён</option>
-                                      </select>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        disabled={updateSlotMutation.isPending}
-                                        onClick={() =>
-                                          updateSlotMutation.mutate({
-                                            slotId: slot.id,
-                                            body: editForm,
-                                          })
-                                        }
-                                      >
-                                        {updateSlotMutation.isPending ? "Сохранение..." : "Сохранить"}
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setEditingSlot(null)
-                                          setEditForm({})
-                                        }}
-                                      >
-                                        Отмена
-                                      </Button>
-                                    </div>
-                                    {updateSlotMutation.isError && (
-                                      <p className="text-xs text-red-500">Ошибка сохранения</p>
-                                    )}
-                                  </CardContent>
-                                </Card>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
-            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
-              Перегенерировать
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => exportScheduleICS()}
+            {/* Sidebar toggle (mobile) */}
+            <button
+              className="fixed bottom-4 right-4 z-40 md:hidden rounded-full bg-primary text-primary-foreground p-3 shadow-lg"
+              onClick={() => setShowSidebar(!showSidebar)}
+              aria-label="Переключить панель"
             >
-              Экспорт в календарь (.ics)
-            </Button>
+              {showSidebar ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+            </button>
+
+            {/* Unplaced panel */}
+            <div
+              className={`w-[280px] flex-shrink-0 border rounded-lg bg-white ${
+                showSidebar ? "block" : "hidden"
+              } md:block`}
+            >
+              <UnplacedPanel
+                items={unplacedData?.items || []}
+                total={unplacedData?.total || 0}
+                isLoading={unplacedLoading}
+              />
+            </div>
           </div>
+        )}
+      </div>
 
-          {/* Change Log */}
-          {changeLog && changeLog.items.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>История изменений</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="py-2 pr-4">Проект</th>
-                        <th className="py-2 pr-4">Тип</th>
-                        <th className="py-2 pr-4">Старое время</th>
-                        <th className="py-2 pr-4">Новое время</th>
-                        <th className="py-2 pr-4">Старый зал</th>
-                        <th className="py-2 pr-4">Новый зал</th>
-                        <th className="py-2 pr-4">Кем</th>
-                        <th className="py-2 pr-4">Дата</th>
-                        <th className="py-2">Уведомл.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {changeLog.items.map((ch) => (
-                        <tr key={ch.id} className="border-b">
-                          <td className="py-2 pr-4 font-medium">{ch.project_title}</td>
-                          <td className="py-2 pr-4">{ch.change_type}</td>
-                          <td className="py-2 pr-4 text-xs text-muted-foreground">
-                            {ch.old_start_time ? formatTime(ch.old_start_time) : "—"}
-                          </td>
-                          <td className="py-2 pr-4 text-xs text-muted-foreground">
-                            {ch.new_start_time ? formatTime(ch.new_start_time) : "—"}
-                          </td>
-                          <td className="py-2 pr-4 text-xs">{ch.old_room_name || "—"}</td>
-                          <td className="py-2 pr-4 text-xs">{ch.new_room_name || "—"}</td>
-                          <td className="py-2 pr-4 text-xs">{ch.changed_by}</td>
-                          <td className="py-2 pr-4 text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(ch.created_at).toLocaleString("ru-RU")}
-                          </td>
-                          <td className="py-2">
-                            {ch.notifications_sent > 0 ? (
-                              <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
-                                {ch.notifications_sent}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">0</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      {/* Slot edit popover */}
+      {editingSlot && (
+        <SlotPopover
+          slot={editingSlot}
+          rooms={allRooms}
+          onSave={(slotId, body) => updateSlotMutation.mutate({ slotId, body })}
+          onDelete={(slotId) => deleteSlotMutation.mutate(slotId)}
+          onClose={() => setEditingSlot(null)}
+          isSaving={updateSlotMutation.isPending}
+        />
       )}
 
-      {/* Step 2: Approve */}
-      {currentStep === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Одобрение расписания</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {scheduleData && (
-              <div className="text-sm space-y-1">
-                <p>Дней: {scheduleData.days.length}</p>
-                <p>
-                  Залов:{" "}
-                  {new Set(
-                    scheduleData.days.flatMap((d) => d.rooms.map((r) => r.room_id))
-                  ).size}
-                </p>
-                <p>
-                  Слотов:{" "}
-                  {scheduleData.days.reduce(
-                    (sum, d) => sum + d.rooms.reduce((s, r) => s + r.slots.length, 0),
-                    0
-                  )}
-                </p>
-              </div>
-            )}
-
-            {approveResult ? (
-              <div className="space-y-3">
-                <p className="text-sm text-green-600 font-medium">
-                  Расписание одобрено: {approveResult.total_slots} слотов, {approveResult.rooms} залов, {approveResult.days} дней
-                </p>
-                <Card className="border-green-200">
-                  <CardContent className="pt-4">
-                    <p className="text-sm">Расписание утверждено. Можно настроить авто-напоминания</p>
-                    <Link to="/messaging">
-                      <Button variant="outline" size="sm" className="mt-2">
-                        Перейти к авто-напоминаниям
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : !showApproveConfirm ? (
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  onClick={() => setShowApproveConfirm(true)}
-                  disabled={approveMutation.isPending}
-                  className="w-full sm:w-auto"
-                >
-                  Одобрить
-                </Button>
-                <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
-                  Назад
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-4 border rounded-md space-y-3">
-                  <p className="text-sm font-medium">Вы уверены, что хотите одобрить расписание?</p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => approveMutation.mutate()}
-                      disabled={approveMutation.isPending}
-                    >
-                      {approveMutation.isPending ? "Одобрение..." : "Подтвердить"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowApproveConfirm(false)}
-                      disabled={approveMutation.isPending}
-                    >
-                      Отмена
-                    </Button>
-                  </div>
-                </div>
-                <Button variant="outline" onClick={() => { setShowApproveConfirm(false); setCurrentStep(1) }} className="w-full sm:w-auto">
-                  Назад
-                </Button>
-              </div>
-            )}
-            {approveMutation.isError && (
-              <p className="text-sm text-red-500">Ошибка одобрения</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+      {/* Config from text dialog */}
+      <ConfigFromTextDialog
+        open={showConfigDialog}
+        onClose={() => setShowConfigDialog(false)}
+        onSubmit={(text) => configFromTextMutation.mutate({ text })}
+        onAccept={() => {
+          setShowConfigDialog(false)
+          // After config accepted, auto-fill
+          generateMutation.mutate()
+        }}
+        isParsing={configFromTextMutation.isPending}
+        parseResult={configResult}
+      />
+    </DndContext>
   )
+}
+
+/** Compute day start from the earliest slot or default to 10:00 */
+function computeDayStart(dayData: { date: string; rooms: { slots: { start_time: string }[] }[] }): Date {
+  let earliest = new Date(`${dayData.date}T10:00:00`)
+  for (const room of dayData.rooms) {
+    for (const slot of room.slots) {
+      const s = new Date(slot.start_time)
+      if (s < earliest) earliest = s
+    }
+  }
+  earliest.setMinutes(Math.floor(earliest.getMinutes() / 15) * 15, 0, 0)
+  return earliest
 }

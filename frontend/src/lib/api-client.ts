@@ -492,13 +492,15 @@ export interface ScheduleSlotResponse {
   id: string
   room_id: string
   room_name: string
-  project_id: string
-  project_title: string
+  project_id: string | null
+  project_title: string | null
   project_author: string | null
   start_time: string
   end_time: string
   display_order: number
   status: string
+  slot_type: string   // "project" | "break" | "ceremony" | "section"
+  title: string | null // For special blocks
 }
 
 export interface RoomSchedule {
@@ -767,6 +769,69 @@ export interface ScheduleChangeItem {
 export interface ScheduleChangeListResponse {
   total: number
   items: ScheduleChangeItem[]
+}
+
+// --- Schedule Builder types ---
+
+export interface SlotCreateRequest {
+  room_id: string
+  start_time: string
+  end_time: string
+  slot_type?: string
+  project_id?: string
+  title?: string
+  description?: string
+}
+
+export interface UnplacedProject {
+  id: string
+  title: string
+  author: string
+  tags: string[]
+}
+
+export interface UnplacedResponse {
+  total: number
+  items: UnplacedProject[]
+}
+
+export interface BulkMoveRequest {
+  room_id: string
+  after_time: string
+  shift_minutes: number
+}
+
+export interface ScheduleConfigBreak {
+  start_time: string
+  end_time: string
+  label: string
+}
+
+export interface ScheduleConfigCeremony {
+  start_time: string
+  end_time: string
+  label: string
+}
+
+export interface ScheduleConfigParsedDay {
+  date_hint: string
+  start_time: string
+  end_time: string
+  slot_duration_minutes: number
+  format: string
+  track_filter: string | null
+  breaks: ScheduleConfigBreak[]
+  ceremonies: ScheduleConfigCeremony[]
+}
+
+export interface ScheduleConfigFromTextRequest {
+  text: string
+}
+
+export interface ScheduleConfigFromTextResponse {
+  parsed_config: ScheduleConfigParsedDay[]
+  rooms_count: number
+  message: string
 }
 
 /** Check if error is a 404 "no active event" response. */
@@ -1355,6 +1420,32 @@ export const getScheduleChanges = async (params?: {
   limit?: number
 }): Promise<ScheduleChangeListResponse> => {
   const { data } = await apiClient.get<ScheduleChangeListResponse>("/schedule/changes", { params })
+  return data
+}
+
+export const createSlot = async (body: SlotCreateRequest): Promise<{ slot: ScheduleSlotResponse }> => {
+  const { data } = await apiClient.post("/schedule/slots", body)
+  return data
+}
+
+export const deleteSlot = async (slotId: string): Promise<void> => {
+  await apiClient.delete(`/schedule/slots/${slotId}`)
+}
+
+export const getUnplacedProjects = async (): Promise<UnplacedResponse> => {
+  const { data } = await apiClient.get("/schedule/unplaced")
+  return data
+}
+
+export const bulkMoveSlots = async (body: BulkMoveRequest): Promise<{ moved_count: number }> => {
+  const { data } = await apiClient.post("/schedule/slots/bulk-move", body)
+  return data
+}
+
+export const configureScheduleFromText = async (
+  body: ScheduleConfigFromTextRequest
+): Promise<ScheduleConfigFromTextResponse> => {
+  const { data } = await apiClient.post("/schedule/configure-from-text", body)
   return data
 }
 
