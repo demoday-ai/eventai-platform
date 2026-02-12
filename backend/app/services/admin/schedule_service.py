@@ -1,13 +1,12 @@
 """Schedule service - generation, CRUD, and change detection."""
 
-import json
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,7 +20,6 @@ from app.models import (
     ScheduleChangeLog,
     ScheduleSlot,
     SlotStatus,
-    Tag,
 )
 from app.models.project_tag import ProjectTag
 from app.schemas.schedule import (
@@ -38,7 +36,6 @@ from app.schemas.schedule import (
     ScheduleResponse,
     ScheduleSlotResponse,
     SlotCreateRequest,
-    UnplacedProject,
 )
 
 logger = logging.getLogger(__name__)

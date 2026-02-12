@@ -33,8 +33,8 @@ from app.schemas.schedule import (
     SlotCreateResponse,
     SlotUpdateRequest,
     SlotUpdateResult,
-    UnplacedResponse,
     UnplacedProject,
+    UnplacedResponse,
 )
 from app.services.admin import audit_service, notification_service, schedule_service
 from app.services.admin.notification_service import CancellationWindowClosedError
@@ -301,6 +301,7 @@ async def create_slot(
         project_author = None
         if slot.room_id:
             from sqlalchemy import select as sa_select
+
             from app.models import Room as RoomModel
             room_result = await db.execute(sa_select(RoomModel).where(RoomModel.id == slot.room_id))
             room_obj = room_result.scalars().first()

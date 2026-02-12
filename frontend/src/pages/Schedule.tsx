@@ -145,7 +145,6 @@ export function Schedule() {
 
       // Compute target time from row index
       // Rows start at 2 (header = row 1). Row N = dayStart + (N - 2) * scaleMinutes
-      const dayDate = currentDay.date
       const dayStart = computeDayStart(currentDay)
       const targetStartMs = dayStart.getTime() + (rowIdx - 2) * scaleMinutes * 60 * 1000
       const targetStart = new Date(targetStartMs)

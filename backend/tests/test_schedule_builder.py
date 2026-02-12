@@ -317,7 +317,7 @@ async def test_generate_per_room_duration(session):
     day_start = MSK.localize(datetime(2026, 2, 2, 10, 0))
     day_end = MSK.localize(datetime(2026, 2, 2, 19, 30))
 
-    result = await schedule_service.generate_schedule(
+    await schedule_service.generate_schedule(
         session,
         event.id,
         clustering_run_id=run.id,
