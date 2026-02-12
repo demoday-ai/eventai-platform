@@ -21,14 +21,16 @@ def _init_db_engine(**kwargs):
     """Create shared DB engine and load LLM model when worker process starts."""
     init_db_engine()
 
-    # Load active LLM model from DB into memory
-    async def _load_model():
+    # Load active LLM model and API keys from DB into memory
+    async def _load_config():
         from sqlalchemy import select
 
         from app.models.app_settings import AppSettings
-        from app.services.core.llm_client import set_active_model
+        from app.models.llm_api_key import LlmApiKey
+        from app.services.core.llm_client import get_key_manager, set_active_model
 
         async with worker_session() as session:
+            # Load model
             result = await session.execute(
                 select(AppSettings).where(AppSettings.key == "llm_model")
             )
@@ -36,10 +38,21 @@ def _init_db_engine(**kwargs):
             if setting and setting.value:
                 set_active_model(setting.value)
 
+            # Load API keys
+            result = await session.execute(
+                select(LlmApiKey.api_key).where(LlmApiKey.is_active)
+            )
+            db_keys = [row[0] for row in result.all()]
+            if db_keys:
+                km = get_key_manager()
+                km._db_keys = db_keys
+                km._initialized = False  # force re-init with DB keys
+                logger.info("Worker loaded %d API keys from DB", len(db_keys))
+
     try:
-        run_async(_load_model())
+        run_async(_load_config())
     except Exception:
-        logger.exception("Failed to load LLM model in worker (non-fatal)")
+        logger.exception("Failed to load LLM config in worker (non-fatal)")
 
 
 @worker_process_shutdown.connect
