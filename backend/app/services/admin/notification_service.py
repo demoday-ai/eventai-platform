@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 import pytz
@@ -97,7 +97,7 @@ async def send_notification(
             text=notification.content[:TELEGRAM_MAX_LENGTH],
         )
         notification.status = NotificationStatus.SENT.value
-        notification.sent_at = datetime.now(pytz.UTC)
+        notification.sent_at = datetime.now(timezone.utc)
         notification.error_message = None
         await session.commit()
         logger.info("Notification %s sent to user %s", notification_id, user.id)
@@ -493,7 +493,7 @@ async def send_eve_reminders(
             type=NotificationType.EVE_OF_DD.value,
             content=content,
             status=NotificationStatus.PENDING.value,
-            scheduled_at=datetime.now(pytz.UTC),
+            scheduled_at=datetime.now(timezone.utc),
             reminder_day=target_day,
         )
         session.add(notification)
@@ -846,7 +846,7 @@ async def check_and_send_pre_slot_reminders(
                 type=NotificationType.PRE_SLOT.value,
                 content=content,
                 status=NotificationStatus.PENDING.value,
-                scheduled_at=now,
+                scheduled_at=now.astimezone(pytz.UTC),
             )
             session.add(notification)
             await session.flush()
@@ -867,8 +867,19 @@ async def _get_slot_participants(
     """Get users who should receive pre-slot reminder for this slot."""
     participants = []
 
-    # TODO: Find student for this project
-    # For now, skip students as we don't have student-project linkage
+    # Find students linked to this project via ParticipationRequest
+    if slot.project_id:
+        from app.models import ParticipationRequest
+
+        student_result = await session.execute(
+            select(ParticipationRequest)
+            .where(ParticipationRequest.project_id == slot.project_id)
+            .where(ParticipationRequest.user_id.isnot(None))
+            .options(selectinload(ParticipationRequest.user))
+        )
+        for pr in student_result.scalars().all():
+            if pr.user:
+                participants.append((pr.user, "student"))
 
     # Find experts assigned to this room
     expert_result = await session.execute(
@@ -934,7 +945,7 @@ async def queue_timing_shift_notifications(
     # Find affected participants
     participants = await _get_slot_participants(session, slot)
 
-    now = datetime.now(pytz.UTC)
+    now = datetime.now(timezone.utc)
     batch_scheduled = now + timedelta(minutes=5)
     queued = 0
 
@@ -952,6 +963,7 @@ async def queue_timing_shift_notifications(
         if existing_notif:
             # Mark existing as batched, we'll combine later
             existing_notif.status = NotificationStatus.BATCHED.value
+            await session.flush()
 
         # Create new notification
         notification = Notification(
@@ -984,67 +996,85 @@ async def process_pending_batches(
     Batches multiple changes per user into a single message.
     Returns (sent, failed).
     """
-    now = datetime.now(pytz.UTC)
-
-    # Find pending timing_shift notifications that are due
-    result = await session.execute(
-        select(Notification)
-        .where(Notification.type == NotificationType.TIMING_SHIFT.value)
-        .where(Notification.status == NotificationStatus.PENDING.value)
-        .where(Notification.scheduled_at <= now)
-        .options(selectinload(Notification.user))
-    )
-    notifications = list(result.scalars().all())
-
-    if not notifications:
-        return 0, 0
-
-    # Group by user
-    by_user: dict[UUID, list[Notification]] = {}
-    for n in notifications:
-        if n.user_id not in by_user:
-            by_user[n.user_id] = []
-        by_user[n.user_id].append(n)
-
+    now = datetime.now(timezone.utc)
     sent = 0
     failed = 0
 
-    for user_id, user_notifications in by_user.items():
-        # Build batch message
-        if len(user_notifications) == 1:
-            content = user_notifications[0].content
-        else:
-            lines = ["📋 Изменения в расписании:\n"]
-            for n in user_notifications:
-                lines.append(f"• {n.content}")
-            content = "\n".join(lines)
+    while True:
+        # Find pending timing_shift notifications that are due (paginated)
+        result = await session.execute(
+            select(Notification)
+            .where(Notification.type == NotificationType.TIMING_SHIFT.value)
+            .where(Notification.status == NotificationStatus.PENDING.value)
+            .where(Notification.scheduled_at <= now)
+            .options(selectinload(Notification.user))
+            .limit(500)
+        )
+        notifications = list(result.scalars().all())
 
-        # Get user
-        user = user_notifications[0].user
-        if not user or not user.telegram_user_id:
-            for n in user_notifications:
-                n.status = NotificationStatus.FAILED.value
-                n.error_message = "User has no telegram_user_id"
-            failed += 1
-            continue
+        if not notifications:
+            break
 
-        # Send
-        try:
-            await bot.send_message(
-                chat_id=user.telegram_user_id,
-                text=content[:TELEGRAM_MAX_LENGTH],
-            )
-            for n in user_notifications:
-                n.status = NotificationStatus.SENT.value
-                n.sent_at = now
-            sent += 1
-        except Exception as e:
-            for n in user_notifications:
-                n.status = NotificationStatus.FAILED.value
-                n.error_message = str(e)[:500]
-            failed += 1
+        # Group by user
+        by_user: dict[UUID, list[Notification]] = {}
+        for n in notifications:
+            if n.user_id not in by_user:
+                by_user[n.user_id] = []
+            by_user[n.user_id].append(n)
 
-    await session.commit()
+        for user_id, user_notifications in by_user.items():
+            # Build batch message
+            if len(user_notifications) == 1:
+                content = user_notifications[0].content
+            else:
+                lines = ["📋 Изменения в расписании:\n"]
+                for n in user_notifications:
+                    lines.append(f"• {n.content}")
+                content = "\n".join(lines)
+
+                # Truncate long batch messages
+                if len(content) > TELEGRAM_MAX_LENGTH:
+                    included_lines = ["📋 Изменения в расписании:\n"]
+                    remaining = len(user_notifications)
+                    for n in user_notifications:
+                        line = f"• {n.content}"
+                        test_msg = "\n".join(included_lines + [line])
+                        suffix = f"\n\n...и ещё {remaining - 1} изменений"
+                        if len(test_msg) + len(suffix) > TELEGRAM_MAX_LENGTH:
+                            extra = len(user_notifications) - (len(included_lines) - 1)
+                            included_lines.append(f"\n...и ещё {extra} изменений")
+                            break
+                        included_lines.append(line)
+                        remaining -= 1
+                    content = "\n".join(included_lines)
+
+            # Get user
+            user = user_notifications[0].user
+            if not user or not user.telegram_user_id:
+                for n in user_notifications:
+                    n.status = NotificationStatus.FAILED.value
+                    n.error_message = "User has no telegram_user_id"
+                failed += 1
+                continue
+
+            # Send
+            try:
+                await bot.send_message(
+                    chat_id=user.telegram_user_id,
+                    text=content[:TELEGRAM_MAX_LENGTH],
+                )
+                for n in user_notifications:
+                    n.status = NotificationStatus.SENT.value
+                    n.sent_at = now
+                sent += 1
+            except Exception as e:
+                for n in user_notifications:
+                    n.status = NotificationStatus.FAILED.value
+                    n.error_message = str(e)[:500]
+                failed += 1
+
+        await session.commit()
+
     return sent, failed
 
 

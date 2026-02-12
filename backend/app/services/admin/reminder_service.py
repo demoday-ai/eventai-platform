@@ -567,6 +567,9 @@ async def send_student_reminders(
 
         await asyncio.sleep(SEND_DELAY)
 
+        if (sent + failed) % 50 == 0:
+            await session.flush()
+
     await session.flush()
     return sent, failed
 
@@ -638,6 +641,9 @@ async def send_expert_reminders(
             logger.warning("Failed to send expert reminder to %s: %s", tg_id, e)
 
         await asyncio.sleep(SEND_DELAY)
+
+        if (sent + failed) % 50 == 0:
+            await session.flush()
 
     await session.flush()
     return sent, failed
@@ -715,6 +721,9 @@ async def send_guest_reminders(
             logger.warning("Failed to send guest reminder to %s: %s", tg_id, e)
 
         await asyncio.sleep(SEND_DELAY)
+
+        if (sent + failed) % 50 == 0:
+            await session.flush()
 
     await session.flush()
     return sent, failed

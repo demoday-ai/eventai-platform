@@ -201,7 +201,9 @@ async def _expert_briefing_job(bot, session_factory):
             now = datetime.now(MSK)
             tomorrow = (now + timedelta(days=1)).date()
 
-            if event.start_date and tomorrow == event.start_date:
+            starts_ok = event.start_date and tomorrow >= event.start_date
+            ends_ok = event.end_date is None or tomorrow <= event.end_date
+            if starts_ok and ends_ok:
                 result = await briefing_service.send_all_briefings(session, event.id, bot)
                 logger.info(
                     "Expert briefings sent: %d sent, %d failed, %d skipped",

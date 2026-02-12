@@ -230,6 +230,17 @@ async def send_all_briefings(
             skipped += 1
             continue
 
+        # Dedup: skip if briefing already sent/pending for this expert+event
+        existing_briefing = await session.execute(
+            select(ExpertBriefing)
+            .where(ExpertBriefing.expert_id == expert.id)
+            .where(ExpertBriefing.event_id == event_id)
+            .where(ExpertBriefing.status.in_([BriefingStatus.SENT, BriefingStatus.PENDING]))
+        )
+        if existing_briefing.scalars().first():
+            skipped += 1
+            continue
+
         briefing = await send_briefing(session, expert, room.id, room.name, event_id, bot)
 
         if briefing.status == BriefingStatus.SENT:
