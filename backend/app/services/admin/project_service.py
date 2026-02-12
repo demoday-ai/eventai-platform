@@ -1,5 +1,6 @@
 """Project upload, validation, and query service."""
 
+import asyncio
 import csv
 import io
 import json
@@ -18,7 +19,6 @@ from app.models.room_project import RoomProject
 from app.models.tag import Tag
 from app.schemas.project import ProjectUploadRow, RowError
 from app.services.admin.tag_service import DEFAULT_TAGS
-from app.services.guest import profiling_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def _match_tags_heuristic(text: str, candidate_tags: list[str]) -> list[str]:
     for tag in candidate_tags:
         tag_lower = tag.lower()
         if len(tag_lower) <= 3:
-            if re.search(rf"\\b{re.escape(tag_lower)}\\b", text_lower):
+            if re.search(rf"\b{re.escape(tag_lower)}\b", text_lower):
                 matched.append(tag)
         elif tag_lower in text_lower:
             matched.append(tag)
@@ -46,6 +46,30 @@ async def _get_candidate_tags(session: AsyncSession) -> list[str]:
     result = await session.execute(select(Tag.name).order_by(Tag.name))
     tags = [row[0] for row in result.all()]
     return tags or list(DEFAULT_TAGS.keys())
+
+
+LLM_CONCURRENCY = 5
+
+
+async def _extract_tags_via_llm(raw_text: str, available_tags: list[str]) -> list[str]:
+    """Extract project tags via LLM. Returns list of tag names."""
+    from app.prompts.admin.tags import PROJECT_TAG_EXTRACTION_SYSTEM
+    from app.services.core import llm_client
+
+    tag_list_str = ", ".join(
+        f"{t} ({DEFAULT_TAGS.get(t, '')})" for t in available_tags if t != "Other"
+    )
+    system_prompt = PROJECT_TAG_EXTRACTION_SYSTEM.format(tag_list=tag_list_str)
+    try:
+        response = await llm_client.send_chat_completion(
+            system_prompt=system_prompt,
+            user_prompt=raw_text,
+            json_mode=True,
+        )
+        return [t for t in response.get("tags", []) if t in available_tags]
+    except Exception:
+        logger.warning("LLM tag extraction failed for project, returning empty")
+        return []
 
 
 async def get_topic_tags_for_buttons(session: AsyncSession) -> list[tuple[str, str]]:
@@ -340,71 +364,62 @@ async def generate_missing_tags(
     if not projects_without_tags:
         return {"processed": 0, "tagged": 0, "message": "All projects already have tags"}
 
-    tag_cache: dict[str, Tag] = {}
+    # Eager-load all tags into cache (single query instead of per-tag SELECTs)
+    tag_result = await session.execute(select(Tag))
+    tag_cache: dict[str, Tag] = {tag.name: tag for tag in tag_result.scalars().all()}
+
+    total = len(projects_without_tags)
     processed = 0
     tagged = 0
-    total = len(projects_without_tags)
+
+    # Report initial progress
+    if progress_callback:
+        try:
+            progress_callback({"stage": "tagging", "current": 0, "total": total, "tagged": 0})
+        except Exception:
+            raise
+
+    # Phase 1: heuristic (fast, synchronous)
+    needs_llm: list[tuple[Project, str]] = []
+    heuristic_results: dict[uuid.UUID, list[str]] = {}
 
     for project in projects_without_tags:
-        # Check for cancellation before each project
-        if progress_callback:
-            try:
-                progress_callback(
-                    {
-                        "stage": "tagging",
-                        "current": processed,
-                        "total": total,
-                        "tagged": tagged,
-                    }
-                )
-            except Exception:
-                # If progress_callback raises (e.g., CancelledError), stop processing
-                raise
-
         raw_text = f"{project.title}\n{project.description}"
         tag_names = _match_tags_heuristic(raw_text, candidate_tags)
+        if tag_names:
+            heuristic_results[project.id] = tag_names
+        else:
+            needs_llm.append((project, raw_text))
 
-        # Fallback to LLM if heuristic didn't find anything
-        if not tag_names:
-            extracted = await profiling_service.extract_interests_from_text(
-                raw_text=raw_text,
-                available_tags=candidate_tags,
-            )
-            tag_names = extracted.get("tags", [])
+    # Phase 2: parallel LLM calls with semaphore
+    semaphore = asyncio.Semaphore(LLM_CONCURRENCY)
+    llm_results: dict[uuid.UUID, list[str]] = {}
 
-        # Fallback to "Other" if still nothing
-        if not tag_names:
-            tag_names = ["Other"]
+    async def extract_one(project: Project, text: str) -> None:
+        async with semaphore:
+            tags = await _extract_tags_via_llm(text, candidate_tags)
+            llm_results[project.id] = tags or ["Other"]
 
-        # Assign tags to project
+    if needs_llm:
+        await asyncio.gather(*(extract_one(p, t) for p, t in needs_llm))
+
+    # Phase 3: write all results to DB
+    all_results = {**heuristic_results, **llm_results}
+    for project in projects_without_tags:
+        tag_names = all_results.get(project.id, ["Other"])
+
         for tag_name in tag_names:
-            if not tag_name:
-                continue
-
-            if tag_name not in tag_cache:
-                existing = await session.scalar(select(Tag).where(Tag.name == tag_name))
-                if existing:
-                    tag_cache[tag_name] = existing
-                else:
-                    # Skip unknown tags (shouldn't happen if candidate_tags is correct)
-                    continue
-
-            pt = ProjectTag(project_id=project.id, tag_id=tag_cache[tag_name].id)
-            session.add(pt)
+            if tag_name in tag_cache:
+                session.add(ProjectTag(project_id=project.id, tag_id=tag_cache[tag_name].id))
 
         processed += 1
         if tag_names:
             tagged += 1
 
-        # Report progress
+        # Report progress every 10 items or at the end
         if progress_callback and (processed % 10 == 0 or processed == total):
             progress_callback(
-                {
-                    "stage": "tagging",
-                    "current": processed,
-                    "total": total,
-                    "tagged": tagged,
-                }
+                {"stage": "tagging", "current": processed, "total": total, "tagged": tagged}
             )
 
     await session.commit()
