@@ -39,6 +39,24 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Failed to seed organizers (non-fatal)")
 
+    # Load active LLM model from DB
+    try:
+        from sqlalchemy import select
+
+        from app.database import async_session
+        from app.models.app_settings import AppSettings
+        from app.services.core.llm_client import set_active_model
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(AppSettings).where(AppSettings.key == "llm_model")
+            )
+            setting = result.scalar_one_or_none()
+            if setting and setting.value:
+                set_active_model(setting.value)
+    except Exception:
+        logger.exception("Failed to load LLM model from DB (non-fatal)")
+
     # Load LLM API keys from DB into KeyManager
     try:
         from sqlalchemy import select

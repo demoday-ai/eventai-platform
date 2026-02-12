@@ -20,6 +20,13 @@ TIMEOUT = 120.0
 MAX_RETRIES = 3
 KEY_COOLDOWN_SECONDS = 60  # Time to wait before retrying a failed key
 
+# In-memory model store. Updated by:
+# 1. App/worker startup (from DB)
+# 2. Admin PATCH /llm/model endpoint
+# NEVER reads DB during LLM calls — avoids deadlock in forked Celery workers
+# where app.database.engine is stale (created pre-fork, bound to wrong event loop).
+_active_model: str | None = None
+
 
 
 @dataclass
@@ -157,26 +164,22 @@ def get_key_manager() -> KeyManager:
     return _key_manager
 
 
-async def get_active_model() -> str:
-    """Get active LLM model from DB (AppSettings).
+def set_active_model(model: str) -> None:
+    """Set the active LLM model in memory.
 
-    Falls back to settings.openrouter_model if DB has no setting.
+    Called from:
+    - App lifespan startup (loads from DB)
+    - Worker process init signal (loads from DB)
+    - Admin PATCH /llm/model endpoint (after DB write)
     """
-    try:
-        from app.database import async_session
-        from app.models.app_settings import AppSettings
+    global _active_model
+    _active_model = model
+    logger.info("Active LLM model set to: %s", model)
 
-        async with async_session() as session:
-            result = await session.execute(
-                select(AppSettings).where(AppSettings.key == "llm_model")
-            )
-            setting = result.scalar_one_or_none()
-            if setting and setting.value:
-                return setting.value
-    except Exception as e:
-        logger.warning("Failed to read model from DB, using config default: %s", e)
 
-    return settings.openrouter_model
+def get_active_model() -> str:
+    """Get the active LLM model from memory. No DB calls, no async."""
+    return _active_model or settings.openrouter_model
 
 
 async def send_chat_completion(
@@ -199,8 +202,7 @@ async def send_chat_completion(
     If `response_format` is provided, it overrides json_mode and is passed
     directly as the response_format payload (e.g. json_schema with strict).
     """
-    if not model:
-        model = await get_active_model()
+    model = model or get_active_model()
     current_model = model
 
     if messages is not None:
@@ -317,8 +319,7 @@ async def send_chat_with_tools(
       - "tool_name": str (if tool_call)
       - "tool_args": dict (if tool_call)
     """
-    if not model:
-        model = await get_active_model()
+    model = model or get_active_model()
     current_model = model
 
     all_messages = [{"role": "system", "content": system_prompt}] + messages

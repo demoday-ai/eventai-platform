@@ -18,8 +18,28 @@ logger = logging.getLogger(__name__)
 
 @worker_process_init.connect
 def _init_db_engine(**kwargs):
-    """Create shared DB engine when worker process starts."""
+    """Create shared DB engine and load LLM model when worker process starts."""
     init_db_engine()
+
+    # Load active LLM model from DB into memory
+    async def _load_model():
+        from sqlalchemy import select
+
+        from app.models.app_settings import AppSettings
+        from app.services.core.llm_client import set_active_model
+
+        async with worker_session() as session:
+            result = await session.execute(
+                select(AppSettings).where(AppSettings.key == "llm_model")
+            )
+            setting = result.scalar_one_or_none()
+            if setting and setting.value:
+                set_active_model(setting.value)
+
+    try:
+        run_async(_load_model())
+    except Exception:
+        logger.exception("Failed to load LLM model in worker (non-fatal)")
 
 
 @worker_process_shutdown.connect

@@ -137,7 +137,10 @@ async def update_model(
 
     await session.commit()
 
-    logger.info("LLM model updated to %s by user %s", data.model_id, user.id)
+    # Update in-memory model immediately (no DB read needed for subsequent LLM calls)
+    from app.services.core.llm_client import set_active_model
+
+    set_active_model(data.model_id)
 
     return {"model_id": data.model_id}
 
