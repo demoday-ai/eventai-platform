@@ -20,10 +20,6 @@ TIMEOUT = 120.0
 MAX_RETRIES = 3
 KEY_COOLDOWN_SECONDS = 60  # Time to wait before retrying a failed key
 
-# Cached model from DB (set by get_active_model)
-_cached_model: str | None = None
-_cached_model_ts: float = 0
-_MODEL_CACHE_TTL = 300  # 5 minutes
 
 
 @dataclass
@@ -162,15 +158,10 @@ def get_key_manager() -> KeyManager:
 
 
 async def get_active_model() -> str:
-    """Get active LLM model from DB (AppSettings), with in-memory cache.
+    """Get active LLM model from DB (AppSettings).
 
     Falls back to settings.openrouter_model if DB has no setting.
     """
-    global _cached_model, _cached_model_ts
-
-    if _cached_model and (time.time() - _cached_model_ts < _MODEL_CACHE_TTL):
-        return _cached_model
-
     try:
         from app.database import async_session
         from app.models.app_settings import AppSettings
@@ -181,15 +172,11 @@ async def get_active_model() -> str:
             )
             setting = result.scalar_one_or_none()
             if setting and setting.value:
-                _cached_model = setting.value
-                _cached_model_ts = time.time()
-                return _cached_model
+                return setting.value
     except Exception as e:
         logger.warning("Failed to read model from DB, using config default: %s", e)
 
-    _cached_model = settings.openrouter_model
-    _cached_model_ts = time.time()
-    return _cached_model
+    return settings.openrouter_model
 
 
 async def send_chat_completion(
