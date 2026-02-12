@@ -15,10 +15,15 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_MODEL = "anthropic/claude-opus-4-5-20251101"
+FALLBACK_MODEL = "openai/gpt-4o-mini"
 TIMEOUT = 120.0
 MAX_RETRIES = 3
 KEY_COOLDOWN_SECONDS = 60  # Time to wait before retrying a failed key
+
+# Cached model from DB (set by get_active_model)
+_cached_model: str | None = None
+_cached_model_ts: float = 0
+_MODEL_CACHE_TTL = 300  # 5 minutes
 
 
 @dataclass
@@ -156,6 +161,37 @@ def get_key_manager() -> KeyManager:
     return _key_manager
 
 
+async def get_active_model() -> str:
+    """Get active LLM model from DB (AppSettings), with in-memory cache.
+
+    Falls back to settings.openrouter_model if DB has no setting.
+    """
+    global _cached_model, _cached_model_ts
+
+    if _cached_model and (time.time() - _cached_model_ts < _MODEL_CACHE_TTL):
+        return _cached_model
+
+    try:
+        from app.database import async_session
+        from app.models.app_settings import AppSettings
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(AppSettings).where(AppSettings.key == "llm_model")
+            )
+            setting = result.scalar_one_or_none()
+            if setting and setting.value:
+                _cached_model = setting.value
+                _cached_model_ts = time.time()
+                return _cached_model
+    except Exception as e:
+        logger.warning("Failed to read model from DB, using config default: %s", e)
+
+    _cached_model = settings.openrouter_model
+    _cached_model_ts = time.time()
+    return _cached_model
+
+
 async def send_chat_completion(
     system_prompt: str,
     user_prompt: str,
@@ -176,7 +212,8 @@ async def send_chat_completion(
     If `response_format` is provided, it overrides json_mode and is passed
     directly as the response_format payload (e.g. json_schema with strict).
     """
-    model = model or settings.openrouter_model
+    if not model:
+        model = await get_active_model()
     current_model = model
 
     if messages is not None:
@@ -293,7 +330,8 @@ async def send_chat_with_tools(
       - "tool_name": str (if tool_call)
       - "tool_args": dict (if tool_call)
     """
-    model = model or settings.openrouter_model
+    if not model:
+        model = await get_active_model()
     current_model = model
 
     all_messages = [{"role": "system", "content": system_prompt}] + messages
