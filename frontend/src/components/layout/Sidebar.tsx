@@ -10,7 +10,6 @@ import {
   Calendar,
   FolderOpen,
   MessageSquare,
-  Bell,
   UserCheck,
   Settings,
   ClipboardList,
@@ -59,7 +58,6 @@ const navGroups: NavGroup[] = [
     label: "Коммуникация",
     items: [
       { to: "/messaging", label: "Рассылки", icon: MessageSquare },
-      { to: "/reminders", label: "Авто-напоминания", icon: Bell, pipelineSteps: ["reminders"] },
     ],
   },
   {

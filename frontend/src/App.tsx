@@ -13,7 +13,6 @@ import { Participants } from "./pages/Participants"
 import { Schedule } from "./pages/Schedule"
 import { CoverageRoomDetail } from "./pages/CoverageRoomDetail"
 import { Messaging } from "./pages/Messaging/index"
-import { Reminders } from "./pages/Reminders"
 import { Event } from "./pages/Event"
 import { Tags } from "./pages/Tags"
 import { Settings } from "./pages/Settings"
@@ -48,7 +47,6 @@ function App() {
           <Route path="/coverage/rooms/:roomId" element={<CoverageRoomDetail />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/messaging" element={<Messaging />} />
-          <Route path="/reminders" element={<Reminders />} />
           <Route path="/participants" element={<Participants />} />
           <Route path="/guests" element={<GuestList />} />
           <Route path="/projects" element={<ProjectsList />} />

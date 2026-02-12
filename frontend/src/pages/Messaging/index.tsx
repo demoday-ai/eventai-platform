@@ -8,8 +8,9 @@ import { OverviewTab } from "./OverviewTab"
 import { BroadcastTab } from "./BroadcastTab"
 import { ParticipationTab } from "./ParticipationTab"
 import { BriefingTab } from "./BriefingTab"
+import { RemindersTab } from "./RemindersTab"
 
-const TABS = ["Обзор", "Рассылка", "Участие", "Брифинг"] as const
+const TABS = ["Обзор", "Рассылка", "Участие", "Брифинг", "Напоминания"] as const
 type Tab = (typeof TABS)[number]
 
 export function Messaging() {
@@ -87,6 +88,7 @@ export function Messaging() {
       {activeTab === "Рассылка" && <BroadcastTab />}
       {activeTab === "Участие" && <ParticipationTab />}
       {activeTab === "Брифинг" && <BriefingTab />}
+      {activeTab === "Напоминания" && <RemindersTab />}
     </div>
   )
 }

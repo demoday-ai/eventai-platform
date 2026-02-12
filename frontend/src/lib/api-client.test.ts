@@ -30,9 +30,6 @@ import {
   getScheduleReminderPreview,
   sendReminders,
   cancelReminders,
-  getReminderBatches,
-  getReminderBatchDetail,
-  previewReminderBatch,
   getNotificationDashboard,
   getNotifications,
   updateSlot,
@@ -529,36 +526,6 @@ describe("apiClient", () => {
       mock.onPost("/reminders/cancel").reply(200, mockData)
 
       const result = await cancelReminders("2026-02-06")
-      expect(result).toEqual(mockData)
-    })
-  })
-
-  describe("getReminderBatches", () => {
-    it("fetches reminder batches", async () => {
-      const mockData = { batches: [] }
-      mock.onGet("/reminders/batches").reply(200, mockData)
-
-      const result = await getReminderBatches("123456")
-      expect(result).toEqual(mockData)
-    })
-  })
-
-  describe("getReminderBatchDetail", () => {
-    it("fetches batch detail", async () => {
-      const mockData = { id: "b1", reminder_type: "eve", status: "completed", initiated_by_name: "Admin", total_recipients: 20, sent: 18, failed: 1, skipped: 1, started_at: "2026-02-05T20:00:00", completed_at: "2026-02-05T20:01:00", by_recipient_type: {} }
-      mock.onGet("/reminders/batches/b1").reply(200, mockData)
-
-      const result = await getReminderBatchDetail("b1", "123456")
-      expect(result).toEqual(mockData)
-    })
-  })
-
-  describe("previewReminderBatch", () => {
-    it("previews reminder batch", async () => {
-      const mockData = { reminder_type: "eve", by_role: {}, total_recipients: 20, total_skipped: 2, duplicate_warning: false }
-      mock.onPost("/reminders/preview").reply(200, mockData)
-
-      const result = await previewReminderBatch("123456", "eve")
       expect(result).toEqual(mockData)
     })
   })

@@ -77,6 +77,7 @@ export function BroadcastTab() {
   }
 
   const handleSend = () => {
+    if (!window.confirm(`Отправить сообщение ${preview?.recipient_count} получателям?`)) return
     sendMutation.mutate({
       template,
       roles: selectedRoles,

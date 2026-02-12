@@ -1,36 +1,22 @@
-import React, { useState } from "react"
-import { useQuery, useMutation } from "@tanstack/react-query"
+import { useState } from "react"
+import { useMutation } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
-import { StatusBadge } from "../../components/shared/StatusBadge"
-import { useAuth } from "../../hooks/useAuth"
 import {
   getScheduleReminderPreview,
   sendReminders,
   cancelReminders,
-  getReminderBatches,
-  getReminderBatchDetail,
   type ScheduleReminderPreview,
   type ReminderSendResult,
   type ReminderCancelResult,
-  type ReminderBatchDetail,
 } from "../../lib/api-client"
 
 export function RemindersTab() {
-  const { telegramId } = useAuth()
   const [reminderDay, setReminderDay] = useState("")
   const [reminderPreview, setReminderPreview] = useState<ScheduleReminderPreview | null>(null)
   const [reminderSendResult, setReminderSendResult] = useState<ReminderSendResult | null>(null)
   const [reminderCancelResult, setReminderCancelResult] = useState<ReminderCancelResult | null>(null)
-  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null)
-  const [batchDetail, setBatchDetail] = useState<ReminderBatchDetail | null>(null)
-
-  const { data: batchHistory, isLoading: batchLoading } = useQuery({
-    queryKey: ["reminderBatches", telegramId],
-    queryFn: () => getReminderBatches(telegramId!),
-    enabled: !!telegramId,
-  })
 
   const previewMutation = useMutation({
     mutationFn: (day: string) => getScheduleReminderPreview(day || undefined),
@@ -50,17 +36,6 @@ export function RemindersTab() {
     mutationFn: (day: string) => cancelReminders(day),
     onSuccess: (data) => setReminderCancelResult(data),
   })
-
-  const loadBatchDetail = async (batchId: string) => {
-    if (expandedBatchId === batchId) {
-      setExpandedBatchId(null)
-      setBatchDetail(null)
-      return
-    }
-    setExpandedBatchId(batchId)
-    const detail = await getReminderBatchDetail(batchId, telegramId!)
-    setBatchDetail(detail)
-  }
 
   return (
     <div className="space-y-6">
@@ -152,67 +127,6 @@ export function RemindersTab() {
                   Отменено: {reminderCancelResult.cancelled_count}
                 </p>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>История рассылок</CardTitle></CardHeader>
-        <CardContent>
-          {batchLoading && <p className="text-muted-foreground">Загрузка...</p>}
-          {batchHistory && batchHistory.batches.length === 0 && (
-            <p className="text-muted-foreground text-sm">Нет рассылок</p>
-          )}
-          {batchHistory && batchHistory.batches.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 pr-4">Тип</th>
-                    <th className="py-2 pr-4">Статус</th>
-                    <th className="py-2 pr-4">Инициатор</th>
-                    <th className="py-2 pr-4">Всего</th>
-                    <th className="py-2 pr-4">Отправлено</th>
-                    <th className="py-2 pr-4">Ошибок</th>
-                    <th className="py-2 pr-4">Пропущено</th>
-                    <th className="py-2">Начато</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {batchHistory.batches.map((batch) => (
-                    <React.Fragment key={batch.id}>
-                      <tr
-                        className="border-b cursor-pointer hover:bg-muted/50"
-                        onClick={() => loadBatchDetail(batch.id)}
-                      >
-                        <td className="py-2 pr-4">{batch.reminder_type}</td>
-                        <td className="py-2 pr-4"><StatusBadge status={batch.status} variant="notification" /></td>
-                        <td className="py-2 pr-4">{batch.initiated_by_name}</td>
-                        <td className="py-2 pr-4">{batch.total_recipients}</td>
-                        <td className="py-2 pr-4">{batch.sent}</td>
-                        <td className="py-2 pr-4">{batch.failed}</td>
-                        <td className="py-2 pr-4">{batch.skipped}</td>
-                        <td className="py-2 text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(batch.started_at).toLocaleString("ru-RU")}
-                        </td>
-                      </tr>
-                      {expandedBatchId === batch.id && batchDetail && (
-                        <tr>
-                          <td colSpan={8} className="py-2 px-4 bg-muted/30">
-                            <p className="text-sm font-medium mb-1">По типам получателей:</p>
-                            {Object.entries(batchDetail.by_recipient_type).map(([role, stats]) => (
-                              <p key={role} className="text-xs text-muted-foreground">
-                                {role}: отправлено {stats.sent}, ошибок {stats.failed}, пропущено {stats.skipped}
-                              </p>
-                            ))}
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
             </div>
           )}
         </CardContent>

@@ -12,7 +12,6 @@ from app.api.leads import router as leads_router
 from app.api.monitoring import router as monitoring_router
 from app.api.participation import router as participation_router
 from app.api.projects import router as projects_router
-from app.api.reminders import router as reminders_router
 from app.api.schedule import router as schedule_router
 from app.api.users import router as users_router
 from app.lifespan import lifespan
@@ -49,7 +48,6 @@ app.include_router(experts_router, prefix="/api/v1")
 app.include_router(schedule_router, prefix="/api/v1")
 app.include_router(guests_router, prefix="/api/v1")
 app.include_router(participation_router, prefix="/api/v1")
-app.include_router(reminders_router, prefix="/api/v1")
 app.include_router(leads_router, prefix="/api/v1")
 app.include_router(monitoring_router, prefix="/api/v1")
 

@@ -22,13 +22,6 @@ from app.models.project_recommendation import ProjectRecommendation
 from app.models.project_tag import ProjectTag
 from app.models.qa_suggestion import QASuggestion, QuestionType
 from app.models.recommendation import Recommendation
-from app.models.reminder import (
-    RecipientType,
-    ReminderBatch,
-    ReminderBatchStatus,
-    ReminderNotification,
-    ReminderType,
-)
 from app.models.role import Role, RoleCode
 from app.models.room import Room
 from app.models.room_project import RoomProject
@@ -73,12 +66,7 @@ __all__ = [
     "ProjectTag",
     "QASuggestion",
     "QuestionType",
-    "RecipientType",
     "Recommendation",
-    "ReminderBatch",
-    "ReminderBatchStatus",
-    "ReminderNotification",
-    "ReminderType",
     "Role",
     "RoleCode",
     "Room",

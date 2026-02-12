@@ -591,7 +591,7 @@ export function Schedule() {
                 <Card className="border-green-200">
                   <CardContent className="pt-4">
                     <p className="text-sm">Расписание утверждено. Можно настроить авто-напоминания</p>
-                    <Link to="/reminders">
+                    <Link to="/messaging">
                       <Button variant="outline" size="sm" className="mt-2">
                         Перейти к авто-напоминаниям
                       </Button>

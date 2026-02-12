@@ -689,43 +689,6 @@ export interface ReminderCancelResult {
   day: string
 }
 
-// --- Reminder types (reminders.py — query param auth) ---
-
-export interface ReminderBatchSummary {
-  id: string
-  reminder_type: string
-  status: string
-  initiated_by_name: string
-  total_recipients: number
-  sent: number
-  failed: number
-  skipped: number
-  started_at: string
-  completed_at: string | null
-}
-
-export interface ReminderBatchDetail extends ReminderBatchSummary {
-  by_recipient_type: Record<string, { sent: number; failed: number; skipped: number }>
-}
-
-export interface ReminderBatchListResponse {
-  batches: ReminderBatchSummary[]
-}
-
-export interface RolePreview {
-  count: number
-  skipped: number
-  declined: number
-}
-
-export interface BatchReminderPreview {
-  reminder_type: string
-  by_role: Record<string, RolePreview>
-  total_recipients: number
-  total_skipped: number
-  duplicate_warning: boolean
-}
-
 // --- Notification types ---
 
 export interface StatusSummaryData {
@@ -1354,39 +1317,6 @@ export const sendReminders = async (day: string): Promise<ReminderSendResult> =>
 
 export const cancelReminders = async (day: string): Promise<ReminderCancelResult> => {
   const { data } = await apiClient.post<ReminderCancelResult>("/reminders/cancel", { day })
-  return data
-}
-
-// --- Reminders (reminders.py — query param auth) ---
-
-export const getReminderBatches = async (
-  telegramId: string,
-  params?: { status?: string; type?: string }
-): Promise<ReminderBatchListResponse> => {
-  const { data } = await apiClient.get<ReminderBatchListResponse>("/reminders/batches", {
-    params: { telegram_user_id: telegramId, ...params },
-  })
-  return data
-}
-
-export const getReminderBatchDetail = async (
-  batchId: string,
-  telegramId: string
-): Promise<ReminderBatchDetail> => {
-  const { data } = await apiClient.get<ReminderBatchDetail>(`/reminders/batches/${batchId}`, {
-    params: { telegram_user_id: telegramId },
-  })
-  return data
-}
-
-export const previewReminderBatch = async (
-  telegramId: string,
-  type: string
-): Promise<BatchReminderPreview> => {
-  const { data } = await apiClient.post<BatchReminderPreview>("/reminders/preview", {
-    reminder_type: type,
-    telegram_user_id: telegramId,
-  })
   return data
 }
 

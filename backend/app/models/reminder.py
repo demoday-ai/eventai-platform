@@ -1,5 +1,7 @@
 """Reminder models for EPIC-007: DD Reminders.
 
+# DEPRECATED — tables not in active use, kept for migration history
+
 Entities:
 - ReminderBatch: Tracks a single reminder broadcast operation
 - Notification: Individual reminder delivery record

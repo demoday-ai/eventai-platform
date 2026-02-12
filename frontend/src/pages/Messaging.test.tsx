@@ -21,8 +21,6 @@ const mockGetNotifications = vi.fn()
 const mockGetScheduleReminderPreview = vi.fn()
 const mockSendReminders = vi.fn()
 const mockCancelReminders = vi.fn()
-const mockGetReminderBatches = vi.fn()
-const mockGetReminderBatchDetail = vi.fn()
 const mockBroadcastParticipation = vi.fn()
 const mockGetParticipationSummary = vi.fn()
 const mockGetUnacknowledged = vi.fn()
@@ -40,8 +38,6 @@ vi.mock("../lib/api-client", () => ({
   getScheduleReminderPreview: (...args: unknown[]) => mockGetScheduleReminderPreview(...args),
   sendReminders: (...args: unknown[]) => mockSendReminders(...args),
   cancelReminders: (...args: unknown[]) => mockCancelReminders(...args),
-  getReminderBatches: (...args: unknown[]) => mockGetReminderBatches(...args),
-  getReminderBatchDetail: (...args: unknown[]) => mockGetReminderBatchDetail(...args),
   broadcastParticipation: (...args: unknown[]) => mockBroadcastParticipation(...args),
   getParticipationSummary: (...args: unknown[]) => mockGetParticipationSummary(...args),
   getUnacknowledged: (...args: unknown[]) => mockGetUnacknowledged(...args),
@@ -76,7 +72,6 @@ describe("Messaging", () => {
       unreachable: [],
     })
     mockGetNotifications.mockResolvedValue({ items: [], total: 0 })
-    mockGetReminderBatches.mockResolvedValue({ batches: [] })
     mockGetParticipationSummary.mockResolvedValue({
       total: 0, acknowledged: 0, pending: 0, unregistered: 0, by_room: [],
     })
@@ -118,6 +113,7 @@ describe("Messaging", () => {
     expect(screen.getByText("Рассылка")).toBeInTheDocument()
     expect(screen.getByText("Участие")).toBeInTheDocument()
     expect(screen.getByText("Брифинг")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Напоминания" })).toBeInTheDocument()
   })
 
   it("shows broadcast tab with role checkboxes", async () => {
@@ -217,6 +213,7 @@ describe("Messaging", () => {
   })
 
   it("sends messages and shows sent/failed/skipped", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true)
     const user = userEvent.setup()
     mockPreviewMessaging.mockResolvedValue({
       recipient_count: 10,

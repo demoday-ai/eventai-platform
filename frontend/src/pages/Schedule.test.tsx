@@ -379,7 +379,7 @@ describe("Schedule", () => {
     await waitFor(() => {
       expect(screen.getByText(/Расписание одобрено/)).toBeInTheDocument()
       expect(screen.getByText("Расписание утверждено. Можно настроить авто-напоминания")).toBeInTheDocument()
-      expect(screen.getByRole("link", { name: "Перейти к авто-напоминаниям" })).toHaveAttribute("href", "/reminders")
+      expect(screen.getByRole("link", { name: "Перейти к авто-напоминаниям" })).toHaveAttribute("href", "/messaging")
     })
   })
 
