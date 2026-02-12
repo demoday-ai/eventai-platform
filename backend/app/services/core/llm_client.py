@@ -16,7 +16,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 FALLBACK_MODEL = "openai/gpt-4o-mini"
-TIMEOUT = 120.0
+TIMEOUT = httpx.Timeout(connect=10.0, read=180.0, write=30.0, pool=10.0)
 MAX_RETRIES = 3
 KEY_COOLDOWN_SECONDS = 60  # Time to wait before retrying a failed key
 
@@ -248,10 +248,11 @@ async def send_chat_completion(
 
             content = data["choices"][0]["message"]["content"]
             logger.info(
-                "LLM response: model=%s tokens_in=%s tokens_out=%s key=...%s",
+                "LLM response: model=%s tokens_in=%s tokens_out=%s len=%d key=...%s",
                 data.get("model", current_model),
                 data.get("usage", {}).get("prompt_tokens"),
                 data.get("usage", {}).get("completion_tokens"),
+                len(content) if content else 0,
                 api_key[-8:],
             )
 
