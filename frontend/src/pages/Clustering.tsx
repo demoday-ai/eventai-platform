@@ -25,7 +25,8 @@ const STEPS = ["Параметры", "Результат", "Перемещени
 export function Clustering() {
   const queryClient = useQueryClient()
   const [currentStep, setCurrentStep] = useState(0)
-  const [numRooms, setNumRooms] = useState(6)
+  const [numRoomsStr, setNumRoomsStr] = useState("6")
+  const numRooms = Number(numRoomsStr) || 0
   const [feedback, setFeedback] = useState("")
   const [roomThemesInput, setRoomThemesInput] = useState("")
   const [roomThemesError, setRoomThemesError] = useState("")
@@ -244,9 +245,9 @@ export function Clustering() {
                 type="number"
                 min={2}
                 max={20}
-                value={numRooms}
+                value={numRoomsStr}
                 onChange={(e) => {
-                  setNumRooms(Number(e.target.value))
+                  setNumRoomsStr(e.target.value)
                   setRoomThemesError("")
                 }}
                 disabled={!!isJobRunning}
