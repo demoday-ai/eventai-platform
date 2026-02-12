@@ -19,6 +19,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/llm", tags=["LLM Config"])
 
 
+async def _reload_key_manager(session: AsyncSession) -> None:
+    """Reload KeyManager with fresh keys from DB."""
+    from app.services.core.llm_client import get_key_manager
+
+    result = await session.execute(select(LlmApiKey.api_key).where(LlmApiKey.is_active))
+    db_keys = [row[0] for row in result.all()]
+
+    km = get_key_manager()
+    km._db_keys = db_keys or None
+    km._initialized = False
+
+
 # Available models with pricing
 AVAILABLE_MODELS = [
     {
@@ -202,10 +214,8 @@ async def add_api_key(
 
     logger.info("LLM API key added: ...%s by user %s", key_suffix, user.id)
 
-    # Reload KeyManager to pick up new key
-    from app.services.core.llm_client import get_key_manager
-
-    get_key_manager()._initialized = False
+    # Reload KeyManager with fresh DB keys
+    await _reload_key_manager(session)
 
     return {
         "id": str(new_key.id),
@@ -239,10 +249,8 @@ async def delete_api_key(
 
     logger.info("LLM API key deleted: ...%s by user %s", key_obj.key_suffix, user.id)
 
-    # Reload KeyManager
-    from app.services.core.llm_client import get_key_manager
-
-    get_key_manager()._initialized = False
+    # Reload KeyManager with fresh DB keys
+    await _reload_key_manager(session)
 
     return {"status": "deleted"}
 

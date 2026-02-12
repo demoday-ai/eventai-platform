@@ -60,13 +60,20 @@ async def _extract_tags_via_llm(raw_text: str, available_tags: list[str]) -> lis
         f"{t} ({DEFAULT_TAGS.get(t, '')})" for t in available_tags if t != "Other"
     )
     system_prompt = PROJECT_TAG_EXTRACTION_SYSTEM.format(tag_list=tag_list_str)
+    # Build case-insensitive lookup: "nlp" -> "NLP", "edtech" -> "EdTech"
+    tag_lookup = {t.lower(): t for t in available_tags}
     try:
         response = await llm_client.send_chat_completion(
             system_prompt=system_prompt,
             user_prompt=raw_text,
             json_mode=True,
         )
-        return [t for t in response.get("tags", []) if t in available_tags]
+        result = []
+        for t in response.get("tags", []):
+            canonical = tag_lookup.get(str(t).strip().lower())
+            if canonical:
+                result.append(canonical)
+        return result
     except Exception:
         logger.warning("LLM tag extraction failed for project, returning empty")
         return []
