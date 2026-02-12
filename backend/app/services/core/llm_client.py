@@ -266,20 +266,27 @@ async def send_chat_completion(
             last_error = e
             status = e.response.status_code
 
+            # Log response body for diagnostics
+            try:
+                error_body = e.response.text[:500]
+            except Exception:
+                error_body = "(unreadable)"
+
             logger.warning(
-                "LLM attempt %d/%d failed: HTTP %d, key=...%s",
+                "LLM attempt %d/%d failed: HTTP %d, key=...%s, body=%s",
                 attempt + 1,
                 MAX_RETRIES,
                 status,
                 api_key[-8:],
+                error_body,
             )
 
-            # Rate limit or auth error - mark key as failed
-            if status in (401, 429, 503):
+            # Auth, rate limit, forbidden, or service error - mark key as failed
+            if status in (401, 403, 429, 503):
                 _key_manager.mark_key_failed(api_key)
 
-            # On model-specific errors, try fallback model
-            if attempt == 1 and current_model != FALLBACK_MODEL:
+            # On model-specific errors (400, 403, 404), try fallback model
+            if attempt == 1 and current_model != FALLBACK_MODEL and status in (400, 403, 404):
                 logger.info("Switching to fallback model: %s", FALLBACK_MODEL)
                 current_model = FALLBACK_MODEL
                 payload["model"] = current_model
@@ -384,18 +391,24 @@ async def send_chat_with_tools(
             last_error = e
             status = e.response.status_code
 
+            try:
+                error_body = e.response.text[:500]
+            except Exception:
+                error_body = "(unreadable)"
+
             logger.warning(
-                "LLM tools attempt %d/%d failed: HTTP %d, key=...%s",
+                "LLM tools attempt %d/%d failed: HTTP %d, key=...%s, body=%s",
                 attempt + 1,
                 MAX_RETRIES,
                 status,
                 api_key[-8:],
+                error_body,
             )
 
-            if status in (401, 429, 503):
+            if status in (401, 403, 429, 503):
                 _key_manager.mark_key_failed(api_key)
 
-            if attempt == 1 and current_model != FALLBACK_MODEL:
+            if attempt == 1 and current_model != FALLBACK_MODEL and status in (400, 403, 404):
                 logger.info("Switching to fallback model: %s", FALLBACK_MODEL)
                 current_model = FALLBACK_MODEL
                 payload["model"] = current_model

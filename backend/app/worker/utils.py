@@ -43,14 +43,23 @@ async def shutdown_db_engine():
     _async_session_factory = None
 
 
+# Per-process event loop — reused across all task invocations.
+# Creating a new loop per call breaks asyncpg: connections from loop #1
+# can't be used in loop #2, causing "Future attached to a different loop".
+_worker_loop: asyncio.AbstractEventLoop | None = None
+
+
 def run_async(coro):
-    """Run async coroutine in sync Celery task."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    """Run async coroutine in sync Celery task.
+
+    Reuses a single event loop per worker process so asyncpg connections
+    (bound to the loop they were created in) remain valid across retries.
+    """
+    global _worker_loop
+    if _worker_loop is None or _worker_loop.is_closed():
+        _worker_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_loop)
+    return _worker_loop.run_until_complete(coro)
 
 
 async def _get_session() -> AsyncSession:
