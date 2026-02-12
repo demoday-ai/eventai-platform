@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { DndContext, DragEndEvent } from "@dnd-kit/core"
+import { DndContext, type DragEndEvent } from "@dnd-kit/core"
 import { Calendar, PanelRightOpen, PanelRightClose } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { PageEmptyState } from "../components/ui/PageEmptyState"
