@@ -72,12 +72,13 @@ async def suggest_room_themes(
     system_prompt = SUGGEST_THEMES_SYSTEM
     user_prompt = build_suggest_themes_prompt(projects_data, num_rooms)
 
-    # 5. Call LLM
+    # 5. Call LLM (use fast model — this is a sync endpoint with gateway timeout)
     logger.info("Suggesting themes: %d sampled projects → %d rooms", sample_size, num_rooms)
     llm_response = await llm_client.send_chat_completion(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         json_mode=True,
+        model="openai/gpt-4o-mini",
     )
 
     # 6. Validate response
