@@ -405,6 +405,7 @@ async def generate_missing_tags(
     async def extract_one(project: Project, text: str) -> None:
         nonlocal processed, tagged
         async with semaphore:
+            _report_progress()  # check cancellation before LLM call
             tags = await _extract_tags_via_llm(text, candidate_tags)
             llm_results[project.id] = tags or ["Other"]
             processed += 1

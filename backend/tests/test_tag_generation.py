@@ -1,5 +1,6 @@
 """Tests for project tag generation: heuristic matching, LLM extraction, generate_missing_tags."""
 
+import asyncio
 from datetime import date
 from unittest.mock import AsyncMock, patch
 
@@ -206,3 +207,43 @@ async def test_generate_missing_tags_other_fallback(session):
 
     assert result["processed"] == 1
     assert result["tagged"] == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_missing_tags_cancellation(session):
+    """CancelledError from progress_callback should stop tag generation."""
+    event = Event(name="Test DD Cancel", start_date=date.today(), end_date=date.today())
+    session.add(event)
+    await session.flush()
+
+    tag_sec = Tag(name="Security")
+    session.add(tag_sec)
+    await session.flush()
+
+    project = Project(
+        event_id=event.id,
+        title="Threat Detector",
+        description="Just a generic project for cancellation test",
+        author="Test",
+        telegram_contact="@test",
+        source="upload",
+    )
+    session.add(project)
+    await session.flush()
+
+    call_count = 0
+
+    def cancelling_callback(progress: dict):
+        nonlocal call_count
+        call_count += 1
+        # Cancel on the second callback (after heuristic phase)
+        if call_count >= 2:
+            raise asyncio.CancelledError("User cancelled")
+
+    with patch(
+        "app.services.admin.project_service._extract_tags_via_llm",
+        new_callable=AsyncMock,
+        return_value=["Security"],
+    ):
+        with pytest.raises(asyncio.CancelledError):
+            await generate_missing_tags(session, event.id, progress_callback=cancelling_callback)
