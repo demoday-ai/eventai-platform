@@ -1,7 +1,7 @@
 """LLM configuration API endpoints."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -273,7 +273,7 @@ async def check_all_keys(
             stmt = select(LlmApiKey).where(LlmApiKey.key_suffix == key_suffix)
             key_obj = (await session.execute(stmt)).scalar_one_or_none()
             if key_obj:
-                key_obj.last_success_at = datetime.now(timezone.utc)
+                key_obj.last_success_at = datetime.utcnow()
                 key_obj.fail_count = 0
                 key_obj.failed_at = None
 
