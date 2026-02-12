@@ -162,6 +162,7 @@ async def send_chat_completion(
     json_mode: bool = True,
     model: str | None = None,
     messages: list[dict] | None = None,
+    response_format: dict | None = None,
 ) -> dict | str:
     """Send a chat completion request to OpenRouter API.
 
@@ -171,6 +172,9 @@ async def send_chat_completion(
 
     If `messages` is provided, it is used as-is (with system prepended).
     Otherwise, a single user message is constructed from `user_prompt`.
+
+    If `response_format` is provided, it overrides json_mode and is passed
+    directly as the response_format payload (e.g. json_schema with strict).
     """
     model = model or settings.openrouter_model
     current_model = model
@@ -187,7 +191,10 @@ async def send_chat_completion(
         "model": current_model,
         "messages": all_messages,
     }
-    if json_mode:
+    if response_format:
+        payload["response_format"] = response_format
+        json_mode = True  # ensure response is parsed as JSON
+    elif json_mode:
         payload["response_format"] = {"type": "json_object"}
 
     last_error = None

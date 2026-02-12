@@ -52,28 +52,42 @@ LLM_CONCURRENCY = 5
 
 
 async def _extract_tags_via_llm(raw_text: str, available_tags: list[str]) -> list[str]:
-    """Extract project tags via LLM. Returns list of tag names."""
+    """Extract project tags via LLM with structured output. Returns list of tag names."""
     from app.prompts.admin.tags import PROJECT_TAG_EXTRACTION_SYSTEM
     from app.services.core import llm_client
 
-    tag_list_str = ", ".join(
-        f"{t} ({DEFAULT_TAGS.get(t, '')})" for t in available_tags if t != "Other"
-    )
+    # Tags shown to LLM (exclude "Other" — it's a fallback only)
+    prompt_tags = [t for t in available_tags if t != "Other"]
+    tag_list_str = ", ".join(f"{t} ({DEFAULT_TAGS.get(t, '')})" for t in prompt_tags)
     system_prompt = PROJECT_TAG_EXTRACTION_SYSTEM.format(tag_list=tag_list_str)
-    # Build case-insensitive lookup: "nlp" -> "NLP", "edtech" -> "EdTech"
-    tag_lookup = {t.lower(): t for t in available_tags}
+
+    # Build JSON Schema with enum to constrain LLM output
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "project_tags",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": prompt_tags},
+                    }
+                },
+                "required": ["tags"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
     try:
         response = await llm_client.send_chat_completion(
             system_prompt=system_prompt,
             user_prompt=raw_text,
-            json_mode=True,
+            response_format=response_format,
         )
-        result = []
-        for t in response.get("tags", []):
-            canonical = tag_lookup.get(str(t).strip().lower())
-            if canonical:
-                result.append(canonical)
-        return result
+        return [t for t in response.get("tags", []) if t in available_tags]
     except Exception:
         logger.warning("LLM tag extraction failed for project, returning empty")
         return []
