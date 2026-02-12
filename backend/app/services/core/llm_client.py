@@ -5,7 +5,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 
 import httpx
 from sqlalchemy import select
@@ -477,8 +477,8 @@ async def sync_key_stats_to_db(session: AsyncSession) -> None:
             key_obj = (await session.execute(stmt)).scalar_one_or_none()
 
             if key_obj:
-                # Convert timestamp to datetime
-                last_success_dt = datetime.fromtimestamp(key_state.last_success, tz=timezone.utc)
+                # Convert timestamp to naive UTC datetime (DB column has no timezone)
+                last_success_dt = datetime.utcfromtimestamp(key_state.last_success)
 
                 # Only update if memory timestamp is newer than DB
                 if key_obj.last_success_at is None or last_success_dt > key_obj.last_success_at:
