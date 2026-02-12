@@ -120,6 +120,10 @@ export function ProjectsList() {
 
   const projects = data || []
 
+  // Count projects without tags
+  const projectsWithoutTags = projects.filter((p) => p.tags.length === 0).length
+  const allTagged = projects.length > 0 && projectsWithoutTags === 0
+
   const getStatusColor = (status: ProjectListItem["status"]) => {
     switch (status) {
       case "confirmed":
@@ -167,12 +171,17 @@ export function ProjectsList() {
                   )}
                   <Button
                     onClick={() => generateMutation.mutate()}
-                    disabled={generateMutation.isPending || isGenerating}
+                    disabled={generateMutation.isPending || isGenerating || allTagged}
                     variant="outline"
                     size="sm"
+                    title={allTagged ? "У всех проектов уже есть теги" : `Проектов без тегов: ${projectsWithoutTags}`}
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    {generateMutation.isPending || isGenerating ? "Генерация..." : "Сгенерировать теги"}
+                    {generateMutation.isPending || isGenerating
+                      ? "Генерация..."
+                      : allTagged
+                        ? "Все теги назначены"
+                        : `Сгенерировать теги (${projectsWithoutTags})`}
                   </Button>
                 </div>
               </div>
