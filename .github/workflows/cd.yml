@@ -19,7 +19,7 @@ jobs:
           chmod 600 ~/.ssh/deploy-key
           cat >> ~/.ssh/config << 'EOF'
           Host evt-ai
-            HostName 84.252.139.24
+            HostName 158.160.23.250
             User dpgorbunov
             IdentityFile ~/.ssh/deploy-key
             IdentitiesOnly yes
