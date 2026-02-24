@@ -40,7 +40,7 @@ class ParticipationRequest(Base):
         nullable=True,
     )
     status: Mapped[ParticipationStatus] = mapped_column(
-        Enum(ParticipationStatus, name="participation_status_enum"),
+        Enum(ParticipationStatus, name="participation_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=ParticipationStatus.PENDING,
     )
