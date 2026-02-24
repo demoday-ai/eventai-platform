@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
@@ -11,13 +12,18 @@ from app.models.tour_status import AdminTourStatus
 router = APIRouter(prefix="/tour", tags=["admin-tour"])
 
 
+async def _get_tour_status(db: AsyncSession, telegram_id: str) -> AdminTourStatus | None:
+    result = await db.execute(select(AdminTourStatus).where(AdminTourStatus.telegram_id == telegram_id))
+    return result.scalar_one_or_none()
+
+
 @router.get("/status")
 async def get_tour_status(
     db: AsyncSession = Depends(get_db),
     telegram_id: str = Depends(get_current_user_id),
 ):
     """Get tour completion status for current user."""
-    status = await db.get(AdminTourStatus, telegram_id)
+    status = await _get_tour_status(db, telegram_id)
 
     if not status:
         return {
@@ -41,7 +47,7 @@ async def mark_tour_prompted(
     telegram_id: str = Depends(get_current_user_id),
 ):
     """Mark tour as prompted (user saw the welcome dialog)."""
-    status = await db.get(AdminTourStatus, telegram_id)
+    status = await _get_tour_status(db, telegram_id)
 
     if not status:
         status = AdminTourStatus(
@@ -63,7 +69,7 @@ async def mark_tour_completed(
     telegram_id: str = Depends(get_current_user_id),
 ):
     """Mark tour as completed."""
-    status = await db.get(AdminTourStatus, telegram_id)
+    status = await _get_tour_status(db, telegram_id)
 
     if not status:
         status = AdminTourStatus(
@@ -87,7 +93,7 @@ async def reset_tour_status(
     telegram_id: str = Depends(get_current_user_id),
 ):
     """Reset tour status (for 'restart tour' button)."""
-    status = await db.get(AdminTourStatus, telegram_id)
+    status = await _get_tour_status(db, telegram_id)
 
     if status:
         await db.delete(status)
