@@ -199,6 +199,11 @@ describe("ProjectsList", () => {
       expect(screen.getByText("Чатбот для поддержки")).toBeInTheDocument()
     })
 
+    // Wait for status options to render in the select
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Подтверждён" })).toBeInTheDocument()
+    })
+
     // Select status filter
     const statusFilter = screen.getByLabelText(/статус/i)
     await user.selectOptions(statusFilter, "confirmed")
