@@ -1,7 +1,7 @@
 """add id column to admin_tour_status
 
-Revision ID: 031
-Revises: 030
+Revision ID: 032
+Revises: 031
 Create Date: 2026-02-24
 
 AdminTourStatus inherits from Base which defines `id: Mapped[UUID]` as a
@@ -21,8 +21,8 @@ from sqlalchemy.dialects.postgresql import UUID
 
 
 # revision identifiers, used by Alembic.
-revision: str = "031"
-down_revision: Union[str, None] = "030"
+revision: str = "032"
+down_revision: Union[str, None] = "031"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
