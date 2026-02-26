@@ -176,12 +176,20 @@ def parse_xlsx(content: bytes) -> list[dict]:
     return result
 
 
-def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowError], list[str]]:
-    """Validate rows, returning (valid, errors, duplicate_titles)."""
+def validate_rows(
+    rows: list[dict],
+    existing_titles: set[str] | None = None,
+) -> tuple[list[ProjectUploadRow], list[RowError], list[str], list[str]]:
+    """Validate rows, returning (valid, errors, duplicate_titles, db_duplicate_titles).
+
+    If existing_titles is provided, also detects duplicates against DB.
+    """
     valid: list[ProjectUploadRow] = []
     errors: list[RowError] = []
     seen_titles: set[str] = set()
     duplicate_titles: list[str] = []
+    db_duplicate_titles: list[str] = []
+    existing_lower = {t.lower() for t in existing_titles} if existing_titles else set()
 
     for i, row in enumerate(rows, start=2):  # row 1 is header
         # Check required fields
@@ -213,6 +221,10 @@ def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowErr
             duplicate_titles.append(title)
             continue
 
+        if title.lower() in existing_lower:
+            db_duplicate_titles.append(title)
+            continue
+
         seen_titles.add(title)
         raw_tags = row.get("tags") or ""
         if isinstance(raw_tags, list):
@@ -233,7 +245,15 @@ def validate_rows(rows: list[dict]) -> tuple[list[ProjectUploadRow], list[RowErr
             )
         )
 
-    return valid, errors, duplicate_titles
+    return valid, errors, duplicate_titles, db_duplicate_titles
+
+
+async def get_existing_titles(session: AsyncSession, event_id: uuid.UUID) -> set[str]:
+    """Get all existing project titles for an event."""
+    result = await session.execute(
+        select(Project.title).where(Project.event_id == event_id)
+    )
+    return {row[0] for row in result.all()}
 
 
 async def save_projects(

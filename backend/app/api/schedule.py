@@ -132,7 +132,12 @@ async def export_schedule_ics(
                 dtstart = slot.start_time.strftime("%Y%m%dT%H%M%S")
                 dtend = slot.end_time.strftime("%Y%m%dT%H%M%S")
                 summary = slot.project_title
-                description = f"Автор: {slot.project_author}" if slot.project_author else ""
+                desc_parts = []
+                if slot.project_author:
+                    desc_parts.append(f"Автор: {slot.project_author}")
+                if hasattr(slot, "project_description") and slot.project_description:
+                    desc_parts.append(slot.project_description[:300])
+                description = "\\n".join(desc_parts)
                 location = room.room_name
 
                 lines.append("BEGIN:VEVENT")
@@ -152,6 +157,62 @@ async def export_schedule_ics(
         content=ics_content,
         media_type="text/calendar; charset=utf-8",
         headers={"Content-Disposition": "attachment; filename=demoday-schedule.ics"},
+    )
+
+
+@router.get("/schedule/export.xlsx")
+async def export_schedule_xlsx(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Export schedule as Excel (.xlsx) file with FIO, descriptions, tags."""
+    import io
+
+    import openpyxl
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=400, detail="No active event")
+
+    schedule = await schedule_service.get_schedule(db, event.id)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Расписание"
+
+    headers = ["Дата", "Время начала", "Время окончания", "Зал", "Проект", "Автор (ФИО)", "Описание", "Статус"]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+
+    for day in schedule.days:
+        for room in day.rooms:
+            for slot in room.slots:
+                if slot.status == "cancelled":
+                    continue
+                ws.append([
+                    day.date.isoformat() if day.date else "",
+                    slot.start_time.strftime("%H:%M"),
+                    slot.end_time.strftime("%H:%M"),
+                    room.room_name,
+                    slot.project_title or slot.title or "",
+                    slot.project_author or "",
+                    (slot.project_description or "")[:500],
+                    slot.status,
+                ])
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 50)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=demoday-schedule.xlsx"},
     )
 
 

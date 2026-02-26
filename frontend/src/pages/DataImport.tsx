@@ -170,8 +170,17 @@ export function DataImport() {
         setProjectMergeState("applying")
       }
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
-      setProjectError(error.response?.data?.detail || error.message)
+    onError: (error: AxiosError<{ detail: string | { message: string; db_duplicates?: string[] } }>) => {
+      const detail = error.response?.data?.detail
+      if (detail && typeof detail === "object" && "message" in detail) {
+        const dbDups = detail.db_duplicates
+        const msg = dbDups && dbDups.length > 0
+          ? `${detail.message}. Дубликаты в БД (${dbDups.length}): ${dbDups.slice(0, 5).join(", ")}${dbDups.length > 5 ? "..." : ""}`
+          : detail.message
+        setProjectError(msg)
+      } else {
+        setProjectError(typeof detail === "string" ? detail : error.message)
+      }
       setProjectMergeState("idle")
     },
   })

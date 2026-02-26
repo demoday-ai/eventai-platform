@@ -12,6 +12,7 @@ interface ScheduleToolbarProps {
   onAddBreak: () => void
   onAddSection: () => void
   onExportICS: () => void
+  onExportXLSX: () => void
   onConfigFromText: () => void
   isGenerating: boolean
   scaleMinutes: number
@@ -23,6 +24,7 @@ export function ScheduleToolbar({
   onAddBreak,
   onAddSection,
   onExportICS,
+  onExportXLSX,
   onConfigFromText,
   isGenerating,
   scaleMinutes,
@@ -62,6 +64,10 @@ export function ScheduleToolbar({
         <Button size="sm" variant="outline" onClick={onExportICS}>
           <Download className="h-3.5 w-3.5 mr-1" />
           .ics
+        </Button>
+        <Button size="sm" variant="outline" onClick={onExportXLSX}>
+          <Download className="h-3.5 w-3.5 mr-1" />
+          .xlsx
         </Button>
       </div>
     </div>

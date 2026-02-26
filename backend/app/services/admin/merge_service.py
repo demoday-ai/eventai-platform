@@ -446,7 +446,7 @@ async def analyze_project_merge(
     else:
         raw_rows = parse_json(content)
 
-    valid, parse_errors, dup_titles = validate_rows(raw_rows)
+    valid, parse_errors, dup_titles, _db_dups = validate_rows(raw_rows)
 
     # Load existing projects
     result = await session.execute(

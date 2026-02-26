@@ -359,6 +359,7 @@ async def get_schedule(
                             project_id=s.project_id,
                             project_title=s.project.title if s.project else (s.title or None),
                             project_author=s.project.author if s.project else None,
+                            project_description=s.project.description if s.project else None,
                             start_time=s.start_time,
                             end_time=s.end_time,
                             display_order=s.display_order,

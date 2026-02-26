@@ -84,6 +84,15 @@ export function Messaging() {
         ))}
       </div>
 
+      {activeTab !== "Обзор" && (
+        <p className="text-sm text-muted-foreground -mt-2">
+          {activeTab === "Рассылка" && "Ручная массовая отправка сообщений участникам"}
+          {activeTab === "Участие" && "Управление участием и сегментами аудитории"}
+          {activeTab === "Брифинг" && "Автоматический персональный пакет эксперту перед Demo Day: зал, проекты, описания, время"}
+          {activeTab === "Напоминания" && "Автоматические уведомления за день и за 30 минут до выступления"}
+        </p>
+      )}
+
       {activeTab === "Обзор" && <OverviewTab />}
       {activeTab === "Рассылка" && <BroadcastTab />}
       {activeTab === "Участие" && <ParticipationTab />}

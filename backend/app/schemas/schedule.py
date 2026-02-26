@@ -17,6 +17,7 @@ class ScheduleSlotResponse(BaseModel):
     project_id: UUID | None = None
     project_title: str | None = None
     project_author: str | None = None
+    project_description: str | None = None
     start_time: datetime
     end_time: datetime
     display_order: int

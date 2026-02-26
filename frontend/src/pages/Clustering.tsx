@@ -258,7 +258,7 @@ export function Clustering() {
               <textarea
                 id="feedback"
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Пожелания к кластеризации..."
+                placeholder="Например: «Разделить NLP и CV по разным залам», «Не больше 6 залов», «EdTech и HR объединить»"
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 disabled={!!isJobRunning}
@@ -344,7 +344,6 @@ export function Clustering() {
         <div className="space-y-4">
           <RoomsGrid rooms={clusteringResult.rooms} />
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
             <Button
               variant="outline"
               className="w-full sm:w-auto"
@@ -352,6 +351,7 @@ export function Clustering() {
             >
               Назад
             </Button>
+            <Button onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">Далее</Button>
           </div>
         </div>
       )}
@@ -372,22 +372,32 @@ export function Clustering() {
                 <CardContent>
                   <div className="space-y-2">
                     {room.projects.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between text-sm border rounded px-2 py-1">
-                        <span className="truncate flex-1 mr-2">{p.title}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isApproved}
-                          onClick={() =>
-                            setMoveDialog({
-                              projectId: p.id,
-                              projectTitle: p.title,
-                              sourceRoomId: room.id,
-                            })
-                          }
-                        >
-                          Переместить
-                        </Button>
+                      <div key={p.id} className="text-sm border rounded px-2 py-1">
+                        <div className="flex items-center justify-between">
+                          <span className="truncate flex-1 mr-2" title={p.description || p.title}>{p.title}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isApproved}
+                            onClick={() =>
+                              setMoveDialog({
+                                projectId: p.id,
+                                projectTitle: p.title,
+                                sourceRoomId: room.id,
+                              })
+                            }
+                          >
+                            Переместить
+                          </Button>
+                        </div>
+                        {(p.author || p.tags.length > 0) && (
+                          <div className="flex flex-wrap items-center gap-1 mt-0.5 mb-1">
+                            {p.author && <span className="text-xs text-muted-foreground">{p.author}</span>}
+                            {p.tags.map((tag) => (
+                              <span key={tag} className="px-1 py-0.5 bg-muted text-[10px] rounded">{tag}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -438,10 +448,10 @@ export function Clustering() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setCurrentStep(3)} className="w-full sm:w-auto">Далее</Button>
             <Button variant="outline" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
               Назад
             </Button>
+            <Button onClick={() => setCurrentStep(3)} className="w-full sm:w-auto">Далее</Button>
           </div>
         </div>
       )}
@@ -500,14 +510,14 @@ export function Clustering() {
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
+                    Назад
+                  </Button>
                   <Button
                     onClick={() => setShowApproveConfirm(true)}
                     className="w-full sm:w-auto"
                   >
                     Одобрить
-                  </Button>
-                  <Button variant="outline" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
-                    Назад
                   </Button>
                 </div>
               )}
@@ -540,8 +550,9 @@ function RoomsGrid({ rooms }: { rooms: ClusteringRoom[] }) {
           <CardContent>
             <ul className="space-y-1">
               {room.projects.map((p) => (
-                <li key={p.id} className="text-sm truncate">
-                  {p.title}
+                <li key={p.id} className="text-sm" title={p.description || p.title}>
+                  <span className="truncate block">{p.title}</span>
+                  {p.author && <span className="text-xs text-muted-foreground">{p.author}</span>}
                 </li>
               ))}
             </ul>

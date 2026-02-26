@@ -21,6 +21,7 @@ import {
   deleteSlot,
   getUnplacedProjects,
   exportScheduleICS,
+  exportScheduleXLSX,
   configureScheduleFromText,
   getCurrentClustering,
   type ScheduleSlotResponse,
@@ -272,6 +273,7 @@ export function Schedule() {
             // TODO: Add section dialog
           }}
           onExportICS={() => exportScheduleICS()}
+          onExportXLSX={() => exportScheduleXLSX()}
           onConfigFromText={() => {
             setConfigResult(null)
             setShowConfigDialog(true)

@@ -95,11 +95,11 @@ describe("CoverageTab", () => {
 
     render(<CoverageTab />, { wrapper: createWrapper() })
 
-    const gapsTab = screen.getByText("Пробелы")
+    const gapsTab = screen.getByText("Незакрытые залы")
     await user.click(gapsTab)
 
     await waitFor(() => {
-      expect(screen.getByText("Всего пробелов:")).toBeInTheDocument()
+      expect(screen.getByText("Всего незакрытых залов:")).toBeInTheDocument()
       expect(screen.getByText("CV")).toBeInTheDocument()
     })
   })
@@ -129,7 +129,7 @@ describe("CoverageTab", () => {
 
     render(<CoverageTab />, { wrapper: createWrapper() })
 
-    const escalationsTab = screen.getByText("Эскалации")
+    const escalationsTab = screen.getByText("Требуют внимания")
     await user.click(escalationsTab)
 
     await waitFor(() => {
@@ -178,8 +178,8 @@ describe("CoverageTab", () => {
 
     render(<CoverageTab />, { wrapper: createWrapper() })
 
-    // Switch to Пробелы tab
-    await user.click(screen.getByText("Пробелы"))
+    // Switch to Незакрытые залы tab
+    await user.click(screen.getByText("Незакрытые залы"))
 
     await waitFor(() => {
       expect(screen.getByText("Зал 1")).toBeInTheDocument()

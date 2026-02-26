@@ -1314,6 +1314,21 @@ export const exportScheduleICS = async (): Promise<void> => {
   URL.revokeObjectURL(url)
 }
 
+export const exportScheduleXLSX = async (): Promise<void> => {
+  const { data } = await apiClient.get("/schedule/export.xlsx", {
+    responseType: "blob",
+  })
+  const blob = new Blob([data as BlobPart], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "demoday-schedule.xlsx"
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // --- Coverage ---
 
 export const getCoverageSummary = async (): Promise<CoverageSummaryData> => {

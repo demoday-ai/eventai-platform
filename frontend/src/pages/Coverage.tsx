@@ -12,7 +12,7 @@ import {
   assignExpert,
 } from "../lib/api-client"
 
-const TABS = ["Обзор", "Пробелы", "Эскалации"] as const
+const TABS = ["Обзор", "Незакрытые залы", "Требуют внимания"] as const
 type Tab = (typeof TABS)[number]
 
 export function CoverageTab() {
@@ -30,13 +30,13 @@ export function CoverageTab() {
   const { data: gaps, isLoading: gapsLoading } = useQuery({
     queryKey: ["coverageGaps"],
     queryFn: getCoverageGaps,
-    enabled: activeTab === "Пробелы",
+    enabled: activeTab === "Незакрытые залы",
   })
 
   const { data: escalations, isLoading: escalationsLoading } = useQuery({
     queryKey: ["escalations", escalationFilter],
     queryFn: () => getEscalations(escalationFilter === "open" ? false : undefined),
-    enabled: activeTab === "Эскалации",
+    enabled: activeTab === "Требуют внимания",
   })
 
   const resolveMutation = useMutation({
@@ -153,17 +153,17 @@ export function CoverageTab() {
         </div>
       )}
 
-      {/* Tab: Пробелы */}
-      {activeTab === "Пробелы" && (
+      {/* Tab: Незакрытые залы */}
+      {activeTab === "Незакрытые залы" && (
         <div className="space-y-4">
           {gapsLoading && <p className="text-muted-foreground">Загрузка...</p>}
           {gaps && (
             <>
               <p className="text-sm text-muted-foreground">
-                Всего пробелов: <span className="font-semibold text-foreground">{gaps.total_gaps}</span>
+                Всего незакрытых залов: <span className="font-semibold text-foreground">{gaps.total_gaps}</span>
               </p>
               {gaps.gaps.length === 0 ? (
-                <p className="text-muted-foreground">Пробелов не обнаружено</p>
+                <p className="text-muted-foreground">Незакрытых залов не обнаружено</p>
               ) : (
                 gaps.gaps.map((gap, idx) => (
                   <GapCard key={`${gap.room_id}-${gap.uncovered_tag}-${idx}`} gap={gap} queryClient={queryClient} />
@@ -174,8 +174,8 @@ export function CoverageTab() {
         </div>
       )}
 
-      {/* Tab: Эскалации */}
-      {activeTab === "Эскалации" && (
+      {/* Tab: Требуют внимания */}
+      {activeTab === "Требуют внимания" && (
         <div className="space-y-4">
           <div className="flex gap-2">
             <Button
@@ -195,7 +195,7 @@ export function CoverageTab() {
           </div>
           {escalationsLoading && <p className="text-muted-foreground">Загрузка...</p>}
           {escalations && escalations.length === 0 && (
-            <p className="text-muted-foreground">Нет эскалаций</p>
+            <p className="text-muted-foreground">Нет записей</p>
           )}
           {escalations && escalations.length > 0 && (
             <Card>

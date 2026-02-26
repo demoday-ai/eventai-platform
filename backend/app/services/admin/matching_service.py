@@ -4,6 +4,7 @@ import json
 import logging
 import math
 import uuid
+from difflib import SequenceMatcher
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,21 @@ from app.models.tag import Tag
 from app.services.core import llm_client
 
 logger = logging.getLogger(__name__)
+
+FUZZY_THRESHOLD = 0.8
+
+
+def _fuzzy_match(tag: str, candidates: set[str]) -> str | None:
+    """Find best fuzzy match for tag among candidates (threshold 0.8)."""
+    tag_lower = tag.lower().strip()
+    best_match = None
+    best_ratio = 0.0
+    for c in candidates:
+        ratio = SequenceMatcher(None, tag_lower, c.lower().strip()).ratio()
+        if ratio >= FUZZY_THRESHOLD and ratio > best_ratio:
+            best_ratio = ratio
+            best_match = c
+    return best_match
 
 ADJACENCY_SYSTEM_PROMPT = """Ты AI-ассистент для организации Demo Day. Тебе дан список тегов AI/ML проектов.
 Определи семантически близкие пары тегов в контексте Demo Day AI-проектов.
@@ -202,6 +218,9 @@ async def run_matching(session: AsyncSession, event_id, use_adjacent_tags: bool 
                 if tag_name in r_tags:
                     score += weight * 1.0
                     matching.append(tag_name)
+                elif _fuzzy_match(tag_name, r_tags):
+                    score += weight * 0.7
+                    matching.append(f"≈{tag_name}")
                 elif tag_name in adjacent_tags:
                     score += weight * 0.5
                     matching.append(f"~{tag_name}")

@@ -104,7 +104,11 @@ async def upload_projects(
     if not rows:
         raise HTTPException(status_code=400, detail="Файл не содержит данных")
 
-    valid, errors, duplicate_titles = project_service.validate_rows(rows)
+    # Check for existing project titles in DB
+    existing_titles = await project_service.get_existing_titles(session, event.id)
+    valid, errors, duplicate_titles, db_duplicate_titles = project_service.validate_rows(
+        rows, existing_titles=existing_titles
+    )
 
     if not valid:
         raise HTTPException(
@@ -112,6 +116,7 @@ async def upload_projects(
             detail={
                 "message": "Нет валидных записей",
                 "errors": [e.model_dump() for e in errors[:20]],
+                "db_duplicates": db_duplicate_titles[:20],
             },
         )
 

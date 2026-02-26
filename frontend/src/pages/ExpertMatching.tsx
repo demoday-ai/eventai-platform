@@ -439,15 +439,15 @@ export function ExpertMatchingTab({ onSwitchTab }: ExpertMatchingTabProps) {
 
           {/* Navigation */}
           <div className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
+              Перезапустить матчинг
+            </Button>
             <Button
               onClick={() => setCurrentStep(2)}
               disabled={!hasMatched}
               className="w-full sm:w-auto"
             >
               Далее
-            </Button>
-            <Button variant="outline" onClick={() => setCurrentStep(0)} className="w-full sm:w-auto">
-              Перезапустить матчинг
             </Button>
           </div>
         </div>
