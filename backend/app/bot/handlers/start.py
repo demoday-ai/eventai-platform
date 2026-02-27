@@ -117,7 +117,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         context.user_data["profile_event_id"] = str(event.id)
 
         await update.message.reply_text(f"С возвращением, {full_name}! Загружаю вашу программу...")
-        return await _do_generate_from_message(update, context)
+        return await _do_generate(update, context)
 
     # Returning user with role but no profile → continue profiling
     if role and not has_profile:
@@ -494,48 +494,6 @@ async def _do_generate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return await _show_program(update, context)
 
 
-async def _do_generate_from_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Run recommendation generation and display results (from message)."""
-    from app.worker.tasks import generate_recommendations_task
-    from app.worker.utils import wait_for_task
-
-    # Show typing indicator
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-
-    user_id = context.user_data["profile_user_id"]
-    event_id = context.user_data["profile_event_id"]
-
-    # Submit task to Celery
-    task = generate_recommendations_task.delay(user_id, event_id)
-    logger.info("Submitted generate_recommendations_task: task_id=%s", task.id)
-
-    # Wait for result with timeout (30s for recommendation generation)
-    completed, data = await wait_for_task(task.id, timeout=40, poll_interval=1.0)
-
-    if not completed:
-        # Task still running - save task_id for later polling
-        context.user_data["pending_task_id"] = task.id
-        await update.message.reply_text(
-            "Генерация программы занимает больше времени, чем обычно. Нажмите кнопку ниже, чтобы проверить готовность.",
-            reply_markup=check_readiness_keyboard(),
-        )
-        return VIEW_PROGRAM
-
-    if not data or data.get("total", 0) == 0:
-        if data and data.get("no_projects"):
-            await update.message.reply_text(
-                "Проекты ещё не загружены организаторами. Мы пришлём уведомление, когда программа будет готова!"
-            )
-        else:
-            await update.message.reply_text(
-                "Не удалось найти подходящие проекты. Попробуйте обновить профиль через /start."
-            )
-        return ConversationHandler.END
-
-    context.user_data["recommendations"] = data
-    context.user_data.pop("pending_task_id", None)
-    return await _show_program_from_message(update, context)
-
 
 async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Format and send recommendation messages (from callback)."""
@@ -567,29 +525,6 @@ async def _show_program(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     return VIEW_PROGRAM
 
-
-async def _show_program_from_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Format and send recommendation messages (from message)."""
-    data = context.user_data.get("recommendations")
-    if not data:
-        return ConversationHandler.END
-
-    messages = format_recommendations(data)
-    must_recs = data.get("must_visit", [])
-    has_if_time = bool(data.get("if_time"))
-    keyboard = program_recommendation_keyboard(must_recs, has_if_time=has_if_time)
-
-    for i, msg in enumerate(messages):
-        if i == len(messages) - 1:
-            await update.message.reply_text(
-                msg,
-                parse_mode="Markdown",
-                reply_markup=keyboard,
-            )
-        else:
-            await update.message.reply_text(msg, parse_mode="Markdown")
-
-    return VIEW_PROGRAM
 
 
 AGENT_TOOLS = [
@@ -802,11 +737,11 @@ async def view_program_callback(update: Update, context: ContextTypes.DEFAULT_TY
     # Project detail
     if data.startswith("pdetail:"):
         pid_short = data.split(":")[1]
-        return await _show_project_detail(update, context, pid_short)
+        return await _show_project_detail(update, context, pid_short, is_callback=True)
 
     # Update profile → restart NL profiling
     if data == "profile:update":
-        return await _restart_nl_profiling_from_callback(update, context)
+        return await _restart_nl_profiling(update, context, is_callback=True)
 
     return VIEW_PROGRAM
 
@@ -1037,7 +972,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 context.user_data["recommendations"] = status["result"]
                 context.user_data.pop("pending_task_id", None)
                 await update.message.reply_text("Программа готова!")
-                return await _show_program_from_message(update, context)
+                return await _show_program(update, context)
             else:
                 context.user_data.pop("pending_task_id", None)
                 await update.message.reply_text(
@@ -1134,7 +1069,7 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                             pid_short = rec["project_id"][:12]
                             # Send confirmation then show detail
                             await update.message.reply_text(f"Показываю проект #{rank}...")
-                            return await _show_project_detail_from_text(update, context, pid_short)
+                            return await _show_project_detail(update, context, pid_short)
                     reply = f"Проект #{rank} не найден в рекомендациях."
 
                 elif tool_name == "show_profile":
@@ -1192,10 +1127,21 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 # =============================================================================
 
 
-async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYPE, pid_short: str) -> int:
-    """Show full project detail (from callback)."""
-    query = update.callback_query
-    profile_id = _uuid.UUID(context.user_data.get("profile_id", ""))
+async def _show_project_detail(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, pid_short: str, *, is_callback: bool = False
+) -> int:
+    """Show full project detail."""
+    profile_id_str = context.user_data.get("profile_id", "")
+    if not profile_id_str:
+        if is_callback:
+            await update.callback_query.edit_message_text("Профиль не найден. Используйте /start.")
+        else:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id, text="Профиль не найден. Используйте /start."
+            )
+        return VIEW_PROGRAM
+
+    profile_id = _uuid.UUID(profile_id_str)
 
     # Find full project_id from recommendations
     recs_data = context.user_data.get("recommendations", {})
@@ -1209,14 +1155,20 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
             break
 
     if not project_id:
-        await query.edit_message_text("Проект не найден.")
+        if is_callback:
+            await update.callback_query.edit_message_text("Проект не найден.")
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Проект не найден.")
         return VIEW_PROGRAM
 
     async with async_session() as session:
         detail = await profiling_service.get_project_detail(session, profile_id, project_id)
 
     if not detail:
-        await query.edit_message_text("Проект не найден в подборке.")
+        if is_callback:
+            await update.callback_query.edit_message_text("Проект не найден в подборке.")
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Проект не найден в подборке.")
         return VIEW_PROGRAM
 
     if detail.get("room_number"):
@@ -1250,78 +1202,19 @@ async def _show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYP
         ]
     )
 
-    await query.edit_message_text(
-        text,
-        parse_mode="Markdown",
-        reply_markup=keyboard,
-    )
-    return VIEW_DETAIL
-
-
-async def _show_project_detail_from_text(update: Update, context: ContextTypes.DEFAULT_TYPE, pid_short: str) -> int:
-    """Show project detail triggered from text message (not callback)."""
-    profile_id_str = context.user_data.get("profile_id", "")
-    if not profile_id_str:
-        await update.message.reply_text("Профиль не найден. Используйте /start.")
-        return VIEW_PROGRAM
-
-    profile_id = _uuid.UUID(profile_id_str)
-
-    # Find full project_id from recommendations
-    recs_data = context.user_data.get("recommendations", {})
-    all_recs = recs_data.get("must_visit", []) + recs_data.get("if_time", [])
-    project_id = None
-    project_rank = None
-    for rec in all_recs:
-        if rec["project_id"].startswith(pid_short):
-            project_id = _uuid.UUID(rec["project_id"])
-            project_rank = rec.get("rank")
-            break
-
-    if not project_id:
-        await update.message.reply_text("Проект не найден.")
-        return VIEW_PROGRAM
-
-    async with async_session() as session:
-        detail = await profiling_service.get_project_detail(session, profile_id, project_id)
-
-    if not detail:
-        await update.message.reply_text("Проект не найден в подборке.")
-        return VIEW_PROGRAM
-
-    room_info = f"Зал {detail['room_number']}: {detail['room_name']}" if detail.get("room_number") else ""
-    tags_str = ", ".join(detail.get("tags", []))
-    score_pct = min(int(detail["relevance_score"]), 100) if detail["relevance_score"] > 0 else 0
-
-    # Use LLM summary as main description, fallback to truncated original
-    if detail.get("llm_summary"):
-        summary = detail["llm_summary"]
+    if is_callback:
+        await update.callback_query.edit_message_text(
+            text,
+            parse_mode="Markdown",
+            reply_markup=keyboard,
+        )
     else:
-        summary = truncate(detail["description"], 300)
-
-    text = (
-        f"*{escape_markdown(detail['title'])}*\n\n"
-        f"{escape_markdown(summary)}\n\n"
-        f"Теги: {tags_str}\n"
-        f"{room_info}\n"
-        f"Релевантность: {score_pct}%"
-    )
-
-    # Store project info for Q&A
-    context.user_data["current_project_id"] = str(project_id)
-    context.user_data["current_project_title"] = detail["title"]
-    context.user_data["current_project_rank"] = project_rank
-
-    pid_short_btn = str(project_id)[:12]
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("Подготовить вопросы", callback_data=f"qa:prep:{pid_short_btn}")],
-            [contact_button(project_id)],
-            [InlineKeyboardButton("Назад к программе", callback_data="prof:back_program")],
-        ]
-    )
-
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=keyboard,
+        )
     return VIEW_DETAIL
 
 
@@ -1407,14 +1300,20 @@ async def qa_more_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # =============================================================================
 
 
-async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Restart NL profiling flow from agent mode without role change (from message)."""
+async def _restart_nl_profiling(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, *, is_callback: bool = False
+) -> int:
+    """Restart NL profiling flow from agent mode without role change."""
     tg_user = update.effective_user
     telegram_user_id = str(tg_user.id)
 
     auth = await check_guest_or_business(telegram_user_id)
     if not auth:
-        await update.message.reply_text("Сначала выберите роль через /start")
+        msg = "Сначала выберите роль через /start"
+        if is_callback:
+            await update.callback_query.edit_message_text(msg)
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
         return VIEW_PROGRAM
 
     user, event, role_code = auth
@@ -1427,33 +1326,11 @@ async def _restart_nl_profiling(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.pop("recommendations", None)
     context.user_data.pop("program_chat", None)
 
-    await update.message.reply_text("Пересобираем профиль.\n\nЧто вас интересует на Demo Day?")
-
-    return NL_REBUILD
-
-
-async def _restart_nl_profiling_from_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Restart NL profiling flow from agent mode without role change (from callback)."""
-    query = update.callback_query
-    tg_user = query.from_user
-    telegram_user_id = str(tg_user.id)
-
-    auth = await check_guest_or_business(telegram_user_id)
-    if not auth:
-        await query.edit_message_text("Сначала выберите роль через /start")
-        return VIEW_PROGRAM
-
-    user, event, role_code = auth
-
-    # Reset profiling state
-    context.user_data["profile_user_id"] = str(user.id)
-    context.user_data["profile_event_id"] = str(event.id)
-    context.user_data["nl_conversation"] = []
-    context.user_data["pending_role_code"] = role_code
-    context.user_data.pop("recommendations", None)
-    context.user_data.pop("program_chat", None)
-
-    await query.edit_message_text("Пересобираем профиль.\n\nЧто вас интересует на Demo Day?")
+    msg = "Пересобираем профиль.\n\nЧто вас интересует на Demo Day?"
+    if is_callback:
+        await update.callback_query.edit_message_text(msg)
+    else:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
     return NL_REBUILD
 
