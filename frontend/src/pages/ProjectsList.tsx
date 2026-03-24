@@ -293,6 +293,9 @@ export function ProjectsList() {
                 )
               ) : (
                 <div className="space-y-3">
+                  {mutationError && (
+                    <p className="text-sm text-red-500 px-4">{mutationError}</p>
+                  )}
                   {showAddForm && (
                     <div className="p-4 border-2 border-dashed rounded-lg space-y-2">
                       <input

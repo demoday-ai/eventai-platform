@@ -55,9 +55,6 @@ def program_recommendation_keyboard(
             InlineKeyboardButton("Обновить профиль", callback_data="profile:update"),
         ]
     )
-    buttons.append(
-        [InlineKeyboardButton("📩 Связь с организаторами", callback_data="contact:organizers")]
-    )
     return InlineKeyboardMarkup(buttons)
 
 

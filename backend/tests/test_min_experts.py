@@ -1,7 +1,5 @@
 """Tests for configurable minimum experts per room."""
 
-import pytest
-
 
 class TestMinExpertsModel:
     """Test that Event model has min_experts_per_room field."""

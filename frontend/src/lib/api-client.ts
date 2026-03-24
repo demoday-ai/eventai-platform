@@ -386,6 +386,7 @@ export interface SuggestThemesResponse {
 
 export interface MatchingRequest {
   use_adjacent_tags?: boolean
+  min_experts_per_room?: number
 }
 
 export interface RoomMatchExpert {
