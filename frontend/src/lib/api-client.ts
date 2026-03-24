@@ -1780,3 +1780,61 @@ export const resetTourStatus = async (): Promise<{ success: boolean }> => {
   const { data } = await apiClient.post("/admin/tour/reset")
   return data
 }
+
+// --- Support Chat ---
+
+export interface SupportThread {
+  id: string
+  user_id: string
+  user_name: string
+  user_username: string | null
+  user_role: string | null
+  status: string
+  last_message: string | null
+  last_message_at: string | null
+  unread: boolean
+  message_count: number
+}
+
+export interface SupportMessage {
+  id: string
+  sender_type: "user" | "organizer"
+  sender_name: string
+  text: string
+  created_at: string
+}
+
+export interface SupportThreadList {
+  threads: SupportThread[]
+  total: number
+}
+
+export const getSupportThreads = async (params?: { status?: string }): Promise<SupportThreadList> => {
+  const { data } = await apiClient.get<SupportThreadList>("/admin/support/threads", { params })
+  return data
+}
+
+export const getSupportMessages = async (threadId: string): Promise<SupportMessage[]> => {
+  const { data } = await apiClient.get<SupportMessage[]>(`/admin/support/threads/${threadId}/messages`)
+  return data
+}
+
+export const sendSupportReply = async (threadId: string, text: string): Promise<SupportMessage> => {
+  const { data } = await apiClient.post<SupportMessage>(`/admin/support/threads/${threadId}/reply`, { text })
+  return data
+}
+
+export const closeSupportThread = async (threadId: string): Promise<{ status: string }> => {
+  const { data } = await apiClient.post<{ status: string }>(`/admin/support/threads/${threadId}/close`)
+  return data
+}
+
+export const createSupportThread = async (userId: string, message: string): Promise<{ thread_id: string }> => {
+  const { data } = await apiClient.post<{ thread_id: string }>("/admin/support/threads", { user_id: userId, message })
+  return data
+}
+
+export const getSupportUnreadCount = async (): Promise<{ count: number }> => {
+  const { data } = await apiClient.get<{ count: number }>("/admin/support/unread-count")
+  return data
+}
