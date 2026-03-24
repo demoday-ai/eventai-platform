@@ -1799,7 +1799,7 @@ export interface SupportThread {
 
 export interface SupportMessage {
   id: string
-  sender_type: "user" | "organizer"
+  sender_type: "user" | "organizer" | "bot"
   sender_name: string
   text: string
   created_at: string

@@ -1131,6 +1131,32 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         chat_history.append({"role": "assistant", "content": "(результат отправлен)"})
         context.user_data["program_chat"] = chat_history
 
+    # Log user message and bot reply to support_messages for admin visibility
+    if user_id and event_id:
+        try:
+            async with async_session() as log_session:
+                from app.services.admin import support_service
+
+                thread = await support_service.get_or_create_thread(
+                    log_session, _uuid.UUID(user_id), _uuid.UUID(event_id)
+                )
+                await support_service.add_user_message(
+                    log_session, thread.id, _uuid.UUID(user_id), user_message
+                )
+                # Log bot reply with a synthetic bot user ID (use user_id as sender for bot)
+                from app.models.support_message import SupportMessage
+
+                bot_msg = SupportMessage(
+                    thread_id=thread.id,
+                    sender_type="bot",
+                    sender_id=_uuid.UUID(user_id),
+                    text=reply or "(результат отправлен)",
+                )
+                log_session.add(bot_msg)
+                await log_session.commit()
+        except Exception:
+            logger.debug("Failed to log chat to support_messages", exc_info=True)
+
     return VIEW_PROGRAM
 
 

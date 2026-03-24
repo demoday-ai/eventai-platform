@@ -171,10 +171,14 @@ export function SupportChat() {
                     className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
                       msg.sender_type === "organizer"
                         ? "bg-blue-500 text-white"
-                        : "bg-muted"
+                        : msg.sender_type === "bot"
+                          ? "bg-purple-50 border border-purple-200"
+                          : "bg-muted"
                     }`}
                   >
-                    <p className="text-xs opacity-70 mb-0.5">{msg.sender_name}</p>
+                    <p className="text-xs opacity-70 mb-0.5">
+                      {msg.sender_type === "bot" ? "AI-агент" : msg.sender_name}
+                    </p>
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                     <p className="text-[10px] opacity-50 mt-1">
                       {new Date(msg.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
