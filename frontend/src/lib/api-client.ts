@@ -965,6 +965,16 @@ export interface ProjectDetailData {
 export interface ProjectUpdateData {
   title?: string
   description?: string
+  author?: string
+  telegram_contact?: string
+  tags?: string[]
+}
+
+export interface ProjectCreateData {
+  title: string
+  description?: string
+  author?: string
+  telegram_contact?: string
   tags?: string[]
 }
 
@@ -985,6 +995,11 @@ export const getProjectDetail = async (id: string): Promise<ProjectDetailData> =
 
 export const updateProject = async (id: string, body: ProjectUpdateData): Promise<ProjectDetailData> => {
   const { data } = await apiClient.patch<ProjectDetailData>(`/admin/projects/${id}`, body)
+  return data
+}
+
+export const createProject = async (body: ProjectCreateData): Promise<ProjectDetailData> => {
+  const { data } = await apiClient.post<ProjectDetailData>("/admin/projects", body)
   return data
 }
 

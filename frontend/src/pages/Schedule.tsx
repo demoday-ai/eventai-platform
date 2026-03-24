@@ -12,6 +12,7 @@ import { UnplacedPanel } from "../components/schedule/UnplacedPanel"
 import { SlotPopover } from "../components/schedule/SlotPopover"
 import { ScheduleToolbar } from "../components/schedule/ScheduleToolbar"
 import { ConfigFromTextDialog } from "../components/schedule/ConfigFromTextDialog"
+import { AddScheduleBlockDialog, type BlockSubmitData } from "../components/schedule/AddScheduleBlockDialog"
 import {
   generateSchedule,
   getSchedule,
@@ -38,6 +39,7 @@ export function Schedule() {
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [configResult, setConfigResult] = useState<ScheduleConfigFromTextResponse | null>(null)
   const [showSidebar, setShowSidebar] = useState(true)
+  const [blockDialog, setBlockDialog] = useState<{ open: boolean; type: "break" | "section" }>({ open: false, type: "break" })
 
   useEffect(() => {
     document.title = `${APP_NAME} - Расписание`
@@ -266,12 +268,8 @@ export function Schedule() {
         {/* Toolbar */}
         <ScheduleToolbar
           onAutoFill={() => generateMutation.mutate()}
-          onAddBreak={() => {
-            // TODO: Add break dialog
-          }}
-          onAddSection={() => {
-            // TODO: Add section dialog
-          }}
+          onAddBreak={() => setBlockDialog({ open: true, type: "break" })}
+          onAddSection={() => setBlockDialog({ open: true, type: "section" })}
           onExportICS={() => exportScheduleICS()}
           onExportXLSX={() => exportScheduleXLSX()}
           onConfigFromText={() => {
@@ -370,6 +368,25 @@ export function Schedule() {
         }}
         isParsing={configFromTextMutation.isPending}
         parseResult={configResult}
+      />
+
+      {/* Add break/section dialog */}
+      <AddScheduleBlockDialog
+        open={blockDialog.open}
+        onClose={() => setBlockDialog({ ...blockDialog, open: false })}
+        onSubmit={(data: BlockSubmitData) => {
+          createSlotMutation.mutate({
+            room_id: data.room_id,
+            start_time: data.start_time,
+            end_time: data.end_time,
+            slot_type: data.slot_type,
+            title: data.title,
+          })
+          setBlockDialog({ ...blockDialog, open: false })
+        }}
+        blockType={blockDialog.type}
+        rooms={allRooms}
+        selectedDay={selectedDay}
       />
     </DndContext>
   )

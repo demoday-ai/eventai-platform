@@ -53,6 +53,7 @@ export function ExpertMatchingTab({ onSwitchTab }: ExpertMatchingTabProps) {
   const queryClient = useQueryClient()
   const [currentStep, setCurrentStep] = useState(0)
   const [useAdjacentTags, setUseAdjacentTags] = useState(true)
+  const [minExpertsPerRoom, setMinExpertsPerRoom] = useState("2")
   const [matchingError, setMatchingError] = useState<string | null>(null)
   const [movingExpertId, setMovingExpertId] = useState<string | null>(null)
   const [assigningExpertId, setAssigningExpertId] = useState<string | null>(null)
@@ -215,6 +216,20 @@ export function ExpertMatchingTab({ onSwitchTab }: ExpertMatchingTabProps) {
               />
               Использовать смежные теги
             </label>
+            <div>
+              <label htmlFor="min-experts" className="block text-sm font-medium mb-1">
+                Мин. экспертов на зал
+              </label>
+              <input
+                id="min-experts"
+                type="number"
+                min={1}
+                max={10}
+                value={minExpertsPerRoom}
+                onChange={(e) => setMinExpertsPerRoom(e.target.value)}
+                className="w-24 rounded border px-3 py-1.5 text-sm"
+              />
+            </div>
             <Button
               onClick={() => {
                 setMatchingError(null)

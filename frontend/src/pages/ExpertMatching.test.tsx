@@ -258,4 +258,14 @@ describe("ExpertMatchingTab", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["pipeline-status"] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
   })
+
+  it("shows min experts per room input on step 0", async () => {
+    render(<ExpertMatchingTab onSwitchTab={vi.fn()} />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      const input = screen.getByLabelText(/мин.*эксперт/i)
+      expect(input).toBeInTheDocument()
+      expect((input as HTMLInputElement).value).toBe("2")
+    })
+  })
 })

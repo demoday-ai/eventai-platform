@@ -257,7 +257,19 @@ class ProjectUpdateRequest(BaseModel):
 
     title: str | None = None
     description: str | None = None
+    author: str | None = None
+    telegram_contact: str | None = None
     tags: list[str] | None = None
+
+
+class ProjectCreateRequest(BaseModel):
+    """Create a new project from admin panel."""
+
+    title: str
+    description: str | None = None
+    author: str | None = None
+    telegram_contact: str | None = None
+    tags: list[str] = []
 
 
 class EventCreateRequest(BaseModel):
