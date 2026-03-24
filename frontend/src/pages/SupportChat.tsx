@@ -29,7 +29,9 @@ export function SupportChat() {
     refetchInterval: 3000,
   })
 
-  const { data: messages } = useQuery({
+  const [sendError, setSendError] = useState<string | null>(null)
+
+  const { data: messages, isError: messagesError } = useQuery({
     queryKey: ["support-messages", selectedThreadId],
     queryFn: () => getSupportMessages(selectedThreadId!),
     enabled: !!selectedThreadId,
@@ -38,24 +40,30 @@ export function SupportChat() {
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (messages?.length) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
   }, [messages])
 
   const sendMutation = useMutation({
-    mutationFn: () => sendSupportReply(selectedThreadId!, draftMessage),
-    onSuccess: () => {
+    mutationFn: ({ threadId, text }: { threadId: string; text: string }) =>
+      sendSupportReply(threadId, text),
+    onSuccess: (_, { threadId }) => {
       setDraftMessage("")
-      queryClient.invalidateQueries({ queryKey: ["support-messages", selectedThreadId] })
+      setSendError(null)
+      queryClient.invalidateQueries({ queryKey: ["support-messages", threadId] })
       queryClient.invalidateQueries({ queryKey: ["support-threads"] })
     },
+    onError: (err) => setSendError(err instanceof Error ? err.message : "Ошибка отправки"),
   })
 
   const closeMutation = useMutation({
-    mutationFn: () => closeSupportThread(selectedThreadId!),
+    mutationFn: ({ threadId }: { threadId: string }) => closeSupportThread(threadId),
     onSuccess: () => {
       setSelectedThreadId(null)
       queryClient.invalidateQueries({ queryKey: ["support-threads"] })
     },
+    onError: (err) => setSendError(err instanceof Error ? err.message : "Ошибка закрытия"),
   })
 
   const threads = threadList?.threads ?? []
@@ -134,7 +142,7 @@ export function SupportChat() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => closeMutation.mutate()}
+                    onClick={() => closeMutation.mutate({ threadId: selectedThreadId! })}
                     disabled={closeMutation.isPending}
                   >
                     Закрыть диалог
@@ -143,6 +151,12 @@ export function SupportChat() {
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messagesError && (
+                <p className="text-sm text-red-500">Не удалось загрузить сообщения</p>
+              )}
+              {sendError && (
+                <p className="text-sm text-red-500">{sendError}</p>
+              )}
               {messages?.map((msg) => (
                 <div
                   key={msg.id}
@@ -174,14 +188,14 @@ export function SupportChat() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey && draftMessage.trim()) {
                       e.preventDefault()
-                      sendMutation.mutate()
+                      sendMutation.mutate({ threadId: selectedThreadId!, text: draftMessage })
                     }
                   }}
                   placeholder="Написать ответ..."
                   disabled={sendMutation.isPending}
                 />
                 <Button
-                  onClick={() => sendMutation.mutate()}
+                  onClick={() => sendMutation.mutate({ threadId: selectedThreadId!, text: draftMessage })}
                   disabled={!draftMessage.trim() || sendMutation.isPending}
                 >
                   Отправить

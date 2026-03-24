@@ -1,6 +1,7 @@
 """Support chat service: thread management, messages, unread counts."""
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -27,7 +28,7 @@ async def get_threads(
     limit: int = 50,
     offset: int = 0,
 ) -> ThreadListResponse:
-    """List support threads for an event."""
+    """List support threads for an event. Optimized: batch queries instead of N+1."""
     query = (
         select(SupportThread)
         .where(SupportThread.event_id == event_id)
@@ -43,31 +44,44 @@ async def get_threads(
 
     total = (await session.execute(count_query)).scalar() or 0
     result = await session.execute(query.limit(limit).offset(offset))
-    threads = result.scalars().all()
+    threads = list(result.scalars().all())
+
+    if not threads:
+        return ThreadListResponse(threads=[], total=total)
+
+    thread_ids = [t.id for t in threads]
+    user_ids = [t.user_id for t in threads]
+
+    # Batch: message counts per thread
+    count_result = await session.execute(
+        select(SupportMessage.thread_id, func.count(SupportMessage.id))
+        .where(SupportMessage.thread_id.in_(thread_ids))
+        .group_by(SupportMessage.thread_id)
+    )
+    msg_counts = dict(count_result.all())
+
+    # Batch: last message per thread using DISTINCT ON
+    last_msgs_result = await session.execute(
+        select(SupportMessage)
+        .where(SupportMessage.thread_id.in_(thread_ids))
+        .order_by(SupportMessage.thread_id, SupportMessage.created_at.desc())
+        .distinct(SupportMessage.thread_id)
+    )
+    last_msgs = {m.thread_id: m for m in last_msgs_result.scalars().all()}
+
+    # Batch: user roles
+    role_result = await session.execute(
+        select(UserRole.user_id, Role.code)
+        .join(Role)
+        .where(UserRole.user_id.in_(user_ids))
+        .where(UserRole.event_id == event_id)
+    )
+    user_roles = dict(role_result.all())
 
     items = []
     for t in threads:
-        # Get last message
-        last_msg_result = await session.execute(
-            select(SupportMessage)
-            .where(SupportMessage.thread_id == t.id)
-            .order_by(SupportMessage.created_at.desc())
-            .limit(1)
-        )
-        last_msg = last_msg_result.scalar_one_or_none()
-
-        # Count messages
-        msg_count = (
-            await session.execute(
-                select(func.count(SupportMessage.id)).where(SupportMessage.thread_id == t.id)
-            )
-        ).scalar() or 0
-
-        # Check if last message is from user (unread for organizer)
+        last_msg = last_msgs.get(t.id)
         unread = last_msg.sender_type == "user" if last_msg else False
-
-        # Get user role
-        user_role = await _get_user_primary_role(session, t.user_id, event_id)
 
         items.append(
             ThreadResponse(
@@ -75,12 +89,12 @@ async def get_threads(
                 user_id=str(t.user_id),
                 user_name=t.user.full_name or t.user.username or "N/A",
                 user_username=t.user.username,
-                user_role=user_role,
+                user_role=user_roles.get(t.user_id),
                 status=t.status,
                 last_message=last_msg.text[:100] if last_msg else None,
                 last_message_at=last_msg.created_at.isoformat() if last_msg else None,
                 unread=unread,
-                message_count=msg_count,
+                message_count=msg_counts.get(t.id, 0),
             )
         )
 
@@ -90,10 +104,15 @@ async def get_threads(
 async def get_messages(
     session: AsyncSession,
     thread_id: UUID,
+    event_id: UUID,
     limit: int = 100,
     offset: int = 0,
 ) -> list[MessageResponse]:
-    """Get messages in a thread."""
+    """Get messages in a thread. Verifies thread belongs to event."""
+    thread = await session.get(SupportThread, thread_id)
+    if not thread or thread.event_id != event_id:
+        raise ValueError("Thread not found")
+
     result = await session.execute(
         select(SupportMessage)
         .where(SupportMessage.thread_id == thread_id)
@@ -119,13 +138,16 @@ async def get_messages(
 async def send_organizer_reply(
     session: AsyncSession,
     thread_id: UUID,
+    event_id: UUID,
     organizer_id: UUID,
     text: str,
 ) -> SupportMessage:
-    """Send organizer reply to a thread."""
+    """Send organizer reply. Verifies thread belongs to event."""
     thread = await session.get(SupportThread, thread_id)
-    if not thread or thread.status != "open":
-        raise ValueError("Thread not found or closed")
+    if not thread or thread.event_id != event_id:
+        raise ValueError("Thread not found")
+    if thread.status != "open":
+        raise ValueError("Thread is closed")
 
     msg = SupportMessage(
         thread_id=thread_id,
@@ -134,6 +156,7 @@ async def send_organizer_reply(
         text=text,
     )
     session.add(msg)
+    thread.updated_at = datetime.now(timezone.utc)
     await session.flush()
     await session.refresh(msg)
     return msg
@@ -147,20 +170,7 @@ async def create_thread_for_user(
     initial_message: str,
 ) -> SupportThread:
     """Organizer creates a thread to contact a specific user."""
-    # Check for existing open thread
-    existing = await session.execute(
-        select(SupportThread)
-        .where(SupportThread.user_id == user_id)
-        .where(SupportThread.event_id == event_id)
-        .where(SupportThread.status == "open")
-    )
-    thread = existing.scalar_one_or_none()
-
-    if not thread:
-        thread = SupportThread(user_id=user_id, event_id=event_id, status="open")
-        session.add(thread)
-        await session.flush()
-        await session.refresh(thread)
+    thread = await _get_or_create_open_thread(session, user_id, event_id)
 
     msg = SupportMessage(
         thread_id=thread.id,
@@ -169,6 +179,7 @@ async def create_thread_for_user(
         text=initial_message,
     )
     session.add(msg)
+    thread.updated_at = datetime.now(timezone.utc)
     await session.commit()
     return thread
 
@@ -184,6 +195,7 @@ async def close_thread(
         raise ValueError("Thread not found")
     thread.status = "closed"
     thread.closed_by = closed_by
+    thread.updated_at = datetime.now(timezone.utc)
     await session.commit()
     return thread
 
@@ -194,11 +206,21 @@ async def get_or_create_thread(
     event_id: UUID,
 ) -> SupportThread:
     """Get open thread for user or create new one."""
+    return await _get_or_create_open_thread(session, user_id, event_id)
+
+
+async def _get_or_create_open_thread(
+    session: AsyncSession,
+    user_id: UUID,
+    event_id: UUID,
+) -> SupportThread:
+    """Get or create open thread with race condition protection."""
     result = await session.execute(
         select(SupportThread)
         .where(SupportThread.user_id == user_id)
         .where(SupportThread.event_id == event_id)
         .where(SupportThread.status == "open")
+        .with_for_update(skip_locked=True)
     )
     thread = result.scalar_one_or_none()
     if thread:
@@ -217,7 +239,7 @@ async def add_user_message(
     user_id: UUID,
     text: str,
 ) -> SupportMessage:
-    """Add user message to thread."""
+    """Add user message to thread. Stores raw text (no escaping)."""
     msg = SupportMessage(
         thread_id=thread_id,
         sender_type="user",
@@ -225,30 +247,35 @@ async def add_user_message(
         text=text,
     )
     session.add(msg)
+
+    # Update thread timestamp
+    thread = await session.get(SupportThread, thread_id)
+    if thread:
+        thread.updated_at = datetime.now(timezone.utc)
+
     await session.flush()
     await session.refresh(msg)
     return msg
 
 
 async def get_unread_count(session: AsyncSession, event_id: UUID) -> int:
-    """Count threads with last message from user (unread by organizer)."""
-    count = 0
-    threads_result = await session.execute(
-        select(SupportThread)
+    """Count threads with last message from user. Single query, no N+1."""
+    last_sender_subq = (
+        select(SupportMessage.sender_type)
+        .where(SupportMessage.thread_id == SupportThread.id)
+        .order_by(SupportMessage.created_at.desc())
+        .limit(1)
+        .correlate(SupportThread)
+        .scalar_subquery()
+    )
+    result = await session.execute(
+        select(func.count())
+        .select_from(SupportThread)
         .where(SupportThread.event_id == event_id)
         .where(SupportThread.status == "open")
+        .where(last_sender_subq == "user")
     )
-    for thread in threads_result.scalars().all():
-        last_msg = await session.execute(
-            select(SupportMessage.sender_type)
-            .where(SupportMessage.thread_id == thread.id)
-            .order_by(SupportMessage.created_at.desc())
-            .limit(1)
-        )
-        sender_type = last_msg.scalar_one_or_none()
-        if sender_type == "user":
-            count += 1
-    return count
+    return result.scalar() or 0
 
 
 async def get_thread_messages_for_context(
@@ -256,21 +283,18 @@ async def get_thread_messages_for_context(
     thread_id: UUID,
 ) -> str:
     """Get full thread messages as text for AI agent context injection."""
-    messages = await get_messages(session, thread_id, limit=200)
+    result = await session.execute(
+        select(SupportMessage)
+        .where(SupportMessage.thread_id == thread_id)
+        .options(selectinload(SupportMessage.sender))
+        .order_by(SupportMessage.created_at.asc())
+        .limit(50)
+    )
+    messages = result.scalars().all()
+
     lines = []
     for m in messages:
         role_label = "Пользователь" if m.sender_type == "user" else "Организатор"
-        lines.append(f"[{role_label}] {m.sender_name}: {m.text}")
+        name = m.sender.full_name or m.sender.username or "N/A"
+        lines.append(f"[{role_label}] {name}: {m.text}")
     return "\n".join(lines)
-
-
-async def _get_user_primary_role(session: AsyncSession, user_id: UUID, event_id: UUID) -> str | None:
-    """Get primary role for a user in an event."""
-    result = await session.execute(
-        select(Role.code)
-        .join(UserRole)
-        .where(UserRole.user_id == user_id)
-        .where(UserRole.event_id == event_id)
-        .limit(1)
-    )
-    return result.scalar_one_or_none()

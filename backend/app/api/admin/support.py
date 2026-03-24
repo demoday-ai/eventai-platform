@@ -1,12 +1,13 @@
 """Admin support chat endpoints."""
 
 import logging
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import check_organizer
 from app.database import get_session
 from app.models.user import User
 from app.schemas.support import (
@@ -26,11 +27,11 @@ router = APIRouter()
 
 @router.get("/support/threads", response_model=ThreadListResponse)
 async def list_threads(
-    status: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    status: Literal["open", "closed"] | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """List support threads."""
     event = await user_service.get_current_event(db)
@@ -42,13 +43,19 @@ async def list_threads(
 @router.get("/support/threads/{thread_id}/messages", response_model=list[MessageResponse])
 async def get_thread_messages(
     thread_id: UUID,
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get messages in a thread."""
-    return await support_service.get_messages(db, thread_id, limit, offset)
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+    try:
+        return await support_service.get_messages(db, thread_id, event.id, limit, offset)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post("/support/threads/{thread_id}/reply", response_model=MessageResponse)
@@ -56,11 +63,16 @@ async def reply_to_thread(
     thread_id: UUID,
     body: SendMessageRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Send organizer reply."""
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
     try:
-        msg = await support_service.send_organizer_reply(db, thread_id, current_user.id, body.text)
+        msg = await support_service.send_organizer_reply(
+            db, thread_id, event.id, current_user.id, body.text
+        )
         await db.commit()
         return MessageResponse(
             id=str(msg.id),
@@ -77,7 +89,7 @@ async def reply_to_thread(
 async def close_thread(
     thread_id: UUID,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Close a support thread."""
     try:
@@ -91,7 +103,7 @@ async def close_thread(
 async def create_thread(
     body: CreateThreadRequest,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Organizer creates thread to contact a specific user."""
     event = await user_service.get_current_event(db)
@@ -107,7 +119,7 @@ async def create_thread(
 @router.get("/support/unread-count", response_model=UnreadCountResponse)
 async def get_unread_count(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_organizer),
 ):
     """Get count of threads with unread user messages."""
     event = await user_service.get_current_event(db)

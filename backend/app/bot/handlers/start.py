@@ -1498,7 +1498,6 @@ async def support_start_callback(update: Update, context: ContextTypes.DEFAULT_T
 
 async def support_chat_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """User sends text in SUPPORT_CHAT - add message to thread."""
-    import html
     import uuid as _uuid
 
     thread_id = context.user_data.get("support_thread_id")
@@ -1510,13 +1509,13 @@ async def support_chat_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         )
         return VIEW_PROGRAM
 
-    safe_text = html.escape(update.message.text or "")
+    raw_text = update.message.text or ""
 
     async with async_session() as session:
         from app.services.admin import support_service
 
         await support_service.add_user_message(
-            session, _uuid.UUID(thread_id), _uuid.UUID(user_id), safe_text
+            session, _uuid.UUID(thread_id), _uuid.UUID(user_id), raw_text
         )
         await session.commit()
 
