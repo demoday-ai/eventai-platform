@@ -1,6 +1,7 @@
 # Backend Architecture
 
-Техническая документация backend EventAI — AI-платформы для организаторов конференций.
+Техническая документация backend EventAI — AI-платформы для организаторов событий. Основной
+доменный сценарий в коде — Demo Day / showcase event.
 
 ## Стек
 
@@ -22,7 +23,7 @@
 
 ## Архитектура
 
-Layered Architecture: **Routes → Services → Repos → Models**.
+Практическая структура backend: **Routes/Bot/Worker → Services → Models + Integrations**.
 
 ```
 app/
@@ -33,36 +34,24 @@ app/
 ├── database.py              AsyncEngine + session factory
 │
 ├── api/                     REST API — тонкий HTTP-слой
-│   ├── admin/               10 модулей: dashboard, rooms, tags, events,
-│   │                        guests, projects, briefing, messaging, audit, organizers
+│   ├── admin/               dashboard, rooms, tags, events, guests, projects,
+│   │                        briefing, messaging, audit, organizers, llm, tour
 │   ├── experts/             5 модулей: crud, matching, invites, coverage, escalations
 │   └── *.py                 auth, users, events, projects, schedule,
-│                            guests, participation, reminders, leads, monitoring
+│                            guests, participation, leads, monitoring
 │
 ├── bot/                     Telegram-бот (ConversationHandler)
-│   ├── handlers/            start, qa, followup, business_followup, contact
+│   ├── handlers/            start, contact, shared
 │   ├── keyboards.py         InlineKeyboard builders
 │   └── utils.py             Форматирование, парсинг
 │
-├── services/                Бизнес-логика (без HTTP, без ORM-запросов)
+├── services/                Бизнес-логика и интеграции
 │   ├── core/                user_service, llm_client, embedding_service, send_retry
 │   ├── admin/               22 сервиса: clustering, matching, coverage, schedule,
 │   │                        briefing, messaging, notifications, reminders, ...
 │   └── guest/               profiling, qa, contact, followup, business_followup
 │
-├── repos/                   Data Access Layer (async SQLAlchemy queries)
-│   ├── event_repo.py        get_current_event, get_approved_clustering
-│   ├── user_repo.py         upsert, get_by_telegram_id, roles
-│   ├── tag_repo.py          CRUD, get_name_to_id_map
-│   ├── expert_repo.py       get_by_id, get_experts, count_by_event
-│   ├── project_repo.py      get_by_id, count_by_event, get_with_descriptions
-│   ├── room_repo.py         get_by_event, count_projects/experts
-│   ├── notification_repo.py CRUD notifications, batches
-│   ├── schedule_repo.py     slots, change_logs
-│   ├── guest_repo.py        guest profiles, recommendations
-│   └── participation_repo.py participation requests
-│
-├── models/                  SQLAlchemy 2.0 ORM (30 моделей, 24 таблицы)
+├── models/                  SQLAlchemy 2.0 ORM
 ├── schemas/                 Pydantic request/response (8 файлов)
 │
 └── worker/                  Celery tasks (LLM, clustering, embeddings)
@@ -83,8 +72,7 @@ Celery   → worker/tasks → services → repos → PostgreSQL
 
 ## Ключевые принципы
 
-- **Services** не знают о HTTP и Telegram — принимают `session` + данные
-- **Repos** — async-функции, только `select`/`insert`/`update`/`delete`
+- **Services** инкапсулируют бизнес-логику и не должны разрастаться в HTTP-слой
 - **`MessageSender` Protocol** вместо прямой зависимости на `telegram.Bot`
 - **Worker tasks** используют `async with worker_session()` для управления сессиями
 - **API-роуты** — тонкий слой: парсинг запроса → вызов сервиса → формирование ответа

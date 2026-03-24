@@ -2,9 +2,15 @@
 
 ## О кэмпе
 
-AI Talent Camp -- кэмп по AI, 33 идеи-проекта, над каждой работает команда. Команды получают выделенные VM в Yandex Cloud (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04) с доменом `teamXX.camp.aitalenthub.ru`. Наша команда -- #12, проект -- #10 AI-агент-куратор DemoDay.
+AI Talent Camp -- кэмп по AI, 33 идеи-проекта, над каждой работает команда. Команды получают выделенные VM в Yandex Cloud (4 vCPU, 8GB RAM, 65GB SSD, Ubuntu 22.04) с доменом `teamXX.camp.aitalenthub.ru`. Наша команда -- #12 "ЯСНОПОНЯТНО". Репозиторий развивает продукт EventAI, выросший из кейса AI-агента-куратора Demo Day.
 
-## Продукт: AI-агент-куратор DemoDay (AI-first Unconference Navigator)
+## Продукт: EventAI
+
+Текущее продуктовое позиционирование репозитория -- EventAI, AI-платформа для организаторов событий. Базовый и наиболее проработанный сценарий -- Demo Day / AI Talent Camp, поэтому ниже в документе сохраняется подробный доменный контекст именно для Demo Day.
+
+### Исток продукта
+
+AI-агент-куратор DemoDay (AI-first Unconference Navigator)
 
 **Автор идеи:** Дмитрий Ботов (@dmbotov)
 

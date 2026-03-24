@@ -2,7 +2,7 @@
   <a href="https://ai.itmo.ru"><strong>AI Talent Hub</strong></a> ×
   <a href="https://itmo.ru"><strong>ИТМО</strong></a>
   <br>
-  <sub>AI Talent Camp 2026 · Проект #12</sub>
+  <sub>AI Talent Camp 2026 · Команда "ЯСНОПОНЯТНО"</sub>
 </p>
 
 <p align="center">
@@ -12,8 +12,8 @@
 <h1 align="center">EventAI</h1>
 
 <p align="center">
-  <strong>AI-платформа для организаторов конференций</strong><br>
-  <sub>Бот + админка для Demo Day, конференций, хакатонов</sub>
+<strong>AI-платформа для организаторов событий</strong><br>
+  <sub>Бот + админка для Demo Day, конференций, хакатонов и showcase-событий</sub>
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ Frontend `localhost:3000` · API docs `localhost:8000/api/v1/docs`
 
 ## Архитектура
 
-Layered Architecture: **Routes → Services → Repos → Models**
+Практическая структура репозитория: **API/бот/UI → services → models + integrations**
 
 ```
 frontend/               React 19, TypeScript, Vite, Tailwind, shadcn/ui
@@ -101,41 +101,33 @@ backend/
 ├── app/
 │   ├── main.py              App factory, CORS, router includes, health
 │   ├── lifespan.py          Startup/shutdown: DB, bot, scheduler
-│   ├── scheduler.py         11 APScheduler jobs (reminders, briefings, etc.)
+│   ├── scheduler.py         APScheduler jobs (reminders, briefings, digest)
 │   │
-│   ├── api/                 REST API (87 endpoints) — thin HTTP layer
-│   │   ├── admin/           10 модулей: dashboard, rooms, tags, events,
-│   │   │                    guests, projects, briefing, messaging, audit, organizers
+│   ├── api/                 REST API — thin HTTP layer
+│   │   ├── admin/           dashboard, rooms, tags, events, guests, projects,
+│   │   │                    briefing, messaging, audit, organizers, llm, tour
 │   │   ├── experts/         5 модулей: crud, matching, invites, coverage, escalations
-│   │   └── *.py             users, auth, schedule, participation, reminders, ...
+│   │   └── *.py             users, auth, events, projects, guests, schedule,
+│   │                        participation, leads, monitoring
 │   │
 │   ├── bot/                 Telegram bot (python-telegram-bot 21.x)
-│   │   ├── handlers/        ConversationHandler states
+│   │   ├── handlers/        onboarding, contact, shared handlers
 │   │   └── keyboards.py     InlineKeyboard builders
 │   │
-│   ├── services/            Business logic (no HTTP, no ORM queries)
+│   ├── services/            Business logic and orchestration
 │   │   ├── admin/           clustering, matching, coverage, schedule,
-│   │   │                    briefing, messaging, reminders, ...
-│   │   ├── guest/           profiling, qa, contact, followup
-│   │   └── core/            user_service, llm_client, embedding, send_retry
+│   │   │                    briefing, messaging, notifications, import, audit
+│   │   ├── guest/           profiling, qa, contact, followup, business_followup
+│   │   └── core/            user_service, llm_client, embedding_service, send_retry
 │   │
-│   ├── repos/               Data access layer (async SQLAlchemy queries)
-│   │   ├── event_repo.py    get_current_event, get_approved_clustering
-│   │   ├── user_repo.py     upsert, get_by_telegram_id, roles
-│   │   ├── tag_repo.py      CRUD, get_name_to_id_map
-│   │   ├── expert_repo.py   get_by_id, get_experts, count_by_event
-│   │   ├── project_repo.py  get_by_id, count_by_event, get_with_descriptions
-│   │   ├── room_repo.py     get_by_event, count_projects/experts
-│   │   └── ...              notification, schedule, guest, participation
-│   │
-│   ├── models/              SQLAlchemy 2.0 ORM (30 tables)
+│   ├── models/              SQLAlchemy 2.0 ORM entities
 │   ├── schemas/             Pydantic request/response models
-│   └── worker/              Celery tasks (LLM, clustering, embeddings)
-│       ├── tasks.py         9 async tasks
-│       └── utils.py         worker_session(), run_async(), task status
+│   └── worker/              Celery tasks (clustering, matching, embeddings)
+│       ├── tasks.py         async background jobs
+│       └── utils.py         worker session helpers
 │
 ├── alembic/                 Database migrations
-└── tests/                   pytest (62 теста)
+└── tests/                   pytest test suite
 ```
 
 **Потоки данных:**
@@ -149,10 +141,10 @@ Celery   → worker/tasks → services → repos → PostgreSQL
 ```
 
 **Ключевые принципы:**
-- Services не знают о HTTP и Telegram — принимают `session` + данные
-- Repos — чистые async-функции, только `select`/`insert`/`update`/`delete`
-- `MessageSender` Protocol вместо прямой зависимости на `telegram.Bot`
-- Worker tasks используют `async with worker_session()` для управления сессиями
+- API-роуты и бот остаются тонкими адаптерами над сервисами
+- Сервисы инкапсулируют бизнес-логику и интеграции
+- `MessageSender` Protocol снижает связность с `telegram.Bot`
+- Worker tasks и scheduler забирают тяжёлую и отложенную обработку из request path
 
 <br>
 
@@ -162,7 +154,7 @@ Celery   → worker/tasks → services → repos → PostgreSQL
 
 **Frontend** — React 19, TypeScript, Vite, TanStack Query, Tailwind, shadcn/ui
 
-**AI** — OpenRouter (GPT-4.1), Gemini Embedding, Qdrant (vector search), cosine similarity + LLM re-ranking
+**AI** — OpenRouter, Gemini Embedding, Qdrant (vector search), reranking и генерация через LLM
 
 **Infra** — Docker Compose, Celery (2 workers: default + heavy), RabbitMQ, Redis, Qdrant, Traefik, Yandex Cloud
 
@@ -193,7 +185,7 @@ Celery   → worker/tasks → services → repos → PostgreSQL
 
 ## Команда
 
-**"ЯСНОПОНЯТНО"** — AI Talent Camp 2026, проект #12
+**"ЯСНОПОНЯТНО"** — AI Talent Camp 2026
 
 - **Дмитрий Горбунов** — тимлид, продукт · [@grbn_dima](https://t.me/grbn_dima)
 - **Анастасия Гапеева** — UX/UI, фронтенд · [@agapeeva](https://t.me/agapeeva)
