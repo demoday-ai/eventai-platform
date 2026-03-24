@@ -55,7 +55,17 @@ def program_recommendation_keyboard(
             InlineKeyboardButton("Обновить профиль", callback_data="profile:update"),
         ]
     )
+    buttons.append(
+        [InlineKeyboardButton("📩 Позвать организатора", callback_data="support:start")]
+    )
     return InlineKeyboardMarkup(buttons)
+
+
+def support_chat_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard shown during support chat with organizer."""
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Вернуться к боту", callback_data="support:back")]]
+    )
 
 
 def check_readiness_keyboard() -> InlineKeyboardMarkup:

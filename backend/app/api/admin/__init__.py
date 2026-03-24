@@ -13,6 +13,7 @@ from app.api.admin.messaging import router as messaging_router
 from app.api.admin.organizers import router as organizers_router
 from app.api.admin.projects import router as projects_router
 from app.api.admin.rooms import router as rooms_router
+from app.api.admin.support import router as support_router
 from app.api.admin.tags import router as tags_router
 from app.api.admin.tour import router as tour_router
 
@@ -31,3 +32,4 @@ router.include_router(organizers_router)
 router.include_router(llm_config_router)
 router.include_router(clustering_router)
 router.include_router(tour_router)
+router.include_router(support_router)

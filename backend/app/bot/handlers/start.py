@@ -42,6 +42,7 @@ from app.bot.handlers.states import (
     NL_REBUILD,
     ONBOARD_CONFIRM,
     ONBOARD_NL_PROFILE,
+    SUPPORT_CHAT,
     VIEW_DETAIL,
     VIEW_PROGRAM,
 )
@@ -51,6 +52,7 @@ from app.bot.keyboards import (
     program_recommendation_keyboard,
     retry_generation_keyboard,
     role_keyboard,
+    support_chat_keyboard,
 )
 from app.bot.utils import safe_send_long_message
 from app.database import async_session
@@ -1033,6 +1035,16 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         num_recommendations=len(all_recs),
     )
 
+    # Inject support chat history if user just returned from organizer chat
+    support_history = context.user_data.pop("support_chat_history", None)
+    if support_history:
+        system_prompt += (
+            "\n\n--- Переписка пользователя с организатором (для контекста) ---\n"
+            f"{support_history}\n"
+            "--- Конец переписки ---\n"
+            "Учитывай эту переписку при ответах пользователю."
+        )
+
     # Maintain conversation history
     chat_history = context.user_data.get("program_chat", [])
     chat_history.append({"role": "user", "content": user_message})
@@ -1445,6 +1457,111 @@ async def orphan_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 # =============================================================================
+# Support chat handlers
+# =============================================================================
+
+
+async def support_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User clicked 'Позвать организатора' - create thread, enter SUPPORT_CHAT."""
+    import uuid as _uuid
+
+    query = update.callback_query
+    await query.answer()
+
+    user_id = context.user_data.get("profile_user_id")
+    event_id = context.user_data.get("profile_event_id")
+
+    if not user_id or not event_id:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Сначала пройдите профилирование через /start.",
+        )
+        return VIEW_PROGRAM
+
+    async with async_session() as session:
+        from app.services.admin import support_service
+
+        thread = await support_service.get_or_create_thread(
+            session, _uuid.UUID(user_id), _uuid.UUID(event_id)
+        )
+        await session.commit()
+        context.user_data["support_thread_id"] = str(thread.id)
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Вы на связи с организаторами. Напишите ваш вопрос - он будет передан в админку.\n\n"
+             "Нажмите кнопку ниже, чтобы вернуться к боту.",
+        reply_markup=support_chat_keyboard(),
+    )
+    return SUPPORT_CHAT
+
+
+async def support_chat_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User sends text in SUPPORT_CHAT - add message to thread."""
+    import uuid as _uuid
+
+    thread_id = context.user_data.get("support_thread_id")
+    user_id = context.user_data.get("profile_user_id")
+
+    if not thread_id or not user_id:
+        await update.message.reply_text(
+            "Ошибка чата. Нажмите /start.",
+        )
+        return VIEW_PROGRAM
+
+    raw_text = update.message.text or ""
+
+    async with async_session() as session:
+        from app.services.admin import support_service
+
+        await support_service.add_user_message(
+            session, _uuid.UUID(thread_id), _uuid.UUID(user_id), raw_text
+        )
+        await session.commit()
+
+    await update.message.reply_text(
+        "Сообщение отправлено организаторам.",
+        reply_markup=support_chat_keyboard(),
+    )
+    return SUPPORT_CHAT
+
+
+async def support_back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User clicked 'Вернуться к боту' - close thread, inject context, return to AI."""
+    import uuid as _uuid
+
+    query = update.callback_query
+    await query.answer()
+
+    thread_id = context.user_data.get("support_thread_id")
+
+    if thread_id:
+        async with async_session() as session:
+            from app.services.admin import support_service
+
+            # Close thread
+            try:
+                await support_service.close_thread(session, _uuid.UUID(thread_id), closed_by="user")
+            except ValueError:
+                pass  # Already closed
+
+            # Load full thread history for AI context
+            thread_history = await support_service.get_thread_messages_for_context(
+                session, _uuid.UUID(thread_id)
+            )
+            if thread_history:
+                context.user_data["support_chat_history"] = thread_history
+
+        context.user_data.pop("support_thread_id", None)
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Вы вернулись к боту. Я в курсе вашего разговора с организатором.",
+    )
+    return VIEW_PROGRAM
+
+
+# =============================================================================
 # Handler factory
 # =============================================================================
 
@@ -1466,6 +1583,7 @@ def get_onboarding_handler() -> ConversationHandler:
                 CallbackQueryHandler(onb_confirm_profile_callback, pattern=r"^onb_nlconf:"),
             ],
             VIEW_PROGRAM: [
+                CallbackQueryHandler(support_start_callback, pattern=r"^support:start$"),
                 CallbackQueryHandler(
                     view_program_callback,
                     pattern=r"^(pdetail:|profile:update|prof:show_profile|prof:show_if_time|prof:check_ready|prof:retry_gen|noop)",
@@ -1481,6 +1599,10 @@ def get_onboarding_handler() -> ConversationHandler:
             ],
             NL_REBUILD: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, nl_rebuild_text),
+            ],
+            SUPPORT_CHAT: [
+                CallbackQueryHandler(support_back_callback, pattern=r"^support:back$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, support_chat_text),
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],

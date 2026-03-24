@@ -27,6 +27,8 @@ from app.models.room import Room
 from app.models.room_project import RoomProject
 from app.models.schedule_change_log import ChangeType, ScheduleChangeLog
 from app.models.schedule_slot import ScheduleSlot, SlotStatus
+from app.models.support_message import SupportMessage
+from app.models.support_thread import SupportThread
 from app.models.tag import Tag
 from app.models.user import GuestSubtype, User
 from app.models.user_role import UserRole
@@ -74,6 +76,8 @@ __all__ = [
     "ScheduleChangeLog",
     "ScheduleSlot",
     "SlotStatus",
+    "SupportMessage",
+    "SupportThread",
     "Tag",
     "User",
     "UserRole",

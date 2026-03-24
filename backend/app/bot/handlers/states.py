@@ -1,6 +1,6 @@
 """Conversation states for bot handlers."""
 
-# Conversation states (6 total)
+# Conversation states (7 total)
 (
     CHOOSE_ROLE,  # 0 - Role selection (4 buttons: student/applicant/business/other)
     ONBOARD_NL_PROFILE,  # 1 - NL profiling (free text → LLM agent)
@@ -8,4 +8,5 @@
     VIEW_PROGRAM,  # 3 - Program + agent mode
     VIEW_DETAIL,  # 4 - Project detail
     NL_REBUILD,  # 5 - Profile rebuild → ONBOARD_CONFIRM
-) = range(6)
+    SUPPORT_CHAT,  # 6 - Support chat with organizer (all text goes to thread)
+) = range(7)

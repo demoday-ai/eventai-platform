@@ -9,6 +9,7 @@ import {
   UsersRound,
   Calendar,
   FolderOpen,
+  MessageCircle,
   MessageSquare,
   UserCheck,
   Settings,
@@ -58,6 +59,7 @@ const navGroups: NavGroup[] = [
     label: "Коммуникация",
     items: [
       { to: "/messaging", label: "Рассылки", icon: MessageSquare },
+      { to: "/support-chat", label: "Чат поддержки", icon: MessageCircle },
     ],
   },
   {
