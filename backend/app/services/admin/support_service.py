@@ -215,16 +215,22 @@ async def _get_or_create_open_thread(
     user_id: UUID,
     event_id: UUID,
 ) -> SupportThread:
-    """Get or create open thread with race condition protection."""
+    """Get or reopen existing thread. One thread per user per event."""
+    # First: look for any thread (open or closed)
     result = await session.execute(
         select(SupportThread)
         .where(SupportThread.user_id == user_id)
         .where(SupportThread.event_id == event_id)
-        .where(SupportThread.status == "open")
+        .order_by(SupportThread.created_at.desc())
+        .limit(1)
         .with_for_update(skip_locked=True)
     )
     thread = result.scalar_one_or_none()
     if thread:
+        if thread.status == "closed":
+            thread.status = "open"
+            thread.closed_by = None
+            thread.updated_at = datetime.now(timezone.utc)
         return thread
 
     thread = SupportThread(user_id=user_id, event_id=event_id, status="open")
