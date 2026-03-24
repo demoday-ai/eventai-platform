@@ -974,14 +974,28 @@ async def view_program_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     # Forward message to organizers if awaiting
     if context.user_data.get("awaiting_organizer_message"):
+        import html
+        import time
+
         context.user_data.pop("awaiting_organizer_message", None)
+
+        # Rate limit: 1 message per 60 seconds
+        last_sent = context.user_data.get("last_organizer_message_at", 0)
+        if time.time() - last_sent < 60:
+            await update.message.reply_text("Подождите минуту перед следующим сообщением.")
+            return VIEW_PROGRAM
+        context.user_data["last_organizer_message_at"] = time.time()
+
         team_chat_id = settings.team_chat_id
         if team_chat_id:
             user = update.effective_user
-            header = f"📩 Сообщение от {user.full_name} (@{user.username or 'N/A'}):"
+            safe_name = html.escape(user.full_name or "")
+            safe_username = html.escape(user.username or "N/A")
+            safe_text = html.escape(update.message.text or "")
+            header = f"Сообщение от {safe_name} (@{safe_username}):"
             await context.bot.send_message(
                 chat_id=int(team_chat_id),
-                text=f"{header}\n\n{update.message.text}",
+                text=f"{header}\n\n{safe_text}",
             )
             await update.message.reply_text("Ваше сообщение передано организаторам. Ответ придет в этот чат.")
         else:

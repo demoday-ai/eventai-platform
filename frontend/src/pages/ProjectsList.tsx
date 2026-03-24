@@ -49,13 +49,17 @@ export function ProjectsList() {
     }
   }, [jobs, queryClient])
 
+  const [mutationError, setMutationError] = useState<string | null>(null)
+
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: { title?: string; author?: string } }) =>
       updateProject(id, body),
     onSuccess: () => {
       setEditingId(null)
+      setMutationError(null)
       queryClient.invalidateQueries({ queryKey: ["projects"] })
     },
+    onError: (err) => setMutationError(err instanceof Error ? err.message : "Ошибка сохранения"),
   })
 
   const createMutation = useMutation({
@@ -64,8 +68,10 @@ export function ProjectsList() {
       setShowAddForm(false)
       setNewTitle("")
       setNewAuthor("")
+      setMutationError(null)
       queryClient.invalidateQueries({ queryKey: ["projects"] })
     },
+    onError: (err) => setMutationError(err instanceof Error ? err.message : "Ошибка создания"),
   })
 
   const generateMutation = useMutation({

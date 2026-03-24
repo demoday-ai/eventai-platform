@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 _PENDING_STATUSES = frozenset({"proposed", "approved", "invite_ready", "invited"})
 
 
-def _compute_coverage_level(confirmed: int, min_required: int = 2) -> str:
+def _compute_coverage_level(confirmed: int, min_required: int) -> str:
     """Compute coverage level based on confirmed experts count and minimum required."""
     if confirmed >= min_required:
         return "covered"

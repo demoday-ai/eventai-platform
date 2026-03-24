@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.expert import RowError
 
@@ -255,21 +255,20 @@ class ProjectDetailResponse(BaseModel):
 class ProjectUpdateRequest(BaseModel):
     """Update project fields."""
 
-    title: str | None = None
-    description: str | None = None
-    author: str | None = None
-    telegram_contact: str | None = None
+    title: str | None = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, max_length=10000)
+    author: str | None = Field(default=None, max_length=200)
+    telegram_contact: str | None = Field(default=None, max_length=100)
     tags: list[str] | None = None
 
 
 class ProjectCreateRequest(BaseModel):
     """Create a new project from admin panel."""
 
-    title: str
-    description: str | None = None
-    author: str | None = None
-    telegram_contact: str | None = None
-    tags: list[str] = []
+    title: str = Field(min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=10000)
+    author: str | None = Field(default=None, max_length=200)
+    telegram_contact: str | None = Field(default=None, max_length=100)
 
 
 class EventCreateRequest(BaseModel):

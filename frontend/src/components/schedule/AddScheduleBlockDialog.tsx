@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "../ui/button"
 
 interface RoomOption {
@@ -36,6 +36,15 @@ export function AddScheduleBlockDialog({
   const [endTime, setEndTime] = useState("")
   const [title, setTitle] = useState("")
 
+  useEffect(() => {
+    if (open) {
+      setRoomId(rooms[0]?.room_id ?? "")
+      setStartTime("")
+      setEndTime("")
+      setTitle("")
+    }
+  }, [open, rooms])
+
   if (!open) return null
 
   const dialogTitle = blockType === "break" ? "Добавить перерыв" : "Добавить секцию"
@@ -44,6 +53,7 @@ export function AddScheduleBlockDialog({
   const handleSubmit = () => {
     if (needsTitle && !title.trim()) return
     if (!startTime || !endTime || !roomId) return
+    if (startTime >= endTime) return
 
     onSubmit({
       room_id: roomId,

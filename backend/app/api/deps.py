@@ -1,13 +1,17 @@
+import os
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import decode_token
+from app.config import Settings
 from app.database import get_session
 from app.models.user import User
 from app.services.core import user_service
 
 bearer_scheme = HTTPBearer(auto_error=False)
+_settings = Settings()
 
 
 async def get_current_user(
@@ -15,12 +19,15 @@ async def get_current_user(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     if not credentials:
-        return await user_service.upsert_user(
-            session,
-            telegram_user_id="dev-admin",
-            full_name="Dev Admin",
-            username="dev-admin",
-        )
+        # Dev fallback only in development
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return await user_service.upsert_user(
+                session,
+                telegram_user_id="dev-admin",
+                full_name="Dev Admin",
+                username="dev-admin",
+            )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     telegram_user_id = decode_token(credentials.credentials)
     user = await user_service.get_user_by_telegram_id(session, telegram_user_id)
     if not user:
@@ -33,7 +40,9 @@ async def check_organizer(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Dependency that checks if the current user is an organizer."""
-    return current_user
+    if _settings.is_organizer(current_user.telegram_user_id, current_user.username):
+        return current_user
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Organizer access required")
 
 
 async def get_current_user_id(current_user: User = Depends(get_current_user)) -> str:

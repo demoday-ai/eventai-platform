@@ -89,7 +89,7 @@ export function ExpertMatchingTab({ onSwitchTab }: ExpertMatchingTabProps) {
   }, [existingMatching, stepDetected])
 
   const runMutation = useMutation({
-    mutationFn: () => runMatching({ use_adjacent_tags: useAdjacentTags }),
+    mutationFn: () => runMatching({ use_adjacent_tags: useAdjacentTags, min_experts_per_room: parseInt(minExpertsPerRoom, 10) || 2 }),
     onSuccess: (data) => {
       setMatchingResult(data)
       setMatchingError(null)

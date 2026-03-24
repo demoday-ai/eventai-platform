@@ -50,6 +50,12 @@ class TestProjectCreateSchema:
         with pytest.raises(ValidationError):
             ProjectCreateRequest()
 
+    def test_create_rejects_empty_title(self):
+        from app.schemas.admin import ProjectCreateRequest
+
+        with pytest.raises(ValidationError):
+            ProjectCreateRequest(title="")
+
     def test_create_with_all_fields(self):
         from app.schemas.admin import ProjectCreateRequest
 

@@ -187,7 +187,7 @@ export function Schedule() {
         new Map(
           scheduleData.days
             .flatMap((d) => d.rooms)
-            .map((r) => [r.room_id, { id: r.room_id, name: r.room_name }])
+            .map((r) => [r.room_id, { id: r.room_id, name: r.room_name, room_id: r.room_id, room_name: r.room_name }])
         ).values()
       )
     : []
