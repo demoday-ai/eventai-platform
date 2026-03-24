@@ -1793,6 +1793,7 @@ export interface SupportThread {
   last_message: string | null
   last_message_at: string | null
   unread: boolean
+  needs_attention: boolean
   message_count: number
 }
 

@@ -1462,11 +1462,12 @@ async def orphan_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def support_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """User clicked 'Позвать организатора' - create thread, enter SUPPORT_CHAT."""
+    """User clicked 'Позвать организатора' or typed /support - create thread, enter SUPPORT_CHAT."""
     import uuid as _uuid
 
-    query = update.callback_query
-    await query.answer()
+    # Handle both callback and command
+    if update.callback_query:
+        await update.callback_query.answer()
 
     user_id = context.user_data.get("profile_user_id")
     event_id = context.user_data.get("profile_event_id")
@@ -1484,6 +1485,7 @@ async def support_start_callback(update: Update, context: ContextTypes.DEFAULT_T
         thread = await support_service.get_or_create_thread(
             session, _uuid.UUID(user_id), _uuid.UUID(event_id)
         )
+        thread.needs_attention = True
         await session.commit()
         context.user_data["support_thread_id"] = str(thread.id)
 
@@ -1605,7 +1607,10 @@ def get_onboarding_handler() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, support_chat_text),
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("support", support_start_callback),
+            CommandHandler("cancel", cancel),
+        ],
         per_message=False,
         allow_reentry=True,
     )

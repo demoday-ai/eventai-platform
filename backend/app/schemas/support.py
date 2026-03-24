@@ -13,6 +13,7 @@ class ThreadResponse(BaseModel):
     last_message: str | None = None
     last_message_at: str | None = None
     unread: bool = False
+    needs_attention: bool = False
     message_count: int = 0
 
 

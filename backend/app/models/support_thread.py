@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -14,6 +14,7 @@ class SupportThread(Base):
     event_id: Mapped[UUID] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     closed_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    needs_attention: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -106,9 +106,14 @@ export function SupportChat() {
                     <span className="font-medium text-sm truncate">
                       {thread.user_name}
                     </span>
-                    {thread.unread && (
-                      <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {thread.needs_attention && (
+                        <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] rounded">Зовет орга</span>
+                      )}
+                      {thread.unread && (
+                        <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {thread.user_role || "пользователь"} - {thread.message_count} сообщ.

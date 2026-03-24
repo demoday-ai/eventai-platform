@@ -94,6 +94,7 @@ async def get_threads(
                 last_message=last_msg.text[:100] if last_msg else None,
                 last_message_at=last_msg.created_at.isoformat() if last_msg else None,
                 unread=unread,
+                needs_attention=t.needs_attention,
                 message_count=msg_counts.get(t.id, 0),
             )
         )
