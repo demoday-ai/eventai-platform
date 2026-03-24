@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import check_organizer
+from app.config import settings
 from app.database import get_session
+from app.models.support_thread import SupportThread
 from app.models.user import User
 from app.schemas.support import (
     CreateThreadRequest,
@@ -65,7 +67,7 @@ async def reply_to_thread(
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(check_organizer),
 ):
-    """Send organizer reply."""
+    """Send organizer reply and deliver to user via Telegram."""
     event = await user_service.get_current_event(db)
     if not event:
         raise HTTPException(status_code=404, detail="No active event")
@@ -74,6 +76,24 @@ async def reply_to_thread(
             db, thread_id, event.id, current_user.id, body.text
         )
         await db.commit()
+
+        # Deliver message to user via Telegram bot
+        thread = await db.get(SupportThread, thread_id)
+        if thread:
+            user = await db.get(User, thread.user_id)
+            if user and user.telegram_user_id:
+                try:
+                    from telegram import Bot
+
+                    bot = Bot(token=settings.bot_token)
+                    org_name = current_user.full_name or "Организатор"
+                    await bot.send_message(
+                        chat_id=int(user.telegram_user_id),
+                        text=f"Ответ от организатора ({org_name}):\n\n{body.text}",
+                    )
+                except Exception as e:
+                    logger.warning("Failed to deliver support reply via Telegram: %s", e)
+
         return MessageResponse(
             id=str(msg.id),
             sender_type="organizer",
