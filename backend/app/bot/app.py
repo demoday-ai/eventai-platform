@@ -1,12 +1,21 @@
 import logging
 from pathlib import Path
 
+from telegram import BotCommand
 from telegram.ext import Application, MessageHandler, PicklePersistence, filters
 
 from app.bot.handlers.start import get_onboarding_handler, orphan_text_handler
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+BOT_COMMANDS = [
+    BotCommand("start", "Начать диалог с ботом"),
+    BotCommand("support", "Связь с организаторами"),
+    BotCommand("program", "Моя программа"),
+    BotCommand("profile", "Изменить профиль интересов"),
+    BotCommand("help", "Помощь и подсказки"),
+]
 
 
 def create_bot_app() -> Application:
@@ -27,10 +36,16 @@ def create_bot_app() -> Application:
 
     application = builder.build()
 
+    # Register bot commands menu
+    async def post_init(app: Application) -> None:
+        await app.bot.set_my_commands(BOT_COMMANDS)
+        logger.info("Bot commands menu registered: %d commands", len(BOT_COMMANDS))
+
+    application.post_init = post_init
+
     application.add_handler(get_onboarding_handler())
 
     # Catch-all: text messages from users not in any ConversationHandler
-    # Still useful as fallback for edge cases
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, orphan_text_handler))
 
     return application

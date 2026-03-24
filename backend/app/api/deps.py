@@ -40,6 +40,9 @@ async def check_organizer(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Dependency that checks if the current user is an organizer."""
+    # Dev-admin bypass in development
+    if current_user.telegram_user_id == "dev-admin" and os.getenv("ENVIRONMENT", "development") == "development":
+        return current_user
     if _settings.is_organizer(current_user.telegram_user_id, current_user.username):
         return current_user
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Organizer access required")
