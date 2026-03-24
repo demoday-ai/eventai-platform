@@ -371,23 +371,21 @@ def build_pre_slot_reminder(
     room: Room | None = None,
     project_title: str | None = None,
 ) -> str:
-    """
-    Build 1-hour-before reminder message.
-    """
+    """Build 30-min-before reminder message for all roles."""
     room_name = room.name if room else "..."
 
     if role == "student":
-        return f"⏰ Через час — твоё выступление в {room_name}!"
+        return f"⏰ Через 30 минут - твое выступление в {room_name}!"
 
     elif role == "expert":
-        return f"⏰ Через час — начало оценки в {room_name}!"
+        return f"⏰ Через 30 минут - начало оценки в {room_name}!"
 
     elif role in ("guest", "business"):
         project = project_title or "проект"
-        return f"⏰ Через час — {project} в {room_name}!"
+        return f"⏰ Через 30 минут - {project} в {room_name}!"
 
     else:
-        return f"⏰ Через час — событие в {room_name}!"
+        return f"⏰ Через 30 минут - событие в {room_name}!"
 
 
 # ========== Eve-of-DD Reminder Job (T012) ==========

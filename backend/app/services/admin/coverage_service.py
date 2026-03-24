@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.event import Event
 from app.models.expert import Expert
 from app.models.expert_room_assignment import ExpertRoomAssignment
 from app.models.expert_tag import ExpertTag
@@ -26,6 +27,15 @@ logger = logging.getLogger(__name__)
 _PENDING_STATUSES = frozenset({"proposed", "approved", "invite_ready", "invited"})
 
 
+def _compute_coverage_level(confirmed: int, min_required: int) -> str:
+    """Compute coverage level based on confirmed experts count and minimum required."""
+    if confirmed >= min_required:
+        return "covered"
+    elif confirmed >= 1:
+        return "partial"
+    return "uncovered"
+
+
 async def get_coverage_summary(session: AsyncSession, event_id) -> dict | None:
     """Per-room coverage summary with project counts, top tags, expert counts.
 
@@ -34,6 +44,10 @@ async def get_coverage_summary(session: AsyncSession, event_id) -> dict | None:
     clustering = await matching_service.get_approved_clustering(session, event_id)
     if not clustering:
         return None
+
+    event_result = await session.execute(select(Event).where(Event.id == event_id))
+    event = event_result.scalar_one_or_none()
+    min_experts = event.min_experts_per_room if event else 2
 
     rooms_result = await session.execute(
         select(Room).where(Room.clustering_run_id == clustering.id).order_by(Room.display_order)
@@ -79,12 +93,7 @@ async def get_coverage_summary(session: AsyncSession, event_id) -> dict | None:
         pending = sum(1 for a in room_assignments if a.status in _PENDING_STATUSES)
         declined = sum(1 for a in room_assignments if a.status == "declined")
 
-        if confirmed >= 2:
-            coverage_level = "covered"
-        elif confirmed >= 1:
-            coverage_level = "partial"
-        else:
-            coverage_level = "uncovered"
+        coverage_level = _compute_coverage_level(confirmed, min_required=min_experts)
 
         rooms_data.append(
             {

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.database import get_session
 from app.models import User
-from app.schemas.admin import ProjectDetailResponse, ProjectListItem, ProjectUpdateRequest
+from app.schemas.admin import ProjectCreateRequest, ProjectDetailResponse, ProjectListItem, ProjectUpdateRequest
 from app.services.admin import admin_service, project_service
 from app.services.core import user_service
 
@@ -39,6 +39,33 @@ async def get_projects(
         raise HTTPException(status_code=404, detail="No active event")
 
     return await admin_service.get_projects_list(db, event.id, room_id, status, search)
+
+
+@router.post("/projects", response_model=ProjectDetailResponse, status_code=201)
+async def create_project(
+    body: ProjectCreateRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new project from admin panel."""
+    from app.models.project import Project
+
+    event = await user_service.get_current_event(db)
+    if not event:
+        raise HTTPException(status_code=404, detail="No active event")
+
+    project = Project(
+        event_id=event.id,
+        title=body.title,
+        description=body.description,
+        author=body.author,
+        telegram_contact=body.telegram_contact,
+    )
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+
+    return await admin_service.get_project_detail(db, event.id, project.id)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetailResponse)

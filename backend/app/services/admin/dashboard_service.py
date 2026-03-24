@@ -879,6 +879,10 @@ async def update_project(
         project.title = body.title
     if body.description is not None:
         project.description = body.description
+    if body.author is not None:
+        project.author = body.author
+    if body.telegram_contact is not None:
+        project.telegram_contact = body.telegram_contact
 
     if body.tags is not None:
         # Remove existing tags
