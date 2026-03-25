@@ -157,6 +157,7 @@ async def send_organizer_reply(
         text=text,
     )
     session.add(msg)
+    thread.needs_attention = False
     thread.updated_at = datetime.now(timezone.utc)
     await session.flush()
     await session.refresh(msg)
