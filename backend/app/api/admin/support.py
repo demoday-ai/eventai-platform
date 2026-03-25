@@ -85,11 +85,14 @@ async def reply_to_thread(
                 try:
                     from telegram import Bot
 
+                    from app.bot.keyboards import support_chat_keyboard
+
                     bot = Bot(token=settings.bot_token)
                     org_name = current_user.full_name or "Организатор"
                     await bot.send_message(
                         chat_id=int(user.telegram_user_id),
                         text=f"Ответ от организатора ({org_name}):\n\n{body.text}",
+                        reply_markup=support_chat_keyboard(),
                     )
                 except Exception as e:
                     logger.warning("Failed to deliver support reply via Telegram: %s", e)
@@ -134,6 +137,21 @@ async def create_thread(
         db, event.id, UUID(body.user_id), current_user.id, body.message
     )
     return {"thread_id": str(thread.id), "status": thread.status}
+
+
+@router.post("/support/threads/{thread_id}/dismiss-attention")
+async def dismiss_attention(
+    thread_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(check_organizer),
+):
+    """Organizer dismisses the 'needs attention' flag."""
+    thread = await db.get(SupportThread, thread_id)
+    if not thread:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    thread.needs_attention = False
+    await db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/support/unread-count", response_model=UnreadCountResponse)

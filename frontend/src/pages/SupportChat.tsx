@@ -10,6 +10,7 @@ import {
   getSupportMessages,
   sendSupportReply,
   closeSupportThread,
+  dismissSupportAttention,
 } from "../lib/api-client"
 
 export function SupportChat() {
@@ -64,6 +65,13 @@ export function SupportChat() {
       queryClient.invalidateQueries({ queryKey: ["support-threads"] })
     },
     onError: (err) => setSendError(err instanceof Error ? err.message : "Ошибка закрытия"),
+  })
+
+  const dismissMutation = useMutation({
+    mutationFn: ({ threadId }: { threadId: string }) => dismissSupportAttention(threadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["support-threads"] })
+    },
   })
 
   const threads = threadList?.threads ?? []
@@ -143,16 +151,28 @@ export function SupportChat() {
                     {selectedThread.status === "closed" && " (закрыт)"}
                   </p>
                 </div>
-                {selectedThread.status === "open" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => closeMutation.mutate({ threadId: selectedThreadId! })}
-                    disabled={closeMutation.isPending}
-                  >
-                    Закрыть диалог
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedThread.needs_attention && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => dismissMutation.mutate({ threadId: selectedThreadId! })}
+                      disabled={dismissMutation.isPending}
+                    >
+                      Снять отметку
+                    </Button>
+                  )}
+                  {selectedThread.status === "open" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => closeMutation.mutate({ threadId: selectedThreadId! })}
+                      disabled={closeMutation.isPending}
+                    >
+                      Закрыть диалог
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">

@@ -157,7 +157,6 @@ async def send_organizer_reply(
         text=text,
     )
     session.add(msg)
-    thread.needs_attention = False
     thread.updated_at = datetime.now(timezone.utc)
     await session.flush()
     await session.refresh(msg)
@@ -197,6 +196,7 @@ async def close_thread(
         raise ValueError("Thread not found")
     thread.status = "closed"
     thread.closed_by = closed_by
+    thread.needs_attention = False
     thread.updated_at = datetime.now(timezone.utc)
     await session.commit()
     return thread

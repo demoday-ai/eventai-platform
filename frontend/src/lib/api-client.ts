@@ -1839,3 +1839,7 @@ export const getSupportUnreadCount = async (): Promise<{ count: number }> => {
   const { data } = await apiClient.get<{ count: number }>("/admin/support/unread-count")
   return data
 }
+export const dismissSupportAttention = async (threadId: string): Promise<{ status: string }> => {
+  const { data } = await apiClient.post<{ status: string }>(`/admin/support/threads/${threadId}/dismiss-attention`)
+  return data
+}
