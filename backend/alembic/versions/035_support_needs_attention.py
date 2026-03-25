@@ -16,7 +16,9 @@ depends_on = None
 
 def upgrade() -> None:
     op.add_column("support_threads", sa.Column("needs_attention", sa.Boolean(), nullable=False, server_default="false"))
+    op.create_index("uq_support_thread_per_user_event", "support_threads", ["user_id", "event_id"], unique=True)
 
 
 def downgrade() -> None:
+    op.drop_index("uq_support_thread_per_user_event", table_name="support_threads")
     op.drop_column("support_threads", "needs_attention")
