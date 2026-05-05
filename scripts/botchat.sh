@@ -24,7 +24,9 @@ if [ $# -lt 2 ]; then
 fi
 SESSION="$1"
 shift
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
+# Default to local dev compose. Override with COMPOSE_FILE=docker-compose.prod.yml
+# when running on the prod host (e.g. via SSH from CD).
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 SERVICE="${SERVICE:-botcli}"
 exec docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" \
   python scripts/chat.py --session="$SESSION" "$@"

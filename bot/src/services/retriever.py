@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select, text, delete
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.project import Project
@@ -188,7 +188,14 @@ def _schedule_rerank(candidates: list[dict], slots: dict[UUID, dict]) -> list[di
 async def _fallback_tag_overlap(
     db: AsyncSession, profile_id: UUID, event_id: UUID, tags: list[str]
 ) -> list[Recommendation]:
-    """Fallback: score projects by tag overlap (case-insensitive)."""
+    """Fallback: score projects by tag overlap (case-insensitive).
+
+    If user has no tags or no project overlaps, score is 0 for everyone -- in that
+    case we add a small random nudge so the order is not deterministically alphabetical
+    (which made every guest receive the exact same A2AS, Adapstory, ... program).
+    """
+    import random
+
     result = await db.execute(
         select(Project).where(Project.event_id == event_id)
     )
@@ -200,7 +207,9 @@ async def _fallback_tag_overlap(
     for p in projects:
         project_tags = {t.lower() for t in (p.tags or [])}
         overlap = len(lower_tags & project_tags)
-        score = overlap * 20.0
+        # base: 20 points per matched tag; random tiebreaker 0..10 so we never end up
+        # alphabetical when many projects share the same overlap (or when overlap=0).
+        score = overlap * 20.0 + random.uniform(0, 10)
         scored.append({"project_id": p.id, "title": p.title, "score": score, "rank": 0, "category": "must_visit"})
 
     scored.sort(key=lambda x: x["score"], reverse=True)
@@ -235,13 +244,17 @@ async def _pad_results(
 
     existing_ids = {c["project_id"] for c in candidates}
 
+    # Order by random() so different guests don't always get the same alphabetical
+    # tail (was causing every program to look identical when pgvector returned 0).
     result = await db.execute(
         select(Project)
         .where(Project.event_id == event_id)
         .where(Project.id.notin_(existing_ids))
-        .order_by(Project.title)
+        .order_by(func.random())
         .limit(min_count - len(candidates))
     )
+
+    import random
 
     for p in result.scalars().all():
         candidates.append({
@@ -253,7 +266,8 @@ async def _pad_results(
             "author": p.author,
             "telegram_contact": p.telegram_contact,
             "parsed_content": p.parsed_content,
-            "score": 10.0,  # low default score
+            # spread scores 5-15 so downstream rerank doesn't tie-break alphabetically
+            "score": 5.0 + random.uniform(0, 10),
         })
 
     return candidates

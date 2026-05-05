@@ -15,7 +15,6 @@ import logging
 from uuid import UUID
 
 from aiogram import F, Router
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
@@ -43,65 +42,8 @@ router = Router()
 MAX_CHAT_HISTORY = 20
 
 
-@router.message(BotStates.view_program, Command("profile"))
-async def cmd_profile(message: Message, state: FSMContext, db: AsyncSession) -> None:
-    """Show user profile directly."""
-    state_data = await state.get_data()
-    profile_id = state_data.get("profile_id")
-    if not profile_id:
-        await message.answer("Профиль не найден. Используйте /start.")
-        return
-
-    result = await db.execute(
-        select(GuestProfile).where(GuestProfile.id == profile_id)
-    )
-    profile = result.scalar_one_or_none()
-    if not profile:
-        await message.answer("Профиль не найден.")
-        return
-
-    await message.answer(_format_profile_text(profile))
-
-
-@router.message(BotStates.view_program, Command("rebuild"))
-async def cmd_rebuild(
-    message: Message, state: FSMContext, db: AsyncSession
-) -> None:
-    """Clear profile and restart profiling."""
-    from sqlalchemy import delete
-
-    state_data = await state.get_data()
-    profile_id = state_data.get("profile_id")
-
-    # Delete old recommendations and profile from DB
-    if profile_id:
-        await db.execute(delete(Recommendation).where(Recommendation.guest_profile_id == UUID(profile_id)))
-        await db.execute(delete(GuestProfile).where(GuestProfile.id == UUID(profile_id)))
-        await db.flush()
-
-    await state.update_data(
-        nl_conversation=[],
-        nl_turn=0,
-        extracted_profile=None,
-        program_chat=[],
-        profile_id=None,
-    )
-    await state.set_state(BotStates.onboard_nl_profile)
-    await message.answer("Давайте пересоздадим профиль. Расскажите о ваших интересах.")
-
-
-@router.message(BotStates.view_program, Command("support"))
-async def cmd_support(message: Message, state: FSMContext) -> None:
-    """Transition to support chat."""
-    from src.bot.keyboards.program import support_back_keyboard
-
-    await state.set_state(BotStates.support_chat)
-    await message.answer(
-        "Вы в режиме чата с организатором.\n"
-        "Напишите свой вопрос, и мы передадим его организатору.\n"
-        "Лимит: 3 сообщения за 5 минут.",
-        reply_markup=support_back_keyboard(),
-    )
+# /profile, /rebuild, /support handlers moved to global_cmds.py so they
+# work in any FSM state (not only view_program).
 
 
 @router.callback_query(BotStates.view_program, F.data == "cmd:profile")

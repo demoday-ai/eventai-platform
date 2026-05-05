@@ -163,8 +163,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             content = resp["choices"][0]["message"]["content"]
             matrix_data = json.loads(content)
             return _format_matrix(matrix_data.get("matrix", {}), criteria)
-        except (asyncio.TimeoutError, json.JSONDecodeError, KeyError, IndexError) as e:
-            logger.error("Compare projects failed: %s", e)
+        except Exception as e:
+            logger.error("Compare projects failed: %s", e, exc_info=True)
             return "Не удалось сгенерировать сравнение. Попробуйте позже."
 
     @agent.tool
@@ -244,8 +244,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             for i, q in enumerate(questions, 1):
                 lines.append(f"{i}. {q}")
             return "\n".join(lines)
-        except (asyncio.TimeoutError, json.JSONDecodeError, KeyError, IndexError) as e:
-            logger.error("Generate questions failed: %s", e)
+        except Exception as e:
+            logger.error("Generate questions failed: %s", e, exc_info=True)
             return "Не удалось сгенерировать вопросы. Попробуйте позже."
 
     @agent.tool
@@ -453,8 +453,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             except asyncio.TimeoutError:
                 return "GitHub не ответил в течение 20 секунд."
             except Exception as e:
-                logger.error("GitHub analyze_repo error: %s", e)
-                return f"Ошибка анализа репозитория: {e}"
+                logger.error("GitHub analyze_repo error: %s", e, exc_info=True)
+                return "Не удалось проанализировать репозиторий."
 
             if gh.get("error"):
                 return gh["error"]

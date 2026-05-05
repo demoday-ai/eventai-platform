@@ -32,6 +32,7 @@ from src.bot.routers import (
     detail_router,
     expert_router,
     fallback_router,
+    global_cmds_router,
     profiling_router,
     program_router,
     start_router,
@@ -243,14 +244,18 @@ async def main() -> None:
 
     # --- Routers ---
     # Registration order matters: more specific routers first.
-    # start_router handles /start (CommandStart filter) so it goes first.
+    # global_cmds_router goes FIRST so /reset, /profile, /rebuild, /support, /help
+    #   work in any FSM state (otherwise state-routers' F.text catch-all swallows
+    #   the command as profile text).
+    # start_router handles /start (CommandStart filter).
     # profiling handles onboard_nl_profile + onboard_confirm states.
     # expert handles expert_dashboard + expert_evaluation states.
     # detail handles view_detail state.
     # support handles support_chat state.
     # program handles view_program state (broadest text handler).
-    # fallback_router MUST be last: global /help, /support, /rebuild,
-    # catch-all for messages without state, and stale callbacks.
+    # fallback_router MUST be last: catch-all for messages without state and
+    #   stale callbacks.
+    dp.include_router(global_cmds_router)
     dp.include_router(start_router)
     dp.include_router(profiling_router)
     dp.include_router(expert_router)

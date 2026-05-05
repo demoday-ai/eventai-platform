@@ -274,7 +274,10 @@ async def setup_dispatcher(bot: CLIBot) -> Dispatcher:
     dp.callback_query.middleware(CLIDbMiddleware())
     dp.callback_query.middleware(CLIPlatformMiddleware())
 
-    # Register routers (same order as main.py)
+    # Register routers (same order as main.py).
+    # global_cmds MUST go first so /profile, /rebuild, /support, /reset, /help
+    # work in any FSM state.
+    from src.bot.routers.global_cmds import router as global_cmds_router
     from src.bot.routers.start import router as start_router
     from src.bot.routers.profiling import router as profiling_router
     from src.bot.routers.expert import router as expert_router
@@ -282,6 +285,7 @@ async def setup_dispatcher(bot: CLIBot) -> Dispatcher:
     from src.bot.routers.support import router as support_router
     from src.bot.routers.program import router as program_router
 
+    dp.include_router(global_cmds_router)
     dp.include_router(start_router)
     dp.include_router(profiling_router)
     dp.include_router(expert_router)

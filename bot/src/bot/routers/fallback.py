@@ -11,56 +11,14 @@ Catches commands and messages that no state-specific router handled:
 import logging
 
 from aiogram import Router
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-
-from src.bot.states import BotStates
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(Command("help"))
-async def cmd_help_global(message: Message, state: FSMContext) -> None:
-    """Global /help handler - works in any state."""
-    current = await state.get_state()
-    if current == BotStates.view_program.state:
-        await message.answer(
-            "Напишите вопрос текстом или используйте команды:\n"
-            "/profile - показать профиль\n"
-            "/rebuild - пересоздать профиль\n"
-            "/support - вопрос организатору\n\n"
-            "Примеры:\n"
-            "- 'Покажи проект 3'\n"
-            "- 'Сравни проекты 1 и 2'\n"
-            "- 'Какие вопросы задать автору?'"
-        )
-    elif current and "expert" in current:
-        await message.answer("Выберите проект для оценки из списка выше.")
-    else:
-        await message.answer("Используйте /start чтобы начать.")
-
-
-@router.message(Command("support"))
-async def cmd_support_global(message: Message, state: FSMContext) -> None:
-    """Redirect to support from any state outside view_program."""
-    current = await state.get_state()
-    if current == BotStates.view_program.state:
-        # Let the program router handle it - but since this is fallback,
-        # the program router should have already handled it. If we got here
-        # it means something went wrong, so provide a helpful response.
-        pass
-    await message.answer(
-        "Команда /support доступна после получения рекомендаций. "
-        "Используйте /start."
-    )
-
-
-@router.message(Command("rebuild"))
-async def cmd_rebuild_global(message: Message, state: FSMContext) -> None:
-    """Redirect to rebuild from any state outside view_program."""
-    await message.answer("Используйте /start чтобы начать заново.")
+# /help, /support, /rebuild moved to global_cmds.py (registered first in dispatcher).
 
 
 @router.message()
