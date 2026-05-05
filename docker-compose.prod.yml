@@ -208,6 +208,24 @@ services:
     stop_grace_period: 30s
     restart: unless-stopped
 
+  # CLI test harness for the bot: runs the same image as `bot` but stays idle
+  # (sleep infinity). Drive it via `scripts/botchat.sh` which exec's chat.py
+  # inside this container. Reuses bot/.env, talks to live db/redis/openrouter.
+  botcli:
+    image: demoday-core-bot
+    command: ["sleep", "infinity"]
+    env_file: ./bot/.env
+    depends_on:
+      bot:
+        condition: service_started
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend

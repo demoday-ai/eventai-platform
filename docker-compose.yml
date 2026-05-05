@@ -135,6 +135,17 @@ services:
       timeout: 5s
       retries: 3
 
+  # CLI test harness for the bot — same image, idle by default.
+  # Drive via `scripts/botchat.sh <session> <message>`.
+  botcli:
+    image: demoday-core-bot
+    command: ["sleep", "infinity"]
+    env_file: ./bot/.env
+    depends_on:
+      bot:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   pgdata:
   redis_data:
