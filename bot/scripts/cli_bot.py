@@ -38,7 +38,13 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.session.base import BaseSession
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.methods import SendMessage, EditMessageText, AnswerCallbackQuery, DeleteMessage
+from aiogram.methods import (
+    AnswerCallbackQuery,
+    DeleteMessage,
+    EditMessageText,
+    SendDocument,
+    SendMessage,
+)
 from aiogram.methods.base import Response, TelegramType, TelegramMethod
 from aiogram.types import (
     CallbackQuery,
@@ -95,6 +101,12 @@ class CapturingSession(BaseSession):
             return True
         elif isinstance(method, DeleteMessage):
             return True
+        elif isinstance(method, SendDocument):
+            return Message(
+                message_id=len(self.captured) + 200,
+                date=datetime.datetime.now(),
+                chat=Chat(id=method.chat_id, type="private"),
+            )
         else:
             return True
 
@@ -201,6 +213,14 @@ def _display_pipe(method: TelegramMethod):
     elif isinstance(method, AnswerCallbackQuery):
         if method.text:
             print(f"POPUP: {method.text}", flush=True)
+
+    elif isinstance(method, SendDocument):
+        # method.document is BufferedInputFile in our flow.
+        filename = getattr(method.document, "filename", "<unnamed>")
+        # InputFile carries the bytes via .data on BufferedInputFile.
+        size = len(getattr(method.document, "data", b""))
+        caption = method.caption or ""
+        print(f"DOCUMENT: {filename} ({size} bytes) {caption}", flush=True)
 
     print("---", flush=True)
 

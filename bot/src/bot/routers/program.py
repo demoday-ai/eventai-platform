@@ -160,9 +160,27 @@ async def cb_export_pdf(
     from src.services.pdf_export import generate_recommendations_pdf
     from aiogram.types import BufferedInputFile
 
-    pdf_buf = await generate_recommendations_pdf(recs, projects, user_name=user_name)
-    doc = BufferedInputFile(pdf_buf.read(), filename="demo_day_program.pdf")
-    await callback.message.answer_document(doc, caption="Ваша программа Demo Day")
+    try:
+        pdf_buf = await generate_recommendations_pdf(
+            recs, projects, user_name=user_name
+        )
+        # Defensive: re-seek in case the buffer pointer drifted between
+        # creation and read (BytesIO position may be at EOF after write).
+        pdf_buf.seek(0)
+        data = pdf_buf.read()
+        if not data:
+            logger.error("PDF generated but buffer is empty for user %s", user_id)
+            await callback.message.answer(
+                "Не удалось сгенерировать PDF. Попробуйте позже."
+            )
+            return
+        doc = BufferedInputFile(data, filename="demo_day_program.pdf")
+        await callback.message.answer_document(doc, caption="Ваша программа Demo Day")
+    except Exception as exc:
+        logger.error("PDF export failed for user %s: %s", user_id, exc, exc_info=True)
+        await callback.message.answer(
+            "Не удалось сгенерировать PDF. Попробуйте позже или /support."
+        )
 
 
 @router.message(BotStates.view_program, F.text)

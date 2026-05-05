@@ -181,10 +181,20 @@ async def role_chosen(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
         await _handle_shortcut(callback, state, db, user, event_id)
         return
 
+    # Expert: ask for invite code
+    if data_parts[1] == "expert":
+        await state.set_state(BotStates.expert_invite_entry)
+        await callback.message.edit_text(
+            "Введите код приглашения эксперта (выдаётся организатором):"
+        )
+        await callback.answer()
+        return
+
     # Set role and subrole
     if data_parts[1] == "business":
         user.role_code = "business"
-        user.subrole = None
+        # role:business or role:business:hr
+        user.subrole = data_parts[2] if len(data_parts) > 2 else None
     else:
         user.role_code = "guest"
         user.subrole = data_parts[2] if len(data_parts) > 2 else "other"
@@ -199,6 +209,55 @@ async def role_chosen(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
     )
 
 
+@router.message(BotStates.expert_invite_entry, F.text)
+async def expert_invite_text(
+    message: Message,
+    state: FSMContext,
+    db: AsyncSession,
+) -> None:
+    """User typed an invite code after clicking 'Эксперт / жюри'."""
+    code = (message.text or "").strip()
+    if not code or code.startswith("/"):
+        # Likely a command — let global_cmds router handle on next attempt;
+        # do nothing here so the user sees no echo.
+        await message.answer(
+            "Введите код приглашения эксперта (или /reset чтобы выбрать другую роль)."
+        )
+        return
+
+    expert = await get_expert_by_invite(db, code)
+    if not expert:
+        await message.answer(
+            "Код не найден. Проверьте правильность или обратитесь к организатору."
+        )
+        return
+
+    state_data = await state.get_data()
+    user_id = state_data.get("user_id")
+    if not user_id:
+        await message.answer("Сессия повреждена. Используйте /start.")
+        return
+
+    user_result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user = user_result.scalar_one()
+
+    if not expert.bot_started:
+        expert.bot_started = True
+        expert.user_id = user.id
+        await db.flush()
+
+    user.role_code = "expert"
+    await db.flush()
+
+    await state.set_state(BotStates.expert_dashboard)
+    await state.update_data(expert_id=str(expert.id))
+
+    from src.bot.routers.expert import show_dashboard
+
+    await message.answer(f"Добро пожаловать, {expert.name}.")
+    await show_dashboard(message, state, db)
+
+
 async def _handle_shortcut(
     callback: CallbackQuery,
     state: FSMContext,
@@ -206,27 +265,77 @@ async def _handle_shortcut(
     user: User,
     event_id: str,
 ) -> None:
-    """Show all projects without profiling."""
+    """Show all projects without profiling.
+
+    Creates a placeholder GuestProfile (so view_program text/agent handlers
+    have something to attach to) and pseudo-Recommendations for the first
+    20 projects so that callbacks @project:N work the same as in the
+    personalised flow. Order is alphabetical by title for predictability.
+    """
+    from uuid import UUID
+
     user.role_code = "guest"
     await db.flush()
-
-    await state.set_state(BotStates.view_program)
-    await callback.message.edit_text("Загружаю все проекты...")
 
     projects_result = await db.execute(
         select(Project).where(Project.event_id == event_id).order_by(Project.title)
     )
-    projects = list(projects_result.scalars().all())
+    projects = list(projects_result.scalars().all())[:20]
 
-    lines = ["Все проекты:\n"]
-    for i, p in enumerate(projects[:20], 1):
-        tags = ", ".join(p.tags[:3]) if p.tags else ""
+    # Create or reuse a placeholder profile for this user/event
+    existing = await db.execute(
+        select(GuestProfile).where(
+            GuestProfile.user_id == user.id,
+            GuestProfile.event_id == UUID(event_id),
+        )
+    )
+    profile = existing.scalar_one_or_none()
+    if not profile:
+        profile = GuestProfile(
+            user_id=user.id,
+            event_id=UUID(event_id),
+            selected_tags=[],
+            keywords=[],
+            nl_summary="Просмотр всех проектов без профилирования.",
+        )
+        db.add(profile)
+        await db.flush()
+    else:
+        # Wipe stale recs so we can rebuild as a flat 20-project list
+        from sqlalchemy import delete
+        await db.execute(
+            delete(Recommendation).where(
+                Recommendation.guest_profile_id == profile.id
+            )
+        )
+        await db.flush()
+
+    # Build pseudo-recommendations so @project:N callbacks resolve
+    for i, p in enumerate(projects, 1):
+        db.add(
+            Recommendation(
+                guest_profile_id=profile.id,
+                project_id=p.id,
+                relevance_score=0.0,
+                category="must_visit" if i <= 8 else "if_time",
+                rank=i,
+            )
+        )
+    await db.flush()
+    await state.update_data(profile_id=str(profile.id))
+    await state.set_state(BotStates.view_program)
+
+    lines = ["Все проекты Demo Day (первые 20):\n"]
+    project_list: list[tuple[int, str]] = []
+    for i, p in enumerate(projects, 1):
         lines.append(f"#{i} {p.title}")
-        if tags:
-            lines.append(f"  {tags}")
-    if len(projects) > 20:
-        lines.append(f"\n...и еще {len(projects) - 20} проектов")
-    lines.append("\nНапишите номер проекта для подробностей.")
-    lines.append("Используйте /rebuild для персональных рекомендаций.")
+        project_list.append((i, p.title))
+    if len(projects) == 20:
+        lines.append("\nНажмите кнопку проекта чтобы открыть детали.")
+        lines.append("Для персональной подборки используйте /rebuild.")
 
-    await callback.message.answer("\n".join(lines), reply_markup=program_keyboard())
+    await callback.message.edit_text("\n".join(lines))
+    await callback.message.answer(
+        "Откройте проект:",
+        reply_markup=project_buttons_keyboard(project_list),
+    )

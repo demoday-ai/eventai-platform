@@ -89,11 +89,13 @@ async def main() -> None:
             if extraction:
                 project.parsed_content = extraction
                 await db.flush()
+                # Commit per project so partial progress survives interruption
+                # (bot rebuild, SIGKILL, network blip, etc).
+                await db.commit()
                 logger.info("  Extracted: %s", project.title)
             else:
                 logger.warning("  Extraction failed: %s", project.title)
 
-        await db.commit()
         logger.info("Done. %d projects processed.", len(projects))
 
     await platform.close()
