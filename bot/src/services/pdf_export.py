@@ -73,7 +73,19 @@ async def generate_recommendations_pdf(
             for row in rows.all():
                 slots_by_rec_id[row[0].id] = (row[0], row.room_name)
 
-    for rec in recs:
+    # Sort chronologically inside each category (must_visit first, then if_time)
+    # so the PDF reads as a walk-through schedule.
+    from datetime import datetime, timezone
+
+    def _sort_key(r: Recommendation):
+        bucket = 0 if r.category == "must_visit" else 1
+        slot_tuple = slots_by_rec_id.get(r.slot_id) if r.slot_id else None
+        start = slot_tuple[0].start_time if slot_tuple else None
+        return (bucket, start or datetime.max.replace(tzinfo=timezone.utc))
+
+    sorted_recs = sorted(recs, key=_sort_key)
+
+    for rec in sorted_recs:
         project = projects_by_id.get(rec.project_id)
         if not project:
             continue

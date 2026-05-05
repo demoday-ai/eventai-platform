@@ -373,15 +373,40 @@ async def format_program(
     """Format recommendations list with schedule info.
 
     Multi-line layout per project so long titles + room names don't wrap into
-    a single inline blob. Sorted by rank (which mostly matches relevance);
-    if_time projects keep their relative order but are marked.
+    a single inline blob. **Sorted chronologically** within each category
+    (must-visit first by start time, then if-time by start time) so the user
+    can walk the day end-to-end without jumping around the schedule.
 
     Returns (text, [(rank, title), ...]).
     """
+    # Pre-load slots for chronological sort, in one query.
+    slot_ids = [r.slot_id for r in recs if r.slot_id]
+    slots_by_id: dict = {}
+    if slot_ids:
+        rows = await db.execute(
+            select(ScheduleSlot, Room.name.label("room_name"))
+            .join(Room, ScheduleSlot.room_id == Room.id)
+            .where(ScheduleSlot.id.in_(slot_ids))
+        )
+        for row in rows.all():
+            slots_by_id[row[0].id] = (row[0], row.room_name)
+
+    def _sort_key(r: Recommendation):
+        # Tuple: category bucket (0=must, 1=if_time), then start_time.
+        # Recs without a slot fall to the end of their bucket but before none.
+        bucket = 0 if r.category == "must_visit" else 1
+        slot_tuple = slots_by_id.get(r.slot_id) if r.slot_id else None
+        start = slot_tuple[0].start_time if slot_tuple else None
+        # Use ISO max for missing time so they sort to bucket end.
+        from datetime import datetime, timezone
+        return (bucket, start or datetime.max.replace(tzinfo=timezone.utc))
+
+    sorted_recs = sorted(recs, key=_sort_key)
+
     lines: list[str] = [header, ""]
     project_list: list[tuple[int, str]] = []
 
-    for rec in recs:
+    for rec in sorted_recs:
         # Load project
         proj_result = await db.execute(
             select(Project).where(Project.id == rec.project_id)
@@ -392,22 +417,14 @@ async def format_program(
 
         project_list.append((rec.rank, project.title))
 
-        # Load schedule slot
+        # Schedule slot (use the pre-loaded map populated above)
         time_block: str | None = None
         room_name: str | None = None
-        if rec.slot_id:
-            slot_result = await db.execute(
-                select(ScheduleSlot, Room.name.label("room_name"))
-                .join(Room, ScheduleSlot.room_id == Room.id)
-                .where(ScheduleSlot.id == rec.slot_id)
-            )
-            row = slot_result.first()
-            if row:
-                slot = row[0]
-                room_name = row.room_name
-                time_str = slot.start_time.strftime("%H:%M")
-                end_str = slot.end_time.strftime("%H:%M")
-                time_block = f"{time_str}–{end_str}"
+        if rec.slot_id and rec.slot_id in slots_by_id:
+            slot, room_name = slots_by_id[rec.slot_id]
+            time_str = slot.start_time.strftime("%H:%M")
+            end_str = slot.end_time.strftime("%H:%M")
+            time_block = f"{time_str}–{end_str}"
 
         marker = " [если успеете]" if rec.category == "if_time" else ""
 
