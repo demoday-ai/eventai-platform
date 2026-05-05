@@ -85,16 +85,49 @@ async def generate_recommendations_pdf(
 
     sorted_recs = sorted(recs, key=_sort_key)
 
+    # Build (bucket -> [unique sorted dates]) for День 1/2 labels.
+    bucket_dates: dict = {}
+    for r in sorted_recs:
+        b = 0 if r.category == "must_visit" else 1
+        if r.slot_id and r.slot_id in slots_by_rec_id:
+            d = slots_by_rec_id[r.slot_id][0].start_time.date()
+            bucket_dates.setdefault(b, [])
+            if d not in bucket_dates[b]:
+                bucket_dates[b].append(d)
+
+    last_key = None  # (bucket, date)
+    last_bucket = None
+
     for rec in sorted_recs:
         project = projects_by_id.get(rec.project_id)
         if not project:
             continue
 
-        # Title with rank + (если успеете)
-        marker = "  (если успеете)" if rec.category == "if_time" else ""
+        # Day/bucket section header
+        bucket = 0 if rec.category == "must_visit" else 1
+        slot_tuple = slots_by_rec_id.get(rec.slot_id) if rec.slot_id else None
+        slot_date = slot_tuple[0].start_time.date() if slot_tuple else None
+        key = (bucket, slot_date)
+        if slot_date and key != last_key:
+            if bucket == 1 and last_bucket != 1:
+                pdf.ln(2)
+                pdf.set_font("DejaVu", "B", 13)
+                pdf.cell(0, 8, "ЕСЛИ УСПЕЕТЕ", new_x="LMARGIN", new_y="NEXT")
+            day_idx = bucket_dates.get(bucket, []).index(slot_date)
+            day_label = f"День {day_idx + 1}"
+            pdf.set_font("DejaVu", "B", 11)
+            pdf.cell(
+                0, 7, f"{day_label}  ({slot_date.strftime('%d.%m')})",
+                new_x="LMARGIN", new_y="NEXT",
+            )
+            pdf.ln(1)
+            last_key = key
+            last_bucket = bucket
+
+        # Title with rank
         pdf.set_font("DejaVu", "B", 12)
         pdf.multi_cell(
-            0, 7, f"#{rec.rank}  {project.title}{marker}",
+            0, 7, f"#{rec.rank}  {project.title}",
             new_x="LMARGIN", new_y="NEXT",
         )
         pdf.ln(1)

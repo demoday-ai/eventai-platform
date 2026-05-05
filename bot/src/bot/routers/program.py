@@ -405,6 +405,20 @@ async def format_program(
 
     lines: list[str] = [header, ""]
     project_list: list[tuple[int, str]] = []
+    last_day: tuple | None = None  # (bucket, date) → insert day header on change
+    last_bucket: int | None = None
+    DAY_NAMES = {0: "День 1", 1: "День 2", 2: "День 3"}
+
+    # Build a (bucket -> [unique sorted dates]) map so we can label День 1/2.
+    bucket_dates: dict = {}
+    for r in sorted_recs:
+        b = 0 if r.category == "must_visit" else 1
+        slot_tuple = slots_by_id.get(r.slot_id) if r.slot_id else None
+        if slot_tuple:
+            d = slot_tuple[0].start_time.date()
+            bucket_dates.setdefault(b, [])
+            if d not in bucket_dates[b]:
+                bucket_dates[b].append(d)
 
     for rec in sorted_recs:
         # Load project
@@ -420,13 +434,32 @@ async def format_program(
         # Schedule slot (use the pre-loaded map populated above)
         time_block: str | None = None
         room_name: str | None = None
+        slot = None
         if rec.slot_id and rec.slot_id in slots_by_id:
             slot, room_name = slots_by_id[rec.slot_id]
             time_str = slot.start_time.strftime("%H:%M")
             end_str = slot.end_time.strftime("%H:%M")
             time_block = f"{time_str}–{end_str}"
 
-        marker = " [если успеете]" if rec.category == "if_time" else ""
+        # Day header on day OR bucket change.
+        bucket = 0 if rec.category == "must_visit" else 1
+        slot_date = slot.start_time.date() if slot else None
+        current_key = (bucket, slot_date)
+        if slot_date and current_key != last_day:
+            day_idx = bucket_dates.get(bucket, []).index(slot_date)
+            day_label = DAY_NAMES.get(day_idx, f"День {day_idx + 1}")
+            section = (
+                "🟡 ЕСЛИ УСПЕЕТЕ" if bucket == 1 and last_bucket != 1 else None
+            )
+            if section:
+                lines.append(section)
+                lines.append("")
+            lines.append(f"📅 {day_label} ({slot_date.strftime('%d.%m')})")
+            lines.append("")
+            last_day = current_key
+            last_bucket = bucket
+
+        marker = ""  # category now shown via section header above, no inline marker needed
 
         # Multi-line block: empty line above for breathing room, then
         # title (with rank), then time/room on its own line.
