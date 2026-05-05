@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.types import JSONType
 
 
 class Expert(Base):
@@ -39,6 +40,17 @@ class Expert(Base):
     bot_started: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     bot_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
+
+    # 031-bot-replacement: bonus-track-llm fields
+    invite_code: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True)
+    tags_json: Mapped[list | None] = mapped_column(JSONType, nullable=True)
+    # Single-room reference used by bot expert flow; admin keeps using
+    # expert_room_assignment for richer multi-room/coverage logic.
+    room_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("rooms.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     user = relationship("User")
     tags = relationship("ExpertTag", back_populates="expert", cascade="all, delete-orphan")

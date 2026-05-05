@@ -51,7 +51,7 @@ def normalize_final():
     print(f"projects_final.json: {len(projects)} projects updated")
 
     if unknown_tags:
-        print(f"\nUnknown tags (kept as-is):")
+        print("\nUnknown tags (kept as-is):")
         for tag, count in unknown_tags.most_common(10):
             print(f"  {count:3d}  {tag}")
 

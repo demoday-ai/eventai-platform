@@ -1,6 +1,5 @@
 """Format raw ElevenLabs transcript JSON into readable markdown."""
 import json
-import sys
 
 INPUT = "docs/01-discovery/interview-raw-botov.json"
 OUTPUT = "docs/01-discovery/interview-transcript-botov.md"

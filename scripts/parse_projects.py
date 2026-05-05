@@ -494,7 +494,7 @@ def main():
     for room, count in sorted(room_counts.items(), key=lambda x: -x[1])[:10]:
         print(f"  {room}: {count}")
 
-    print(f"\nDone! Output files:")
+    print("\nDone! Output files:")
     print(f"  - {OUTPUT_CSV}")
     print(f"  - {OUTPUT_JSON}")
 

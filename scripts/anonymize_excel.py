@@ -10,12 +10,9 @@ Output: data/test/*.xlsx
 
 import json
 import re
-import os
-import copy
 from pathlib import Path
 from collections import defaultdict
 import openpyxl
-from openpyxl.utils import get_column_letter
 
 # Paths
 DOWNLOADS = Path(r"C:\Users\Admin\Downloads")
@@ -589,7 +586,7 @@ def main():
         json.dump(mapping, f, ensure_ascii=False, indent=2)
 
     print(f"\nMapping saved to: {mapping_path.name}")
-    print(f"\nStats:")
+    print("\nStats:")
     print(f"  Students:  {len(anon.student_map)}")
     print(f"  Experts:   {len(anon.expert_map)}")
     print(f"  Mentors:   {len(anon.mentor_map)}")

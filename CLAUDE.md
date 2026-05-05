@@ -80,26 +80,36 @@ AI-агент-куратор DemoDay (AI-first Unconference Navigator)
 
 ## Репозиторий
 
-**Основной:** https://github.com/demoday-ai/demoday-core (единый монорепо)
+**Основной:** https://github.com/demoday-ai/eventai-platform (единый монорепо, monolith + bot)
 
 | Папка | Назначение |
 |-------|-----------|
+| `backend/` | FastAPI + admin API + scheduler (APScheduler) + Celery worker. Использует send-only `aiogram.Bot` для исходящих сообщений |
+| `frontend/` | React 19 + Vite + TS + shadcn/ui (admin UI ~20 страниц) |
+| `bot/` | Standalone Telegram-агент (aiogram 3 + PydanticAI + 8 tools + pgvector). Эксклюзивно держит long-poll Telegram. См. `bot/CLAUDE.md` |
 | `docs/` | Документация, спецификация, артефакты discovery |
 | `data/` | Данные: экспертный маппинг, тестовые данные |
 | `data/test/` | Анонимизированные Excel-файлы DD для тестирования и демо |
 | `scripts/` | Утилиты (анонимизация, обработка данных) |
+| `specs/` | Speckit-спецификации фич (`031-bot-replacement` -- последняя крупная) |
 | `telegram-log/` | Telegram-бот для логирования чата команды |
+
+**Архитектурное правило:** Telegram токен один, long-poll держит **только** контейнер `bot`. `backend/scheduler/messaging` шлют через send-only `aiogram.Bot` (см. `backend/app/services/core/bot_messenger.py`). Telegram это разрешает.
 
 **Инфраструктура кэмпа:** https://github.com/AI-Talent-Camp-2026/ai-talent-camp-2026-infra
 
 ## Инфраструктура
 
-EventAI Server в Yandex Cloud.
+EventAI Server на Beget VPS.
 
-- **VM:** 2 vCPU, 4 GB RAM, 20 GB SSD, Ubuntu 24.04
-- **IP:** `84.252.139.24`
+- **VM:** 4 vCPU, 3.8 GB RAM, 38 GB SSD, Ubuntu (Linux 6.8)
+- **IP:** `85.198.96.191`
 - **Домен:** `evt-ai.ru`
-- **SSH:** `ssh -i ~/.ssh/evt-ai-key dpgorbunov@84.252.139.24`
+- **SSH:** `ssh -i ~/.ssh/evt-ai-key root@85.198.96.191`
+- **Workspace:** `~/workspace/demoday-core`
+- **Reverse proxy:** Traefik v2.11 (контейнер `traefik-traefik-1`), сеть `traefik-public`, Let's Encrypt
+- **CI/CD:** GitHub Actions (`.github/workflows/ci.yml` + `cd.yml`). На push в `main` -> CI (ruff, pytest, eslint, tsc, vitest) -> CD (SSH в VPS, `git reset --hard origin/main`, `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`).
+- **Соседние сервисы на VPS:** `llm-agent-platform`, `eventai-agent` (legacy), `openclaw`, `digital-twin`, `snowbase` -- все в Docker, RAM делим
 
 ## Документация
 
@@ -200,13 +210,22 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 
 ## Active Technologies
 
-**Backend:**
-- Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg
-- PostgreSQL 16
-- httpx, python-multipart, OpenRouter API
-- APScheduler 3.10+ (CronTrigger + IntervalTrigger)
+**Backend (`backend/`):**
+- Python 3.12 + FastAPI, SQLAlchemy 2.0 (asyncpg), Alembic
+- PostgreSQL 16 + pgvector (3072d Gemini embeddings)
+- aiogram 3.27 (send-only `Bot` через `app/services/core/bot_messenger.py`)
+- APScheduler 3.10+ (Cron + Interval), Celery + RabbitMQ + Redis (db0)
+- httpx, OpenRouter API
 
-**Frontend:**
+**Bot agent (`bot/`):**
+- Python 3.12 + aiogram 3.x (long-poll, Redis FSM в db1)
+- PydanticAI Agent с 8 tools (show_project, show_profile, compare_projects, generate_questions, filter_projects, get_summary, update_status, github_drilldown)
+- pgvector cosine search (brute-force, ~330 проектов)
+- LLM: deepseek/deepseek-v3.2 через OpenRouter
+- Embeddings: google/gemini-embedding-001
+- Markdown: telegramify-markdown (LLM markdown -> Telegram entities)
+
+**Frontend (`frontend/`):**
 - React 19 + TypeScript + Vite
 - TanStack Query (react-query) для API
 - Tailwind CSS + shadcn/ui
@@ -214,7 +233,8 @@ _Воркшоп: Василий Рассказов (X5). Фреймворк: Dis
 - Vitest + Testing Library для тестов
 
 ## Recent Changes
-- 001-onboarding: Added Python 3.12+ + FastAPI, python-telegram-bot 21.x, SQLAlchemy 2.0, Alembic, asyncpg
+- 001-onboarding: Added Python 3.12+ + FastAPI, SQLAlchemy 2.0, Alembic, asyncpg
 - 002-project-clustering: Added httpx, python-multipart, OpenRouter API integration, 6 new DB tables (projects, tags, project_tags, clustering_runs, rooms, room_projects), LLM-based clustering, seed data (400 projects from checkpoint forms)
 - 005-dd-reminders: Added APScheduler 3.10+ (CronTrigger + IntervalTrigger), 3 new DB tables (schedule_slots, notifications, schedule_change_logs), schedule auto-generation from clustering, eve-of-DD and pre-slot reminders, timing shift notifications with batching
 - 016-organizer-web-admin: Added frontend (React + Vite + TypeScript + Tailwind + shadcn/ui), Phase 1 Dashboard with metrics API (GET /api/v1/admin/dashboard), TanStack Query, auto-refresh, alerts, 10 tests (Vitest + Testing Library)
+- 031-bot-replacement: Заменён python-telegram-bot 21.x на aiogram 3.27 + standalone bonus-агент в `bot/`. Миграции 036/037/038: `pgvector` extension, `users.role_code` enum, новые поля `projects/guest_profiles/recommendations/experts`, таблицы `chat_messages/support_log/bot_expert_scores`. Backend больше не держит long-poll -- только send-only `aiogram.Bot` через `bot_messenger`. DB image: `postgres:16-alpine` -> `pgvector/pgvector:pg16`. Удалены `app/bot/`, `services/guest/*`

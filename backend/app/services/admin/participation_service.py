@@ -3,10 +3,10 @@ import logging
 import uuid
 from datetime import date, datetime, timezone
 
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.models.clustering_run import ClusteringRun
 from app.models.event import Event
@@ -27,9 +27,10 @@ logger = logging.getLogger(__name__)
 
 def _acknowledge_slot_keyboard(request_id: str) -> InlineKeyboardMarkup:
     short_id = str(request_id)[:8]
+    # aiogram InlineKeyboardMarkup expects inline_keyboard kwarg; this matches PTB shape.
     return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("Ознакомлен", callback_data=f"ack:{short_id}")],
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Ознакомлен", callback_data=f"ack:{short_id}")],
         ]
     )
 

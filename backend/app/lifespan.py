@@ -96,57 +96,28 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Failed to load LLM keys from DB (non-fatal, will use env)")
 
+    # 031-bot-replacement: bot now runs as a separate service (bot/).
+    # Backend only sends outbound messages via send-only aiogram.Bot.
+    # No polling / webhook handling here.
     if settings.bot_token:
-        from app.bot.app import create_bot_app
-
-        bot_app = create_bot_app()
-
-        if settings.bot_mode == "webhook":
-            webhook_path = "/bot/webhook"
-            webhook_full = f"{settings.webhook_url}{webhook_path}"
-            await bot_app.initialize()
-            await bot_app.bot.set_webhook(webhook_full)
-            await bot_app.start()
-            logger.info("Bot started in webhook mode: %s", webhook_full)
-
-            from telegram.ext import Application
-
-            async def webhook_handler(request):
-                from starlette.responses import Response
-
-                data = await request.json()
-                update = Application.de_json(data, bot_app.bot)
-                await bot_app.process_update(update)
-                return Response(status_code=200)
-
-            app.add_api_route(webhook_path, webhook_handler, methods=["POST"])
-        else:
-            await bot_app.initialize()
-            await bot_app.start()
-            await bot_app.updater.start_polling()
-            logger.info("Bot started in polling mode")
-
-        app.state.bot_app = bot_app
-    else:
-        logger.warning("BOT_TOKEN not set — bot disabled")
-
-    # Setup APScheduler for reminders/escalations
-    if settings.bot_token and hasattr(app.state, "bot_app"):
         try:
             from app.database import async_session as session_factory
             from app.scheduler import setup_scheduler
+            from app.services.core.bot_messenger import get_send_bot
 
-            bot_instance = app.state.bot_app.bot
-            scheduler = setup_scheduler(bot_instance, session_factory)
+            send_bot = get_send_bot()
+            scheduler = setup_scheduler(send_bot, session_factory)
             scheduler.start()
             app.state.scheduler = scheduler
             logger.info(
-                "APScheduler started: expert reminders (12h), escalations (12h), "
-                "participation jobs (1h/24h), eve-of-DD (17:00/18:00 MSK), "
+                "APScheduler started (send-only via aiogram): expert reminders (12h), "
+                "escalations (12h), participation jobs (1h/24h), eve-of-DD (17:00/18:00 MSK), "
                 "pre-slot (5min), batch processor (60s), expert briefing (18:00 MSK)"
             )
         except Exception:
             logger.exception("Failed to start APScheduler (non-fatal)")
+    else:
+        logger.warning("BOT_TOKEN not set -- scheduler disabled (no outbound messaging)")
 
     yield
 
@@ -155,10 +126,10 @@ async def lifespan(app: FastAPI):
         app.state.scheduler.shutdown(wait=False)
         logger.info("APScheduler stopped")
 
-    if hasattr(app.state, "bot_app"):
-        bot_app = app.state.bot_app
-        if settings.bot_mode == "polling" and bot_app.updater.running:
-            await bot_app.updater.stop()
-        await bot_app.stop()
-        await bot_app.shutdown()
-        logger.info("Bot stopped")
+    # Close send-only aiogram.Bot session
+    try:
+        from app.services.core.bot_messenger import close_send_bot
+
+        await close_send_bot()
+    except Exception:
+        logger.exception("Failed to close send-only Bot")

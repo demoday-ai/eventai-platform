@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.config import settings
 from app.database import get_session
 from app.models import User
 from app.schemas.admin import (
@@ -94,9 +93,9 @@ async def messaging_send(
             detail="Template must not be empty",
         )
 
-    from telegram import Bot
+    from app.services.core.bot_messenger import get_send_bot
 
-    bot = Bot(token=settings.bot_token)
+    bot = get_send_bot()
     result = await messaging_service.send_messages(
         db,
         event.id,

@@ -5,7 +5,6 @@ import csv
 import re
 from pathlib import Path
 from collections import defaultdict
-from typing import Any
 
 import pandas as pd
 
@@ -729,13 +728,13 @@ def main():
     with_links = sum(1 for p in merged if p.get('links'))
     with_repo = sum(1 for p in merged if p.get('repository'))
 
-    print(f"\nData completeness:")
+    print("\nData completeness:")
     print(f"  With expert scores: {with_scores}")
     print(f"  With expert comments: {with_comments}")
     print(f"  With links: {with_links}")
     print(f"  With repository: {with_repo}")
 
-    print(f"\nDone! Output files:")
+    print("\nDone! Output files:")
     print(f"  - {OUTPUT_JSON} ({OUTPUT_JSON.stat().st_size / 1024:.1f} KB)")
     print(f"  - {OUTPUT_CSV} ({OUTPUT_CSV.stat().st_size / 1024:.1f} KB)")
 

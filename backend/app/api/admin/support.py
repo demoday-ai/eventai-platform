@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import check_organizer
-from app.config import settings
 from app.database import get_session
 from app.models.support_thread import SupportThread
 from app.models.user import User
@@ -83,16 +82,15 @@ async def reply_to_thread(
             user = await db.get(User, thread.user_id)
             if user and user.telegram_user_id:
                 try:
-                    from telegram import Bot
+                    from app.services.core.bot_messenger import get_send_bot
 
-                    from app.bot.keyboards import support_chat_keyboard
-
-                    bot = Bot(token=settings.bot_token)
+                    bot = get_send_bot()
                     org_name = current_user.full_name or "Организатор"
+                    # The bot/ service shows guests how to keep talking via /support;
+                    # no inline keyboard from backend needed for plain text reply.
                     await bot.send_message(
                         chat_id=int(user.telegram_user_id),
                         text=f"Ответ от организатора ({org_name}):\n\n{body.text}",
-                        reply_markup=support_chat_keyboard(),
                     )
                 except Exception as e:
                     logger.warning("Failed to deliver support reply via Telegram: %s", e)

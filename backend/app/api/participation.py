@@ -28,13 +28,9 @@ async def broadcast_slots(
         raise HTTPException(status_code=404, detail="Нет текущего события")
 
     try:
-        # We need a bot instance — this endpoint is primarily for API access
-        # The main flow is through the Telegram bot handler
-        from telegram import Bot
+        from app.services.core.bot_messenger import get_send_bot
 
-        from app.config import settings
-
-        bot = Bot(token=settings.bot_token)
+        bot = get_send_bot()
         result = await participation_service.broadcast_slots(session, event, bot)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))

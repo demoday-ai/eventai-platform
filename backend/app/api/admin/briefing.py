@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.config import settings
 from app.database import get_session
 from app.models import User
 from app.schemas.admin import BriefingPreview, BriefingSendResult
@@ -43,9 +42,9 @@ async def send_briefings(
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active event")
 
-    from telegram import Bot
+    from app.services.core.bot_messenger import get_send_bot
 
-    bot = Bot(token=settings.bot_token)
+    bot = get_send_bot()
     result = await briefing_service.send_all_briefings(db, event.id, bot)
 
     await audit_service.log_action(

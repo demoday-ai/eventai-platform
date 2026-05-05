@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Add parent to path for imports
@@ -205,7 +205,7 @@ async def main():
         print(f"Event: {event.name} ({event.id})")
 
         result = await sync_rooms(session, event.id, final_data)
-        print(f"\n=== RESULT ===")
+        print("\n=== RESULT ===")
         print(f"Rooms: {result['rooms_created']}")
         print(f"Assignments: {result['assignments']}")
         print(f"Not found: {result['not_found']}")

@@ -1,0 +1,706 @@
+"""Tool implementations for the EventAI PydanticAI agent.
+
+Eight tools available to the LLM agent during VIEW_PROGRAM state:
+
+- show_project      -- карточка проекта: описание, стек, метрики из артефактов, автор.
+                       Принимает номер (#1) или название. Поиск среди рекомендаций.
+- show_profile      -- текущий профиль гостя: теги, цели, summary. Без параметров.
+- compare_projects  -- сравнение 2-5 проектов. LLM генерирует матрицу по критериям
+                       (тематика/стек/применимость для гостей, стадия/бизнес-модель для бизнеса).
+- generate_questions -- 3-5 вопросов для Q&A автору. Персонализированы под роль
+                       (студент -> технические, HR -> найм/команда/пилот).
+- update_status     -- бизнес-пайплайн: interested/contacted/meeting_scheduled/rejected/in_progress.
+                       Только role=business. Создает BusinessFollowup в БД.
+- filter_projects   -- фильтр рекомендаций по тегу или технологии (case-insensitive).
+- get_summary       -- итоги: для гостей follow-up пакет (контакты + шаблон),
+                       для бизнеса pipeline (статусы + шаблоны обращений).
+- github_drilldown  -- GitHub-репозиторий через gh CLI (live).
+                       summary: полный анализ (stars, commits, health, red flags).
+                       file: содержимое файла (до 3000 символов).
+                       tree: структура файлов (до 100 записей).
+                       commits: последние 10 коммитов.
+                       contributors: топ-10 контрибьюторов с процентами.
+"""
+
+import asyncio
+import json
+import logging
+
+from pydantic_ai import Agent, RunContext
+from sqlalchemy import select, func
+
+from src.agent.agent import AgentDeps
+from src.models.business_followup import BusinessFollowup
+from src.models.project import Project
+from src.models.recommendation import Recommendation
+
+logger = logging.getLogger(__name__)
+
+
+def register_tools(agent: Agent[AgentDeps, str]) -> None:
+    """Register all 8 tools on the given agent instance."""
+
+    @agent.tool
+    async def show_project(
+        ctx: RunContext[AgentDeps], project_identifier: str
+    ) -> str:
+        """Показать карточку проекта: описание, стек, метрики из артефактов (PPTX/PDF/README), автор.
+
+        Args:
+            project_identifier: номер (#1, "1") или название проекта ("ChatLaw").
+                Поиск среди рекомендаций пользователя.
+        Returns:
+            Форматированная карточка с данными из БД + parsed_content (артефакты).
+        """
+        deps = ctx.deps
+
+        # Try rank first
+        rec = None
+        try:
+            rank = int(project_identifier.strip().lstrip("#"))
+            rec = _find_recommendation(deps.recommendations, rank)
+        except ValueError:
+            pass
+
+        # Fallback: search by name among recommended projects
+        if not rec:
+            name_lower = project_identifier.strip().lower()
+            project_ids = [r.project_id for r in deps.recommendations]
+            if project_ids:
+                result = await deps.db.execute(
+                    select(Project).where(
+                        Project.id.in_(project_ids),
+                        func.lower(Project.title).contains(name_lower),
+                    )
+                )
+                matched = result.scalars().first()
+                if matched:
+                    rec = next(
+                        (r for r in deps.recommendations if r.project_id == matched.id),
+                        None,
+                    )
+
+        if not rec:
+            return f"Проект '{project_identifier}' не найден в рекомендациях."
+
+        result = await deps.db.execute(
+            select(Project).where(Project.id == rec.project_id)
+        )
+        project = result.scalar_one_or_none()
+        if not project:
+            return f"Проект '{project_identifier}' не найден."
+
+        return _format_project_card(project, rec)
+
+    @agent.tool
+    async def show_profile(ctx: RunContext[AgentDeps]) -> str:
+        """Показать текущий профиль гостя: выбранные теги, цели, NL-summary, бизнес-поля."""
+        deps = ctx.deps
+        if not deps.profile:
+            return "Профиль не создан. Используйте /rebuild для персонализации."
+
+        from src.agent.agent import _format_profile
+
+        return _format_profile(deps.profile)
+
+    @agent.tool
+    async def compare_projects(
+        ctx: RunContext[AgentDeps], project_ranks: list[int]
+    ) -> str:
+        """Сравнить 2-5 проектов через LLM-матрицу.
+
+        Критерии зависят от роли: для гостей (тематика, стек, применимость),
+        для бизнеса (стадия, команда, бизнес-модель, готовность к пилоту).
+        Использует отдельный LLM-вызов для генерации матрицы.
+
+        Args:
+            project_ranks: список номеров проектов из рекомендаций, например [1, 3].
+        """
+        deps = ctx.deps
+        if len(project_ranks) < 2:
+            return "Для сравнения нужно минимум 2 проекта."
+
+        ranks = project_ranks[:5]  # cap at 5
+
+        projects: list[Project] = []
+        for rank in ranks:
+            rec = _find_recommendation(deps.recommendations, rank)
+            if not rec:
+                return f"Проект #{rank} не найден в рекомендациях."
+            result = await deps.db.execute(
+                select(Project).where(Project.id == rec.project_id)
+            )
+            project = result.scalar_one_or_none()
+            if project:
+                projects.append(project)
+
+        if len(projects) < 2:
+            return "Недостаточно проектов для сравнения."
+
+        from src.prompts.qa import build_comparison_matrix_prompt
+
+        is_business = deps.user.role_code == "business"
+        criteria = _get_default_criteria(is_business)
+        projects_text = "\n".join(
+            _build_project_context(p) for p in projects
+        )
+
+        system_prompt, user_prompt = build_comparison_matrix_prompt(
+            projects_text, criteria
+        )
+
+        try:
+            resp = await asyncio.wait_for(
+                deps.platform.chat_completion(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                ),
+                timeout=25.0,
+            )
+            content = resp["choices"][0]["message"]["content"]
+            matrix_data = json.loads(content)
+            return _format_matrix(matrix_data.get("matrix", {}), criteria)
+        except (asyncio.TimeoutError, json.JSONDecodeError, KeyError, IndexError) as e:
+            logger.error("Compare projects failed: %s", e)
+            return "Не удалось сгенерировать сравнение. Попробуйте позже."
+
+    @agent.tool
+    async def generate_questions(
+        ctx: RunContext[AgentDeps], project_rank: int
+    ) -> str:
+        """Подготовить 3-5 вопросов для Q&A автору проекта.
+
+        Вопросы персонализированы: студент -> технические/архитектурные,
+        HR/бизнес -> найм, команда, пилот, масштабирование.
+        Использует данные из артефактов (презентация, GitHub) для контекста.
+
+        Args:
+            project_rank: номер проекта из рекомендаций.
+        """
+        deps = ctx.deps
+        rec = _find_recommendation(deps.recommendations, project_rank)
+        if not rec:
+            return f"Проект #{project_rank} не найден в рекомендациях."
+
+        result = await deps.db.execute(
+            select(Project).where(Project.id == rec.project_id)
+        )
+        project = result.scalar_one_or_none()
+        if not project:
+            return "Проект не найден."
+
+        from src.prompts.qa import build_business_qa_prompt, build_guest_qa_prompt
+
+        # Enrich description with artifact context
+        enriched_desc = _build_project_context(project, max_desc=500)
+
+        if deps.user.role_code == "business":
+            system_prompt, user_prompt = build_business_qa_prompt(
+                objective=(
+                    deps.profile.objective if deps.profile else "technology"
+                ),
+                industries=(
+                    ", ".join(deps.profile.business_objectives or [])
+                    if deps.profile
+                    else ""
+                ),
+                tech_stack=", ".join(project.tech_stack or []),
+                project_title=project.title,
+                project_description=enriched_desc,
+                project_tech_stack=", ".join(project.tech_stack or []),
+            )
+        else:
+            system_prompt, user_prompt = build_guest_qa_prompt(
+                subtype=deps.user.subrole or "other",
+                interests=(
+                    ", ".join(deps.profile.selected_tags or [])
+                    if deps.profile
+                    else ""
+                ),
+                project_title=project.title,
+                project_description=enriched_desc,
+                project_tech_stack=", ".join(project.tech_stack or []),
+            )
+
+        try:
+            resp = await asyncio.wait_for(
+                deps.platform.chat_completion(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                ),
+                timeout=20.0,
+            )
+            content = resp["choices"][0]["message"]["content"]
+            data = json.loads(content)
+            questions = data.get("questions", [])
+
+            lines = [f"Вопросы для проекта #{project_rank} ({project.title}):\n"]
+            for i, q in enumerate(questions, 1):
+                lines.append(f"{i}. {q}")
+            return "\n".join(lines)
+        except (asyncio.TimeoutError, json.JSONDecodeError, KeyError, IndexError) as e:
+            logger.error("Generate questions failed: %s", e)
+            return "Не удалось сгенерировать вопросы. Попробуйте позже."
+
+    @agent.tool
+    async def update_status(
+        ctx: RunContext[AgentDeps], project_rank: int, status: str
+    ) -> str:
+        """Обновить статус проекта в бизнес-пайплайне (BusinessFollowup в БД).
+
+        Только для role=business. Создает запись если нет, обновляет если есть.
+
+        Args:
+            project_rank: номер проекта из рекомендаций.
+            status: один из interested, contacted, meeting_scheduled, rejected, in_progress.
+        """
+        deps = ctx.deps
+        if deps.user.role_code != "business":
+            return "Эта функция доступна только бизнес-пользователям."
+
+        VALID = {"interested", "contacted", "meeting_scheduled", "rejected", "in_progress"}
+        if status not in VALID:
+            return f"Допустимые статусы: {', '.join(sorted(VALID))}"
+
+        rec = _find_recommendation(deps.recommendations, project_rank)
+        if not rec:
+            return f"Проект #{project_rank} не найден."
+
+        result = await deps.db.execute(
+            select(BusinessFollowup).where(
+                BusinessFollowup.user_id == deps.user.id,
+                BusinessFollowup.event_id == deps.event.id,
+                BusinessFollowup.project_id == rec.project_id,
+            )
+        )
+        followup = result.scalar_one_or_none()
+        if followup:
+            old = followup.status
+            followup.status = status
+            await deps.db.flush()
+            return f"Статус проекта #{project_rank} изменен: {old} -> {status}"
+        else:
+            new = BusinessFollowup(
+                user_id=deps.user.id,
+                event_id=deps.event.id,
+                project_id=rec.project_id,
+                status=status,
+            )
+            deps.db.add(new)
+            await deps.db.flush()
+            return f"Проект #{project_rank} добавлен в пайплайн: {status}"
+
+    @agent.tool
+    async def filter_projects(ctx: RunContext[AgentDeps], tag: str) -> str:
+        """Отфильтровать рекомендованные проекты по тегу или технологии (case-insensitive).
+
+        Ищет совпадение в project.tags и project.tech_stack.
+
+        Args:
+            tag: тег или технология для фильтрации, например "NLP" или "PyTorch".
+        """
+        deps = ctx.deps
+        if not deps.recommendations:
+            return "Нет рекомендаций. Используйте /rebuild."
+
+        tag_lower = tag.strip().lower()
+        matched: list[tuple[Recommendation, Project]] = []
+
+        # Load all recommended projects in one query
+        project_ids = [r.project_id for r in deps.recommendations]
+        result = await deps.db.execute(
+            select(Project).where(Project.id.in_(project_ids))
+        )
+        projects = {p.id: p for p in result.scalars().all()}
+
+        for rec in deps.recommendations:
+            project = projects.get(rec.project_id)
+            if not project:
+                continue
+            project_tags = [t.lower() for t in (project.tags or [])]
+            project_stack = [t.lower() for t in (project.tech_stack or [])]
+            if tag_lower in project_tags or tag_lower in project_stack:
+                matched.append((rec, project))
+
+        if not matched:
+            return f"Нет проектов с тегом '{tag}' в ваших рекомендациях."
+
+        lines = [f"Проекты с тегом '{tag}' ({len(matched)}):\n"]
+        for rec, project in matched:
+            lines.append(f"#{rec.rank} {project.title}")
+            tags_str = ", ".join(project.tags[:3]) if project.tags else ""
+            if tags_str:
+                lines.append(f"   {tags_str}")
+        return "\n".join(lines)
+
+    @agent.tool
+    async def get_summary(ctx: RunContext[AgentDeps]) -> str:
+        """Итоговая сводка по рекомендованным проектам.
+
+        Гости: follow-up пакет (ранжированный список + Telegram-контакты + шаблон сообщения).
+        Бизнес: pipeline (статусы проектов + контакты + шаблоны первого/повторного обращения).
+        """
+        deps = ctx.deps
+        if deps.user.role_code == "business":
+            return await _get_pipeline(deps)
+        return await _get_followup(deps)
+
+    @agent.tool
+    async def github_drilldown(
+        ctx: RunContext[AgentDeps],
+        project_identifier: str,
+        query_type: str,
+        file_path: str | None = None,
+    ) -> str:
+        """Получить данные из GitHub-репозитория проекта (live через gh CLI subprocess).
+
+        Все вызовы идут через `gh api` (GitHub REST API), без клонирования репо.
+        Требует установленный gh CLI и опционально GITHUB_TOKEN для rate limit.
+
+        Args:
+            project_identifier: номер (#1) или название проекта.
+            query_type:
+                "summary" - полный анализ: stars, forks, commits, contributors,
+                    languages, has_tests/ci/docker, health_score, red_flags.
+                    Внутри ~6 параллельных gh api вызовов.
+                "file" - содержимое одного файла (до 3000 символов, base64 decode).
+                    Нужен file_path.
+                "tree" - структура файлов (до 100 записей, recursive).
+                    file_path опционально для поддиректории.
+                "commits" - последние 10 коммитов (sha, date, author, message).
+                "contributors" - топ-10 контрибьюторов с количеством и процентом коммитов.
+            file_path: путь к файлу/директории (для query_type file/tree).
+        """
+        deps = ctx.deps
+
+        VALID_TYPES = {"summary", "file", "tree", "commits", "contributors"}
+        if query_type not in VALID_TYPES:
+            return f"Допустимые типы: {', '.join(sorted(VALID_TYPES))}"
+
+        if query_type == "file" and not file_path:
+            return "Для просмотра файла укажите file_path."
+
+        # Resolve project
+        rec = None
+        try:
+            rank = int(project_identifier.strip().lstrip("#"))
+            rec = _find_recommendation(deps.recommendations, rank)
+        except ValueError:
+            pass
+
+        if not rec:
+            # name search
+            name_lower = project_identifier.strip().lower()
+            project_ids = [r.project_id for r in deps.recommendations]
+            if project_ids:
+                result = await deps.db.execute(
+                    select(Project).where(
+                        Project.id.in_(project_ids),
+                        func.lower(Project.title).contains(name_lower),
+                    )
+                )
+                matched = result.scalars().first()
+                if matched:
+                    rec = next(
+                        (r for r in deps.recommendations if r.project_id == matched.id),
+                        None,
+                    )
+
+        if not rec:
+            return f"Проект '{project_identifier}' не найден в рекомендациях."
+
+        result = await deps.db.execute(
+            select(Project).where(Project.id == rec.project_id)
+        )
+        project = result.scalar_one_or_none()
+        if not project or not project.github_url:
+            return f"У проекта {project.title if project else '?'} нет GitHub-репозитория."
+
+        from src.services.github_analyzer import (
+            fetch_commits,
+            fetch_contributors,
+            fetch_file,
+            fetch_tree,
+            parse_github_url,
+        )
+
+        parsed = parse_github_url(project.github_url)
+        if not parsed:
+            return f"Невалидный GitHub URL: {project.github_url}"
+
+        owner, repo = parsed
+        token = ""
+        try:
+            from src.core.config import settings
+            token = settings.github_token
+        except Exception:
+            pass
+
+        if query_type == "summary":
+            # Live analysis via gh API
+            from src.services.github_analyzer import analyze_repo
+
+            try:
+                gh = await asyncio.wait_for(
+                    analyze_repo(owner, repo, token), timeout=20.0,
+                )
+            except asyncio.TimeoutError:
+                return "GitHub не ответил в течение 20 секунд."
+            except Exception as e:
+                logger.error("GitHub analyze_repo error: %s", e)
+                return f"Ошибка анализа репозитория: {e}"
+
+            if gh.get("error"):
+                return gh["error"]
+
+            lines = [f"GitHub: {gh.get('full_name', f'{owner}/{repo}')}\n"]
+            lines.append(f"Звезды: {gh.get('stars', 0)} | Форки: {gh.get('forks_count', 0)}")
+            lines.append(
+                f"Коммитов: {gh.get('total_commits', '?')} | "
+                f"Контрибьюторов: {gh.get('contributors_count', '?')}"
+            )
+            if gh.get("primary_language"):
+                lines.append(f"Язык: {gh['primary_language']}")
+            lines.append(f"Последний пуш: {gh.get('days_since_last_push', '?')} дней назад")
+            lines.append(f"Возраст: {gh.get('repo_age_days', '?')} дней")
+            lines.append(
+                f"Тесты: {'есть' if gh.get('has_tests') else 'нет'} | "
+                f"CI: {'есть' if gh.get('has_ci') else 'нет'} | "
+                f"Docker: {'есть' if gh.get('has_docker') else 'нет'}"
+            )
+            if gh.get("license"):
+                lines.append(f"Лицензия: {gh['license']}")
+            lines.append(f"Health score: {gh.get('health_score', '?')}/100")
+
+            if gh.get("contributors"):
+                lines.append("\nКонтрибьюторы:")
+                for c in gh["contributors"][:5]:
+                    lines.append(f"  {c['login']}: {c['contributions']} ({c['percentage']}%)")
+
+            flags = gh.get("red_flags", [])
+            if flags:
+                lines.append("\nRed flags:")
+                for f in flags:
+                    lines.append(f"  [{f.get('severity', '?')}] {f.get('description', '?')}")
+
+            return "\n".join(lines)
+
+        # Real-time drill-down via gh CLI
+        try:
+            if query_type == "file":
+                return await asyncio.wait_for(
+                    fetch_file(owner, repo, file_path, token), timeout=15.0,
+                )
+            elif query_type == "tree":
+                return await asyncio.wait_for(
+                    fetch_tree(owner, repo, token, file_path or ""), timeout=15.0,
+                )
+            elif query_type == "commits":
+                return await asyncio.wait_for(
+                    fetch_commits(owner, repo, token), timeout=15.0,
+                )
+            elif query_type == "contributors":
+                return await asyncio.wait_for(
+                    fetch_contributors(owner, repo, token), timeout=15.0,
+                )
+        except asyncio.TimeoutError:
+            return "GitHub не ответил в течение 15 секунд."
+        except Exception as e:
+            logger.error("GitHub drilldown error: %s", e)
+            return f"Ошибка при получении данных: {e}"
+
+        return "Неизвестная ошибка"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _find_recommendation(
+    recs: list[Recommendation], rank: int
+) -> Recommendation | None:
+    """Find recommendation by rank number."""
+    for r in recs:
+        if r.rank == rank:
+            return r
+    return None
+
+
+def _get_default_criteria(is_business: bool) -> list[str]:
+    """Return default comparison criteria based on user role."""
+    if is_business:
+        return [
+            "Стадия проекта",
+            "Размер команды",
+            "Технический стек",
+            "Бизнес-модель",
+            "Готовность к пилоту",
+        ]
+    return [
+        "Тематика",
+        "Технологии",
+        "Практическая применимость",
+        "Инновационность",
+        "Зрелость проекта",
+    ]
+
+
+def _build_project_context(project: Project, max_desc: int = 200) -> str:
+    """Build rich text context including artifact data."""
+    parts = [f"- {project.title}: {project.description[:max_desc]}"]
+    if project.tech_stack:
+        parts.append(f"  Стек: {', '.join(project.tech_stack)}")
+
+    pc = project.parsed_content if isinstance(project.parsed_content, dict) else None
+    if pc:
+        if pc.get("problem"):
+            parts.append(f"  Проблема: {pc['problem']}")
+        if pc.get("solution"):
+            parts.append(f"  Решение: {pc['solution']}")
+        if pc.get("key_metrics"):
+            parts.append(f"  Метрики: {', '.join(pc['key_metrics'])}")
+        if pc.get("novelty"):
+            parts.append(f"  Новизна: {pc['novelty']}")
+        if pc.get("risks"):
+            parts.append(f"  Риски: {pc['risks']}")
+        if pc.get("production_readiness"):
+            parts.append(f"  Готовность: {pc['production_readiness']}")
+    return "\n".join(parts)
+
+
+def _format_project_card(project: Project, rec: Recommendation) -> str:
+    """Format a single project into a readable card."""
+    lines = [
+        f"#{rec.rank} {project.title}\n",
+        project.description[:300],
+    ]
+    if project.tags:
+        lines.append(f"\nТеги: {', '.join(project.tags)}")
+    if project.tech_stack:
+        lines.append(f"Стек: {', '.join(project.tech_stack)}")
+
+    if project.parsed_content and isinstance(project.parsed_content, dict):
+        pc = project.parsed_content
+        if pc.get("problem"):
+            lines.append(f"\nПроблема: {pc['problem']}")
+        if pc.get("solution"):
+            lines.append(f"Решение: {pc['solution']}")
+        if pc.get("audience"):
+            lines.append(f"Аудитория: {pc['audience']}")
+        if pc.get("novelty"):
+            lines.append(f"Новизна: {pc['novelty']}")
+        if pc.get("key_metrics"):
+            lines.append(f"Метрики: {', '.join(pc['key_metrics'])}")
+        if pc.get("production_readiness"):
+            lines.append(f"Готовность: {pc['production_readiness']}")
+        if pc.get("risks"):
+            lines.append(f"Риски: {pc['risks']}")
+        red_flags = pc.get("red_flags")
+        if red_flags:
+            flags_text = "; ".join(
+                f"{f['description']} ({f['severity']})"
+                for f in red_flags
+                if isinstance(f, dict)
+            )
+            if flags_text:
+                lines.append(f"Red flags: {flags_text}")
+
+    if project.author:
+        lines.append(f"\nАвтор: {project.author}")
+    return "\n".join(lines)
+
+
+def _format_matrix(matrix: dict, criteria: list[str]) -> str:
+    """Format comparison matrix dict into readable text."""
+    if not matrix:
+        return "Не удалось сгенерировать матрицу."
+
+    lines = ["Матрица сравнения:\n"]
+    for criterion in criteria:
+        lines.append(f"*{criterion}:*")
+        for project_name, scores in matrix.items():
+            value = scores.get(criterion, "-")
+            lines.append(f"  {project_name}: {value}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+async def _get_followup(deps: AgentDeps) -> str:
+    """Build follow-up package for guest users."""
+    if not deps.recommendations:
+        return "Нет рекомендаций. Используйте /rebuild."
+
+    lines = ["Follow-up пакет:\n"]
+    for rec in deps.recommendations[:10]:
+        result = await deps.db.execute(
+            select(Project).where(Project.id == rec.project_id)
+        )
+        project = result.scalar_one_or_none()
+        if project:
+            contact = (
+                f" | {project.telegram_contact}" if project.telegram_contact else ""
+            )
+            lines.append(f"#{rec.rank} {project.title}{contact}")
+
+    lines.append("\nШаблон для связи:")
+    lines.append("Здравствуйте! Видел(а) ваш проект на Demo Day.")
+    lines.append("Интересует возможность сотрудничества.")
+    return "\n".join(lines)
+
+
+async def _get_pipeline(deps: AgentDeps) -> str:
+    """Build business pipeline summary."""
+    result = await deps.db.execute(
+        select(BusinessFollowup).where(
+            BusinessFollowup.user_id == deps.user.id,
+            BusinessFollowup.event_id == deps.event.id,
+        )
+    )
+    followups = result.scalars().all()
+
+    if not followups:
+        return "Пайплайн пуст. Сначала получите рекомендации."
+
+    stats: dict[str, int] = {}
+    for f in followups:
+        stats[f.status] = stats.get(f.status, 0) + 1
+
+    lines = ["Business Pipeline:\n"]
+    for status, count in stats.items():
+        lines.append(f"  {status}: {count}")
+    lines.append("")
+
+    for f in followups[:10]:
+        result = await deps.db.execute(
+            select(Project).where(Project.id == f.project_id)
+        )
+        project = result.scalar_one_or_none()
+        if project:
+            lines.append(f"[{f.status}] {project.title}")
+            if project.telegram_contact:
+                lines.append(f"  Контакт: {project.telegram_contact}")
+            if f.notes:
+                lines.append(f"  {f.notes[:50]}")
+
+    company = deps.profile.company if deps.profile and deps.profile.company else "[название компании]"
+
+    lines.append("\nШаблоны для связи:")
+    lines.append("")
+    lines.append("Первое обращение:")
+    lines.append(f"Здравствуйте! Представляю компанию {company}.")
+    lines.append("Видели ваш проект [название проекта] на Demo Day.")
+    lines.append("Интересует обсуждение возможного сотрудничества.")
+    lines.append("Удобно будет созвониться на этой неделе?")
+    lines.append("")
+    lines.append("Повторное обращение:")
+    lines.append("Добрый день! Мы общались на Demo Day по проекту [название].")
+    lines.append("Хотел(а) бы уточнить детали для запуска пилота.")
+
+    return "\n".join(lines)

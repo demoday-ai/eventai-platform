@@ -5,7 +5,7 @@ import pytest
 DEPENDENCY_MODULES = [
     "fastapi",
     "uvicorn",
-    "telegram",
+    "aiogram",
     "sqlalchemy",
     "asyncpg",
     "alembic",

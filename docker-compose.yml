@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:16-alpine
+    # 031-bot-replacement: pgvector required for bot agent embeddings (3072d Gemini).
+    # Same PG 16 base — pgdata volume is forward/backward compatible.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: demoday
       POSTGRES_PASSWORD: demoday
@@ -110,6 +112,28 @@ services:
     depends_on:
       - backend
       - flower
+
+  # 031-bot-replacement: standalone aiogram bot service.
+  # Owns the Telegram long-poll for the shared bot token.
+  # Backend (scheduler/messaging/support) sends outbound messages via send-only
+  # aiogram.Bot from app.services.core.bot_messenger — no HTTP bridge needed.
+  bot:
+    build: ./bot
+    env_file: ./bot/.env
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   pgdata:

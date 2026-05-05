@@ -6,7 +6,7 @@ Tracks business partner interactions with projects after Demo Day.
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Text
+from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,13 +14,22 @@ from app.models.base import Base
 
 
 class PipelineStatus(str, enum.Enum):
-    """Status of a project in partner's pipeline."""
+    """Status of a project in partner's pipeline.
+
+    NOTE: stored as VARCHAR(64) since migration 038_bonus_tables to allow both
+    demoday admin values (interested|contacted|negotiating|closed_won|closed_lost)
+    and bonus bot values (interested|contacted|meeting_scheduled|rejected|in_progress).
+    """
 
     interested = "interested"
     contacted = "contacted"
     negotiating = "negotiating"
     closed_won = "closed_won"
     closed_lost = "closed_lost"
+    # bonus-track-llm values:
+    meeting_scheduled = "meeting_scheduled"
+    rejected = "rejected"
+    in_progress = "in_progress"
 
 
 class BusinessFollowup(Base):
@@ -46,9 +55,10 @@ class BusinessFollowup(Base):
         nullable=False,
         index=True,
     )
-    status: Mapped[PipelineStatus] = mapped_column(
-        Enum(PipelineStatus),
-        default=PipelineStatus.interested,
+    status: Mapped[str] = mapped_column(
+        String(64),
+        default=PipelineStatus.interested.value,
+        nullable=False,
     )
     notes: Mapped[str | None] = mapped_column(
         Text,
@@ -68,9 +78,12 @@ class BusinessFollowup(Base):
     def status_emoji(self) -> str:
         """Get emoji for current status."""
         return {
-            PipelineStatus.interested: "👀",
-            PipelineStatus.contacted: "📧",
-            PipelineStatus.negotiating: "🤝",
-            PipelineStatus.closed_won: "✅",
-            PipelineStatus.closed_lost: "❌",
+            PipelineStatus.interested.value: "👀",
+            PipelineStatus.contacted.value: "📧",
+            PipelineStatus.negotiating.value: "🤝",
+            PipelineStatus.closed_won.value: "✅",
+            PipelineStatus.closed_lost.value: "❌",
+            PipelineStatus.meeting_scheduled.value: "📅",
+            PipelineStatus.rejected.value: "🚫",
+            PipelineStatus.in_progress.value: "🔄",
         }.get(self.status, "❓")

@@ -355,7 +355,7 @@ def main():
     for t, c in sorted(tracks.items(), key=lambda x: -x[1]):
         print(f"  {t}: {c}")
 
-    print(f"\nFiles created:")
+    print("\nFiles created:")
     print(f"  {OUTPUT_CSV} ({OUTPUT_CSV.stat().st_size / 1024:.1f} KB)")
     print(f"  {OUTPUT_JSON} ({OUTPUT_JSON.stat().st_size / 1024:.1f} KB)")
 

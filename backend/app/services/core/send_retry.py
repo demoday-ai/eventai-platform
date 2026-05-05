@@ -2,16 +2,21 @@
 
 import asyncio
 import logging
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
 class MessageSender(Protocol):
-    """Protocol for sending messages (decouples services from telegram.Bot)."""
+    """Protocol for sending messages (decouples services from telegram.Bot).
 
-    async def send_message(self, chat_id: int | str, text: str, **kwargs) -> None: ...
+    Return type is `Any` so the protocol accepts both aiogram.Bot.send_message
+    (returns Message) and any test stub. Callers that need message_id should
+    rely on the concrete aiogram.Bot type instead.
+    """
+
+    async def send_message(self, chat_id: int | str, text: str, **kwargs) -> Any: ...
 
 
 async def send_with_retry(

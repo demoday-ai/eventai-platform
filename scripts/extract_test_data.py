@@ -11,9 +11,7 @@ Usage: python scripts/extract_test_data.py
 
 import json
 import re
-import sys
 from pathlib import Path
-from collections import defaultdict
 import openpyxl
 
 REPO = Path(r"C:\Users\Admin\Desktop\AI Talent Camp\demoday-core")

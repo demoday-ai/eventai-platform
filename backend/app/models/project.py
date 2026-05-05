@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.types import JSONType
 
 
 class Project(Base):
@@ -26,6 +27,14 @@ class Project(Base):
     tech_stack: Mapped[str | None] = mapped_column(String(500), nullable=True)
     presentation_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     demo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # 031-bot-replacement: bonus columns (pgvector + JSONB).
+    # `embedding` is mapped as JSONB at the ORM level (3072d Gemini vector).
+    # The bot service uses pgvector cosine search via raw SQL; admin backend
+    # only reads/writes embedding rarely, so JSONB-as-object is fine.
+    parsed_content: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    tags_json: Mapped[list | None] = mapped_column(JSONType, nullable=True)
+    tech_stack_json: Mapped[list | None] = mapped_column(JSONType, nullable=True)
 
     tags = relationship("ProjectTag", back_populates="project", cascade="all, delete-orphan")
     room_assignments = relationship("RoomProject", back_populates="project", cascade="all, delete-orphan")

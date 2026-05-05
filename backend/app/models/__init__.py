@@ -3,6 +3,7 @@ from app.models.audit_log import AdminAuditLog
 from app.models.base import Base
 from app.models.business_followup import BusinessFollowup, PipelineStatus
 from app.models.business_profile import OBJECTIVE_DISPLAY, BusinessObjective, BusinessProfile
+from app.models.chat_message import ChatMessage
 from app.models.clustering_run import ClusteringRun
 from app.models.contact_request import ContactRequest, ContactRequestStatus
 from app.models.escalation import Escalation
@@ -10,6 +11,7 @@ from app.models.event import Event
 from app.models.expert import Expert
 from app.models.expert_briefing import BriefingStatus, ExpertBriefing
 from app.models.expert_room_assignment import ExpertRoomAssignment
+from app.models.expert_score import BotExpertScore
 from app.models.expert_tag import ExpertTag
 from app.models.followup_package import FollowupPackage
 from app.models.guest_profile import GuestProfile
@@ -27,10 +29,11 @@ from app.models.room import Room
 from app.models.room_project import RoomProject
 from app.models.schedule_change_log import ChangeType, ScheduleChangeLog
 from app.models.schedule_slot import ScheduleSlot, SlotStatus
+from app.models.support_log import SupportLog
 from app.models.support_message import SupportMessage
 from app.models.support_thread import SupportThread
 from app.models.tag import Tag
-from app.models.user import GuestSubtype, User
+from app.models.user import GUEST_SUBTYPE_TO_ROLE_CODE, GuestSubtype, User, UserRoleCode
 from app.models.user_role import UserRole
 
 __all__ = [
@@ -43,6 +46,7 @@ __all__ = [
     "BusinessObjective",
     "BusinessProfile",
     "ChangeType",
+    "ChatMessage",
     "ClusteringRun",
     "ContactRequest",
     "ContactRequestStatus",
@@ -53,8 +57,10 @@ __all__ = [
     "Expert",
     "ExpertBriefing",
     "ExpertRoomAssignment",
+    "BotExpertScore",
     "ExpertTag",
     "FollowupPackage",
+    "GUEST_SUBTYPE_TO_ROLE_CODE",
     "GuestProfile",
     "GuestSubtype",
     "OBJECTIVE_DISPLAY",
@@ -76,9 +82,11 @@ __all__ = [
     "ScheduleChangeLog",
     "ScheduleSlot",
     "SlotStatus",
+    "SupportLog",
     "SupportMessage",
     "SupportThread",
     "Tag",
     "User",
     "UserRole",
+    "UserRoleCode",
 ]

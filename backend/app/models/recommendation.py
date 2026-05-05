@@ -32,6 +32,13 @@ class Recommendation(Base):
     category: Mapped[str] = mapped_column(String(20), nullable=False)
     rank: Mapped[int] = mapped_column(Integer, nullable=False)
     llm_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 031-bot-replacement: schedule-aware rerank fields used by bonus retriever
+    slot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("schedule_slots.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    visit_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     guest_profile = relationship("GuestProfile", back_populates="recommendations")
     project = relationship("Project")

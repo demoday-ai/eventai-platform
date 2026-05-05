@@ -10,7 +10,7 @@ from app.models.business_profile import BusinessProfile
 from app.models.event import Event
 from app.models.guest_profile import GuestProfile
 from app.models.role import Role, RoleCode
-from app.models.user import GuestSubtype, User
+from app.models.user import GUEST_SUBTYPE_TO_ROLE_CODE, GuestSubtype, User, UserRoleCode
 from app.models.user_role import UserRole
 
 
@@ -107,12 +107,27 @@ async def set_role(
         user_role = UserRole(user_id=user_id, role_id=role.id, event_id=event_id)
         session.add(user_role)
 
-    # Update guest_subtype on user
+    # Update guest_subtype + role_code on user.
+    # 031-bot-replacement: role_code is the coarse 3-value enum used by the bot agent;
+    # keep it in sync with guest_subtype + role.code so the bot reads correct routing.
     user = await session.get(User, user_id)
     if role.code == RoleCode.GUEST.value:
         user.guest_subtype = guest_subtype
+        if guest_subtype is not None:
+            user.role_code = GUEST_SUBTYPE_TO_ROLE_CODE.get(guest_subtype)
+        else:
+            user.role_code = UserRoleCode.GUEST
     else:
         user.guest_subtype = None
+        # Map admin role codes -> bot role codes
+        # (RoleCode values: guest, expert, organizer, business)
+        if role.code == "expert":
+            user.role_code = UserRoleCode.EXPERT
+        elif role.code == "business":
+            user.role_code = UserRoleCode.BUSINESS
+        else:
+            # organizer / unknown -> not a bot user
+            user.role_code = None
 
     await session.commit()
 
@@ -120,6 +135,8 @@ async def set_role(
 async def set_guest_subtype(session: AsyncSession, user_id: uuid.UUID, guest_subtype: GuestSubtype) -> None:
     user = await session.get(User, user_id)
     user.guest_subtype = guest_subtype
+    # Keep bot-side coarse role in sync.
+    user.role_code = GUEST_SUBTYPE_TO_ROLE_CODE.get(guest_subtype)
     await session.commit()
 
 

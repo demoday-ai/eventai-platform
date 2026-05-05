@@ -1,11 +1,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.types import JSONType
 
 
 class GuestProfile(Base):
@@ -24,6 +25,12 @@ class GuestProfile(Base):
     keywords: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     extra_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # 031-bot-replacement: bonus-track-llm fields
+    nl_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    position: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_objectives: Mapped[list | None] = mapped_column(JSONType, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
