@@ -372,9 +372,13 @@ async def format_program(
 ) -> tuple[str, list[tuple[int, str]]]:
     """Format recommendations list with schedule info.
 
+    Multi-line layout per project so long titles + room names don't wrap into
+    a single inline blob. Sorted by rank (which mostly matches relevance);
+    if_time projects keep their relative order but are marked.
+
     Returns (text, [(rank, title), ...]).
     """
-    lines = [header, ""]
+    lines: list[str] = [header, ""]
     project_list: list[tuple[int, str]] = []
 
     for rec in recs:
@@ -389,7 +393,8 @@ async def format_program(
         project_list.append((rec.rank, project.title))
 
         # Load schedule slot
-        slot_info = ""
+        time_block: str | None = None
+        room_name: str | None = None
         if rec.slot_id:
             slot_result = await db.execute(
                 select(ScheduleSlot, Room.name.label("room_name"))
@@ -401,19 +406,27 @@ async def format_program(
                 slot = row[0]
                 room_name = row.room_name
                 time_str = slot.start_time.strftime("%H:%M")
-                slot_info = f" | {time_str} | {room_name}"
+                end_str = slot.end_time.strftime("%H:%M")
+                time_block = f"{time_str}–{end_str}"
 
-        category_marker = ""
-        if rec.category == "if_time":
-            category_marker = " [если успеете]"
+        marker = " [если успеете]" if rec.category == "if_time" else ""
+
+        # Multi-line block: empty line above for breathing room, then
+        # title (with rank), then time/room on its own line.
+        lines.append(f"#{rec.rank} {project.title}{marker}")
+        if time_block and room_name:
+            lines.append(f"⏰ {time_block} · 📍 {room_name}")
+        elif time_block:
+            lines.append(f"⏰ {time_block}")
+        elif room_name:
+            lines.append(f"📍 {room_name}")
 
         tags = ", ".join(project.tags[:3]) if project.tags else ""
-
-        lines.append(f"#{rec.rank} {project.title}{slot_info}{category_marker}")
         if tags:
-            lines.append(f"   {tags}")
+            lines.append(f"🏷 {tags}")
+        lines.append("")  # spacer between projects
 
-    return "\n".join(lines), project_list
+    return "\n".join(lines).rstrip() + "\n", project_list
 
 
 def _format_profile_text(profile: GuestProfile) -> str:
