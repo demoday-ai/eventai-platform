@@ -204,7 +204,7 @@ async def cb_export_pdf(
 
     try:
         pdf_buf = await generate_recommendations_pdf(
-            recs, projects, user_name=user_name
+            recs, projects, user_name=user_name, db=db
         )
         # Defensive: re-seek in case the buffer pointer drifted between
         # creation and read (BytesIO position may be at EOF after write).
