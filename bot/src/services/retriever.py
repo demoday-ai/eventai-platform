@@ -101,8 +101,10 @@ async def _pgvector_search(
 
     result = await db.execute(
         text("""
-            SELECT id, title, description, tags, tech_stack, author, telegram_contact,
-                   parsed_content, embedding <=> cast(:embedding as vector) AS distance
+            SELECT id, title, description,
+                   tags_json AS tags, tech_stack_json AS tech_stack,
+                   author, telegram_contact, parsed_content,
+                   embedding <=> cast(:embedding as vector) AS distance
             FROM projects
             WHERE event_id = cast(:event_id as uuid) AND embedding IS NOT NULL
             ORDER BY embedding <=> cast(:embedding as vector)
