@@ -138,7 +138,7 @@ services:
   # CLI test harness for the bot — same image, idle by default.
   # Drive via `scripts/botchat.sh <session> <message>`.
   botcli:
-    image: demoday-core-bot
+    build: ./bot
     command: ["sleep", "infinity"]
     env_file: ./bot/.env
     depends_on:

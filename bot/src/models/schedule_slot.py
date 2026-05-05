@@ -22,7 +22,11 @@ class ScheduleSlot(Base):
         index=True,
     )
     room_id: Mapped[UUID] = mapped_column(ForeignKey("rooms.id"))
-    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"))
+    # 031-bot-replacement: backend schema makes project_id nullable
+    # (slots may be placeholders without an assigned project).
+    project_id: Mapped[UUID | None] = mapped_column(ForeignKey("projects.id"))
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    day_number: Mapped[int] = mapped_column(Integer)
+    # 031-bot-replacement: backend schema uses `display_order` (per-day index),
+    # not `day_number`. Bot uses this only as a sort key.
+    display_order: Mapped[int] = mapped_column(Integer)

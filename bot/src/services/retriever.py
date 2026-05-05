@@ -210,7 +210,7 @@ async def _fallback_tag_overlap(
         s["rank"] = i + 1
         s["category"] = "must_visit" if i < 8 else "if_time"
         rec = Recommendation(
-            profile_id=profile_id,
+            guest_profile_id=profile_id,
             project_id=s["project_id"],
             relevance_score=s["score"],
             category=s["category"],
@@ -276,7 +276,7 @@ async def _load_schedule_slots(db: AsyncSession, event_id: UUID) -> dict[UUID, d
             "room_name": row.room_name,
             "start_time": slot.start_time,
             "end_time": slot.end_time,
-            "day_number": slot.day_number,
+            "day_number": slot.display_order,
         }
 
     return slots
@@ -292,7 +292,7 @@ async def _save_recommendations(
     for r in ranked:
         slot = r.get("slot")
         rec = Recommendation(
-            profile_id=profile_id,
+            guest_profile_id=profile_id,
             project_id=r["project_id"],
             relevance_score=r["score"],
             category=r["category"],
