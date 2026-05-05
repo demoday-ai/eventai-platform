@@ -79,44 +79,54 @@ async def generate_recommendations_pdf(
             continue
 
         # Title with rank + (если успеете)
-        marker = " (если успеете)" if rec.category == "if_time" else ""
+        marker = "  (если успеете)" if rec.category == "if_time" else ""
         pdf.set_font("DejaVu", "B", 12)
         pdf.multi_cell(
-            0, 8, f"#{rec.rank} {project.title}{marker}",
+            0, 7, f"#{rec.rank}  {project.title}{marker}",
             new_x="LMARGIN", new_y="NEXT",
         )
+        pdf.ln(1)
 
-        # Time + room from schedule
+        # Time and Room go on SEPARATE multi_cell calls. A single combined
+        # 'Время: ... Зал: ...' line breaks badly when room name is long
+        # (renders 'Зал' before 'Время' or pulls in description fragments).
         if rec.slot_id and rec.slot_id in slots_by_rec_id:
             slot, room_name = slots_by_rec_id[rec.slot_id]
             time_str = slot.start_time.strftime("%H:%M")
             end_str = slot.end_time.strftime("%H:%M")
             pdf.set_font("DejaVu", "", 9)
             pdf.multi_cell(
-                0, 5, f"Время: {time_str}–{end_str}    Зал: {room_name}",
+                0, 5, f"Время:  {time_str}–{end_str}",
                 new_x="LMARGIN", new_y="NEXT",
             )
+            pdf.multi_cell(
+                0, 5, f"Зал:    {room_name}",
+                new_x="LMARGIN", new_y="NEXT",
+            )
+        pdf.ln(2)
 
         # Description (smart-truncated, never mid-word)
         if project.description:
             desc = _smart_truncate(project.description, DESC_LIMIT)
             pdf.set_font("DejaVu", "", 10)
             pdf.multi_cell(0, 6, desc, new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
 
-        # Meta block (tags, stack, author, contact)
+        # Meta block (tags, stack, author, contact) on its own line each
         meta_lines = []
         if project.tags:
-            meta_lines.append(f"Теги: {', '.join(str(t) for t in project.tags)}")
+            meta_lines.append(f"Теги:    {', '.join(str(t) for t in project.tags)}")
         if project.tech_stack:
-            meta_lines.append(f"Стек: {', '.join(str(t) for t in project.tech_stack)}")
+            meta_lines.append(f"Стек:    {', '.join(str(t) for t in project.tech_stack)}")
         if project.author:
-            meta_lines.append(f"Автор: {project.author}")
+            meta_lines.append(f"Автор:   {project.author}")
         if project.telegram_contact:
             meta_lines.append(f"Контакт: {project.telegram_contact}")
         if meta_lines:
             pdf.set_font("DejaVu", "", 9)
-            pdf.multi_cell(0, 5, "\n".join(meta_lines), new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(4)
+            for line in meta_lines:
+                pdf.multi_cell(0, 5, line, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(5)
 
     buf = io.BytesIO()
     pdf.output(buf)
