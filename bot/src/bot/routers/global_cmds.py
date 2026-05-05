@@ -51,11 +51,47 @@ def _format_profile_text(profile: GuestProfile) -> str:
 
 
 @router.message(Command("reset"))
-async def cmd_reset(message: Message, state: FSMContext) -> None:
-    """Hard reset: wipe FSM state and prompt /start."""
+async def cmd_reset(
+    message: Message, state: FSMContext, db: AsyncSession
+) -> None:
+    """Hard reset: wipe FSM state AND associated DB rows (profile,
+    recommendations, chat history) so the next /start really starts fresh.
+
+    Round 2 finding: bare state.clear() left the GuestProfile + Recommendations
+    in the DB, so /start said 'С возвращением!' and reused the old program
+    while /profile claimed 'profile not created' — split-brain.
+    """
+    state_data = await state.get_data()
+    profile_id = state_data.get("profile_id")
+    user_id = state_data.get("user_id")
+
+    if profile_id:
+        try:
+            await db.execute(
+                delete(Recommendation).where(
+                    Recommendation.guest_profile_id == UUID(profile_id)
+                )
+            )
+            await db.execute(
+                delete(GuestProfile).where(GuestProfile.id == UUID(profile_id))
+            )
+        except Exception:
+            await db.rollback()
+
+    if user_id:
+        try:
+            from src.models.chat_message import ChatMessage
+            await db.execute(
+                delete(ChatMessage).where(ChatMessage.user_id == UUID(user_id))
+            )
+        except Exception:
+            await db.rollback()
+
+    if profile_id or user_id:
+        await db.commit()
     await state.clear()
     await message.answer(
-        "Сессия сброшена. Нажмите /start чтобы начать заново."
+        "Сессия и профиль сброшены. Нажмите /start чтобы начать заново."
     )
 
 
@@ -203,6 +239,58 @@ async def cmd_recommend(
     await message.answer(text, reply_markup=keyboard)
 
 
+@router.message(Command("expert", "mentor"))
+async def cmd_expert(
+    message: Message, state: FSMContext, db: AsyncSession
+) -> None:
+    """Quick alias for the 'Эксперт / жюри' button on /start.
+
+    User testing flagged that /expert and /mentor were swallowed because
+    no handler existed -- only the inline button worked. Also useful as a
+    direct deep-link target.
+    """
+    # Ensure user_id and event_id are in state -- expert_invite_text needs them.
+    state_data = await state.get_data()
+    if not state_data.get("user_id") or not state_data.get("event_id"):
+        from src.models.event import Event
+        from src.models.user import User
+
+        tg_user_id = str(message.from_user.id)
+        result = await db.execute(
+            select(User).where(User.telegram_user_id == tg_user_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            user = User(
+                telegram_user_id=tg_user_id,
+                full_name=message.from_user.full_name or "User",
+                username=message.from_user.username,
+            )
+            db.add(user)
+            await db.flush()
+
+        event_result = await db.execute(
+            select(Event).where(Event.is_active.is_(True)).limit(1)
+        )
+        event = event_result.scalar_one_or_none()
+        if not event:
+            await message.answer(
+                "Сейчас нет активных событий. Обратитесь к организатору."
+            )
+            return
+
+        await state.update_data(
+            user_id=str(user.id),
+            event_id=str(event.id),
+        )
+
+    await state.set_state(BotStates.expert_invite_entry)
+    await message.answer(
+        "Введите код приглашения эксперта (выдаётся организатором).\n"
+        "Если кода нет -- /reset чтобы вернуться к выбору роли."
+    )
+
+
 @router.message(Command("support"))
 async def cmd_support(message: Message, state: FSMContext) -> None:
     """Enter support chat from any state."""
@@ -227,6 +315,7 @@ async def cmd_help(message: Message, state: FSMContext) -> None:
         "/profile - показать ваш профиль\n"
         "/recommend - пересобрать рекомендации (с тем же профилем)\n"
         "/rebuild - пересоздать профиль и рекомендации\n"
+        "/expert - вход для эксперта/ментора (по коду)\n"
         "/support - связь с организатором\n"
         "/reset - полный сброс сессии\n"
     )

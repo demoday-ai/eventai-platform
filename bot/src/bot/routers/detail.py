@@ -184,6 +184,25 @@ async def cb_back_to_program(
     )
 
 
+@router.callback_query(BotStates.view_detail, F.data.startswith("project:"))
+async def cb_project_in_detail(
+    callback: CallbackQuery, state: FSMContext, db: AsyncSession
+) -> None:
+    """Open another project from project detail screen.
+
+    Used by nav_back_keyboard's 'К проекту' button. Without this handler
+    the callback falls through to fallback router and shows
+    'Кнопка устарела'.
+    """
+    await callback.answer()
+    try:
+        rank = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.message.answer("Неверный номер проекта.")
+        return
+    await show_project_detail(callback, state, db, rank)
+
+
 @router.callback_query(BotStates.view_detail, F.data == "cmd:profile")
 async def cb_profile_in_detail(
     callback: CallbackQuery, state: FSMContext, db: AsyncSession

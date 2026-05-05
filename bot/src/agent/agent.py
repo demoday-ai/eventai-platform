@@ -111,6 +111,7 @@ async def _build_system_prompt(ctx: RunContext[AgentDeps]) -> str:
             slot = row[0]
             slots_map[slot.project_id] = {
                 "start": slot.start_time,
+                "end": slot.end_time,
                 "room": row.room_name,
             }
 
@@ -179,7 +180,18 @@ def _format_recommendations(
             slot = slots.get(rec.project_id)
             if slot:
                 start = slot["start"]
-                line += f" | когда: {start.strftime('%d.%m %H:%M')} | где: {slot['room']}"
+                end = slot.get("end")
+                if end:
+                    line += (
+                        f" | когда: {start.strftime('%d.%m %H:%M')}"
+                        f"-{end.strftime('%H:%M')}"
+                        f" | где: {slot['room']}"
+                    )
+                else:
+                    line += (
+                        f" | когда: {start.strftime('%d.%m %H:%M')}"
+                        f" | где: {slot['room']}"
+                    )
             lines.append(line)
         else:
             lines.append(f"#{rec.rank}")
