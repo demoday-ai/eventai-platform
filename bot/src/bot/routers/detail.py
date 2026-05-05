@@ -149,11 +149,14 @@ async def show_project_detail(
         await target.answer(card_text, reply_markup=detail_keyboard(project_rank, has_contact))
 
 
-@router.callback_query(BotStates.view_detail, F.data == "cmd:back")
+@router.callback_query(
+    BotStates.view_detail, F.data.in_({"cmd:back", "cmd:back_to_program"})
+)
 async def cb_back_to_program(
     callback: CallbackQuery, state: FSMContext, db: AsyncSession
 ) -> None:
-    """Return to program view."""
+    """Return to program view (handles both legacy cmd:back from
+    detail_keyboard and cmd:back_to_program from nav_back_keyboard)."""
     await callback.answer()
     await state.set_state(BotStates.view_program)
 
@@ -178,6 +181,40 @@ async def cb_back_to_program(
 
     await callback.message.answer(
         "Назад к программе.", reply_markup=program_keyboard()
+    )
+
+
+@router.callback_query(BotStates.view_detail, F.data == "cmd:profile")
+async def cb_profile_in_detail(
+    callback: CallbackQuery, state: FSMContext, db: AsyncSession
+) -> None:
+    """Show profile from project detail (used by nav_back_keyboard)."""
+    from src.bot.keyboards.program import nav_back_keyboard
+    from src.bot.routers.program import _format_profile_text
+
+    await callback.answer()
+
+    state_data = await state.get_data()
+    profile_id = state_data.get("profile_id")
+    rank = state_data.get("current_project_rank")
+    if not profile_id:
+        await callback.message.answer(
+            "Профиль не найден.", reply_markup=nav_back_keyboard(rank)
+        )
+        return
+
+    result = await db.execute(
+        select(GuestProfile).where(GuestProfile.id == UUID(profile_id))
+    )
+    profile = result.scalar_one_or_none()
+    if not profile:
+        await callback.message.answer(
+            "Профиль не найден.", reply_markup=nav_back_keyboard(rank)
+        )
+        return
+
+    await callback.message.answer(
+        _format_profile_text(profile), reply_markup=nav_back_keyboard(rank)
     )
 
 
@@ -271,13 +308,18 @@ async def cb_generate_questions(
             await callback.message.answer("Не удалось сгенерировать вопросы.")
             return
 
+        from src.bot.keyboards.program import nav_back_keyboard
+
         header = f"Вопросы для проекта #{project_rank}:\n{project.title}\n\n"
-        await callback.message.answer(header + content)
+        await callback.message.answer(
+            header + content, reply_markup=nav_back_keyboard(project_rank)
+        )
 
     except Exception as e:
         logger.error("Q&A generation failed: %s", e)
         await callback.message.answer(
-            "Не удалось сгенерировать вопросы. Попробуйте позже."
+            "Не удалось сгенерировать вопросы. Попробуйте позже.",
+            reply_markup=nav_back_keyboard(project_rank),
         )
 
 
@@ -308,13 +350,30 @@ async def cb_contact_author(
     contact = project.telegram_contact
     author = project.author or "автор"
 
+    from src.bot.keyboards.program import nav_back_keyboard
+
+    # Resolve project rank for the back button (best-effort).
+    rank_for_nav: int | None = None
+    profile_id = state_data.get("profile_id")
+    if profile_id:
+        rec_result = await db.execute(
+            select(Recommendation).where(
+                Recommendation.guest_profile_id == UUID(profile_id),
+                Recommendation.project_id == UUID(project_id),
+            )
+        )
+        rec = rec_result.scalar_one_or_none()
+        if rec:
+            rank_for_nav = rec.rank
+
     await callback.message.answer(
         f"Контакт автора проекта \"{project_title}\":\n\n"
         f"Автор: {author}\n"
         f"Telegram: {contact}\n\n"
         f"Шаблон для связи:\n"
         f"\"Здравствуйте! Видел(а) ваш проект {project_title} на Demo Day. "
-        f"Интересует возможность сотрудничества.\""
+        f"Интересует возможность сотрудничества.\"",
+        reply_markup=nav_back_keyboard(rank_for_nav),
     )
 
 

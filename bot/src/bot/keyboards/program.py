@@ -61,3 +61,22 @@ def support_back_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Назад к программе", callback_data="support:back")],
     ])
+
+
+def nav_back_keyboard(project_rank: int | None = None) -> InlineKeyboardMarkup:
+    """Compact navigation row used after secondary screens (Q&A, contact,
+    profile view, if-time list). Always includes 'К программе' so the user
+    is never stuck. Optional 'К проекту' if a rank is in scope.
+    """
+    row: list[InlineKeyboardButton] = []
+    if project_rank is not None:
+        row.append(
+            InlineKeyboardButton(
+                text="К проекту", callback_data=f"project:{project_rank}"
+            )
+        )
+    row.append(
+        InlineKeyboardButton(text="К программе", callback_data="cmd:back_to_program")
+    )
+    row.append(InlineKeyboardButton(text="Профиль", callback_data="cmd:profile"))
+    return InlineKeyboardMarkup(inline_keyboard=[row])

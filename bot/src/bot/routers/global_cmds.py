@@ -9,6 +9,7 @@ Commands:
 - /reset    -> wipe FSM and run /start logic
 - /profile  -> show profile if exists
 - /rebuild  -> wipe profile + recommendations, restart profiling
+- /recommend-> regenerate recommendations from existing profile
 - /support  -> enter support chat
 - /help     -> short menu
 """
@@ -115,6 +116,93 @@ async def cmd_rebuild(
     )
 
 
+@router.message(Command("recommend"))
+async def cmd_recommend(
+    message: Message,
+    state: FSMContext,
+    db: AsyncSession,
+    platform,
+) -> None:
+    """Re-generate recommendations from the existing profile.
+
+    Difference from /rebuild: keeps the profile (interests, summary,
+    objectives etc.) and just rebuilds the program. Use after the
+    underlying project pool changed (new artefact parsing, new embeddings)
+    or to get a different ranking with the same profile.
+    """
+    state_data = await state.get_data()
+    profile_id = state_data.get("profile_id")
+    event_id = state_data.get("event_id")
+
+    if not profile_id or not event_id:
+        await message.answer(
+            "Профиля ещё нет. Используйте /start чтобы пройти онбординг."
+        )
+        return
+
+    result = await db.execute(
+        select(GuestProfile).where(GuestProfile.id == UUID(profile_id))
+    )
+    profile = result.scalar_one_or_none()
+    if not profile:
+        await message.answer(
+            "Профиль не найден в базе. Используйте /rebuild чтобы пересоздать."
+        )
+        return
+
+    from src.services.retriever import generate_recommendations
+
+    interests = profile.selected_tags or []
+    keywords = profile.keywords or []
+    parts: list[str] = []
+    if interests:
+        parts.append(f"Интересы: {', '.join(interests)}")
+    if keywords:
+        parts.append(f"Цели: {', '.join(keywords)}")
+    if profile.nl_summary:
+        parts.append(profile.nl_summary)
+    profile_text = "\n".join(parts) or (profile.raw_text or "общие интересы")
+
+    await message.answer("Генерирую рекомендации...")
+    try:
+        recs = await generate_recommendations(
+            db=db,
+            platform=platform,
+            profile_id=profile.id,
+            event_id=UUID(event_id),
+            profile_text=profile_text,
+            selected_tags=interests,
+        )
+    except Exception as exc:
+        logger.error("recommend failed: %s", exc, exc_info=True)
+        await message.answer(
+            "Не удалось сгенерировать рекомендации. Попробуйте /rebuild."
+        )
+        return
+
+    await state.set_state(BotStates.view_program)
+    if not recs:
+        await message.answer(
+            "Не нашлось подходящих проектов. Попробуйте /rebuild "
+            "и опишите интересы подробнее."
+        )
+        return
+
+    from src.bot.keyboards.program import (
+        program_keyboard,
+        project_buttons_keyboard,
+    )
+    from src.bot.routers.program import format_program
+
+    text, project_list = await format_program(recs, db)
+    keyboard = (
+        project_buttons_keyboard(project_list)
+        if project_list
+        else program_keyboard()
+    )
+    await message.answer(text, reply_markup=keyboard)
+
+
 @router.message(Command("support"))
 async def cmd_support(message: Message, state: FSMContext) -> None:
     """Enter support chat from any state."""
@@ -137,6 +225,7 @@ async def cmd_help(message: Message, state: FSMContext) -> None:
         "Команды:\n"
         "/start - начать или перезапустить\n"
         "/profile - показать ваш профиль\n"
+        "/recommend - пересобрать рекомендации (с тем же профилем)\n"
         "/rebuild - пересоздать профиль и рекомендации\n"
         "/support - связь с организатором\n"
         "/reset - полный сброс сессии\n"

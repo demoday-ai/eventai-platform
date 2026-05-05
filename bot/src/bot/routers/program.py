@@ -23,7 +23,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.agent.agent import AgentDeps, create_agent
 from src.core.config import settings
 from src.core.sanitize import sanitize_text
-from src.bot.keyboards.program import detail_keyboard, program_keyboard, project_buttons_keyboard
+from src.bot.keyboards.program import (
+    detail_keyboard,
+    nav_back_keyboard,
+    program_keyboard,
+    project_buttons_keyboard,
+)
 from src.bot.states import BotStates
 from src.models.chat_message import ChatMessage
 from src.models.event import Event
@@ -67,7 +72,44 @@ async def cb_profile(
         await callback.message.answer("Профиль не найден.")
         return
 
-    await callback.message.answer(_format_profile_text(profile))
+    await callback.message.answer(
+        _format_profile_text(profile), reply_markup=nav_back_keyboard()
+    )
+
+
+@router.callback_query(BotStates.view_program, F.data == "cmd:back_to_program")
+async def cb_back_to_program(
+    callback: CallbackQuery, state: FSMContext, db: AsyncSession
+) -> None:
+    """Re-show the must-visit program (used by nav_back_keyboard)."""
+    await callback.answer()
+
+    state_data = await state.get_data()
+    profile_id = state_data.get("profile_id")
+    if not profile_id:
+        await callback.message.answer("Программа не найдена. /start.")
+        return
+
+    recs_result = await db.execute(
+        select(Recommendation)
+        .where(
+            Recommendation.guest_profile_id == UUID(profile_id),
+            Recommendation.category == "must_visit",
+        )
+        .order_by(Recommendation.rank)
+    )
+    recs = list(recs_result.scalars().all())
+    if not recs:
+        await callback.message.answer("Программа пуста. Используйте /recommend.")
+        return
+
+    text, project_list = await format_program(recs, db)
+    keyboard = (
+        project_buttons_keyboard(project_list)
+        if project_list
+        else program_keyboard()
+    )
+    await callback.message.answer(text, reply_markup=keyboard)
 
 
 @router.callback_query(BotStates.view_program, F.data == "cmd:if_time")
@@ -98,7 +140,7 @@ async def cb_if_time(
         return
 
     text, _ = await format_program(recs, db, header="Если успеете:")
-    await callback.message.answer(text)
+    await callback.message.answer(text, reply_markup=nav_back_keyboard())
 
 
 @router.callback_query(BotStates.view_program, F.data.startswith("project:"))

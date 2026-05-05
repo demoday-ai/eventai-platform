@@ -33,14 +33,36 @@ from src.services.expert import get_expert_progress, save_score
 logger = logging.getLogger(__name__)
 router = Router()
 
-# Default evaluation criteria if event doesn't define them
-DEFAULT_CRITERIA = [
-    "Техническая реализация",
-    "Инновационность",
-    "Практическая ценность",
-    "Качество презентации",
-    "Общее впечатление",
+# Default evaluation criteria for Demo Day: 7 critera scored 1-3 with weights.
+# Stored as (name, weight_pct). Weights are informational; total weighted score
+# is shown to expert as e.g. "17/21" (sum of raw 1-3 picks across 7 criteria).
+DEFAULT_CRITERIA: list[dict] = [
+    {"name": "Актуальность", "weight": 15},
+    {"name": "Практ. значимость", "weight": 20},
+    {"name": "Новизна", "weight": 15},
+    {"name": "Импакт", "weight": 15},
+    {"name": "R&D", "weight": 10},
+    {"name": "Масштабирование", "weight": 10},
+    {"name": "Качество реализации", "weight": 15},
 ]
+
+
+def _criteria_names(criteria: list) -> list[str]:
+    """Extract just names from criteria list (handles old str-list format too)."""
+    out: list[str] = []
+    for c in criteria:
+        if isinstance(c, dict):
+            out.append(c.get("name") or "")
+        else:
+            out.append(str(c))
+    return out
+
+
+def _criteria_weight_for(criteria: list, name: str) -> int | None:
+    for c in criteria:
+        if isinstance(c, dict) and c.get("name") == name:
+            return c.get("weight")
+    return None
 
 
 async def show_dashboard(
@@ -101,27 +123,28 @@ async def show_dashboard(
     total = progress["total"]
     scored = progress["scored"]
 
+    # Pagination: keep current page in state, default 0.
+    state_data_for_page = await state.get_data()
+    page = state_data_for_page.get("expert_page", 0)
+
     # Build dashboard text
+    pct = int(round(scored / total * 100)) if total else 0
     lines = [
         f"Эксперт: {expert.name}",
-        f"Прогресс: {scored}/{total} проектов оценено",
+        f"Прогресс: {scored}/{total} проектов ({pct}%)",
         "",
     ]
-
-    for p in projects:
-        status = "v" if p.id in scores else " "
-        lines.append(f"[{status}] {p.title[:40]}")
-
-    lines.append("")
     if scored == total and total > 0:
-        lines.append("Все проекты оценены!")
+        lines.append("Все проекты оценены. Спасибо.")
     else:
-        lines.append("Выберите проект для оценки:")
+        lines.append(
+            "Выберите проект (✅ = оценён, можно изменить; ▫️ = ждёт оценки):"
+        )
 
     dashboard_text = "\n".join(lines)
 
     scored_ids = set(scores.keys())
-    keyboard = expert_dashboard_keyboard(projects, scored_ids)
+    keyboard = expert_dashboard_keyboard(projects, scored_ids, page=page)
 
     await state.set_state(BotStates.expert_dashboard)
 
@@ -131,11 +154,28 @@ async def show_dashboard(
         await target.answer(dashboard_text, reply_markup=keyboard)
 
 
+@router.callback_query(BotStates.expert_dashboard, F.data.startswith("page:"))
+async def cb_dashboard_page(
+    callback: CallbackQuery, state: FSMContext, db: AsyncSession
+) -> None:
+    """Switch dashboard page."""
+    await callback.answer()
+    page_str = callback.data.split(":")[1]
+    if page_str == "noop":
+        return
+    try:
+        page = int(page_str)
+    except ValueError:
+        return
+    await state.update_data(expert_page=page)
+    await show_dashboard(callback, state, db)
+
+
 @router.callback_query(BotStates.expert_dashboard, F.data.startswith("eval:"))
 async def cb_start_evaluation(
     callback: CallbackQuery, state: FSMContext, db: AsyncSession
 ) -> None:
-    """Start evaluating a specific project."""
+    """Start (or re-edit) evaluation of a specific project."""
     await callback.answer()
 
     project_id = callback.data.split(":")[1]
@@ -151,24 +191,46 @@ async def cb_start_evaluation(
 
     state_data = await state.get_data()
     criteria = state_data.get("criteria", DEFAULT_CRITERIA)
+    crit_names = _criteria_names(criteria)
+
+    # If expert already scored this project, pre-fill so they can edit
+    expert_id = state_data.get("expert_id")
+    existing_scores: dict = {}
+    existing_comment: str | None = None
+    if expert_id:
+        from src.models.expert_score import ExpertScore
+        prev = await db.execute(
+            select(ExpertScore).where(
+                ExpertScore.expert_id == UUID(expert_id),
+                ExpertScore.project_id == UUID(project_id),
+            )
+        )
+        prev_row = prev.scalar_one_or_none()
+        if prev_row:
+            existing_scores = dict(prev_row.criteria_scores or {})
+            existing_comment = prev_row.comment
 
     # Initialize evaluation state
     await state.set_state(BotStates.expert_evaluation)
     await state.update_data(
         eval_project_id=project_id,
         eval_project_title=project.title,
-        eval_scores={},
+        eval_scores=existing_scores,
         eval_criterion_index=0,
         eval_awaiting_comment=False,
+        eval_comment=existing_comment,
     )
 
     # Show first criterion
-    criterion = criteria[0]
+    criterion_name = crit_names[0]
+    weight = _criteria_weight_for(criteria, criterion_name)
+    weight_str = f" [вес {weight}%]" if weight else ""
+    current = existing_scores.get(criterion_name)
     await callback.message.answer(
         f"Оценка проекта: {project.title}\n\n"
-        f"Критерий 1/{len(criteria)}: {criterion}\n"
-        "Выберите оценку (1-5):",
-        reply_markup=score_keyboard(0),
+        f"Критерий 1/{len(crit_names)}: {criterion_name}{weight_str}\n"
+        "Выберите оценку (1-3):",
+        reply_markup=score_keyboard(0, current=current),
     )
 
 
@@ -260,17 +322,18 @@ async def cb_score_criterion(
     except ValueError:
         return
 
-    if score_value < 1 or score_value > 5:
-        await callback.message.answer("Оценка должна быть от 1 до 5.")
+    if score_value < 1 or score_value > 3:
+        await callback.message.answer("Оценка должна быть от 1 до 3.")
         return
 
     state_data = await state.get_data()
     criteria = state_data.get("criteria", DEFAULT_CRITERIA)
+    crit_names = _criteria_names(criteria)
     eval_scores: dict = state_data.get("eval_scores", {})
     project_title = state_data.get("eval_project_title", "")
 
     # Save score for this criterion
-    criterion_name = criteria[criterion_index]
+    criterion_name = crit_names[criterion_index]
     eval_scores[criterion_name] = score_value
 
     next_index = criterion_index + 1
@@ -279,25 +342,32 @@ async def cb_score_criterion(
         eval_criterion_index=next_index,
     )
 
-    if next_index < len(criteria):
-        # Show next criterion
-        next_criterion = criteria[next_index]
+    if next_index < len(crit_names):
+        next_name = crit_names[next_index]
+        weight = _criteria_weight_for(criteria, next_name)
+        weight_str = f" [вес {weight}%]" if weight else ""
+        current = eval_scores.get(next_name)
         await callback.message.edit_text(
             f"Оценка проекта: {project_title}\n\n"
-            f"Критерий {next_index + 1}/{len(criteria)}: {next_criterion}\n"
-            "Выберите оценку (1-5):",
-            reply_markup=score_keyboard(next_index),
+            f"Критерий {next_index + 1}/{len(crit_names)}: {next_name}{weight_str}\n"
+            "Выберите оценку (1-3):",
+            reply_markup=score_keyboard(next_index, current=current),
         )
     else:
         # All criteria scored, ask for comment
         await state.update_data(eval_awaiting_comment=True)
 
-        # Show summary
+        # Show summary with weighted total
+        max_raw = len(crit_names) * 3
+        raw_total = sum(eval_scores.values())
         lines = [f"Оценки для проекта: {project_title}\n"]
         for crit, val in eval_scores.items():
-            lines.append(f"  {crit}: {val}/5")
+            weight = _criteria_weight_for(criteria, crit)
+            w_str = f" [вес {weight}%]" if weight else ""
+            lines.append(f"  {crit}: {val}/3{w_str}")
+        lines.append(f"\nИтого (raw): {raw_total}/{max_raw}")
         lines.append(
-            "\nНапишите комментарий (или отправьте '-' чтобы пропустить):"
+            "Напишите комментарий (или отправьте '-' чтобы пропустить):"
         )
 
         await callback.message.edit_text("\n".join(lines))
@@ -321,13 +391,20 @@ async def eval_comment_text(message: Message, state: FSMContext) -> None:
 
     project_title = state_data.get("eval_project_title", "")
     eval_scores = state_data.get("eval_scores", {})
+    criteria = state_data.get("criteria", DEFAULT_CRITERIA)
+
+    raw_total = sum(eval_scores.values())
+    max_raw = len(_criteria_names(criteria)) * 3
 
     # Show final summary for confirmation
     lines = [f"Итоговая оценка: {project_title}\n"]
     for crit, val in eval_scores.items():
-        lines.append(f"  {crit}: {val}/5")
+        weight = _criteria_weight_for(criteria, crit)
+        w_str = f" [вес {weight}%]" if weight else ""
+        lines.append(f"  {crit}: {val}/3{w_str}")
+    lines.append(f"\nИтого (raw): {raw_total}/{max_raw}")
     if comment:
-        lines.append(f"\nКомментарий: {comment}")
+        lines.append(f"Комментарий: {comment}")
     lines.append("\nПодтвердить?")
 
     await message.answer(
@@ -361,8 +438,12 @@ def _clear_eval_state(state_data: dict) -> None:
         state_data.pop(key, None)
 
 
-def _get_criteria(event: Event | None) -> list[str]:
-    """Extract evaluation criteria from event config or use defaults."""
+def _get_criteria(event: Event | None) -> list:
+    """Extract evaluation criteria from event config or use defaults.
+
+    Returns a list of either strings (legacy) or dicts {name, weight}.
+    All consumers go through _criteria_names / _criteria_weight_for.
+    """
     if not event or not event.evaluation_criteria:
         return DEFAULT_CRITERIA
 
@@ -371,18 +452,9 @@ def _get_criteria(event: Event | None) -> list[str]:
     if isinstance(criteria_data, dict) and "criteria" in criteria_data:
         criteria_list = criteria_data["criteria"]
         if isinstance(criteria_list, list) and criteria_list:
-            names = []
-            for c in criteria_list:
-                if isinstance(c, str):
-                    names.append(c)
-                elif isinstance(c, dict) and "name" in c:
-                    names.append(c["name"])
-            if names:
-                return names
+            return criteria_list  # may contain str or dict items
 
-    if isinstance(criteria_data, list):
-        result = [str(c) for c in criteria_data if c]
-        if result:
-            return result
+    if isinstance(criteria_data, list) and criteria_data:
+        return criteria_data
 
     return DEFAULT_CRITERIA
