@@ -21,8 +21,13 @@ class GuestProfile(Base):
         index=True,
     )
     selected_tags: Mapped[list[str] | None] = mapped_column(JSONB, default=None)
+    # DB has extracted_tags JSONB NOT NULL DEFAULT '[]'. Bot doesn't write it (backend
+    # admin/clustering does), but ORM must know the column to avoid SELECT mismatches.
+    extracted_tags: Mapped[list[str] | None] = mapped_column(JSONB, default=None)
     keywords: Mapped[list[str] | None] = mapped_column(JSONB, default=None)
     raw_text: Mapped[str | None] = mapped_column(Text, default=None)
+    # Free-form extra payload backend may attach. Bot reads if present, doesn't write.
+    extra_data: Mapped[dict | None] = mapped_column(JSONB, default=None)
     nl_summary: Mapped[str | None] = mapped_column(Text, default=None)
     company: Mapped[str | None] = mapped_column(String(255), default=None)
     position: Mapped[str | None] = mapped_column(String(255), default=None)
