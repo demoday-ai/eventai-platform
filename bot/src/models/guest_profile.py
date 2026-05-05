@@ -31,7 +31,7 @@ class GuestProfile(Base):
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(),
     )
-    updated_at: Mapped[datetime | None] = mapped_column(
-        default=None,
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(),
         onupdate=func.now(),
     )
