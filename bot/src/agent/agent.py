@@ -86,16 +86,37 @@ async def _build_system_prompt(ctx: RunContext[AgentDeps]) -> str:
         _format_profile(deps.profile) if deps.profile else "Профиль не создан"
     )
 
-    # Load project details for recommendations context
+    # Load project details + scheduled slots for recommendations context.
+    # Including slot times/rooms here lets the LLM answer "когда?/где?"
+    # without having to invoke an extra tool, and prevents it from saying
+    # "нет расписания" when the program just showed times to the user.
     project_ids = [r.project_id for r in deps.recommendations]
     projects_map: dict = {}
+    slots_map: dict = {}
     if project_ids:
+        from src.models.room import Room
+        from src.models.schedule_slot import ScheduleSlot
+
         result = await deps.db.execute(
             select(Project).where(Project.id.in_(project_ids))
         )
         projects_map = {p.id: p for p in result.scalars().all()}
 
-    recs_summary = _format_recommendations(deps.recommendations, projects_map)
+        slot_rows = await deps.db.execute(
+            select(ScheduleSlot, Room.name.label("room_name"))
+            .join(Room, ScheduleSlot.room_id == Room.id)
+            .where(ScheduleSlot.project_id.in_(project_ids))
+        )
+        for row in slot_rows.all():
+            slot = row[0]
+            slots_map[slot.project_id] = {
+                "start": slot.start_time,
+                "room": row.room_name,
+            }
+
+    recs_summary = _format_recommendations(
+        deps.recommendations, projects_map, slots_map
+    )
 
     prompt = build_agent_system_prompt(
         is_business=is_business,
@@ -130,12 +151,17 @@ def _format_profile(profile: GuestProfile) -> str:
     return "\n".join(parts) if parts else "Нет данных"
 
 
-def _format_recommendations(recs: list[Recommendation], projects: dict | None = None) -> str:
-    """Format recommendation list with project details for the system prompt."""
+def _format_recommendations(
+    recs: list[Recommendation],
+    projects: dict | None = None,
+    slots: dict | None = None,
+) -> str:
+    """Format recommendation list with project + slot details for system prompt."""
     if not recs:
         return "Нет рекомендаций"
 
     projects = projects or {}
+    slots = slots or {}
     lines: list[str] = []
     for rec in recs:
         project = projects.get(rec.project_id)
@@ -150,6 +176,10 @@ def _format_recommendations(recs: list[Recommendation], projects: dict | None = 
             pc = project.parsed_content if isinstance(project.parsed_content, dict) else None
             if pc and pc.get("problem"):
                 line += f" | проблема: {pc['problem'][:80]}"
+            slot = slots.get(rec.project_id)
+            if slot:
+                start = slot["start"]
+                line += f" | когда: {start.strftime('%d.%m %H:%M')} | где: {slot['room']}"
             lines.append(line)
         else:
             lines.append(f"#{rec.rank}")
