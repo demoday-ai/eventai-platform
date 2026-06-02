@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react"
 import { getTagGenerationStatus, cancelTagGeneration, type TagGenerationStatus } from "../lib/api-client"
 
 interface BackgroundJob {
@@ -36,16 +36,23 @@ interface BackgroundJobsProviderProps {
 
 export function BackgroundJobsProvider({ children }: BackgroundJobsProviderProps) {
   const [jobs, setJobs] = useState<BackgroundJob[]>([])
+  const jobsRef = useRef<BackgroundJob[]>([])
 
-  // Poll active jobs
+  // Keep a live reference so the polling loop never reads a stale snapshot.
   useEffect(() => {
-    const activeJobs = jobs.filter(
-      (j) => j.status === "running" || j.status === "pending"
-    )
+    jobsRef.current = jobs
+  }, [jobs])
 
-    if (activeJobs.length === 0) return
-
+  // Single stable polling loop for the provider lifetime. Reads the current
+  // job list via ref (not a closure), so progress updates and completion are
+  // tracked correctly without tearing down/recreating the interval each tick.
+  useEffect(() => {
     const interval = setInterval(async () => {
+      const activeJobs = jobsRef.current.filter(
+        (j) => j.status === "running" || j.status === "pending"
+      )
+      if (activeJobs.length === 0) return
+
       for (const job of activeJobs) {
         try {
           if (job.type === "tag-generation") {
@@ -78,7 +85,7 @@ export function BackgroundJobsProvider({ children }: BackgroundJobsProviderProps
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [jobs])
+  }, [])
 
   const startTagGeneration = (taskId: string) => {
     setJobs((prev) => [

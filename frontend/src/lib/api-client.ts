@@ -258,12 +258,6 @@ export interface UploadResult {
   duplicate_warning?: string | null
 }
 
-export interface UploadConflict {
-  message: string
-  existing_count: number
-  new_count: number
-}
-
 export interface ExpertUploadResult {
   total_parsed: number
   imported: number
@@ -271,11 +265,6 @@ export interface ExpertUploadResult {
   without_tags: number
   errors: RowError[]
   duplicate_warning?: string | null
-}
-
-export interface ExpertUploadConflict {
-  existing_count: number
-  message: string
 }
 
 // --- Guest Upload types ---
@@ -286,11 +275,6 @@ export interface GuestUploadResult {
   duplicates: number
   errors: RowError[]
   duplicate_warning?: string | null
-}
-
-export interface GuestUploadConflict {
-  existing_count: number
-  message: string
 }
 
 // --- Smart Merge types ---
@@ -794,12 +778,6 @@ export interface UnplacedProject {
 export interface UnplacedResponse {
   total: number
   items: UnplacedProject[]
-}
-
-export interface BulkMoveRequest {
-  room_id: string
-  after_time: string
-  shift_minutes: number
 }
 
 export interface ScheduleConfigBreak {
@@ -1468,11 +1446,6 @@ export const getUnplacedProjects = async (): Promise<UnplacedResponse> => {
   return data
 }
 
-export const bulkMoveSlots = async (body: BulkMoveRequest): Promise<{ moved_count: number }> => {
-  const { data } = await apiClient.post("/schedule/slots/bulk-move", body)
-  return data
-}
-
 export const configureScheduleFromText = async (
   body: ScheduleConfigFromTextRequest
 ): Promise<ScheduleConfigFromTextResponse> => {
@@ -1830,15 +1803,6 @@ export const closeSupportThread = async (threadId: string): Promise<{ status: st
   return data
 }
 
-export const createSupportThread = async (userId: string, message: string): Promise<{ thread_id: string }> => {
-  const { data } = await apiClient.post<{ thread_id: string }>("/admin/support/threads", { user_id: userId, message })
-  return data
-}
-
-export const getSupportUnreadCount = async (): Promise<{ count: number }> => {
-  const { data } = await apiClient.get<{ count: number }>("/admin/support/unread-count")
-  return data
-}
 export const dismissSupportAttention = async (threadId: string): Promise<{ status: string }> => {
   const { data } = await apiClient.post<{ status: string }>(`/admin/support/threads/${threadId}/dismiss-attention`)
   return data

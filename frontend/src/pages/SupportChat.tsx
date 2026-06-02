@@ -19,6 +19,7 @@ export function SupportChat() {
   const [draftMessage, setDraftMessage] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("open")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const prevMsgCountRef = useRef(0)
 
   useEffect(() => {
     document.title = `${APP_NAME} - Чат поддержки`
@@ -39,11 +40,21 @@ export function SupportChat() {
     refetchInterval: 3000,
   })
 
-  // Auto-scroll to bottom on new messages
+  // Reset the scroll baseline when switching threads so the first load of the
+  // newly selected thread scrolls to the bottom.
   useEffect(() => {
-    if (messages?.length) {
+    prevMsgCountRef.current = 0
+  }, [selectedThreadId])
+
+  // Auto-scroll to bottom only when the message count actually grows.
+  // The 3s refetch returns a new array reference each time; scrolling on every
+  // refetch would yank the view down and block reading the history.
+  useEffect(() => {
+    const count = messages?.length ?? 0
+    if (count > prevMsgCountRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
+    prevMsgCountRef.current = count
   }, [messages])
 
   const sendMutation = useMutation({

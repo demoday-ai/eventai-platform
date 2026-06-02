@@ -211,22 +211,3 @@ export function startAdminTour() {
   driverObj.drive()
 }
 
-// Note: These functions are now just for compatibility
-// Real status comes from backend via getTourStatus()
-export function shouldShowTourPrompt(): boolean {
-  // This is now checked via API in Dashboard component
-  return false
-}
-
-export function shouldShowTour(): boolean {
-  // This is now checked via API
-  return false
-}
-
-export function markTourPrompted() {
-  // This is now handled via API in Dashboard component
-}
-
-export function resetTour() {
-  // This is now handled via API (resetTourStatus)
-}
