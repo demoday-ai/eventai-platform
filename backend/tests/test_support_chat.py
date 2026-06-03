@@ -109,3 +109,38 @@ class TestSupportSchemas:
 
         req = CreateThreadRequest(user_id=str(uuid.uuid4()), message="Привет!")
         assert req.message == "Привет!"
+
+
+class TestSendOrganizerReply:
+    """Service: organizer reply clears the needs_attention flag (ADR-001)."""
+
+    @pytest.mark.asyncio
+    async def test_reply_clears_needs_attention(self, session):
+        from datetime import date
+
+        from app.models.event import Event
+        from app.models.support_thread import SupportThread
+        from app.models.user import User
+        from app.services.admin import support_service
+
+        event = Event(name="DD", start_date=date.today(), end_date=date.today())
+        organizer = User(telegram_user_id="org1", full_name="Org")
+        guest = User(telegram_user_id="g1", full_name="Guest")
+        session.add_all([event, organizer, guest])
+        await session.flush()
+
+        thread = SupportThread(
+            user_id=guest.id,
+            event_id=event.id,
+            status="open",
+            needs_attention=True,
+        )
+        session.add(thread)
+        await session.flush()
+
+        await support_service.send_organizer_reply(
+            session, thread.id, event.id, organizer.id, "Зал 3, 14:00"
+        )
+
+        await session.refresh(thread)
+        assert thread.needs_attention is False

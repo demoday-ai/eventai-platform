@@ -14,6 +14,8 @@ from app.models.room import Room
 from app.models.room_project import RoomProject
 from app.models.schedule_change_log import ScheduleChangeLog
 from app.models.schedule_slot import ScheduleSlot
+from app.models.support_message import SupportMessage
+from app.models.support_thread import SupportThread
 from app.models.tag import Tag
 from app.models.user import User
 
@@ -38,6 +40,8 @@ async def async_engine():
                 ScheduleSlot.__table__,
                 ScheduleChangeLog.__table__,
                 Notification.__table__,
+                SupportThread.__table__,
+                SupportMessage.__table__,
             ],
         )
     yield engine

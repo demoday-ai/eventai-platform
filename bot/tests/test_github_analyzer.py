@@ -6,6 +6,7 @@ Tests parse_github_url, gh_api (mocked), analyze_repo, and drill-down functions.
 import asyncio
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -285,6 +286,12 @@ class TestAnalyzeRepo:
     @pytest.mark.asyncio
     async def test_red_flags_no_tests_no_readme(self):
         """Red flags generated for missing tests and README."""
+        # Use dates relative to now so the test stays stable over time:
+        # created 5 days ago triggers the "timeline" flag (< 14 days),
+        # pushed today avoids a stale-activity flag.
+        now = datetime.now(timezone.utc)
+        recent = (now - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        today = now.strftime("%Y-%m-%dT%H:%M:%SZ")
         meta = {
             "default_branch": "main",
             "stargazers_count": 0,
@@ -292,8 +299,8 @@ class TestAnalyzeRepo:
             "open_issues_count": 0,
             "fork": False,
             "license": None,
-            "created_at": "2026-04-10T00:00:00Z",
-            "pushed_at": "2026-04-10T00:00:00Z",
+            "created_at": recent,
+            "pushed_at": today,
             "language": "Python",
         }
 

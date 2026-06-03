@@ -11,6 +11,8 @@ from src.models.chat_message import ChatMessage
 from src.models.expert import Expert
 from src.models.expert_score import ExpertScore
 from src.models.support_log import SupportLog
+from src.models.support_thread import SupportThread
+from src.models.support_message import SupportMessage
 from src.models.business_followup import BusinessFollowup
 
 __all__ = [
@@ -27,5 +29,7 @@ __all__ = [
     "Expert",
     "ExpertScore",
     "SupportLog",
+    "SupportThread",
+    "SupportMessage",
     "BusinessFollowup",
 ]

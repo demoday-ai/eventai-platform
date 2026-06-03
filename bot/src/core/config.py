@@ -25,9 +25,6 @@ class Settings(BaseSettings):
     # GitHub
     github_token: str = ""  # GitHub token for API access via gh CLI
 
-    # Organizer
-    organizer_chat_id: int = 0
-
     # Limits
     rate_limit_per_minute: int = 10
     semaphore_limit: int = 10

@@ -128,6 +128,7 @@ def _get_dp_and_bot() -> tuple[Dispatcher, MockedBot]:
     _dp.callback_query.middleware(_platform_mw)
 
     # Import routers fresh (they are module-level singletons)
+    from src.bot.routers.global_cmds import router as global_cmds_router
     from src.bot.routers.start import router as start_router
     from src.bot.routers.profiling import router as profiling_router
     from src.bot.routers.expert import router as expert_router
@@ -136,7 +137,9 @@ def _get_dp_and_bot() -> tuple[Dispatcher, MockedBot]:
     from src.bot.routers.program import router as program_router
     from src.bot.routers.fallback import router as fallback_router
 
-    # Registration order matches main.py
+    # Registration order matches main.py: global_cmds FIRST so /support, /profile,
+    # /rebuild work in any state instead of being swallowed by view_program.
+    _dp.include_router(global_cmds_router)
     _dp.include_router(start_router)
     _dp.include_router(profiling_router)
     _dp.include_router(expert_router)
@@ -242,7 +245,7 @@ async def seed(db: AsyncSession):
             project_id=p.id,
             start_time=slot_time,
             end_time=slot_time + timedelta(minutes=20),
-            day_number=1,
+            display_order=i + 1,
         )
         slots.append(slot)
         db.add(slot)
@@ -920,7 +923,7 @@ class TestProgramRouter:
         await dp.feed_update(bot, update)
 
         req = bot.get_request()
-        assert "не найден" in req.text.lower()
+        assert "не создан" in req.text.lower()
 
     @pytest.mark.asyncio
     async def test_cb_profile_button(self, db: AsyncSession, seed):
@@ -1075,10 +1078,10 @@ class TestDetailRouter:
         await db.flush()
 
         rec = Recommendation(
-            profile_id=profile.id,
+            guest_profile_id=profile.id,
             project_id=seed["projects"][0].id,
             relevance_score=90.0,
-            category="must_see",
+            category="must_visit",
             rank=1,
             slot_id=seed["slots"][0].id,
         )
@@ -1208,8 +1211,12 @@ class TestSupportRouter:
         assert state == BotStates.support_chat.state
 
     @pytest.mark.asyncio
-    async def test_support_text_forwards_message(self, db: AsyncSession, seed):
-        """Text in support_chat -> creates SupportLog, sends confirmation."""
+    async def test_support_text_writes_to_thread(self, db: AsyncSession, seed):
+        """Text in support_chat -> creates thread + user message (ADR-001),
+        flags needs_attention, confirms to user. No SupportLog, no group forward."""
+        from src.models.support_message import SupportMessage
+        from src.models.support_thread import SupportThread
+
         uid = 9041
         user = User(telegram_user_id=str(uid), full_name="Support Sender", username="sender")
         db.add(user)
@@ -1230,12 +1237,29 @@ class TestSupportRouter:
         await dp.feed_update(bot, update)
 
         req = bot.get_request()
-        assert "Сообщение отправлено" in req.text
+        assert "отправлено" in req.text.lower()
 
-        result = await db.execute(select(SupportLog).where(SupportLog.user_id == user.id))
-        log = result.scalar_one_or_none()
-        assert log is not None
-        assert log.question == "Где найти расписание?"
+        thread = (
+            await db.execute(
+                select(SupportThread).where(SupportThread.user_id == user.id)
+            )
+        ).scalar_one()
+        assert thread.needs_attention is True
+        assert thread.status == "open"
+
+        msg = (
+            await db.execute(
+                select(SupportMessage).where(SupportMessage.thread_id == thread.id)
+            )
+        ).scalar_one()
+        assert msg.sender_type == "user"
+        assert msg.text == "Где найти расписание?"
+
+        # Legacy SupportLog must no longer be written.
+        log = (
+            await db.execute(select(SupportLog).where(SupportLog.user_id == user.id))
+        ).scalar_one_or_none()
+        assert log is None
 
     @pytest.mark.asyncio
     async def test_support_rate_limit(self, db: AsyncSession, seed):
@@ -1284,6 +1308,35 @@ class TestSupportRouter:
         assert state == BotStates.view_program.state
 
     @pytest.mark.asyncio
+    async def test_support_back_loads_thread_history(self, db: AsyncSession, seed):
+        """support:back -> support_history in FSM is built from the thread (ADR-001)."""
+        from src.services.support import add_user_support_message
+
+        uid = 9046
+        user = User(telegram_user_id=str(uid), full_name="History User")
+        db.add(user)
+        await db.flush()
+        await add_user_support_message(db, user.id, seed["event"].id, "мой вопрос")
+
+        dp, bot = _setup_dp(db)
+        await _set_state(dp, bot, BotStates.support_chat.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+        }, user_id=uid)
+
+        _queue_cb(bot)
+        _queue_send(bot)
+
+        update = make_callback("support:back", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        data = await _get_data(dp, bot, user_id=uid)
+        history = data.get("support_history")
+        assert history is not None
+        assert any("мой вопрос" in line for line in history)
+
+    @pytest.mark.asyncio
     async def test_support_back_with_recommendations(self, db: AsyncSession, seed):
         """support:back with recs -> shows program."""
         uid = 9044
@@ -1296,10 +1349,10 @@ class TestSupportRouter:
         await db.flush()
 
         rec = Recommendation(
-            profile_id=profile.id,
+            guest_profile_id=profile.id,
             project_id=seed["projects"][0].id,
             relevance_score=85.0,
-            category="must_see",
+            category="must_visit",
             rank=1,
         )
         db.add(rec)
@@ -1470,11 +1523,11 @@ class TestExpertRouter:
         _queue_cb(bot)
         _queue_edit(bot)
 
-        update = make_callback("score:0:4", user_id=uid, chat_id=uid)
+        update = make_callback("score:0:3", user_id=uid, chat_id=uid)
         await dp.feed_update(bot, update)
 
         data = await _get_data(dp, bot, user_id=uid)
-        assert data["eval_scores"]["Техническая сложность"] == 4
+        assert data["eval_scores"]["Техническая сложность"] == 3
         assert data["eval_criterion_index"] == 1
 
     @pytest.mark.asyncio
@@ -1809,11 +1862,11 @@ class TestCrossRouterFlows:
         state = await _get_state(dp, bot, user_id=uid)
         assert state == BotStates.expert_evaluation.state
 
-        # Step 3: Score all 3 criteria
+        # Step 3: Score all 3 criteria (1-3 scale)
         for i in range(3):
             _queue_cb(bot)
             _queue_edit(bot)
-            update = make_callback(f"score:{i}:{4 + (i % 2)}", user_id=uid, chat_id=uid)
+            update = make_callback(f"score:{i}:{2 + (i % 2)}", user_id=uid, chat_id=uid)
             await dp.feed_update(bot, update)
 
         # Step 4: Comment

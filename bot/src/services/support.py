@@ -7,8 +7,116 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.sanitize import sanitize_text
 from src.models.support_log import SupportLog
+from src.models.support_message import SupportMessage
+from src.models.support_thread import SupportThread
 
 logger = logging.getLogger(__name__)
+
+
+async def _get_or_create_open_thread(
+    db: AsyncSession, user_id: UUID, event_id: UUID
+) -> SupportThread:
+    """Get the user's thread for the event (reopen if closed) or create one.
+
+    One thread per user per event (matches backend unique constraint).
+    """
+    result = await db.execute(
+        select(SupportThread)
+        .where(SupportThread.user_id == user_id, SupportThread.event_id == event_id)
+        .order_by(SupportThread.created_at.desc())
+        .limit(1)
+        # Lock the row so two concurrent guest messages don't both fall through
+        # to INSERT and violate UNIQUE(user_id, event_id) (migration 035).
+        .with_for_update(skip_locked=False)
+    )
+    thread = result.scalar_one_or_none()
+    if thread:
+        if thread.status == "closed":
+            thread.status = "open"
+            thread.closed_by = None
+            thread.updated_at = datetime.now(timezone.utc)
+        return thread
+
+    thread = SupportThread(user_id=user_id, event_id=event_id, status="open")
+    db.add(thread)
+    await db.flush()
+    return thread
+
+
+async def add_user_support_message(
+    db: AsyncSession,
+    user_id: UUID,
+    event_id: UUID,
+    text: str,
+) -> SupportMessage:
+    """Persist a guest support message into the unified thread model (ADR-001).
+
+    Reuses/reopens the user's thread, appends a "user" message, flags the
+    thread as needing organizer attention. The web admin reads the same tables.
+    """
+    thread = await _get_or_create_open_thread(db, user_id, event_id)
+    thread.needs_attention = True
+    thread.updated_at = datetime.now(timezone.utc)
+
+    msg = SupportMessage(
+        thread_id=thread.id,
+        sender_type="user",
+        sender_id=user_id,
+        text=(sanitize_text(text) or "")[:1000],
+    )
+    db.add(msg)
+    await db.flush()
+    await db.refresh(msg)
+    return msg
+
+
+async def get_support_history(
+    db: AsyncSession,
+    user_id: UUID,
+    event_id: UUID,
+    limit: int = 20,
+) -> list[str] | None:
+    """Render the user's support thread as text lines for AI agent context.
+
+    Returns None if the user has no thread. Lines look like
+    "Пользователь: ..." / "Организатор: ..." in chronological order.
+    """
+    thread = (
+        await db.execute(
+            select(SupportThread)
+            .where(
+                SupportThread.user_id == user_id,
+                SupportThread.event_id == event_id,
+            )
+            .order_by(SupportThread.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if not thread:
+        return None
+
+    # Take the NEWEST `limit` messages (so the latest organizer answer is never
+    # dropped), with id as a tiebreaker for deterministic order when several
+    # messages share an identical created_at; then render chronologically.
+    messages = (
+        await db.execute(
+            select(SupportMessage)
+            .where(SupportMessage.thread_id == thread.id)
+            .order_by(
+                SupportMessage.created_at.desc(),
+                SupportMessage.id.desc(),
+            )
+            .limit(limit)
+        )
+    ).scalars().all()
+    if not messages:
+        return None
+
+    lines: list[str] = []
+    for m in reversed(messages):
+        label = "Пользователь" if m.sender_type == "user" else "Организатор"
+        lines.append(f"{label}: {m.text}")
+    return lines
 
 
 def generate_correlation_id() -> str:

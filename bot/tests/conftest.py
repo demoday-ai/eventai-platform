@@ -214,7 +214,7 @@ async def seed(db: AsyncSession):
             project_id=p.id,
             start_time=slot_time,
             end_time=slot_time + timedelta(minutes=20),
-            day_number=1,
+            display_order=i + 1,
         )
         slots.append(slot)
         db.add(slot)

@@ -36,7 +36,6 @@ from src.bot.routers import (
     profiling_router,
     program_router,
     start_router,
-    support_group_router,
     support_router,
 )
 from src.core.config import settings
@@ -263,10 +262,6 @@ async def main() -> None:
     dp.include_router(support_router)
     dp.include_router(program_router)
     dp.include_router(fallback_router)
-
-    # Group router for organizer replies (separate chat)
-    if settings.organizer_chat_id:
-        dp.include_router(support_group_router)
 
     # --- Health endpoint ---
     health_runner = await run_health_server()
