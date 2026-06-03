@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.models.base import Base
@@ -21,6 +21,9 @@ class ChatMessage(Base):
     event_id: Mapped[UUID] = mapped_column(ForeignKey("events.id"))
     role: Mapped[str] = mapped_column(String(32))
     content: Mapped[str] = mapped_column(Text)
+    # Real column is timestamptz (migration 038); declare tz-aware so values
+    # round-trip as offset-aware and never clash with aware datetimes.
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
     )

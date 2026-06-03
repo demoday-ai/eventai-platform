@@ -6,11 +6,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.sanitize import sanitize_text
+from src.models.chat_message import ChatMessage
 from src.models.support_log import SupportLog
-from src.models.support_message import SupportMessage
 from src.models.support_thread import SupportThread
 
 logger = logging.getLogger(__name__)
+
+
+async def is_taken_over(db: AsyncSession, user_id: UUID, event_id: UUID) -> bool:
+    """True if an organizer has taken over this conversation (AI must stay silent)."""
+    row = (
+        await db.execute(
+            select(SupportThread.taken_over)
+            .where(
+                SupportThread.user_id == user_id,
+                SupportThread.event_id == event_id,
+            )
+            .order_by(SupportThread.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return bool(row)
 
 
 async def _get_or_create_open_thread(
@@ -48,21 +64,21 @@ async def add_user_support_message(
     user_id: UUID,
     event_id: UUID,
     text: str,
-) -> SupportMessage:
-    """Persist a guest support message into the unified thread model (ADR-001).
+) -> ChatMessage:
+    """Persist a guest support message into chat_messages (single source of truth).
 
-    Reuses/reopens the user's thread, appends a "user" message, flags the
-    thread as needing organizer attention. The web admin reads the same tables.
+    Reuses/reopens the user's thread and flags it as needing organizer attention;
+    the message itself goes to chat_messages (role=user), which the web admin reads.
     """
     thread = await _get_or_create_open_thread(db, user_id, event_id)
     thread.needs_attention = True
     thread.updated_at = datetime.now(timezone.utc)
 
-    msg = SupportMessage(
-        thread_id=thread.id,
-        sender_type="user",
-        sender_id=user_id,
-        text=(sanitize_text(text) or "")[:1000],
+    msg = ChatMessage(
+        user_id=user_id,
+        event_id=event_id,
+        role="user",
+        content=(sanitize_text(text) or "")[:1000],
     )
     db.add(msg)
     await db.flush()
@@ -76,46 +92,29 @@ async def get_support_history(
     event_id: UUID,
     limit: int = 20,
 ) -> list[str] | None:
-    """Render the user's support thread as text lines for AI agent context.
+    """Render recent conversation lines (chat_messages) for AI agent context.
 
-    Returns None if the user has no thread. Lines look like
-    "Пользователь: ..." / "Организатор: ..." in chronological order.
+    Takes the NEWEST `limit` messages (so the latest organizer answer is never
+    dropped), id as tiebreaker for deterministic order, rendered chronologically.
     """
-    thread = (
-        await db.execute(
-            select(SupportThread)
-            .where(
-                SupportThread.user_id == user_id,
-                SupportThread.event_id == event_id,
-            )
-            .order_by(SupportThread.created_at.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-    if not thread:
-        return None
-
-    # Take the NEWEST `limit` messages (so the latest organizer answer is never
-    # dropped), with id as a tiebreaker for deterministic order when several
-    # messages share an identical created_at; then render chronologically.
     messages = (
         await db.execute(
-            select(SupportMessage)
-            .where(SupportMessage.thread_id == thread.id)
-            .order_by(
-                SupportMessage.created_at.desc(),
-                SupportMessage.id.desc(),
+            select(ChatMessage)
+            .where(
+                ChatMessage.user_id == user_id,
+                ChatMessage.event_id == event_id,
             )
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
             .limit(limit)
         )
     ).scalars().all()
     if not messages:
         return None
 
+    label = {"user": "Пользователь", "assistant": "Ассистент", "organizer": "Организатор"}
     lines: list[str] = []
     for m in reversed(messages):
-        label = "Пользователь" if m.sender_type == "user" else "Организатор"
-        lines.append(f"{label}: {m.text}")
+        lines.append(f"{label.get(m.role, m.role)}: {m.content}")
     return lines
 
 
