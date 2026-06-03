@@ -194,8 +194,8 @@ export function SupportChat() {
                       msg.role === "organizer"
                         ? "bg-blue-500 text-white"
                         : msg.role === "assistant"
-                          ? "bg-purple-50 border border-purple-200"
-                          : "bg-muted"
+                          ? "bg-purple-500/15 border border-purple-500/30 text-foreground"
+                          : "bg-muted text-foreground"
                     }`}
                   >
                     <p className="text-xs opacity-70 mb-0.5">

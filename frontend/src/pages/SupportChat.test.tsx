@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SupportChat } from "./SupportChat"
+
+// jsdom lacks scrollIntoView; the component calls it on new messages.
+beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn()
+})
 
 const mockGetConversations = vi.fn()
 const mockGetConversationMessages = vi.fn()
@@ -44,6 +50,31 @@ describe("SupportChat", () => {
     await waitFor(() => expect(screen.getByText("Гость")).toBeInTheDocument())
     // needs_attention badge
     expect(screen.getByText(/Зовёт орга/i)).toBeInTheDocument()
+  })
+
+  it("renders assistant message with readable (foreground) text on dark theme", async () => {
+    mockGetConversations.mockResolvedValue({
+      conversations: [{
+        user_id: "u3", user_name: "Гость Три", user_username: null, user_role: "guest",
+        last_message: "x", last_message_at: null, message_count: 1,
+        unread: false, needs_attention: false, taken_over: false, status: "open",
+      }],
+      total: 1,
+    })
+    mockGetConversationMessages.mockResolvedValue([
+      { id: "m1", role: "assistant", content: "ответ агента", created_at: "2026-06-03T10:00:00Z" },
+    ])
+    const Wrapper = wrapper()
+    render(<Wrapper><SupportChat /></Wrapper>)
+    // select the conversation to open the chat panel
+    await waitFor(() => expect(screen.getByText("Гость Три")).toBeInTheDocument())
+    await userEvent.click(screen.getByText("Гость Три"))
+    const bubble = await screen.findByText("ответ агента")
+    const container = bubble.closest("div")!
+    // assistant bubble must declare an explicit text color, not inherit a light
+    // foreground onto a near-white background (white-on-white bug).
+    expect(container.className).toContain("text-foreground")
+    expect(container.className.split(/\s+/)).not.toContain("bg-purple-50")
   })
 
   it("shows takeover badge when taken_over", async () => {
