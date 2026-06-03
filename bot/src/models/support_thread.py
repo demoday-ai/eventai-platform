@@ -24,6 +24,9 @@ class SupportThread(Base):
     needs_attention: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false"
     )
+    taken_over: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     # Real column is timestamptz (migration 034); declare tz-aware to match
     # updated_at and avoid naive/aware comparison errors.
     created_at: Mapped[datetime] = mapped_column(

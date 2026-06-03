@@ -20,6 +20,12 @@ class TestSupportThreadModel:
         assert thread.status == "open"
         assert thread.closed_by is None
 
+    def test_thread_has_taken_over_default_false(self):
+        from app.models.support_thread import SupportThread
+
+        thread = SupportThread(user_id=uuid.uuid4(), event_id=uuid.uuid4())
+        assert thread.taken_over is False or thread.taken_over is None
+
     def test_thread_statuses(self):
         from app.models.support_thread import SupportThread
 

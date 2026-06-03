@@ -15,6 +15,7 @@ class SupportThread(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     closed_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
     needs_attention: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    taken_over: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
