@@ -66,7 +66,16 @@ class User(Base):
         Enum(GuestSubtype, name="guest_subtype_enum"), nullable=True
     )
     role_code: Mapped[UserRoleCode | None] = mapped_column(
-        Enum(UserRoleCode, name="user_role_code"), nullable=True
+        # The DB enum (migration 037) was created with lowercase string labels
+        # ('guest', 'business', 'expert'). SQLAlchemy defaults to serializing by
+        # Enum member NAME (GUEST), which doesn't match -> LookupError on read.
+        # values_callable forces serialization by VALUE to match the DB labels.
+        Enum(
+            UserRoleCode,
+            name="user_role_code",
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=True,
     )
     subrole: Mapped[str | None] = mapped_column(String(128), nullable=True)
     source: Mapped[str | None] = mapped_column(String(10), nullable=True, server_default="bot")
