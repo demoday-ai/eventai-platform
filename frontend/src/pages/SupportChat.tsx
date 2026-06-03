@@ -203,7 +203,12 @@ export function SupportChat() {
                     </p>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     <p className="text-[10px] opacity-50 mt-1">
-                      {new Date(msg.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(msg.created_at).toLocaleString("ru-RU", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   </div>
                 </div>

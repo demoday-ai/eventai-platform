@@ -77,6 +77,27 @@ describe("SupportChat", () => {
     expect(container.className.split(/\s+/)).not.toContain("bg-purple-50")
   })
 
+  it("shows date and time on a message, not just time", async () => {
+    mockGetConversations.mockResolvedValue({
+      conversations: [{
+        user_id: "u4", user_name: "Гость Четыре", user_username: null, user_role: "guest",
+        last_message: "x", last_message_at: null, message_count: 1,
+        unread: false, needs_attention: false, taken_over: false, status: "open",
+      }],
+      total: 1,
+    })
+    mockGetConversationMessages.mockResolvedValue([
+      { id: "m1", role: "user", content: "вопрос", created_at: "2026-02-06T15:45:00Z" },
+    ])
+    const Wrapper = wrapper()
+    render(<Wrapper><SupportChat /></Wrapper>)
+    await waitFor(() => expect(screen.getByText("Гость Четыре")).toBeInTheDocument())
+    await userEvent.click(screen.getByText("Гость Четыре"))
+    await screen.findByText("вопрос")
+    // timestamp must include the date (day + month), not only HH:MM
+    expect(screen.getByText(/06\.02|6 февр|06 февр/i)).toBeInTheDocument()
+  })
+
   it("shows takeover badge when taken_over", async () => {
     mockGetConversations.mockResolvedValue({
       conversations: [{
