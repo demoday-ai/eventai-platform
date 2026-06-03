@@ -1,8 +1,13 @@
 """Tests for unified conversations (chat_messages + thread metadata)."""
+import uuid
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
+from app.api.deps import check_organizer, get_current_user
+from app.database import get_session
+from app.main import app
 from app.models.chat_message import ChatMessage
 from app.models.event import Event
 from app.models.support_thread import SupportThread
@@ -130,3 +135,41 @@ class TestReplyReleaseClose:
         )).scalar_one()
         assert thread.status == "closed"
         assert thread.taken_over is False
+
+
+class TestConversationAPI:
+    @pytest.fixture
+    async def client(self, session):
+        mock_user = User(telegram_user_id="api_org", full_name="API Org")
+        mock_user.id = uuid.uuid4()
+
+        async def override_get_session():
+            yield session
+
+        async def override_check_organizer():
+            return mock_user
+
+        async def override_get_current_user():
+            return mock_user
+
+        app.dependency_overrides[get_session] = override_get_session
+        app.dependency_overrides[check_organizer] = override_check_organizer
+        app.dependency_overrides[get_current_user] = override_get_current_user
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as c:
+            yield c
+
+        app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_list_endpoint_returns_200(self, client, session):
+        # active event required by get_current_event
+        event = Event(name="DD", start_date=date.today(), end_date=date.today(), is_active=True)
+        session.add(event)
+        await session.flush()
+
+        resp = await client.get("/api/v1/admin/conversations?filter=all")
+        assert resp.status_code == 200
+        assert "conversations" in resp.json()

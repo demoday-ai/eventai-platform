@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.admin.audit import router as audit_router
 from app.api.admin.briefing import router as briefing_router
 from app.api.admin.clustering import router as clustering_router
+from app.api.admin.conversations import router as conversations_router
 from app.api.admin.dashboard import router as dashboard_router
 from app.api.admin.events import router as events_router
 from app.api.admin.guests import router as guests_router
@@ -13,7 +14,6 @@ from app.api.admin.messaging import router as messaging_router
 from app.api.admin.organizers import router as organizers_router
 from app.api.admin.projects import router as projects_router
 from app.api.admin.rooms import router as rooms_router
-from app.api.admin.support import router as support_router
 from app.api.admin.tags import router as tags_router
 from app.api.admin.tour import router as tour_router
 
@@ -32,4 +32,4 @@ router.include_router(organizers_router)
 router.include_router(llm_config_router)
 router.include_router(clustering_router)
 router.include_router(tour_router)
-router.include_router(support_router)
+router.include_router(conversations_router)
