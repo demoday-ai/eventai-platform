@@ -874,6 +874,40 @@ class TestProgramRouter:
         assert state == BotStates.support_chat.state
 
     @pytest.mark.asyncio
+    async def test_view_program_skips_agent_when_taken_over(self, db: AsyncSession, seed):
+        """If the conversation is taken over, the AI agent must NOT reply."""
+        from src.models.chat_message import ChatMessage
+        from src.models.support_thread import SupportThread
+
+        uid = 9061
+        user = User(telegram_user_id=str(uid), full_name="Taken Over")
+        db.add(user)
+        await db.flush()
+        db.add(SupportThread(user_id=user.id, event_id=seed["event"].id,
+                             status="open", taken_over=True))
+        await db.flush()
+
+        dp, bot = _setup_dp(db)
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+        }, user_id=uid)
+        _queue_send(bot)
+
+        update = make_message("вопрос боту", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        rows = (await db.execute(
+            select(ChatMessage).where(ChatMessage.user_id == user.id, ChatMessage.role == "user")
+        )).scalars().all()
+        assert len(rows) == 1
+        assistant = (await db.execute(
+            select(ChatMessage).where(ChatMessage.user_id == user.id, ChatMessage.role == "assistant")
+        )).scalars().all()
+        assert len(assistant) == 0
+
+    @pytest.mark.asyncio
     async def test_profile_command_shows_profile(self, db: AsyncSession, seed):
         """/profile -> shows profile text."""
         uid = 9022
@@ -1211,10 +1245,10 @@ class TestSupportRouter:
         assert state == BotStates.support_chat.state
 
     @pytest.mark.asyncio
-    async def test_support_text_writes_to_thread(self, db: AsyncSession, seed):
-        """Text in support_chat -> creates thread + user message (ADR-001),
-        flags needs_attention, confirms to user. No SupportLog, no group forward."""
-        from src.models.support_message import SupportMessage
+    async def test_support_text_writes_to_chat_messages(self, db: AsyncSession, seed):
+        """Text in support_chat -> writes chat_messages(role=user), flags the
+        thread needs_attention, confirms to user. No SupportLog, no group forward."""
+        from src.models.chat_message import ChatMessage
         from src.models.support_thread import SupportThread
 
         uid = 9041
@@ -1249,11 +1283,11 @@ class TestSupportRouter:
 
         msg = (
             await db.execute(
-                select(SupportMessage).where(SupportMessage.thread_id == thread.id)
+                select(ChatMessage).where(ChatMessage.user_id == user.id)
             )
         ).scalar_one()
-        assert msg.sender_type == "user"
-        assert msg.text == "Где найти расписание?"
+        assert msg.role == "user"
+        assert msg.content == "Где найти расписание?"
 
         # Legacy SupportLog must no longer be written.
         log = (

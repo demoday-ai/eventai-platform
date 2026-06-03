@@ -289,6 +289,13 @@ async def view_program_text(
     db.add(chat_msg)
     await db.flush()
 
+    # If an organizer took over this conversation, the AI stays silent —
+    # the guest message is saved (above) and the organizer answers from the admin.
+    from src.services.support import is_taken_over
+
+    if await is_taken_over(db, UUID(user_id), UUID(event_id)):
+        return
+
     # Build and run agent
     deps = AgentDeps(
         platform=platform,
