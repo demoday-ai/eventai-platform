@@ -73,3 +73,60 @@ class TestGetConversations:
         await session.flush()
         attn2 = await conversation_service.get_conversations(session, event.id, filter="attention")
         assert attn2.total == 1
+
+
+class TestReplyReleaseClose:
+    @pytest.mark.asyncio
+    async def test_reply_writes_organizer_message_and_takes_over(self, session):
+        from sqlalchemy import select
+
+        user, event = await _seed_user_event(session)
+        organizer = User(telegram_user_id="org", full_name="Org")
+        session.add(organizer)
+        await session.flush()
+
+        msg = await conversation_service.post_organizer_message(
+            session, user.id, event.id, organizer.id, "ответ орга"
+        )
+        assert msg.role == "organizer"
+        assert msg.content == "ответ орга"
+
+        thread = (await session.execute(
+            select(SupportThread).where(SupportThread.user_id == user.id)
+        )).scalar_one()
+        assert thread.taken_over is True
+        assert thread.needs_attention is False
+
+        rows = await conversation_service.get_messages(session, user.id, event.id)
+        assert any(r.role == "organizer" and r.content == "ответ орга" for r in rows)
+
+    @pytest.mark.asyncio
+    async def test_release_clears_taken_over(self, session):
+        from sqlalchemy import select
+
+        user, event = await _seed_user_event(session)
+        org = User(telegram_user_id="org2", full_name="Org2")
+        session.add(org)
+        await session.flush()
+        await conversation_service.post_organizer_message(session, user.id, event.id, org.id, "x")
+        await conversation_service.release(session, user.id, event.id)
+        thread = (await session.execute(
+            select(SupportThread).where(SupportThread.user_id == user.id)
+        )).scalar_one()
+        assert thread.taken_over is False
+
+    @pytest.mark.asyncio
+    async def test_close_sets_closed_and_clears_takeover(self, session):
+        from sqlalchemy import select
+
+        user, event = await _seed_user_event(session)
+        org = User(telegram_user_id="org3", full_name="Org3")
+        session.add(org)
+        await session.flush()
+        await conversation_service.post_organizer_message(session, user.id, event.id, org.id, "x")
+        await conversation_service.close(session, user.id, event.id)
+        thread = (await session.execute(
+            select(SupportThread).where(SupportThread.user_id == user.id)
+        )).scalar_one()
+        assert thread.status == "closed"
+        assert thread.taken_over is False
