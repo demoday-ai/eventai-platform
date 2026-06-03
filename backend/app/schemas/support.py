@@ -41,3 +41,29 @@ class ThreadListResponse(BaseModel):
 
 class UnreadCountResponse(BaseModel):
     count: int
+
+
+class ConversationResponse(BaseModel):
+    user_id: str
+    user_name: str
+    user_username: str | None = None
+    user_role: str | None = None
+    last_message: str | None = None
+    last_message_at: str | None = None
+    message_count: int = 0
+    unread: bool = False
+    needs_attention: bool = False
+    taken_over: bool = False
+    status: str = "open"
+
+
+class ConversationListResponse(BaseModel):
+    conversations: list[ConversationResponse]
+    total: int
+
+
+class ConversationMessageResponse(BaseModel):
+    id: str
+    role: str  # "user" | "assistant" | "organizer"
+    content: str
+    created_at: str
