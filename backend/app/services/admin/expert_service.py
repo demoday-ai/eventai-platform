@@ -187,3 +187,13 @@ async def delete_all_experts(session: AsyncSession, event_id) -> int:
         await session.delete(expert)
     await session.commit()
     return count
+
+
+async def delete_expert(session: AsyncSession, expert_id) -> bool:
+    """Delete a single expert by id. Returns True if it existed."""
+    expert = await session.get(Expert, expert_id)
+    if not expert:
+        return False
+    await session.delete(expert)
+    await session.commit()
+    return True

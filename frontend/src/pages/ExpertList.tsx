@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { ExpertFormDialog } from "../components/ExpertFormDialog"
 import { StatusBadge } from "../components/shared/StatusBadge"
-import { getExperts, updateExpertStatus, type ExpertListItem } from "../lib/api-client"
+import { getExperts, updateExpertStatus, deleteExpert, type ExpertListItem } from "../lib/api-client"
 
 function canChangeStatus(status: string | null): boolean {
   return status !== null && status !== "confirmed" && status !== "declined"
@@ -22,6 +22,13 @@ export function ExpertListTab() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       updateExpertStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["experts"] })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteExpert(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["experts"] })
     },
@@ -118,13 +125,28 @@ export function ExpertListTab() {
                         </div>
                       </td>
                       <td className="py-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDialog({ mode: "edit", expert })}
-                        >
-                          Редактировать
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDialog({ mode: "edit", expert })}
+                          >
+                            Редактировать
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-700"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`Удалить эксперта «${expert.name}»?`)) {
+                                deleteMutation.mutate(expert.id)
+                              }
+                            }}
+                          >
+                            Удалить
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

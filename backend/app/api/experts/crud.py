@@ -336,6 +336,28 @@ async def delete_all_experts(
     return {"deleted": count}
 
 
+@router.delete("/experts/{expert_id}")
+async def delete_expert(
+    expert_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a single expert by id."""
+    deleted = await expert_service.delete_expert(session, expert_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Expert not found")
+
+    await audit_service.log_action(
+        session,
+        current_user,
+        "delete_expert",
+        entity_type="experts",
+        entity_id=str(expert_id),
+    )
+
+    return {"deleted": str(expert_id)}
+
+
 @router.post("/experts")
 async def create_expert(
     body: ExpertCreateRequest,

@@ -1222,6 +1222,11 @@ export const updateExpertStatus = async (expertId: string, status: string): Prom
   return data
 }
 
+export const deleteExpert = async (id: string): Promise<{ deleted: string }> => {
+  const { data } = await apiClient.delete<{ deleted: string }>(`/experts/${id}`)
+  return data
+}
+
 // --- Matching ---
 
 export const runMatching = async (params?: MatchingRequest): Promise<MatchingResult> => {

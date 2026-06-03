@@ -18,6 +18,7 @@ vi.mock("../lib/api-client", () => ({
   createExpert: vi.fn(),
   updateExpert: vi.fn(),
   updateExpertStatus: vi.fn(),
+  deleteExpert: vi.fn(),
 }))
 
 const mockExperts: apiClient.ExpertListItem[] = [
@@ -251,5 +252,41 @@ describe("ExpertListTab", () => {
     expect(screen.getByText("Подтверждён")).toBeInTheDocument()
     expect(screen.queryByText("Подтвердить")).not.toBeInTheDocument()
     expect(screen.queryByText("Отклонить")).not.toBeInTheDocument()
+  })
+  it("deletes an expert after confirmation", async () => {
+    vi.mocked(apiClient.getExperts).mockResolvedValue(mockExperts)
+    vi.mocked(apiClient.deleteExpert).mockResolvedValue({ deleted: "e1" })
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
+
+    render(<ExpertListTab />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Иван Петров")).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByText("Удалить")
+    await userEvent.click(deleteButtons[0])
+
+    await waitFor(() => {
+      expect(apiClient.deleteExpert).toHaveBeenCalledWith("e1")
+    })
+    confirmSpy.mockRestore()
+  })
+
+  it("does not delete when confirmation is cancelled", async () => {
+    vi.mocked(apiClient.getExperts).mockResolvedValue(mockExperts)
+    vi.mocked(apiClient.deleteExpert).mockResolvedValue({ deleted: "e1" })
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false)
+
+    render(<ExpertListTab />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByText("Иван Петров")).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getAllByText("Удалить")[0])
+
+    expect(apiClient.deleteExpert).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
   })
 })
