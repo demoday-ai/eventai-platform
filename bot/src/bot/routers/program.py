@@ -24,7 +24,6 @@ from src.agent.agent import AgentDeps, create_agent
 from src.core.config import settings
 from src.core.sanitize import sanitize_text
 from src.bot.keyboards.program import (
-    detail_keyboard,
     nav_back_keyboard,
     program_keyboard,
     project_buttons_keyboard,
