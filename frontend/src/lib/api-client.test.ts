@@ -34,6 +34,11 @@ import {
   getNotifications,
   updateSlot,
   getScheduleChanges,
+  getConversations,
+  getConversationMessages,
+  replyToConversation,
+  releaseConversation,
+  closeConversation,
 } from "./api-client"
 
 describe("apiClient", () => {
@@ -572,6 +577,40 @@ describe("apiClient", () => {
 
       const result = await getScheduleChanges()
       expect(result).toEqual(mockData)
+    })
+  })
+
+  describe("conversations", () => {
+    it("getConversations hits /admin/conversations with filter", async () => {
+      mock.onGet("/admin/conversations").reply(200, { conversations: [], total: 0 })
+      const res = await getConversations({ filter: "all" })
+      expect(res.total).toBe(0)
+    })
+
+    it("getConversationMessages hits messages endpoint", async () => {
+      mock.onGet("/admin/conversations/u1/messages").reply(200, [])
+      const res = await getConversationMessages("u1")
+      expect(res).toEqual([])
+    })
+
+    it("replyToConversation posts to reply endpoint", async () => {
+      mock.onPost("/admin/conversations/u1/reply").reply(200, {
+        id: "m1", role: "organizer", content: "hi", created_at: "2026-06-03T10:00:00Z",
+      })
+      const res = await replyToConversation("u1", "hi")
+      expect(res.role).toBe("organizer")
+    })
+
+    it("releaseConversation posts to release endpoint", async () => {
+      mock.onPost("/admin/conversations/u1/release").reply(200, { status: "released" })
+      const res = await releaseConversation("u1")
+      expect(res.status).toBe("released")
+    })
+
+    it("closeConversation posts to close endpoint", async () => {
+      mock.onPost("/admin/conversations/u1/close").reply(200, { status: "closed" })
+      const res = await closeConversation("u1")
+      expect(res.status).toBe("closed")
     })
   })
 })

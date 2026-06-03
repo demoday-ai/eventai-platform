@@ -1754,56 +1754,55 @@ export const resetTourStatus = async (): Promise<{ success: boolean }> => {
   return data
 }
 
-// --- Support Chat ---
+// --- Conversations (unified guest↔bot↔organizer) ---
 
-export interface SupportThread {
-  id: string
+export interface Conversation {
   user_id: string
   user_name: string
   user_username: string | null
   user_role: string | null
-  status: string
   last_message: string | null
   last_message_at: string | null
+  message_count: number
   unread: boolean
   needs_attention: boolean
-  message_count: number
+  taken_over: boolean
+  status: string
 }
 
-export interface SupportMessage {
+export interface ConversationMessage {
   id: string
-  sender_type: "user" | "organizer" | "bot"
-  sender_name: string
-  text: string
+  role: "user" | "assistant" | "organizer"
+  content: string
   created_at: string
 }
 
-export interface SupportThreadList {
-  threads: SupportThread[]
+export interface ConversationList {
+  conversations: Conversation[]
   total: number
 }
 
-export const getSupportThreads = async (params?: { status?: string }): Promise<SupportThreadList> => {
-  const { data } = await apiClient.get<SupportThreadList>("/admin/support/threads", { params })
+export const getConversations = async (params?: { filter?: string; role?: string }): Promise<ConversationList> => {
+  const { data } = await apiClient.get<ConversationList>("/admin/conversations", { params })
   return data
 }
 
-export const getSupportMessages = async (threadId: string): Promise<SupportMessage[]> => {
-  const { data } = await apiClient.get<SupportMessage[]>(`/admin/support/threads/${threadId}/messages`)
+export const getConversationMessages = async (userId: string): Promise<ConversationMessage[]> => {
+  const { data } = await apiClient.get<ConversationMessage[]>(`/admin/conversations/${userId}/messages`)
   return data
 }
 
-export const sendSupportReply = async (threadId: string, text: string): Promise<SupportMessage> => {
-  const { data } = await apiClient.post<SupportMessage>(`/admin/support/threads/${threadId}/reply`, { text })
+export const replyToConversation = async (userId: string, text: string): Promise<ConversationMessage> => {
+  const { data } = await apiClient.post<ConversationMessage>(`/admin/conversations/${userId}/reply`, { text })
   return data
 }
 
-export const closeSupportThread = async (threadId: string): Promise<{ status: string }> => {
-  const { data } = await apiClient.post<{ status: string }>(`/admin/support/threads/${threadId}/close`)
+export const releaseConversation = async (userId: string): Promise<{ status: string }> => {
+  const { data } = await apiClient.post<{ status: string }>(`/admin/conversations/${userId}/release`)
   return data
 }
 
-export const dismissSupportAttention = async (threadId: string): Promise<{ status: string }> => {
-  const { data } = await apiClient.post<{ status: string }>(`/admin/support/threads/${threadId}/dismiss-attention`)
+export const closeConversation = async (userId: string): Promise<{ status: string }> => {
+  const { data } = await apiClient.post<{ status: string }>(`/admin/conversations/${userId}/close`)
   return data
 }
