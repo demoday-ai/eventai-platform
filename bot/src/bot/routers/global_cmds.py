@@ -94,6 +94,18 @@ async def cmd_reset(
             delete(ChatMessage).where(ChatMessage.user_id == user.id)
         )
 
+        # Reset support-thread state too: a wiped session must not keep
+        # showing «Зовёт орга» / «Перехвачен» in the admin conversations list.
+        from sqlalchemy import update as sa_update
+
+        from src.models.support_thread import SupportThread
+
+        await db.execute(
+            sa_update(SupportThread)
+            .where(SupportThread.user_id == user.id)
+            .values(needs_attention=False, taken_over=False)
+        )
+
     await state.clear()
     await message.answer(
         "Сессия и профиль сброшены. Нажмите /start чтобы начать заново."

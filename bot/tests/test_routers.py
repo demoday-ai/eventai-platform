@@ -2022,3 +2022,35 @@ class TestOnboardingLogged:
         assert "assistant" in roles, "bot onboarding reply must be logged"
         user_msg = next(r for r in rows if r.role == "user")
         assert "компьютерное зрение" in user_msg.content
+
+    @pytest.mark.asyncio
+    async def test_reset_clears_support_thread_state(self, db: AsyncSession, seed):
+        """/reset must clear needs_attention/taken_over on the support thread —
+        otherwise the admin keeps showing 'Зовёт орга' for a wiped session."""
+        from src.models.support_thread import SupportThread
+
+        uid = int(str(uuid4().int)[:9])
+        user = User(telegram_user_id=str(uid), full_name="Reset Thread")
+        db.add(user)
+        await db.flush()
+        thread = SupportThread(
+            user_id=user.id, event_id=seed["event"].id,
+            status="open", needs_attention=True, taken_over=True,
+        )
+        db.add(thread)
+        await db.flush()
+
+        dp, bot = _setup_dp(db)
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+        }, user_id=uid)
+        _queue_send(bot)
+
+        update = make_message("/reset", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        await db.refresh(thread)
+        assert thread.needs_attention is False
+        assert thread.taken_over is False
