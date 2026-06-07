@@ -1987,3 +1987,38 @@ class TestResetCommand:
             select(Recommendation).where(Recommendation.guest_profile_id == profile.id)
         )).scalars().all()
         assert recs == []
+
+
+class TestOnboardingLogged:
+    """Onboarding dialogue must be logged to chat_messages so the admin
+    sees the conversation from the very beginning (not only post-program)."""
+
+    @pytest.mark.asyncio
+    async def test_nl_profile_turn_logged(self, db: AsyncSession, seed):
+        from src.models.chat_message import ChatMessage
+
+        uid = int(str(uuid4().int)[:9])
+        user = User(telegram_user_id=str(uid), full_name="Onboard Logged")
+        db.add(user)
+        await db.flush()
+
+        dp, bot = _setup_dp(db)  # default mock: action=reply "Расскажите подробнее."
+        await _set_state(dp, bot, BotStates.onboard_nl_profile.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+        }, user_id=uid)
+        _queue_send(bot)
+
+        update = make_message("Интересует компьютерное зрение", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        rows = (await db.execute(
+            select(ChatMessage).where(ChatMessage.user_id == user.id)
+            .order_by(ChatMessage.created_at)
+        )).scalars().all()
+        roles = [r.role for r in rows]
+        assert "user" in roles, "guest onboarding message must be logged"
+        assert "assistant" in roles, "bot onboarding reply must be logged"
+        user_msg = next(r for r in rows if r.role == "user")
+        assert "компьютерное зрение" in user_msg.content

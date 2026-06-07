@@ -75,6 +75,20 @@ async def nl_profile_text(
     # Append user message
     nl_conversation.append({"role": "user", "content": message.text})
 
+    # Log the onboarding turn to chat_messages — the admin's conversation view
+    # reads from there and must show the dialogue from the very first message.
+    from src.models.chat_message import ChatMessage
+
+    db.add(
+        ChatMessage(
+            user_id=UUID(user_id),
+            event_id=UUID(event_id),
+            role="user",
+            content=(sanitize_text(message.text) or "")[:2000],
+        )
+    )
+    await db.flush()
+
     # Build system prompt
     role_context = get_role_context(user.role_code, user.subrole)
     system_prompt = get_profile_agent_system(tag_list, role_context)
@@ -115,6 +129,15 @@ async def nl_profile_text(
     if action == "reply":
         reply_text = llm_result.get("message", "Расскажите подробнее.")
         nl_conversation.append({"role": "assistant", "content": reply_text})
+        db.add(
+            ChatMessage(
+                user_id=UUID(user_id),
+                event_id=UUID(event_id),
+                role="assistant",
+                content=(sanitize_text(reply_text) or "")[:2000],
+            )
+        )
+        await db.flush()
         await state.update_data(
             nl_conversation=nl_conversation,
             nl_turn=nl_turn + 1,
