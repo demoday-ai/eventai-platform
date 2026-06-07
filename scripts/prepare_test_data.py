@@ -97,8 +97,9 @@ for row_idx in range(2, ws_checkpoint.max_row + 1):
         if not telegram.startswith('@'):
             telegram = f'@{telegram}'
 
-    # Use plan as description, limit to 200 chars
-    description = str(plan)[:200] if plan else f"Проект {title}"
+    # Use plan as description in full — truncation is a rendering concern
+    # (bot card / PDF smart-truncate on word boundaries), not an import concern.
+    description = str(plan) if plan else f"Проект {title}"
 
     # Normalize track to Russian canonical names
     track_map = {
