@@ -61,34 +61,39 @@ async def cmd_reset(
     in the DB, so /start said 'С возвращением!' and reused the old program
     while /profile claimed 'profile not created' — split-brain.
     """
-    state_data = await state.get_data()
-    profile_id = state_data.get("profile_id")
-    user_id = state_data.get("user_id")
+    # Resolve the user from Telegram, NOT from FSM: if the FSM was lost or
+    # stale, profile rows survived /reset and the next /start behaved
+    # nondeterministically (sometimes onboarding, sometimes old program).
+    from src.models.user import User
 
-    if profile_id:
-        try:
+    tg_user_id = str(message.from_user.id)
+    user = (
+        await db.execute(select(User).where(User.telegram_user_id == tg_user_id))
+    ).scalar_one_or_none()
+
+    if user:
+        # Transaction is owned by DbSessionMiddleware (commit on success,
+        # rollback + friendly message on failure) — no manual commit here.
+        profile_ids = (
+            await db.execute(
+                select(GuestProfile.id).where(GuestProfile.user_id == user.id)
+            )
+        ).scalars().all()
+        if profile_ids:
             await db.execute(
                 delete(Recommendation).where(
-                    Recommendation.guest_profile_id == UUID(profile_id)
+                    Recommendation.guest_profile_id.in_(profile_ids)
                 )
             )
             await db.execute(
-                delete(GuestProfile).where(GuestProfile.id == UUID(profile_id))
+                delete(GuestProfile).where(GuestProfile.id.in_(profile_ids))
             )
-        except Exception:
-            await db.rollback()
+        from src.models.chat_message import ChatMessage
 
-    if user_id:
-        try:
-            from src.models.chat_message import ChatMessage
-            await db.execute(
-                delete(ChatMessage).where(ChatMessage.user_id == UUID(user_id))
-            )
-        except Exception:
-            await db.rollback()
+        await db.execute(
+            delete(ChatMessage).where(ChatMessage.user_id == user.id)
+        )
 
-    if profile_id or user_id:
-        await db.commit()
     await state.clear()
     await message.answer(
         "Сессия и профиль сброшены. Нажмите /start чтобы начать заново."

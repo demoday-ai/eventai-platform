@@ -1938,3 +1938,52 @@ class TestCrossRouterFlows:
         assert score is not None
         assert score.comment == "Good project"
         assert len(score.criteria_scores) == 3
+
+
+class TestResetCommand:
+    """/reset must wipe ALL user profiles from DB by user_id, not just the
+    one referenced by the (possibly stale/empty) FSM profile_id."""
+
+    @pytest.mark.asyncio
+    async def test_reset_wipes_profile_even_without_fsm_profile_id(
+        self, db: AsyncSession, seed
+    ):
+        uid = int(str(uuid4().int)[:9])
+        user = User(telegram_user_id=str(uid), full_name="Reset Victim", role_code="guest")
+        db.add(user)
+        await db.flush()
+        # Profile exists in DB but FSM has NO profile_id (stale session case)
+        profile = GuestProfile(user_id=user.id, event_id=seed["event"].id)
+        db.add(profile)
+        await db.flush()
+        rec = Recommendation(
+            guest_profile_id=profile.id,
+            project_id=seed["projects"][0].id,
+            relevance_score=80.0,
+            category="must_visit",
+            rank=1,
+        )
+        db.add(rec)
+        await db.flush()
+
+        dp, bot = _setup_dp(db)
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        # FSM knows user_id but NOT profile_id — the stale-state scenario
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+        }, user_id=uid)
+        _queue_send(bot)
+
+        update = make_message("/reset", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        remaining = (await db.execute(
+            select(GuestProfile).where(GuestProfile.user_id == user.id)
+        )).scalars().all()
+        assert remaining == [], "/reset must delete profiles by user_id"
+
+        recs = (await db.execute(
+            select(Recommendation).where(Recommendation.guest_profile_id == profile.id)
+        )).scalars().all()
+        assert recs == []
