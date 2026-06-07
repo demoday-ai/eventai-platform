@@ -173,3 +173,58 @@ class TestConversationAPI:
         resp = await client.get("/api/v1/admin/conversations?filter=all")
         assert resp.status_code == 200
         assert "conversations" in resp.json()
+
+
+class TestUserRoleRelationships:
+    """UserRole.role / User.user_roles relationships must exist — 4 services
+    reference them; without them /notifications/dashboard 500s."""
+
+    @pytest.mark.asyncio
+    async def test_userrole_role_relationship(self, session):
+        from app.models.role import Role
+        from app.models.user_role import UserRole
+
+        user, event = await _seed_user_event(session)
+        role = Role(code="guest", name="Гость")
+        session.add(role)
+        await session.flush()
+        ur = UserRole(user_id=user.id, role_id=role.id, event_id=event.id)
+        session.add(ur)
+        await session.flush()
+
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+
+        loaded = (
+            await session.execute(
+                select(UserRole)
+                .where(UserRole.user_id == user.id)
+                .options(selectinload(UserRole.role))
+            )
+        ).scalar_one()
+        assert loaded.role.code == "guest"
+
+    @pytest.mark.asyncio
+    async def test_user_user_roles_relationship(self, session):
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+
+        from app.models.role import Role
+        from app.models.user import User
+        from app.models.user_role import UserRole
+
+        user, event = await _seed_user_event(session)
+        role = Role(code="expert", name="Эксперт")
+        session.add(role)
+        await session.flush()
+        session.add(UserRole(user_id=user.id, role_id=role.id, event_id=event.id))
+        await session.flush()
+
+        loaded = (
+            await session.execute(
+                select(User)
+                .where(User.id == user.id)
+                .options(selectinload(User.user_roles).selectinload(UserRole.role))
+            )
+        ).scalar_one()
+        assert [ur.role.code for ur in loaded.user_roles] == ["expert"]
