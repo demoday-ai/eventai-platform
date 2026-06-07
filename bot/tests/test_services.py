@@ -437,3 +437,57 @@ class TestBuildProfileText:
         )
 
         assert ". " in text
+
+
+# ---------------------------------------------------------------------------
+# Profile display normalization tests
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeProfileDisplay:
+    """normalize_profile_display: dedupe interests, strip goal-duplicating
+    lines from summary before showing the profile to the user."""
+
+    def test_collapses_parent_tag_when_subtags_present(self):
+        from src.services.profiling import normalize_profile_display
+
+        interests, _ = normalize_profile_display(
+            ["CV", "CV (детекция объектов)", "CV (сегментация)", "CV (видеоаналитика)"],
+            [], "",
+        )
+        # parent "CV" dropped, subtags kept
+        assert "CV" not in interests
+        assert "CV (детекция объектов)" in interests
+        assert len(interests) == 3
+
+    def test_keeps_parent_tag_without_subtags(self):
+        from src.services.profiling import normalize_profile_display
+
+        interests, _ = normalize_profile_display(["CV", "NLP"], [], "")
+        assert interests == ["CV", "NLP"]
+
+    def test_dedupes_exact_duplicates(self):
+        from src.services.profiling import normalize_profile_display
+
+        interests, _ = normalize_profile_display(["NLP", "NLP", "CV"], [], "")
+        assert interests == ["NLP", "CV"]
+
+    def test_strips_goal_duplicating_line_from_summary(self):
+        from src.services.profiling import normalize_profile_display
+
+        goals = ["Увидеть проекты по видеоаналитике для безопасности"]
+        summary = (
+            "Цель: Увидеть проекты по видеоаналитике для безопасности\n\n"
+            "Студент, интересуется компьютерным зрением."
+        )
+        _, clean = normalize_profile_display([], goals, summary)
+        assert "Цель:" not in clean
+        assert "Студент, интересуется компьютерным зрением." in clean
+
+    def test_summary_without_duplication_unchanged(self):
+        from src.services.profiling import normalize_profile_display
+
+        _, clean = normalize_profile_display(
+            [], ["цель"], "Просто описание профиля."
+        )
+        assert clean == "Просто описание профиля."

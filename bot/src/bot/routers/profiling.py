@@ -123,9 +123,13 @@ async def nl_profile_text(
         return
 
     # action == "profile" -> show for confirmation
+    from src.services.profiling import normalize_profile_display
+
     interests = llm_result.get("interests", [])
     goals = llm_result.get("goals", [])
     summary = llm_result.get("summary", "")
+    # Dedupe tags / strip goal-duplicating summary lines before display & save
+    interests, summary = normalize_profile_display(interests, goals, summary)
 
     # Business-specific fields
     company = llm_result.get("company")

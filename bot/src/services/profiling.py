@@ -43,6 +43,54 @@ async def chat_for_profile(
         return {"action": "reply", "message": "Расскажите подробнее о ваших интересах."}
 
 
+def normalize_profile_display(
+    interests: list[str],
+    goals: list[str],
+    summary: str,
+) -> tuple[list[str], str]:
+    """Clean up LLM-extracted profile for user-facing display.
+
+    - Dedupe interests; drop a bare parent tag ("CV") when subtags
+      ("CV (детекция объектов)") are present — the parent adds noise.
+    - Strip summary lines that merely repeat a goal ("Цель: ...") since
+      goals are rendered separately.
+    """
+    # Dedupe preserving order
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for tag in interests:
+        t = tag.strip()
+        if t and t not in seen:
+            seen.add(t)
+            deduped.append(t)
+
+    # Drop bare parents that have subtags like "Parent (...)"
+    parents_with_subtags = {
+        t.split("(")[0].strip() for t in deduped if "(" in t
+    }
+    cleaned_interests = [
+        t for t in deduped
+        if not ("(" not in t and t in parents_with_subtags)
+    ]
+
+    # Strip goal-duplicating lines from summary
+    goal_set = {g.strip().lower() for g in goals}
+    kept_lines: list[str] = []
+    for line in (summary or "").splitlines():
+        stripped = line.strip()
+        body = stripped
+        for prefix in ("Цель:", "Цели:", "Goal:", "Goals:"):
+            if body.startswith(prefix):
+                body = body[len(prefix):].strip()
+                break
+        if stripped and body.lower() in goal_set:
+            continue
+        kept_lines.append(line)
+    clean_summary = "\n".join(kept_lines).strip()
+
+    return cleaned_interests, clean_summary
+
+
 def build_profile_text(
     selected_tags: list[str] | None,
     keywords: list[str] | None,
