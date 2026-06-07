@@ -518,3 +518,15 @@ class TestSmartTruncate:
         text = "Первое предложение. Второе предложение длинное и подробное."
         out = smart_truncate(text, 30)
         assert out.startswith("Первое предложение.")
+
+
+class TestBusinessFollowupSchema:
+    """Bot model must match the real table (migration 038): no updated_at."""
+
+    def test_model_has_no_updated_at(self):
+        from src.models.business_followup import BusinessFollowup
+
+        assert "updated_at" not in BusinessFollowup.__table__.columns
+        # columns that DO exist in the real schema
+        for col in ("user_id", "event_id", "project_id", "status", "notes", "created_at"):
+            assert col in BusinessFollowup.__table__.columns

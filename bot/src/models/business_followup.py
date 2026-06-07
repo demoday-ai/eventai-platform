@@ -19,10 +19,8 @@ class BusinessFollowup(Base):
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"))
     status: Mapped[str] = mapped_column(String(64), default="interested")
     notes: Mapped[str | None] = mapped_column(Text, default=None)
+    # NOTE: real table (migration 038) has loi_generated and NO updated_at —
+    # declaring updated_at here caused UndefinedColumnError on SELECT.
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(),
-    )
-    updated_at: Mapped[datetime | None] = mapped_column(
-        default=None,
-        onupdate=func.now(),
     )
