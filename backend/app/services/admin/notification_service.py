@@ -695,7 +695,9 @@ async def _get_unreachable_participants(
         .join(UserRole)
         .join(Role)
         .where(UserRole.event_id == event_id)
-        .where(or_(User.telegram_user_id.is_(None), User.telegram_user_id == 0))
+        # telegram_user_id is varchar — comparing with int 0 made Postgres
+        # raise "operator does not exist: character varying = integer" (500).
+        .where(or_(User.telegram_user_id.is_(None), User.telegram_user_id == ""))
         .options(selectinload(User.user_roles).selectinload(UserRole.role))
         .distinct()
     )

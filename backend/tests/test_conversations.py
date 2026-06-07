@@ -228,3 +228,16 @@ class TestUserRoleRelationships:
             )
         ).scalar_one()
         assert [ur.role.code for ur in loaded.user_roles] == ["expert"]
+
+
+class TestNotificationDashboard:
+    """notifications/dashboard must not 500 (varchar=integer comparison bug)."""
+
+    @pytest.mark.asyncio
+    async def test_dashboard_runs_without_type_error(self, session):
+        from app.services.admin import notification_service
+
+        user, event = await _seed_user_event(session)
+        result = await notification_service.get_notification_dashboard(session, event.id)
+        assert result.summary.total == 0
+        assert result.unreachable == []
