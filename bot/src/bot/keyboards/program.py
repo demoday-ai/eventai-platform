@@ -36,6 +36,7 @@ def confirm_profile_keyboard() -> InlineKeyboardMarkup:
 def project_buttons_keyboard(
     project_list: list[tuple[int, str]],
     include_pdf: bool = True,
+    include_show_program: bool = False,
 ) -> InlineKeyboardMarkup:
     """Inline buttons for each recommended project."""
     buttons: list[list[InlineKeyboardButton]] = []
@@ -51,8 +52,19 @@ def project_buttons_keyboard(
     ]
     buttons.append(bottom)
 
+    extras: list[InlineKeyboardButton] = []
+    if include_show_program:
+        extras.append(
+            InlineKeyboardButton(
+                text="Показать программу", callback_data="cmd:show_program"
+            )
+        )
     if include_pdf:
-        buttons.append([InlineKeyboardButton(text="Скачать PDF", callback_data="cmd:export_pdf")])
+        extras.append(
+            InlineKeyboardButton(text="Скачать PDF", callback_data="cmd:export_pdf")
+        )
+    if extras:
+        buttons.append(extras)
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

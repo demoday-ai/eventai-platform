@@ -7,6 +7,7 @@ from fpdf import FPDF
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.textutil import smart_truncate as _smart_truncate
 from src.models.project import Project
 from src.models.recommendation import Recommendation
 from src.models.room import Room
@@ -14,26 +15,6 @@ from src.models.schedule_slot import ScheduleSlot
 
 FONTS_DIR = Path(__file__).resolve().parent.parent.parent / "fonts"
 DESC_LIMIT = 600  # truncate long descriptions but cut on word boundary
-
-
-def _smart_truncate(text: str, limit: int) -> str:
-    """Cut text to <= limit chars, prefer the last sentence boundary,
-    fall back to last whitespace, never mid-word. Adds an ellipsis
-    when truncation actually happened.
-    """
-    if not text or len(text) <= limit:
-        return text or ""
-    cut = text[:limit]
-    # Prefer punctuation
-    for sep in (". ", "! ", "? ", ".\n", "!\n", "?\n", ";\n"):
-        idx = cut.rfind(sep)
-        if idx >= limit - 200:  # require the boundary to be reasonably close to limit
-            return cut[: idx + 1].rstrip() + " ..."
-    # Fall back to last whitespace
-    idx = cut.rfind(" ")
-    if idx > 0:
-        return cut[:idx].rstrip() + " ..."
-    return cut.rstrip() + " ..."
 
 
 async def generate_recommendations_pdf(

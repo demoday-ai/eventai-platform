@@ -382,3 +382,52 @@ class TestGetSemaphore:
             assert sem._value == settings.semaphore_limit
         finally:
             retriever_mod._semaphore = original
+
+
+class TestRelevanceThreshold:
+    """must_visit must be driven by relevance, not by position alone:
+    a candidate far below the top score lands in if_time even inside top-8."""
+
+    def test_low_score_candidates_demoted_to_if_time(self):
+        room = uuid4()
+        base_time = datetime(2026, 5, 15, 10, 0, tzinfo=timezone.utc)
+
+        candidates = []
+        slots = {}
+        # 3 strong (90+), 5 weak (<40) — weak ones must NOT be must_visit
+        scores = [95.0, 92.0, 90.0, 38.0, 35.0, 33.0, 30.0, 28.0]
+        for i, sc in enumerate(scores):
+            pid = uuid4()
+            t = base_time + timedelta(minutes=20 * i)
+            candidates.append({"project_id": pid, "title": f"P{i+1}", "score": sc})
+            slots[pid] = {
+                "slot_id": uuid4(), "room_id": room, "room_name": "A",
+                "start_time": t, "end_time": t + timedelta(minutes=20),
+                "day_number": 1,
+            }
+
+        ranked = _schedule_rerank(candidates, slots)
+        strong = [r for r in ranked if r["score"] >= 60]
+        weak = [r for r in ranked if r["score"] < 60]
+        assert all(r["category"] == "must_visit" for r in strong)
+        assert all(r["category"] == "if_time" for r in weak)
+
+    def test_uniform_high_scores_keep_top8_must_visit(self):
+        """When everything is comparable, behave as before: top-8 must_visit."""
+        room = uuid4()
+        base_time = datetime(2026, 5, 15, 10, 0, tzinfo=timezone.utc)
+
+        candidates = []
+        slots = {}
+        for i in range(12):
+            pid = uuid4()
+            t = base_time + timedelta(minutes=20 * i)
+            candidates.append({"project_id": pid, "title": f"P{i+1}", "score": 90.0 - i})
+            slots[pid] = {
+                "slot_id": uuid4(), "room_id": room, "room_name": "A",
+                "start_time": t, "end_time": t + timedelta(minutes=20),
+                "day_number": 1,
+            }
+
+        ranked = _schedule_rerank(candidates, slots)
+        assert sum(1 for r in ranked if r["category"] == "must_visit") == 8

@@ -16,7 +16,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bot.keyboards.program import program_keyboard, project_buttons_keyboard
+from src.bot.keyboards.program import project_buttons_keyboard
 from src.bot.keyboards.roles import role_keyboard
 from src.bot.states import BotStates
 from src.models.event import Event
@@ -149,14 +149,10 @@ async def _return_to_program(
     await state.update_data(profile_id=str(profile.id))
 
     if recs:
-        from src.bot.routers.program import format_program
+        from src.bot.routers.program import send_program_nav
 
-        text, project_list = await format_program(recs, db)
-        keyboard = project_buttons_keyboard(project_list) if project_list else program_keyboard()
-        await message.answer(
-            f"С возвращением!\n\n{text}",
-            reply_markup=keyboard,
-        )
+        await message.answer("С возвращением!")
+        await send_program_nav(message, recs, db)
     else:
         await message.answer(
             "Профиль найден, но рекомендации устарели. Используйте /rebuild."

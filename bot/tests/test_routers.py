@@ -1144,7 +1144,12 @@ class TestDetailRouter:
 
         bot.get_request()  # AnswerCallbackQuery
         req = bot.get_request()
-        assert "ChatLaw" in req.text
+        # Back must NOT re-send the full program wall of text (spam);
+        # a short line + project buttons keyboard is enough.
+        assert "Ваша программа" not in req.text
+        assert len(req.text) < 200
+        kb_texts = [b.text for row in req.reply_markup.inline_keyboard for b in row]
+        assert any("ChatLaw" in t for t in kb_texts)
 
     @pytest.mark.asyncio
     async def test_generate_questions(self, db: AsyncSession, seed):
@@ -1412,7 +1417,11 @@ class TestSupportRouter:
 
         bot.get_request()  # AnswerCallbackQuery
         req = bot.get_request()
-        assert "ChatLaw" in req.text
+        # No full-program wall of text on back — short line + buttons.
+        assert "Ваша программа" not in req.text
+        assert len(req.text) < 200
+        kb_texts = [b.text for row in req.reply_markup.inline_keyboard for b in row]
+        assert any("ChatLaw" in t for t in kb_texts)
 
     @pytest.mark.asyncio
     async def test_support_session_lost(self, db: AsyncSession, seed):

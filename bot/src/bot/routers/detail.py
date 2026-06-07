@@ -15,7 +15,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bot.keyboards.program import detail_keyboard, program_keyboard, project_buttons_keyboard
+from src.bot.keyboards.program import detail_keyboard, program_keyboard
 from src.bot.states import BotStates
 from src.models.guest_profile import GuestProfile
 from src.models.project import Project
@@ -102,8 +102,9 @@ async def show_project_detail(
     card_lines.append("")
 
     if project.description:
-        desc = project.description[:500]
-        card_lines.append(desc)
+        from src.core.textutil import smart_truncate
+
+        card_lines.append(smart_truncate(project.description, 500))
         card_lines.append("")
 
     if project.tags:
@@ -172,11 +173,9 @@ async def cb_back_to_program(
         recs = list(recs_result.scalars().all())
 
         if recs:
-            from src.bot.routers.program import format_program
+            from src.bot.routers.program import send_program_nav
 
-            text, project_list = await format_program(recs, db)
-            keyboard = project_buttons_keyboard(project_list) if project_list else program_keyboard()
-            await callback.message.answer(text, reply_markup=keyboard)
+            await send_program_nav(callback.message, recs, db)
             return
 
     await callback.message.answer(

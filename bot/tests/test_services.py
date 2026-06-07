@@ -491,3 +491,30 @@ class TestNormalizeProfileDisplay:
             [], ["цель"], "Просто описание профиля."
         )
         assert clean == "Просто описание профиля."
+
+
+class TestSmartTruncate:
+    """Shared smart_truncate: never cuts mid-word."""
+
+    def test_short_text_unchanged(self):
+        from src.core.textutil import smart_truncate
+
+        assert smart_truncate("короткий текст", 500) == "короткий текст"
+
+    def test_cuts_on_word_boundary(self):
+        from src.core.textutil import smart_truncate
+
+        text = "The Competition of Fairness in AI Faces and more words here"
+        out = smart_truncate(text, 38)  # would cut mid-"Faces"
+        assert not out.rstrip(" .").endswith("Fa")
+        assert out.endswith("...")
+        # every emitted word is a whole word from the source
+        for w in out.replace("...", "").split():
+            assert w in text
+
+    def test_prefers_sentence_boundary(self):
+        from src.core.textutil import smart_truncate
+
+        text = "Первое предложение. Второе предложение длинное и подробное."
+        out = smart_truncate(text, 30)
+        assert out.startswith("Первое предложение.")

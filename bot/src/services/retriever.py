@@ -176,11 +176,21 @@ def _schedule_rerank(candidates: list[dict], slots: dict[UUID, dict]) -> list[di
 
         ranked.append(candidate)
 
-    # Assign categories
+    # Assign categories: must_visit is position AND relevance driven.
+    # A candidate far below the top score (cliff) must not be "обязательно
+    # к посещению" just because it landed in top-8 — it goes to if_time.
+    top_score = ranked[0]["score"] if ranked else 0.0
+    threshold = top_score * 0.6
+    must_count = 0
     for i, r in enumerate(ranked):
         r["rank"] = i + 1
-        r["category"] = "must_visit" if i < 8 else "if_time"
-        r["visit_order"] = i + 1 if i < 8 else None
+        is_must = i < 8 and r["score"] >= threshold
+        r["category"] = "must_visit" if is_must else "if_time"
+        if is_must:
+            must_count += 1
+            r["visit_order"] = must_count
+        else:
+            r["visit_order"] = None
 
     return ranked[:15]
 

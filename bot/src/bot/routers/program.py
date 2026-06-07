@@ -80,7 +80,36 @@ async def cb_profile(
 async def cb_back_to_program(
     callback: CallbackQuery, state: FSMContext, db: AsyncSession
 ) -> None:
-    """Re-show the must-visit program (used by nav_back_keyboard)."""
+    """Return to program: short nav message, not the full text wall."""
+    await callback.answer()
+
+    state_data = await state.get_data()
+    profile_id = state_data.get("profile_id")
+    if not profile_id:
+        await callback.message.answer("Программа не найдена. /start.")
+        return
+
+    recs_result = await db.execute(
+        select(Recommendation)
+        .where(
+            Recommendation.guest_profile_id == UUID(profile_id),
+            Recommendation.category == "must_visit",
+        )
+        .order_by(Recommendation.rank)
+    )
+    recs = list(recs_result.scalars().all())
+    if not recs:
+        await callback.message.answer("Программа пуста. Используйте /recommend.")
+        return
+
+    await send_program_nav(callback.message, recs, db)
+
+
+@router.callback_query(BotStates.view_program, F.data == "cmd:show_program")
+async def cb_show_program(
+    callback: CallbackQuery, state: FSMContext, db: AsyncSession
+) -> None:
+    """Show the FULL program text explicitly (button «Показать программу»)."""
     await callback.answer()
 
     state_data = await state.get_data()
@@ -369,6 +398,40 @@ def _to_pydantic_message(msg: dict):
     if msg["role"] == "user":
         return ModelRequest(parts=[UserPromptPart(content=msg["content"])])
     return ModelResponse(parts=[TextPart(content=msg["content"])])
+
+
+async def send_program_nav(
+    message,
+    recs: list[Recommendation],
+    db: AsyncSession,
+) -> None:
+    """Short return-to-program message: one line + project buttons.
+
+    Used by every "back to program" path (project card, support, profile nav)
+    instead of re-sending the full program text wall each time. The full
+    program is rendered only on generation and via the «Показать программу»
+    button (cmd:show_program).
+    """
+    project_list: list[tuple[int, str]] = []
+    for rec in sorted(recs, key=lambda r: r.rank):
+        proj_result = await db.execute(
+            select(Project.title).where(Project.id == rec.project_id)
+        )
+        title = proj_result.scalar_one_or_none()
+        if title:
+            project_list.append((rec.rank, title))
+
+    from src.bot.keyboards.program import (
+        program_keyboard,
+        project_buttons_keyboard,
+    )
+
+    keyboard = (
+        project_buttons_keyboard(project_list, include_show_program=True)
+        if project_list
+        else program_keyboard()
+    )
+    await message.answer("Вы в программе. Выберите проект:", reply_markup=keyboard)
 
 
 async def format_program(
