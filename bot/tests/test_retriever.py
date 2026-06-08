@@ -431,3 +431,66 @@ class TestRelevanceThreshold:
 
         ranked = _schedule_rerank(candidates, slots)
         assert sum(1 for r in ranked if r["category"] == "must_visit") == 8
+
+
+class TestLLMRerank:
+    """LLM re-ranking: vector gives top-N, LLM reorders by profile relevance
+    and drops off-topic candidates (Gemini sims are compressed, so absolute
+    vector score cannot separate relevant from noise)."""
+
+    @pytest.mark.asyncio
+    async def test_rerank_reorders_and_filters(self):
+        import json
+        from unittest.mock import AsyncMock, MagicMock
+        from src.services.retriever import _llm_rerank
+
+        c1 = {"project_id": uuid4(), "title": "Скоринг МТС", "description": "кредитный скоринг", "score": 74.0}
+        c2 = {"project_id": uuid4(), "title": "Deepfake detection", "description": "детекция дипфейков", "score": 67.0}
+        c3 = {"project_id": uuid4(), "title": "Антифрод банк", "description": "обнаружение мошенничества", "score": 66.0}
+
+        platform = MagicMock()
+        # LLM keeps the 2 fintech, drops deepfake, in this order: c3, c1
+        platform.chat_completion = AsyncMock(return_value={
+            "choices": [{"message": {"content": json.dumps({
+                "ranking": [
+                    {"index": 3, "relevant": True},
+                    {"index": 1, "relevant": True},
+                    {"index": 2, "relevant": False},
+                ]
+            })}}]
+        })
+
+        out = await _llm_rerank(platform, "финтех скоринг антифрод", [c1, c2, c3])
+        titles = [c["title"] for c in out]
+        # Relevant first in LLM order; off-topic sinks to the end (→ «если успеете»),
+        # nothing lost. Deepfake last with a low score, not in the lead.
+        assert titles[:2] == ["Антифрод банк", "Скоринг МТС"]
+        assert titles[-1] == "Deepfake detection"
+        assert out[1]["score"] >= 60 and out[-1]["score"] < 60
+
+    @pytest.mark.asyncio
+    async def test_rerank_falls_back_to_input_on_llm_error(self):
+        from unittest.mock import AsyncMock, MagicMock
+        from src.services.retriever import _llm_rerank
+
+        cands = [
+            {"project_id": uuid4(), "title": "A", "description": "x", "score": 70.0},
+            {"project_id": uuid4(), "title": "B", "description": "y", "score": 60.0},
+        ]
+        platform = MagicMock()
+        platform.chat_completion = AsyncMock(side_effect=Exception("LLM down"))
+
+        out = await _llm_rerank(platform, "запрос", cands)
+        # On failure: return input unchanged (vector order preserved, nothing lost)
+        assert [c["title"] for c in out] == ["A", "B"]
+
+    @pytest.mark.asyncio
+    async def test_rerank_empty_candidates(self):
+        from unittest.mock import AsyncMock, MagicMock
+        from src.services.retriever import _llm_rerank
+
+        platform = MagicMock()
+        platform.chat_completion = AsyncMock()
+        out = await _llm_rerank(platform, "q", [])
+        assert out == []
+        platform.chat_completion.assert_not_called()

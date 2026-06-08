@@ -72,12 +72,18 @@ async def _generate_pipeline(
         logger.error("Embedding failed: %s", e)
         return await _fallback_tag_overlap(db, profile_id, event_id, selected_tags or [])
 
-    # 2. pgvector cosine search top-30
-    candidates = await _pgvector_search(db, embedding, event_id, limit=30)
+    # 2. pgvector cosine search top-N. Take a wider net (25) because Gemini
+    # similarities are compressed and the relevant set isn't cleanly separable
+    # by cosine alone — the LLM reranker does the semantic separation next.
+    candidates = await _pgvector_search(db, embedding, event_id, limit=25)
 
     if len(candidates) < 5:
         logger.info("Few pgvector results (%d), padding with popular projects", len(candidates))
         candidates = await _pad_results(db, candidates, event_id, min_count=10)
+
+    # 2b. LLM re-rank by profile relevance (fixes compressed-cosine noise).
+    # On failure returns vector order unchanged — no candidates lost.
+    candidates = await _llm_rerank(platform, profile_text, candidates)
 
     # 3. Load schedule slots
     slots = await _load_schedule_slots(db, event_id)
@@ -128,6 +134,84 @@ async def _pgvector_search(
         }
         for row in rows
     ]
+
+
+async def _llm_rerank(
+    platform: PlatformClient,
+    profile_text: str,
+    candidates: list[dict],
+) -> list[dict]:
+    """Re-rank vector candidates by profile relevance via LLM.
+
+    Gemini embeddings have a compressed similarity range (~55-75%), so the raw
+    cosine score can't separate relevant from off-topic. The LLM reads the
+    profile + candidate titles/descriptions, reorders by true relevance and
+    drops clearly off-topic items. On any failure the input order (vector
+    order) is returned unchanged — we never lose candidates.
+    """
+    if not candidates:
+        return []
+
+    import json
+
+    lines = []
+    for i, c in enumerate(candidates, 1):
+        desc = (c.get("description") or "")[:200]
+        lines.append(f"{i}. {c['title']}: {desc}")
+    catalog = "\n".join(lines)
+
+    system = (
+        "Ты ранжируешь проекты Demo Day по релевантности интересам гостя.\n"
+        "Верни СТРОГО JSON: {\"ranking\": [{\"index\": N, \"relevant\": true|false}, ...]}\n"
+        "index - номер проекта из списка. Порядок в ranking = порядок по убыванию "
+        "релевантности. relevant=false для проектов НЕ по теме запроса гостя "
+        "(их покажем в 'если успеете'). Включи ВСЕ проекты из списка ровно один раз."
+    )
+    user = f"Интересы гостя: {profile_text}\n\nПроекты:\n{catalog}"
+
+    try:
+        resp = await platform.chat_completion(
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            response_format={"type": "json_object"},
+        )
+        content = resp["choices"][0]["message"]["content"]
+        ranking = json.loads(content).get("ranking", [])
+        if not ranking:
+            return candidates
+
+        by_index = {i + 1: c for i, c in enumerate(candidates)}
+        seen: set[int] = set()
+        relevant: list[dict] = []
+        irrelevant: list[dict] = []
+        for item in ranking:
+            idx = item.get("index")
+            cand = by_index.get(idx)
+            if cand is None or idx in seen:
+                continue
+            seen.add(idx)
+            if item.get("relevant", True):
+                relevant.append(cand)
+            else:
+                irrelevant.append(cand)
+        # Any candidate the LLM omitted: keep at the end in vector order.
+        leftovers = [c for i, c in by_index.items() if i not in seen]
+        ordered = relevant + irrelevant + leftovers
+
+        # Re-score so downstream rerank/threshold reflects LLM order:
+        # relevant get a high band (descending), the rest a low band.
+        n_rel = len(relevant)
+        for pos, c in enumerate(ordered):
+            if pos < n_rel:
+                c["score"] = 100.0 - pos  # 100, 99, ... relevant cluster
+            else:
+                c["score"] = 40.0 - pos   # clearly below the must-visit threshold
+        return ordered
+    except Exception as e:
+        logger.warning("LLM rerank failed (%s), keeping vector order", e)
+        return candidates
 
 
 def _filter_past_slots(candidates: list[dict], slots: dict[UUID, dict], now: datetime) -> list[dict]:
