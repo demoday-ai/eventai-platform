@@ -43,9 +43,12 @@ async def generate_recommendations(
         return await _fallback_tag_overlap(db, profile_id, event_id, selected_tags or [])
 
     try:
+        # Budget must exceed the LLM-rerank timeout (8s) plus embedding+queries,
+        # so a slow rerank falls back to vector order INSIDE the pipeline rather
+        # than tripping this outer timeout into the useless tag-overlap fallback.
         return await asyncio.wait_for(
             _generate_pipeline(db, platform, profile_id, event_id, profile_text, selected_tags),
-            timeout=15.0,
+            timeout=25.0,
         )
     except asyncio.TimeoutError:
         logger.warning("Pipeline timeout, falling back to tag overlap")
@@ -140,14 +143,18 @@ async def _llm_rerank(
     platform: PlatformClient,
     profile_text: str,
     candidates: list[dict],
+    timeout: float = 8.0,
 ) -> list[dict]:
     """Re-rank vector candidates by profile relevance via LLM.
 
     Gemini embeddings have a compressed similarity range (~55-75%), so the raw
     cosine score can't separate relevant from off-topic. The LLM reads the
     profile + candidate titles/descriptions, reorders by true relevance and
-    drops clearly off-topic items. On any failure the input order (vector
-    order) is returned unchanged — we never lose candidates.
+    drops clearly off-topic items.
+
+    Has its OWN timeout: a slow LLM falls back to vector order here instead of
+    bubbling up to the pipeline timeout (which would trigger the useless
+    tag-overlap fallback). On any failure the input order is returned unchanged.
     """
     if not candidates:
         return []
@@ -170,12 +177,15 @@ async def _llm_rerank(
     user = f"Интересы гостя: {profile_text}\n\nПроекты:\n{catalog}"
 
     try:
-        resp = await platform.chat_completion(
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            response_format={"type": "json_object"},
+        resp = await asyncio.wait_for(
+            platform.chat_completion(
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                response_format={"type": "json_object"},
+            ),
+            timeout=timeout,
         )
         content = resp["choices"][0]["message"]["content"]
         ranking = json.loads(content).get("ranking", [])

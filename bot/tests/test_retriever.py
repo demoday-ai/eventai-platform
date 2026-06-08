@@ -494,3 +494,29 @@ class TestLLMRerank:
         out = await _llm_rerank(platform, "q", [])
         assert out == []
         platform.chat_completion.assert_not_called()
+
+
+class TestLLMRerankTimeout:
+    """LLM rerank must fall back to vector order on its OWN timeout, so a slow
+    LLM never bubbles up to the pipeline timeout -> useless tag-overlap fallback."""
+
+    @pytest.mark.asyncio
+    async def test_rerank_timeout_returns_vector_order(self):
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+        from src.services.retriever import _llm_rerank
+
+        cands = [
+            {"project_id": uuid4(), "title": "A", "description": "x", "score": 70.0},
+            {"project_id": uuid4(), "title": "B", "description": "y", "score": 60.0},
+        ]
+
+        async def slow(*a, **k):
+            await asyncio.sleep(5)
+            return {}
+
+        platform = MagicMock()
+        platform.chat_completion = slow
+
+        out = await _llm_rerank(platform, "q", cands, timeout=0.2)
+        assert [c["title"] for c in out] == ["A", "B"]
