@@ -88,7 +88,7 @@ jobs:
           cache-dependency-path: bot/pyproject.toml
       - run: pip install ".[dev]"
       - run: ruff check src
-      - run: pytest tests/ -q
+      - run: python -m pytest tests/ -q
 
   build:
     needs: [backend, frontend, bot]
