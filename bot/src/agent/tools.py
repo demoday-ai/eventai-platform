@@ -610,7 +610,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             return "Нечего менять: укажите номер проекта или тему."
 
         await deps.db.flush()
-        await _reload_and_renumber(deps)
+        await _reload_recs(deps)
 
         from src.bot.routers.program import format_program
 
@@ -712,31 +712,99 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         )
         return "\n".join(lines)
 
+    @agent.tool
+    async def show_program(ctx: RunContext[AgentDeps]) -> str:
+        """Показать персональную программу гостя ЦЕЛИКОМ, как она есть в базе.
+
+        Вызывай на "покажи мою программу", "что у меня в программе", "покажи
+        целиком", "моя программа". Возвращает программу дословно - отдай её
+        пользователю БЕЗ изменений и НЕ пересказывай номера/время своими словами.
+        """
+        deps = ctx.deps
+        if not deps.recommendations:
+            return "Программа пуста. Опишите интересы или используйте /rebuild."
+        from src.bot.routers.program import format_program
+
+        text, _ = await format_program(
+            deps.recommendations, deps.db, header="Ваша программа:"
+        )
+        return text
+
+    @agent.tool
+    async def add_project(ctx: RunContext[AgentDeps], name: str) -> str:
+        """Добавить КОНКРЕТНЫЙ проект из каталога в программу по названию (без пересборки).
+
+        Вызывай когда гость просит добавить названный проект, которого нет в
+        подборке ("добавь Deepfake detection", "добавь проект X в программу").
+        Для проектов, которые уже в программе (в т.ч. в 'если успеете'),
+        используй update_program(add=[номер]).
+
+        Args:
+            name: название проекта (или узнаваемая часть) из каталога.
+        """
+        deps = ctx.deps
+        if deps.profile is None:
+            return "Профиль не создан, добавить нельзя."
+        name_low = name.strip().lower()
+        if not name_low:
+            return "Укажите название проекта."
+
+        res = await deps.db.execute(
+            select(Project)
+            .where(
+                Project.event_id == deps.event.id,
+                func.lower(Project.title).contains(name_low),
+            )
+            .limit(1)
+        )
+        project = res.scalars().first()
+        if not project:
+            return f"Не нашёл в каталоге проект «{name}». Уточните название."
+        if any(r.project_id == project.id for r in deps.recommendations):
+            return f"«{project.title}» уже в вашей программе."
+
+        from src.models.schedule_slot import ScheduleSlot
+
+        slot_res = await deps.db.execute(
+            select(ScheduleSlot.id).where(ScheduleSlot.project_id == project.id).limit(1)
+        )
+        slot_id = slot_res.scalar_one_or_none()
+        max_rank = max((r.rank for r in deps.recommendations), default=0)
+        deps.db.add(
+            Recommendation(
+                guest_profile_id=deps.profile.id,
+                project_id=project.id,
+                relevance_score=100.0,
+                category="must_visit",
+                rank=max_rank + 1,
+                slot_id=slot_id,
+            )
+        )
+        await deps.db.flush()
+        await _reload_recs(deps)
+        from src.bot.routers.program import format_program
+
+        text, _ = await format_program(
+            deps.recommendations, deps.db, header="Добавил в программу:"
+        )
+        return text
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-async def _reload_and_renumber(deps: AgentDeps) -> None:
-    """Reload the profile's recommendations from DB, renumber ranks/visit_order,
-    and refresh deps.recommendations so the agent stays consistent in-run."""
+async def _reload_recs(deps: AgentDeps) -> None:
+    """Reload the profile's recommendations from DB (ordered by rank), keeping
+    each project's rank STABLE across edits (gaps allowed) so a number always
+    means the same project. Refreshes deps.recommendations for in-run consistency."""
     result = await deps.db.execute(
         select(Recommendation)
         .where(Recommendation.guest_profile_id == deps.profile.id)
         .order_by(Recommendation.rank)
     )
-    recs = list(result.scalars().all())
-    must = 0
-    for i, r in enumerate(recs, 1):
-        r.rank = i
-        if r.category == "must_visit":
-            must += 1
-            r.visit_order = must
-        else:
-            r.visit_order = None
-    await deps.db.flush()
-    deps.recommendations = recs
+    deps.recommendations = list(result.scalars().all())
 
 
 async def _project_rooms(db, project_ids: list) -> dict:

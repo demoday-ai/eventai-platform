@@ -1122,11 +1122,12 @@ class TestProgramRouter:
         assert settings.agent_timeout == 75.0
 
     @pytest.mark.asyncio
-    async def test_reload_and_renumber_closes_gaps(self, db: AsyncSession, seed):
-        """update_program core: after removing a project ranks/visit_order are contiguous."""
+    async def test_reload_recs_keeps_ranks_stable(self, db: AsyncSession, seed):
+        """update_program core: after removing a project, remaining ranks stay STABLE
+        (gap preserved) so a number always means the same project."""
         from types import SimpleNamespace
         from sqlalchemy import delete as _delete
-        from src.agent.tools import _reload_and_renumber
+        from src.agent.tools import _reload_recs
 
         user = User(telegram_user_id="9100", full_name="Renum", role_code="guest")
         db.add(user)
@@ -1151,10 +1152,10 @@ class TestProgramRouter:
         await db.flush()
 
         deps = SimpleNamespace(db=db, profile=profile, recommendations=[])
-        await _reload_and_renumber(deps)
+        await _reload_recs(deps)
 
-        assert [r.rank for r in deps.recommendations] == [1, 2]
-        assert [r.visit_order for r in deps.recommendations] == [1, 2]
+        # Ranks 1 and 3 survive (rank 2 removed); NOT renumbered to [1, 2].
+        assert [r.rank for r in deps.recommendations] == [1, 3]
 
 
 # =========================================================================
