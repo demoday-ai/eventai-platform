@@ -41,7 +41,7 @@ def project_buttons_keyboard(
     """Inline buttons for each recommended project."""
     buttons: list[list[InlineKeyboardButton]] = []
     for rank, title in project_list:
-        label = f"#{rank} {title}"
+        label = f"{rank} {title}"
         if len(label) > 60:
             label = label[:57] + "..."
         buttons.append([InlineKeyboardButton(text=label, callback_data=f"project:{rank}")])

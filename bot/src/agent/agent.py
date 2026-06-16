@@ -139,10 +139,10 @@ async def _build_system_prompt(ctx: RunContext[AgentDeps]) -> str:
     if deps.current_project_rank is not None:
         title = deps.current_project_title or ""
         prompt += (
-            f"\n\nТЕКУЩИЙ ПРОЕКТ: #{deps.current_project_rank} {title}\n"
+            f"\n\nТЕКУЩИЙ ПРОЕКТ: {deps.current_project_rank} {title}\n"
             'Если пользователь говорит "этот проект", "данный проект", '
             '"расскажи подробнее", "вопросы к нему", "связаться с автором" '
-            f"без указания номера - имеется в виду проект #{deps.current_project_rank}. "
+            f"без указания номера - имеется в виду проект {deps.current_project_rank}. "
             "Передавай этот номер в инструменты show_project/generate_questions/compare_projects."
         )
 
@@ -184,7 +184,7 @@ def _format_recommendations(
         if project:
             tags = ", ".join(project.tags[:3]) if project.tags else ""
             stack = ", ".join(project.tech_stack[:3]) if project.tech_stack else ""
-            line = f"#{rec.rank} {project.title}"
+            line = f"{rec.rank} {project.title}"
             if tags:
                 line += f" | теги: {tags}"
             if stack:
@@ -209,5 +209,5 @@ def _format_recommendations(
                     )
             lines.append(line)
         else:
-            lines.append(f"#{rec.rank}")
+            lines.append(f"{rec.rank}")
     return "\n".join(lines)

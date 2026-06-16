@@ -108,7 +108,7 @@ async def generate_recommendations_pdf(
         # Title with rank
         pdf.set_font("DejaVu", "B", 12)
         pdf.multi_cell(
-            0, 7, f"#{rec.rank}  {project.title}",
+            0, 7, f"{rec.rank}  {project.title}",
             new_x="LMARGIN", new_y="NEXT",
         )
         pdf.ln(1)

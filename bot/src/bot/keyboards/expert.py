@@ -27,7 +27,7 @@ def expert_dashboard_keyboard(
         title = p.title[:30]
         buttons.append([
             InlineKeyboardButton(
-                text=f"{marker} #{visible.index(p) + start + 1} {title}",
+                text=f"{marker} {visible.index(p) + start + 1} {title}",
                 callback_data=f"eval:{p.id}",
             ),
             InlineKeyboardButton(

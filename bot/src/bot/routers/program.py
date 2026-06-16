@@ -546,17 +546,19 @@ async def format_program(
             last_day = current_key
             last_bucket = bucket
 
-        marker = ""  # category now shown via section header above, no inline marker needed
-
-        # Multi-line block: empty line above for breathing room, then
-        # title (with rank), then time/room on its own line.
-        lines.append(f"#{rec.rank} {project.title}{marker}")
+        # Multi-line block: title (numbered, no '#'), then time/room, then the
+        # one-line "почему именно тебе" reason (llm_summary) if present.
+        lines.append(f"{rec.rank}. {project.title}")
         if time_block and room_name:
             lines.append(f"⏰ {time_block} · 📍 {room_name}")
         elif time_block:
             lines.append(f"⏰ {time_block}")
         elif room_name:
             lines.append(f"📍 {room_name}")
+
+        reason = getattr(rec, "llm_summary", None)
+        if reason:
+            lines.append(f"💡 {reason}")
 
         tags = ", ".join(project.tags[:3]) if project.tags else ""
         if tags:

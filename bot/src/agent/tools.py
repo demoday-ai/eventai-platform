@@ -131,7 +131,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         for rank in ranks:
             rec = _find_recommendation(deps.recommendations, rank)
             if not rec:
-                return f"Проект #{rank} не найден в рекомендациях."
+                return f"Проект {rank} не найден в рекомендациях."
             result = await deps.db.execute(
                 select(Project).where(Project.id == rec.project_id)
             )
@@ -188,7 +188,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         deps = ctx.deps
         rec = _find_recommendation(deps.recommendations, project_rank)
         if not rec:
-            return f"Проект #{project_rank} не найден в рекомендациях."
+            return f"Проект {project_rank} не найден в рекомендациях."
 
         result = await deps.db.execute(
             select(Project).where(Project.id == rec.project_id)
@@ -245,7 +245,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             data = json.loads(content)
             questions = data.get("questions", [])
 
-            lines = [f"Вопросы для проекта #{project_rank} ({project.title}):\n"]
+            lines = [f"Вопросы для проекта {project_rank} ({project.title}):\n"]
             for i, q in enumerate(questions, 1):
                 lines.append(f"{i}. {q}")
             return "\n".join(lines)
@@ -275,7 +275,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         rec = _find_recommendation(deps.recommendations, project_rank)
         if not rec:
-            return f"Проект #{project_rank} не найден."
+            return f"Проект {project_rank} не найден."
 
         result = await deps.db.execute(
             select(BusinessFollowup).where(
@@ -289,7 +289,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             old = followup.status
             followup.status = status
             await deps.db.flush()
-            return f"Статус проекта #{project_rank} изменен: {old} -> {status}"
+            return f"Статус проекта {project_rank} изменен: {old} -> {status}"
         else:
             new = BusinessFollowup(
                 user_id=deps.user.id,
@@ -299,7 +299,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             )
             deps.db.add(new)
             await deps.db.flush()
-            return f"Проект #{project_rank} добавлен в пайплайн: {status}"
+            return f"Проект {project_rank} добавлен в пайплайн: {status}"
 
     @agent.tool
     async def filter_projects(ctx: RunContext[AgentDeps], tag: str) -> str:
@@ -338,7 +338,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         lines = [f"Проекты с тегом '{tag}' ({len(matched)}):\n"]
         for rec, project in matched:
-            lines.append(f"#{rec.rank} {project.title}")
+            lines.append(f"{rec.rank} {project.title}")
             tags_str = ", ".join(project.tags[:3]) if project.tags else ""
             if tags_str:
                 lines.append(f"   {tags_str}")
@@ -739,7 +739,7 @@ def _build_project_context(project: Project, max_desc: int = 200) -> str:
 def _format_project_card(project: Project, rec: Recommendation) -> str:
     """Format a single project into a readable card."""
     lines = [
-        f"#{rec.rank} {project.title}\n",
+        f"{rec.rank} {project.title}\n",
         project.description[:300],
     ]
     if project.tags:
@@ -808,7 +808,7 @@ async def _get_followup(deps: AgentDeps) -> str:
             contact = (
                 f" | {project.telegram_contact}" if project.telegram_contact else ""
             )
-            lines.append(f"#{rec.rank} {project.title}{contact}")
+            lines.append(f"{rec.rank} {project.title}{contact}")
 
     lines.append("\nШаблон для связи:")
     lines.append("Здравствуйте! Видел(а) ваш проект на Demo Day.")

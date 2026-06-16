@@ -324,7 +324,7 @@ async def _handle_shortcut(
     lines = ["Все проекты Demo Day (первые 20):\n"]
     project_list: list[tuple[int, str]] = []
     for i, p in enumerate(projects, 1):
-        lines.append(f"#{i} {p.title}")
+        lines.append(f"{i} {p.title}")
         project_list.append((i, p.title))
     if len(projects) == 20:
         lines.append("\nНажмите кнопку проекта чтобы открыть детали.")

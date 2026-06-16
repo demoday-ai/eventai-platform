@@ -94,7 +94,7 @@ async def show_project_detail(
 
     # Format card
     card_lines = [
-        f"#{rec.rank}. {project.title}",
+        f"{rec.rank}. {project.title}",
     ]
 
     if slot_info:
@@ -332,7 +332,7 @@ async def cb_generate_questions(
 
         from src.bot.keyboards.program import nav_back_keyboard
 
-        header = f"Вопросы для проекта #{project_rank}:\n{project.title}\n\n"
+        header = f"Вопросы для проекта {project_rank}:\n{project.title}\n\n"
         await callback.message.answer(
             header + content, reply_markup=nav_back_keyboard(project_rank)
         )

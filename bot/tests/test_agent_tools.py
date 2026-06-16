@@ -154,7 +154,7 @@ class TestFormatProjectCard:
 
         card = _format_project_card(project, rec)
 
-        assert "#1 ChatLaw" in card
+        assert "1 ChatLaw" in card
         assert "%" not in card
         assert "Legal chatbot" in card
         assert "NLP" in card
@@ -178,7 +178,7 @@ class TestFormatProjectCard:
 
         card = _format_project_card(project, rec)
 
-        assert "#3 Simple" in card
+        assert "3 Simple" in card
         assert "Simple project" in card
         assert "Теги" not in card
         assert "Стек" not in card
@@ -306,8 +306,8 @@ class TestFormatRecommendations:
         """Recommendations formatted correctly, no percentages."""
         recs = [_make_recommendation(1, score=90.0), _make_recommendation(2, score=85.0)]
         text = _format_recommendations(recs)
-        assert "#1" in text
-        assert "#2" in text
+        assert "1" in text
+        assert "2" in text
         assert "%" not in text
         assert "score" not in text
 
@@ -567,7 +567,7 @@ class TestFilterProjects:
 
         assert "Проекты с тегом 'NLP'" in result
         assert "(1)" in result
-        assert "#1 ChatLaw" in result
+        assert "1 ChatLaw" in result
         assert "NLP, LLM, RAG" in result
 
     def test_filter_none_tags_no_crash(self):
