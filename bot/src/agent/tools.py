@@ -526,23 +526,26 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
     async def update_program(
         ctx: RunContext[AgentDeps],
         remove: list[int] | None = None,
+        add: list[int] | None = None,
         exclude: list[str] | None = None,
     ) -> str:
         """Быстро поправить программу БЕЗ пересборки (мгновенно).
 
-        Вызывай когда пользователь хочет убрать конкретный проект или
-        исключить тему ("убери таможню", "не интересно X", "убери проект 3").
+        Вызывай когда пользователь хочет убрать/добавить конкретный проект или
+        исключить тему ("убери таможню", "добавь проект 5", "не интересно X").
 
         Args:
-            remove: номера проектов из текущей программы, которые убрать.
-            exclude: темы/теги, которые гостю НЕ интересны (запоминаются в
-                профиль и применяются при будущих пересборках; матчащие
-                проекты убираются из текущей программы).
+            remove: номера проектов из программы, которые убрать.
+            add: номера проектов из программы (из блока "если успеете"),
+                которые поднять в основу.
+            exclude: темы/теги/направления, которые гостю НЕ интересны
+                (запоминаются в профиль; матчащие проекты убираются).
         """
         deps = ctx.deps
         if deps.profile is None:
             return "Профиль не создан, программу пока нельзя править."
         remove = remove or []
+        add = add or []
         exclude = exclude or []
         changed: list[str] = []
 
@@ -556,13 +559,17 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                 ids = [r.project_id for r in deps.recommendations]
                 drop_pids: set = set()
                 if ids:
+                    # Room/track name matters too ("AI Security" is the zal, not a tag).
+                    rooms = await _project_rooms(deps.db, ids)
                     res = await deps.db.execute(
                         select(Project).where(Project.id.in_(ids))
                     )
                     low = [t.lower() for t in terms]
                     for p in res.scalars().all():
                         hay = " ".join(
-                            [p.title or ""] + (p.tags or []) + [p.description or ""]
+                            [p.title or ""]
+                            + (p.tags or [])
+                            + [p.description or "", rooms.get(p.id, "")]
                         ).lower()
                         if any(t in hay for t in low):
                             drop_pids.add(p.id)
@@ -589,8 +596,18 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                 )
                 changed.append(f"убрал из программы: {len(rm_pids)}")
 
+        if add:
+            add_ranks = set(add)
+            promoted = 0
+            for r in deps.recommendations:
+                if r.rank in add_ranks and r.category != "must_visit":
+                    r.category = "must_visit"
+                    promoted += 1
+            if promoted:
+                changed.append(f"поднял в основу: {promoted}")
+
         if not changed:
-            return "Нечего менять: укажите номер проекта или тему для исключения."
+            return "Нечего менять: укажите номер проекта или тему."
 
         await deps.db.flush()
         await _reload_and_renumber(deps)
@@ -682,6 +699,21 @@ async def _reload_and_renumber(deps: AgentDeps) -> None:
             r.visit_order = None
     await deps.db.flush()
     deps.recommendations = recs
+
+
+async def _project_rooms(db, project_ids: list) -> dict:
+    """Map project_id -> room/track name (for exclude-by-track matching)."""
+    if not project_ids:
+        return {}
+    from src.models.room import Room
+    from src.models.schedule_slot import ScheduleSlot
+
+    res = await db.execute(
+        select(ScheduleSlot.project_id, Room.name)
+        .join(Room, ScheduleSlot.room_id == Room.id)
+        .where(ScheduleSlot.project_id.in_(project_ids))
+    )
+    return {pid: (name or "") for pid, name in res.all()}
 
 
 def _find_recommendation(

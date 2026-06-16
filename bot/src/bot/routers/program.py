@@ -15,6 +15,7 @@ import logging
 from uuid import UUID
 
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
@@ -187,7 +188,10 @@ async def cb_project_detail(
     await show_project_detail(callback, state, db, rank)
 
 
-@router.callback_query(BotStates.view_program, F.data == "cmd:export_pdf")
+@router.callback_query(
+    StateFilter(BotStates.view_program, BotStates.view_detail),
+    F.data == "cmd:export_pdf",
+)
 async def cb_export_pdf(
     callback: CallbackQuery, state: FSMContext, db: AsyncSession
 ) -> None:
