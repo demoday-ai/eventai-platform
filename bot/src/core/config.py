@@ -28,7 +28,11 @@ class Settings(BaseSettings):
     # Limits
     rate_limit_per_minute: int = 10
     semaphore_limit: int = 10
-    agent_timeout: float = 45.0
+    # Budget for one full agent.run. Must exceed the worst nested chain:
+    # agent reasoning turn + a tool that itself makes a full LLM call
+    # (compare 25s / questions 20s) + a formatting turn. 45s tripped on cold
+    # starts and produced false "Обработка занимает больше времени".
+    agent_timeout: float = 75.0
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

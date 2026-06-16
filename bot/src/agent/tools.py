@@ -90,6 +90,11 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         if not project:
             return f"Проект '{project_identifier}' не найден."
 
+        # Remember the last shown project so the next turn can resolve "этот
+        # проект" and so questions:/contact: buttons find it after returning to
+        # view_program (program.py persists this back into FSM state).
+        ctx.deps.current_project_rank = rec.rank
+        ctx.deps.current_project_title = project.title
         return _format_project_card(project, rec)
 
     @agent.tool

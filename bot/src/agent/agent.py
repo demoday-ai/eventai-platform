@@ -30,6 +30,10 @@ class AgentDeps:
     recommendations: list[Recommendation]
     event: Event
     support_history: list[str] | None = None
+    # Last project the user looked at (by rank). Read from FSM state before the
+    # run and updated by show_project; lets the agent resolve "этот проект".
+    current_project_rank: int | None = None
+    current_project_title: str | None = None
 
 
 def create_agent(platform_url: str, agent_token: str, session_id: str | None = None) -> Agent[AgentDeps, str]:
@@ -130,6 +134,17 @@ async def _build_system_prompt(ctx: RunContext[AgentDeps]) -> str:
     if deps.support_history:
         support_text = "\n".join(deps.support_history)
         prompt += f"\n\nИСТОРИЯ ОБЩЕНИЯ С ОРГАНИЗАТОРОМ:\n{support_text}"
+
+    # Last opened project: lets the agent resolve "этот проект" without a number.
+    if deps.current_project_rank is not None:
+        title = deps.current_project_title or ""
+        prompt += (
+            f"\n\nТЕКУЩИЙ ПРОЕКТ: #{deps.current_project_rank} {title}\n"
+            'Если пользователь говорит "этот проект", "данный проект", '
+            '"расскажи подробнее", "вопросы к нему", "связаться с автором" '
+            f"без указания номера - имеется в виду проект #{deps.current_project_rank}. "
+            "Передавай этот номер в инструменты show_project/generate_questions/compare_projects."
+        )
 
     return prompt
 

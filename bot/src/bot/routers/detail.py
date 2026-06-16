@@ -10,6 +10,7 @@ import logging
 from uuid import UUID
 
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
@@ -236,7 +237,10 @@ async def cb_profile_in_detail(
     )
 
 
-@router.callback_query(BotStates.view_detail, F.data.startswith("questions:"))
+@router.callback_query(
+    StateFilter(BotStates.view_detail, BotStates.view_program),
+    F.data.startswith("questions:"),
+)
 async def cb_generate_questions(
     callback: CallbackQuery,
     state: FSMContext,
@@ -341,7 +345,10 @@ async def cb_generate_questions(
         )
 
 
-@router.callback_query(BotStates.view_detail, F.data.startswith("contact:"))
+@router.callback_query(
+    StateFilter(BotStates.view_detail, BotStates.view_program),
+    F.data.startswith("contact:"),
+)
 async def cb_contact_author(
     callback: CallbackQuery, state: FSMContext, db: AsyncSession
 ) -> None:

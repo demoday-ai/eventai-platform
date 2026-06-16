@@ -333,12 +333,15 @@ async def view_program_text(
         recommendations=recs,
         event=event,
         support_history=state_data.get("support_history"),
+        current_project_rank=state_data.get("current_project_rank"),
+        current_project_title=state_data.get("current_project_title"),
     )
 
     # Load chat history from state (before try block so it's always defined)
     program_chat: list[dict] = state_data.get("program_chat", [])
     program_chat.append({"role": "user", "content": message.text})
 
+    agent_ok = False
     try:
         agent = create_agent(platform.platform_url, platform.token, platform.current_session_id)
 
@@ -361,6 +364,7 @@ async def view_program_text(
         reply_text = agent_result.output
         if not reply_text:
             reply_text = "Не удалось получить ответ. Попробуйте переформулировать."
+        agent_ok = True
 
     except asyncio.TimeoutError:
         reply_text = "Обработка занимает больше времени. Попробуйте еще раз."
@@ -376,6 +380,20 @@ async def view_program_text(
         program_chat = program_chat[-MAX_CHAT_HISTORY:]
 
     await state.update_data(program_chat=program_chat)
+
+    # Persist the last-shown project (show_project may have updated deps) so the
+    # next turn and the questions:/contact: buttons know the active project.
+    # Only on success, to avoid overwriting context on a timeout/error.
+    if agent_ok and deps.current_project_rank is not None:
+        upd: dict = {"current_project_rank": deps.current_project_rank}
+        if deps.current_project_title is not None:
+            upd["current_project_title"] = deps.current_project_title
+        rec = next(
+            (r for r in recs if r.rank == deps.current_project_rank), None
+        )
+        if rec:
+            upd["current_project_id"] = str(rec.project_id)
+        await state.update_data(**upd)
 
     # Save to DB
     assistant_msg = ChatMessage(

@@ -1057,6 +1057,70 @@ class TestProgramRouter:
         req = bot.get_request()
         assert "NLP" in req.text
 
+    @pytest.mark.asyncio
+    async def test_agent_persists_current_project(self, db: AsyncSession, seed):
+        """show_project (via deps) -> current_project_* persisted to FSM state."""
+        uid = 9027
+        user = User(telegram_user_id=str(uid), full_name="Ctx User", role_code="guest")
+        db.add(user)
+        await db.flush()
+
+        profile = GuestProfile(
+            user_id=user.id, event_id=seed["event"].id, selected_tags=["NLP"]
+        )
+        db.add(profile)
+        await db.flush()
+
+        rec = Recommendation(
+            guest_profile_id=profile.id,
+            project_id=seed["projects"][0].id,
+            relevance_score=90.0,
+            category="must_visit",
+            rank=1,
+            slot_id=seed["slots"][0].id,
+        )
+        db.add(rec)
+        await db.flush()
+
+        platform = _make_platform_mock()
+        dp, bot = _setup_dp(db, platform)
+
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+            "profile_id": str(profile.id),
+        }, user_id=uid)
+
+        _queue_send(bot)
+
+        with patch("src.bot.routers.program.create_agent") as mock_create:
+            mock_agent = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.output = "Вот карточка проекта."
+
+            async def _run(*args, **kwargs):
+                deps = kwargs["deps"]
+                deps.current_project_rank = 1
+                deps.current_project_title = seed["projects"][0].title
+                return mock_result
+
+            mock_agent.run = AsyncMock(side_effect=_run)
+            mock_create.return_value = mock_agent
+
+            update = make_message("покажи проект 1", user_id=uid, chat_id=uid)
+            await dp.feed_update(bot, update)
+
+        data = await _get_data(dp, bot, user_id=uid)
+        assert data.get("current_project_rank") == 1
+        assert data.get("current_project_id") == str(seed["projects"][0].id)
+
+    def test_agent_timeout_default_is_75(self):
+        """Run budget must stay generous enough for nested tool LLM calls."""
+        from src.core.config import settings
+
+        assert settings.agent_timeout == 75.0
+
 
 # =========================================================================
 # DETAIL ROUTER TESTS
@@ -1198,6 +1262,85 @@ class TestDetailRouter:
         bot.get_request()  # AnswerCallbackQuery
         req = bot.get_request()
         assert "Вопросы для проекта" in req.text
+
+    @pytest.mark.asyncio
+    async def test_questions_button_works_in_view_program(self, db: AsyncSession, seed):
+        """questions:<rank> still works after returning to view_program (not stale)."""
+        uid = 9035
+        user = User(
+            telegram_user_id=str(uid),
+            full_name="QA VP",
+            role_code="guest",
+            subrole="student",
+        )
+        db.add(user)
+        await db.flush()
+
+        profile = GuestProfile(
+            user_id=user.id, event_id=seed["event"].id, selected_tags=["NLP"]
+        )
+        db.add(profile)
+        await db.flush()
+
+        platform = _make_platform_mock()
+        platform.chat_completion = AsyncMock(
+            return_value={"choices": [{"message": {"content": "1. Как работает RAG?"}}]}
+        )
+        dp, bot = _setup_dp(db, platform)
+
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+            "profile_id": str(profile.id),
+            "current_project_id": str(seed["projects"][0].id),
+            "current_project_rank": 1,
+        }, user_id=uid)
+
+        _queue_cb(bot)
+        _queue_send(bot)
+
+        update = make_callback("questions:1", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        bot.get_request()  # AnswerCallbackQuery
+        req = bot.get_request()
+        assert "Вопросы для проекта" in req.text
+        assert await _get_state(dp, bot, user_id=uid) == BotStates.view_program.state
+
+    @pytest.mark.asyncio
+    async def test_contact_button_works_in_view_program(self, db: AsyncSession, seed):
+        """contact:<rank> still works in view_program (not stale)."""
+        uid = 9036
+        user = User(telegram_user_id=str(uid), full_name="Contact VP", role_code="guest")
+        db.add(user)
+        await db.flush()
+
+        profile = GuestProfile(user_id=user.id, event_id=seed["event"].id)
+        db.add(profile)
+        await db.flush()
+
+        dp, bot = _setup_dp(db)
+
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+            "profile_id": str(profile.id),
+            "current_project_id": str(seed["projects"][0].id),
+            "current_project_title": seed["projects"][0].title,
+        }, user_id=uid)
+
+        _queue_cb(bot)
+        _queue_send(bot)
+
+        update = make_callback("contact:1", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        bot.get_request()  # AnswerCallbackQuery
+        req = bot.get_request()
+        assert "Контакт автора" in req.text
+        assert "@author1" in req.text
 
     @pytest.mark.asyncio
     async def test_detail_text_forwards_to_program(self, db: AsyncSession, seed):
