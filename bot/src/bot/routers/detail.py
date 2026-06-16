@@ -237,6 +237,24 @@ async def cb_profile_in_detail(
     )
 
 
+async def _resolve_project_id(db: AsyncSession, state_data: dict, rank: int | None) -> str | None:
+    """Resolve project_id by the rank in the callback (authoritative) so a card
+    button always targets ITS project, not the last-opened one. Falls back to
+    the last-opened project in state if the rank can't be resolved."""
+    profile_id = state_data.get("profile_id")
+    if rank is not None and profile_id:
+        res = await db.execute(
+            select(Recommendation.project_id).where(
+                Recommendation.guest_profile_id == UUID(profile_id),
+                Recommendation.rank == rank,
+            )
+        )
+        pid = res.scalar_one_or_none()
+        if pid:
+            return str(pid)
+    return state_data.get("current_project_id")
+
+
 @router.callback_query(
     StateFilter(BotStates.view_detail, BotStates.view_program),
     F.data.startswith("questions:"),
@@ -261,8 +279,8 @@ async def cb_generate_questions(
     user_id = state_data.get("user_id")
     profile_id = state_data.get("profile_id")
 
-    # Load project
-    project_id = state_data.get("current_project_id")
+    # Resolve by the rank in the callback (not the stale last-opened project).
+    project_id = await _resolve_project_id(db, state_data, project_rank)
     if not project_id:
         await callback.message.answer("Проект не найден.")
         return
@@ -356,8 +374,15 @@ async def cb_contact_author(
     await callback.answer()
 
     state_data = await state.get_data()
-    project_id = state_data.get("current_project_id")
-    project_title = state_data.get("current_project_title", "проект")
+    parts = callback.data.split(":")
+    rank = None
+    if len(parts) > 1:
+        try:
+            rank = int(parts[1])
+        except ValueError:
+            rank = None
+    # Resolve by the rank in the callback (not the stale last-opened project).
+    project_id = await _resolve_project_id(db, state_data, rank)
 
     if not project_id:
         await callback.message.answer("Проект не найден.")
@@ -371,6 +396,7 @@ async def cb_contact_author(
     if not project or not project.telegram_contact:
         await callback.message.answer("Контакт автора недоступен.")
         return
+    project_title = project.title
 
     contact = project.telegram_contact
     author = project.author or "автор"

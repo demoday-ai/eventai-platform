@@ -1378,6 +1378,47 @@ class TestDetailRouter:
         assert "@author1" in req.text
 
     @pytest.mark.asyncio
+    async def test_contact_resolves_by_rank_not_state(self, db: AsyncSession, seed):
+        """contact:N targets project N (by rank), not the last-opened project."""
+        uid = 9037
+        user = User(telegram_user_id=str(uid), full_name="RankContact", role_code="guest")
+        db.add(user)
+        await db.flush()
+        profile = GuestProfile(user_id=user.id, event_id=seed["event"].id)
+        db.add(profile)
+        await db.flush()
+        for i in range(2):  # rank1 -> project0, rank2 -> project1
+            db.add(Recommendation(
+                guest_profile_id=profile.id,
+                project_id=seed["projects"][i].id,
+                relevance_score=90.0 - i,
+                category="must_visit",
+                rank=i + 1,
+            ))
+        await db.flush()
+
+        dp, bot = _setup_dp(db)
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        # Last-opened in state = project0, but we press contact:2.
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+            "profile_id": str(profile.id),
+            "current_project_id": str(seed["projects"][0].id),
+            "current_project_title": seed["projects"][0].title,
+        }, user_id=uid)
+
+        _queue_cb(bot)
+        _queue_send(bot)
+        update = make_callback("contact:2", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        bot.get_request()  # AnswerCallbackQuery
+        req = bot.get_request()
+        assert "@author2" in req.text  # project1's contact
+        assert "@author1" not in req.text  # NOT the last-opened project0
+
+    @pytest.mark.asyncio
     async def test_detail_text_forwards_to_program(self, db: AsyncSession, seed):
         """Text in view_detail -> transitions to view_program (agent handles it)."""
         uid = 9033
