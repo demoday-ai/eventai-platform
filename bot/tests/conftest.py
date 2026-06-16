@@ -153,7 +153,15 @@ def _bootstrap_schema():
             await conn.run_sync(Base.metadata.create_all)
         await eng.dispose()
 
-    asyncio.run(_setup())
+    # Best-effort: if Postgres is unreachable (e.g. local run without Docker),
+    # don't fail the whole session — DB-dependent tests fail on their own
+    # fixture, pure tests still run.
+    try:
+        asyncio.run(_setup())
+    except Exception as e:  # noqa: BLE001 - tolerate any connect error
+        import warnings
+
+        warnings.warn(f"schema bootstrap skipped (DB unreachable): {e}", stacklevel=2)
 
 
 @pytest_asyncio.fixture

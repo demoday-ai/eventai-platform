@@ -412,6 +412,27 @@ class TestRelevanceThreshold:
         assert all(r["category"] == "must_visit" for r in strong)
         assert all(r["category"] == "if_time" for r in weak)
 
+    def test_schedule_rerank_drops_off_and_tiers_by_grade(self):
+        """Graded path: off dropped, strong -> must_visit, weak -> if_time."""
+        cands = []
+        for i in range(3):
+            cands.append({"project_id": uuid4(), "title": f"S{i}",
+                          "score": 100.0 - i, "grade": "strong", "reason": "r"})
+        for i in range(2):
+            cands.append({"project_id": uuid4(), "title": f"W{i}",
+                          "score": 50.0 - i, "grade": "weak", "reason": "r"})
+        for i in range(4):
+            cands.append({"project_id": uuid4(), "title": f"O{i}",
+                          "score": 10.0 - i, "grade": "off", "reason": "r"})
+
+        ranked = _schedule_rerank(cands, {})
+        titles = [r["title"] for r in ranked]
+        assert not any(t.startswith("O") for t in titles)  # off dropped
+        must = [r for r in ranked if r["category"] == "must_visit"]
+        if_time = [r for r in ranked if r["category"] == "if_time"]
+        assert len(must) == 3 and all(r["title"].startswith("S") for r in must)
+        assert len(if_time) == 2 and all(r["title"].startswith("W") for r in if_time)
+
     def test_uniform_high_scores_keep_top8_must_visit(self):
         """When everything is comparable, behave as before: top-8 must_visit."""
         room = uuid4()
@@ -449,24 +470,24 @@ class TestLLMRerank:
         c3 = {"project_id": uuid4(), "title": "Антифрод банк", "description": "обнаружение мошенничества", "score": 66.0}
 
         platform = MagicMock()
-        # LLM keeps the 2 fintech, drops deepfake, in this order: c3, c1
+        # LLM grades the 2 fintech strong (order c3, c1), deepfake off.
         platform.chat_completion = AsyncMock(return_value={
             "choices": [{"message": {"content": json.dumps({
-                "ranking": [
-                    {"index": 3, "relevant": True},
-                    {"index": 1, "relevant": True},
-                    {"index": 2, "relevant": False},
+                "grades": [
+                    {"index": 3, "grade": "strong", "reason": "антифрод для банка"},
+                    {"index": 1, "grade": "strong", "reason": "кредитный скоринг"},
+                    {"index": 2, "grade": "off", "reason": "не про финтех"},
                 ]
             })}}]
         })
 
         out = await _llm_rerank(platform, "финтех скоринг антифрод", [c1, c2, c3])
         titles = [c["title"] for c in out]
-        # Relevant first in LLM order; off-topic sinks to the end (→ «если успеете»),
-        # nothing lost. Deepfake last with a low score, not in the lead.
+        # Strong first in LLM order; off-topic sinks to the end (dropped downstream).
         assert titles[:2] == ["Антифрод банк", "Скоринг МТС"]
         assert titles[-1] == "Deepfake detection"
-        assert out[1]["score"] >= 60 and out[-1]["score"] < 60
+        assert out[0]["grade"] == "strong" and out[-1]["grade"] == "off"
+        assert out[0]["reason"]  # reason populated
 
     @pytest.mark.asyncio
     async def test_rerank_falls_back_to_input_on_llm_error(self):

@@ -167,11 +167,15 @@ async def _llm_rerank(
     catalog = "\n".join(lines)
 
     system = (
-        "Ты ранжируешь проекты Demo Day по релевантности интересам гостя.\n"
-        "Верни СТРОГО JSON: {\"ranking\": [{\"index\": N, \"relevant\": true|false}, ...]}\n"
-        "index - номер проекта из списка. Порядок в ranking = порядок по убыванию "
-        "релевантности. relevant=false для проектов НЕ по теме запроса гостя "
-        "(их покажем в 'если успеете'). Включи ВСЕ проекты из списка ровно один раз."
+        "Ты оцениваешь релевантность проектов Demo Day интересам гостя.\n"
+        'Верни СТРОГО JSON: {"grades": [{"index": N, "grade": "strong|weak|off", '
+        '"reason": "<кратко>"}, ...]}\n'
+        "index - номер проекта из списка.\n"
+        "grade: strong - прямо про интересы гостя; weak - смежное, может быть интересно; "
+        "off - НЕ по теме ИЛИ то, что гость явно просил исключить.\n"
+        "Если гость указал, что ему НЕ интересно - такие проекты обязательно grade=off.\n"
+        "reason - одна короткая фраза, чем проект полезен ИМЕННО этому гостю (до 12 слов).\n"
+        "Оцени КАЖДЫЙ проект из списка ровно один раз."
     )
     user = f"Интересы гостя: {profile_text}\n\nПроекты:\n{catalog}"
 
@@ -187,36 +191,37 @@ async def _llm_rerank(
             timeout=timeout,
         )
         content = resp["choices"][0]["message"]["content"]
-        ranking = json.loads(content).get("ranking", [])
-        if not ranking:
+        grades = json.loads(content).get("grades", [])
+        if not grades:
             return candidates
 
         by_index = {i + 1: c for i, c in enumerate(candidates)}
+        buckets: dict[str, list[dict]] = {"strong": [], "weak": [], "off": []}
         seen: set[int] = set()
-        relevant: list[dict] = []
-        irrelevant: list[dict] = []
-        for item in ranking:
+        for item in grades:
             idx = item.get("index")
             cand = by_index.get(idx)
             if cand is None or idx in seen:
                 continue
             seen.add(idx)
-            if item.get("relevant", True):
-                relevant.append(cand)
-            else:
-                irrelevant.append(cand)
-        # Any candidate the LLM omitted: keep at the end in vector order.
-        leftovers = [c for i, c in by_index.items() if i not in seen]
-        ordered = relevant + irrelevant + leftovers
+            g = item.get("grade")
+            if g not in ("strong", "weak", "off"):
+                g = "weak"
+            cand["grade"] = g
+            cand["reason"] = (item.get("reason") or "").strip()
+            buckets[g].append(cand)
+        # Any candidate the LLM omitted: default to weak, vector order.
+        for i, c in by_index.items():
+            if i not in seen:
+                c["grade"] = "weak"
+                c.setdefault("reason", "")
+                buckets["weak"].append(c)
 
-        # Re-score so downstream rerank/threshold reflects LLM order:
-        # relevant get a high band (descending), the rest a low band.
-        n_rel = len(relevant)
+        ordered = buckets["strong"] + buckets["weak"] + buckets["off"]
+        # Score band so downstream sort keeps strong > weak > off, LLM order within.
+        n = len(ordered)
         for pos, c in enumerate(ordered):
-            if pos < n_rel:
-                c["score"] = 100.0 - pos  # 100, 99, ... relevant cluster
-            else:
-                c["score"] = 40.0 - pos   # clearly below the must-visit threshold
+            c["score"] = float(n - pos)
         return ordered
     except Exception as e:
         logger.warning("LLM rerank failed (%s), keeping vector order", e)
@@ -237,11 +242,18 @@ def _filter_past_slots(candidates: list[dict], slots: dict[UUID, dict], now: dat
 
 
 def _schedule_rerank(candidates: list[dict], slots: dict[UUID, dict]) -> list[dict]:
-    """Greedy slot assignment with room bonus and conflict penalty."""
-    assigned_slots: set[datetime] = set()  # start_time values already taken
-    assigned_rooms: dict[UUID, int] = {}   # room_id -> count
-    last_room_id: UUID | None = None
+    """Drop off-topic, assign slots, split into a tight must_visit + short if_time.
 
+    Selectivity:
+    - LLM-graded path: must_visit = grade 'strong' (max 8, min 3 to avoid an
+      empty program), if_time = grade 'weak' (max 5); 'off' is dropped entirely.
+    - Fallback (no grades): top-8-by-relevance-threshold as before, if_time capped.
+    """
+    # Drop off-topic graded candidates (no-grade candidates pass through).
+    candidates = [c for c in candidates if c.get("grade") != "off"]
+
+    assigned_slots: set[datetime] = set()  # start_time values already taken
+    last_room_id: UUID | None = None
     ranked: list[dict] = []
 
     # Sort by score descending
@@ -262,30 +274,44 @@ def _schedule_rerank(candidates: list[dict], slots: dict[UUID, dict]) -> list[di
                 candidate["score"] += 3.0
 
             assigned_slots.add(slot["start_time"])
-            assigned_rooms[room_id] = assigned_rooms.get(room_id, 0) + 1
             last_room_id = room_id
 
             candidate["slot"] = slot
 
         ranked.append(candidate)
 
-    # Assign categories: must_visit is position AND relevance driven.
-    # A candidate far below the top score (cliff) must not be "обязательно
-    # к посещению" just because it landed in top-8 — it goes to if_time.
-    top_score = ranked[0]["score"] if ranked else 0.0
-    threshold = top_score * 0.6
-    must_count = 0
-    for i, r in enumerate(ranked):
-        r["rank"] = i + 1
-        is_must = i < 8 and r["score"] >= threshold
-        r["category"] = "must_visit" if is_must else "if_time"
-        if is_must:
-            must_count += 1
-            r["visit_order"] = must_count
-        else:
-            r["visit_order"] = None
+    # Tiers.
+    have_grades = any("grade" in c for c in ranked)
+    if have_grades:
+        must = [c for c in ranked if c.get("grade") == "strong"][:8]
+        if len(must) < 3:
+            for c in ranked:
+                if c not in must:
+                    must.append(c)
+                    if len(must) >= 3:
+                        break
+        must_set = {id(c) for c in must}
+        if_time = [c for c in ranked if id(c) not in must_set][:5]
+    else:
+        # Relevance-threshold fallback: a candidate far below the top score
+        # must not be must_visit just because it landed in top-8.
+        top_score = ranked[0]["score"] if ranked else 0.0
+        threshold = top_score * 0.6
+        must = [c for i, c in enumerate(ranked) if i < 8 and c["score"] >= threshold]
+        must_set = {id(c) for c in must}
+        if_time = [c for c in ranked if id(c) not in must_set][:5]
 
-    return ranked[:15]
+    result = must + if_time
+    for i, r in enumerate(result):
+        r["rank"] = i + 1
+    for j, r in enumerate(must):
+        r["category"] = "must_visit"
+        r["visit_order"] = j + 1
+    for r in if_time:
+        r["category"] = "if_time"
+        r["visit_order"] = None
+
+    return result
 
 
 async def _fallback_tag_overlap(
@@ -416,6 +442,7 @@ async def _save_recommendations(
             rank=r["rank"],
             slot_id=slot["slot_id"] if slot else None,
             visit_order=r.get("visit_order"),
+            llm_summary=r.get("reason"),
         )
         db.add(rec)
         recs.append(rec)
