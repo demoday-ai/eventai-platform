@@ -3,8 +3,10 @@ name: CI/CD
 on:
   push:
     branches: [main]
+    paths-ignore: ['docs/**', 'qr/**', '*.txt']
   pull_request:
     branches: [main]
+    paths-ignore: ['docs/**', 'qr/**', '*.txt']
 
 # Cancel superseded PR runs, but never cancel an in-flight deploy on main.
 concurrency:
@@ -17,6 +19,8 @@ permissions:
 
 env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/eventai
+  # Opt into Node 24 for JS-based actions (Node 20 deprecated June 2026).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   backend:
@@ -34,7 +38,7 @@ jobs:
           cache-dependency-path: backend/pyproject.toml
       - run: pip install ".[dev]"
       - run: ruff check .
-      - run: pytest tests/ --ignore=tests/test_handlers/test_onboarding.py --ignore=tests/e2e/ -v
+      - run: pytest tests/ --ignore=tests/e2e/ -v
 
   frontend:
     runs-on: ubuntu-latest
