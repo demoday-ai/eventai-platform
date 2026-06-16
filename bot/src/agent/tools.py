@@ -27,7 +27,7 @@ import json
 import logging
 
 from pydantic_ai import Agent, RunContext
-from sqlalchemy import select, func
+from sqlalchemy import delete, select, func
 
 from src.agent.agent import AgentDeps
 from src.models.business_followup import BusinessFollowup
@@ -522,10 +522,166 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         return "Неизвестная ошибка"
 
+    @agent.tool
+    async def update_program(
+        ctx: RunContext[AgentDeps],
+        remove: list[int] | None = None,
+        exclude: list[str] | None = None,
+    ) -> str:
+        """Быстро поправить программу БЕЗ пересборки (мгновенно).
+
+        Вызывай когда пользователь хочет убрать конкретный проект или
+        исключить тему ("убери таможню", "не интересно X", "убери проект 3").
+
+        Args:
+            remove: номера проектов из текущей программы, которые убрать.
+            exclude: темы/теги, которые гостю НЕ интересны (запоминаются в
+                профиль и применяются при будущих пересборках; матчащие
+                проекты убираются из текущей программы).
+        """
+        deps = ctx.deps
+        if deps.profile is None:
+            return "Профиль не создан, программу пока нельзя править."
+        remove = remove or []
+        exclude = exclude or []
+        changed: list[str] = []
+
+        if exclude:
+            terms = [t.strip() for t in exclude if t.strip()]
+            if terms:
+                note = "Не интересует: " + ", ".join(terms)
+                deps.profile.nl_summary = (
+                    (deps.profile.nl_summary or "") + "\n" + note
+                ).strip()
+                ids = [r.project_id for r in deps.recommendations]
+                drop_pids: set = set()
+                if ids:
+                    res = await deps.db.execute(
+                        select(Project).where(Project.id.in_(ids))
+                    )
+                    low = [t.lower() for t in terms]
+                    for p in res.scalars().all():
+                        hay = " ".join(
+                            [p.title or ""] + (p.tags or []) + [p.description or ""]
+                        ).lower()
+                        if any(t in hay for t in low):
+                            drop_pids.add(p.id)
+                if drop_pids:
+                    await deps.db.execute(
+                        delete(Recommendation).where(
+                            Recommendation.guest_profile_id == deps.profile.id,
+                            Recommendation.project_id.in_(drop_pids),
+                        )
+                    )
+                changed.append("исключил темы: " + ", ".join(terms))
+
+        if remove:
+            rm_ranks = set(remove)
+            rm_pids = [
+                r.project_id for r in deps.recommendations if r.rank in rm_ranks
+            ]
+            if rm_pids:
+                await deps.db.execute(
+                    delete(Recommendation).where(
+                        Recommendation.guest_profile_id == deps.profile.id,
+                        Recommendation.project_id.in_(rm_pids),
+                    )
+                )
+                changed.append(f"убрал из программы: {len(rm_pids)}")
+
+        if not changed:
+            return "Нечего менять: укажите номер проекта или тему для исключения."
+
+        await deps.db.flush()
+        await _reload_and_renumber(deps)
+
+        from src.bot.routers.program import format_program
+
+        text, _ = await format_program(
+            deps.recommendations, deps.db, header="Обновлённая программа:"
+        )
+        return "Готово (" + "; ".join(changed) + ").\n\n" + text
+
+    @agent.tool
+    async def rebuild_program(ctx: RunContext[AgentDeps], note: str) -> str:
+        """Пересобрать программу под изменившиеся интересы (1 LLM-вызов).
+
+        Вызывай когда пользователь меняет/расширяет интересы
+        ("больше про RAG", "интересует ещё биотех"). Профиль сохраняется,
+        не сбрасывается. Для простого убрать/исключить используй update_program.
+
+        Args:
+            note: что добавить к интересам гостя (одна фраза).
+        """
+        deps = ctx.deps
+        if deps.profile is None:
+            return "Профиль не создан, пересборка недоступна."
+        if note and note.strip():
+            deps.profile.nl_summary = (
+                (deps.profile.nl_summary or "") + "\n" + note.strip()
+            ).strip()
+            await deps.db.flush()
+
+        interests = deps.profile.selected_tags or []
+        keywords = deps.profile.keywords or []
+        parts: list[str] = []
+        if interests:
+            parts.append("Интересы: " + ", ".join(interests))
+        if keywords:
+            parts.append("Цели: " + ", ".join(keywords))
+        if deps.profile.nl_summary:
+            parts.append(deps.profile.nl_summary)
+        profile_text = "\n".join(parts) or (deps.profile.raw_text or "общие интересы")
+
+        from src.services.retriever import generate_recommendations
+
+        try:
+            recs = await generate_recommendations(
+                db=deps.db,
+                platform=deps.platform,
+                profile_id=deps.profile.id,
+                event_id=deps.event.id,
+                profile_text=profile_text,
+                selected_tags=interests,
+            )
+        except Exception as e:
+            logger.error("rebuild_program failed: %s", e, exc_info=True)
+            return "Не удалось пересобрать программу, попробуйте позже."
+
+        if not recs:
+            return "Под новый запрос подходящих проектов не нашлось."
+
+        deps.recommendations = recs
+        from src.bot.routers.program import format_program
+
+        text, _ = await format_program(recs, deps.db, header="Пересобрал программу:")
+        return text
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+async def _reload_and_renumber(deps: AgentDeps) -> None:
+    """Reload the profile's recommendations from DB, renumber ranks/visit_order,
+    and refresh deps.recommendations so the agent stays consistent in-run."""
+    result = await deps.db.execute(
+        select(Recommendation)
+        .where(Recommendation.guest_profile_id == deps.profile.id)
+        .order_by(Recommendation.rank)
+    )
+    recs = list(result.scalars().all())
+    must = 0
+    for i, r in enumerate(recs, 1):
+        r.rank = i
+        if r.category == "must_visit":
+            must += 1
+            r.visit_order = must
+        else:
+            r.visit_order = None
+    await deps.db.flush()
+    deps.recommendations = recs
 
 
 def _find_recommendation(

@@ -1121,6 +1121,41 @@ class TestProgramRouter:
 
         assert settings.agent_timeout == 75.0
 
+    @pytest.mark.asyncio
+    async def test_reload_and_renumber_closes_gaps(self, db: AsyncSession, seed):
+        """update_program core: after removing a project ranks/visit_order are contiguous."""
+        from types import SimpleNamespace
+        from sqlalchemy import delete as _delete
+        from src.agent.tools import _reload_and_renumber
+
+        user = User(telegram_user_id="9100", full_name="Renum", role_code="guest")
+        db.add(user)
+        await db.flush()
+        profile = GuestProfile(user_id=user.id, event_id=seed["event"].id)
+        db.add(profile)
+        await db.flush()
+        for i in range(3):
+            db.add(Recommendation(
+                guest_profile_id=profile.id,
+                project_id=seed["projects"][i].id,
+                relevance_score=90.0 - i,
+                category="must_visit",
+                rank=i + 1,
+            ))
+        await db.flush()
+        # Remove the middle one -> rank gap.
+        await db.execute(_delete(Recommendation).where(
+            Recommendation.guest_profile_id == profile.id,
+            Recommendation.rank == 2,
+        ))
+        await db.flush()
+
+        deps = SimpleNamespace(db=db, profile=profile, recommendations=[])
+        await _reload_and_renumber(deps)
+
+        assert [r.rank for r in deps.recommendations] == [1, 2]
+        assert [r.visit_order for r in deps.recommendations] == [1, 2]
+
 
 # =========================================================================
 # DETAIL ROUTER TESTS
