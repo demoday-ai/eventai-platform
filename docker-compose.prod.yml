@@ -83,6 +83,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: ghcr.io/demoday-ai/eventai-backend:${TAG:-latest}
     build: ./backend
     env_file: ./backend/.env
     environment:
@@ -111,6 +112,7 @@ services:
     restart: unless-stopped
 
   worker:
+    image: ghcr.io/demoday-ai/eventai-backend:${TAG:-latest}
     build: ./backend
     command: >
       celery -A app.worker.celery_app worker
@@ -144,6 +146,7 @@ services:
     restart: unless-stopped
 
   worker-heavy:
+    image: ghcr.io/demoday-ai/eventai-backend:${TAG:-latest}
     build: ./backend
     command: >
       celery -A app.worker.celery_app worker
@@ -187,6 +190,7 @@ services:
   # 031-bot-replacement: standalone aiogram bot service.
   # Owns Telegram long-poll for the shared bot token; backend uses send-only aiogram.Bot.
   bot:
+    image: ghcr.io/demoday-ai/eventai-bot:${TAG:-latest}
     build: ./bot
     env_file: ./bot/.env
     depends_on:
@@ -212,6 +216,7 @@ services:
   # (sleep infinity). Drive it via `scripts/botchat.sh` which exec's chat.py
   # inside this container. Reuses bot/.env, talks to live db/redis/openrouter.
   botcli:
+    image: ghcr.io/demoday-ai/eventai-bot:${TAG:-latest}
     build: ./bot
     command: ["sleep", "infinity"]
     env_file: ./bot/.env
@@ -227,6 +232,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: ghcr.io/demoday-ai/eventai-frontend:${TAG:-latest}
     build:
       context: ./frontend
       args:

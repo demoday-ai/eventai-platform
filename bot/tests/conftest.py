@@ -125,6 +125,37 @@ def make_callback(
 TEST_DB_URL = os.environ["DATABASE_URL"]
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _bootstrap_schema():
+    """Prepare a blank Postgres for the suite: pgvector extension, the
+    user_role_code enum (models declare it with create_type=False) and all
+    tables. No-op when they already exist, so it is safe both in CI (fresh DB)
+    and against a pre-populated local database.
+    """
+    import asyncio
+
+    from sqlalchemy import text
+
+    import src.models  # noqa: F401  -- register every table on Base.metadata
+    from src.models.base import Base
+
+    async def _setup() -> None:
+        eng = create_async_engine(TEST_DB_URL)
+        async with eng.begin() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            await conn.execute(
+                text(
+                    "DO $$ BEGIN "
+                    "CREATE TYPE user_role_code AS ENUM ('guest', 'business', 'expert'); "
+                    "EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+                )
+            )
+            await conn.run_sync(Base.metadata.create_all)
+        await eng.dispose()
+
+    asyncio.run(_setup())
+
+
 @pytest_asyncio.fixture
 async def db():
     eng = create_async_engine(TEST_DB_URL, pool_size=2)

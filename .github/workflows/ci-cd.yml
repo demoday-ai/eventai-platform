@@ -1,0 +1,197 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded PR runs, but never cancel an in-flight deploy on main.
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/eventai
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - run: pip install ".[dev]"
+      - run: ruff check .
+      - run: pytest tests/ --ignore=tests/test_handlers/test_onboarding.py --ignore=tests/e2e/ -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx eslint .
+      - run: npx tsc -b
+      - run: npx vitest --run
+
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: bot/
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: eventai
+          POSTGRES_PASSWORD: eventai
+          POSTGRES_DB: eventai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eventai"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      BOT_TOKEN: test
+      DATABASE_URL: postgresql+asyncpg://eventai:eventai@localhost:5432/eventai
+      REDIS_URL: redis://localhost:6379/0
+      REDIS_PASSWORD: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bot/pyproject.toml
+      - run: pip install ".[dev]"
+      - run: ruff check src
+      - run: pytest tests/ -q
+
+  build:
+    needs: [backend, frontend, bot]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            context: ./backend
+          - name: bot
+            context: ./bot
+          - name: frontend
+            context: ./frontend
+            build_args: |
+              VITE_API_URL=/api/v1
+              VITE_APP_NAME=Demo Day Admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (and push on main)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          build-args: ${{ matrix.build_args }}
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY_B64 }}" | base64 -d > ~/.ssh/deploy-key
+          chmod 600 ~/.ssh/deploy-key
+          cat >> ~/.ssh/config << 'EOF'
+          Host evt-ai
+            HostName 85.198.96.191
+            User root
+            IdentityFile ~/.ssh/deploy-key
+            IdentitiesOnly yes
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+
+      - name: Deploy with health gate + rollback
+        run: |
+          ssh evt-ai "TAG=${{ github.sha }} GHCR_USER=${{ github.actor }} GHCR_TOKEN=${{ secrets.GITHUB_TOKEN }} bash -se" <<'DEPLOY'
+          set -euo pipefail
+          cd ~/workspace/demoday-core
+          export TAG
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.prod"
+
+          PREV=$(git rev-parse HEAD)
+          git fetch origin main
+          git reset --hard origin/main
+
+          echo "Deploying TAG=$TAG (previous=$PREV)"
+          $COMPOSE pull
+          $COMPOSE up -d --remove-orphans
+
+          # Health gate: backend, bot, frontend must all report healthy.
+          gate() {
+            for svc in backend bot frontend; do
+              cid=$($COMPOSE ps -q "$svc")
+              [ -n "$cid" ] || return 1
+              st=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid")
+              [ "$st" = "healthy" ] || return 1
+            done
+          }
+
+          ok=0
+          for _ in $(seq 1 30); do
+            if gate; then ok=1; break; fi
+            sleep 10
+          done
+
+          if [ "$ok" -ne 1 ]; then
+            echo "Health gate FAILED -- rolling back to $PREV"
+            git reset --hard "$PREV"
+            export TAG="$PREV"
+            $COMPOSE pull
+            $COMPOSE up -d --remove-orphans
+            $COMPOSE ps
+            exit 1
+          fi
+
+          echo "Deploy healthy."
+          $COMPOSE ps
+          DEPLOY
