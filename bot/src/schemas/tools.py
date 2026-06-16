@@ -1,12 +1,6 @@
 from pydantic import BaseModel
 
 
-class ComparisonMatrix(BaseModel):
-    projects: list[str]
-    criteria: list[str]
-    matrix: dict[str, dict[str, str]]
-
-
 class RedFlag(BaseModel):
     category: str      # "metric", "team", "scope", "technical"
     description: str

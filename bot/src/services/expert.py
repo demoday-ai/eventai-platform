@@ -19,13 +19,6 @@ async def get_expert_by_invite(db: AsyncSession, invite_code: str) -> Expert | N
     return result.scalar_one_or_none()
 
 
-async def get_expert_by_user(db: AsyncSession, user_id: UUID) -> Expert | None:
-    result = await db.execute(
-        select(Expert).where(Expert.user_id == user_id)
-    )
-    return result.scalar_one_or_none()
-
-
 async def get_room_projects(db: AsyncSession, room_id: UUID, event_id: UUID) -> list[Project]:
     """Get projects assigned to a room via schedule slots."""
     result = await db.execute(

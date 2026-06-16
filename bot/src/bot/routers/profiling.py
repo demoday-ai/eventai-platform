@@ -25,7 +25,6 @@ from src.core.sanitize import sanitize_text
 from src.models.event import Event
 from src.models.guest_profile import GuestProfile
 from src.models.project import Project
-from src.models.recommendation import Recommendation
 from src.models.user import User
 from src.prompts.profiling import get_profile_agent_system, get_role_context
 from src.services.platform_client import PlatformClient

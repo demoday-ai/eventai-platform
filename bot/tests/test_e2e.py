@@ -32,8 +32,7 @@ from src.models.recommendation import Recommendation
 from src.models.expert import Expert
 from src.models.expert_score import ExpertScore
 from src.models.chat_message import ChatMessage
-from src.models.support_log import SupportLog
-from src.schemas.tools import ComparisonMatrix, ProjectExtraction
+from src.schemas.tools import ProjectExtraction
 
 
 # --- Fixtures ---
@@ -404,19 +403,6 @@ def test_qa_prompts():
 
 # === Test 6: Schemas ===
 
-def test_comparison_matrix_schema():
-    matrix = ComparisonMatrix(
-        projects=["ChatLaw", "SentimentScope"],
-        criteria=["Стек", "Применимость"],
-        matrix={
-            "ChatLaw": {"Стек": "LangChain + FAISS", "Применимость": "Высокая"},
-            "SentimentScope": {"Стек": "Transformers", "Применимость": "Средняя"},
-        },
-    )
-    assert len(matrix.projects) == 2
-    assert matrix.matrix["ChatLaw"]["Стек"] == "LangChain + FAISS"
-
-
 def test_project_extraction_schema():
     extraction = ProjectExtraction(
         problem="Юристы тратят время на рутинные консультации",
@@ -471,32 +457,6 @@ async def test_expert_service(db: AsyncSession, seed_data):
     progress = await get_expert_progress(db, expert.id, seed_data["rooms"][0].id, seed_data["event"].id)
     assert progress["scored"] == 1
     assert progress["total"] >= 1
-
-
-# === Test 8: Support service ===
-
-@pytest.mark.asyncio
-async def test_support_service(db: AsyncSession, seed_data):
-    """Test support log CRUD."""
-    from src.services.support import create_support_entry, find_by_correlation_id, save_answer
-
-    user = User(telegram_user_id="sup_test", full_name="Support Test", role_code="guest")
-    db.add(user)
-    await db.flush()
-
-    entry = await create_support_entry(db, user.id, seed_data["event"].id, "Где парковка?")
-    assert entry.correlation_id.startswith("SQ-")
-    assert entry.question == "Где парковка?"
-    assert entry.answer is None
-
-    # Find by correlation_id
-    found = await find_by_correlation_id(db, entry.correlation_id)
-    assert found is not None
-
-    # Save answer
-    await save_answer(db, found, "Парковка на улице Ломоносова, 9")
-    assert found.answer == "Парковка на улице Ломоносова, 9"
-    assert found.answered_at is not None
 
 
 # === Test 9: FSM States ===

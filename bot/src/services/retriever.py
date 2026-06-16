@@ -11,10 +11,9 @@ from src.models.recommendation import Recommendation
 from src.models.schedule_slot import ScheduleSlot
 from src.models.room import Room
 from src.services.platform_client import PlatformClient
+from src.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-from src.core.config import settings
 
 _semaphore: asyncio.Semaphore | None = None
 

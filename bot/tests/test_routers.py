@@ -50,7 +50,6 @@ from src.models.project import Project
 from src.models.recommendation import Recommendation
 from src.models.room import Room
 from src.models.schedule_slot import ScheduleSlot
-from src.models.support_log import SupportLog
 from src.models.user import User
 
 
@@ -1252,7 +1251,7 @@ class TestSupportRouter:
     @pytest.mark.asyncio
     async def test_support_text_writes_to_chat_messages(self, db: AsyncSession, seed):
         """Text in support_chat -> writes chat_messages(role=user), flags the
-        thread needs_attention, confirms to user. No SupportLog, no group forward."""
+        thread needs_attention, confirms to user. No group forward."""
         from src.models.chat_message import ChatMessage
         from src.models.support_thread import SupportThread
 
@@ -1293,12 +1292,6 @@ class TestSupportRouter:
         ).scalar_one()
         assert msg.role == "user"
         assert msg.content == "Где найти расписание?"
-
-        # Legacy SupportLog must no longer be written.
-        log = (
-            await db.execute(select(SupportLog).where(SupportLog.user_id == user.id))
-        ).scalar_one_or_none()
-        assert log is None
 
     @pytest.mark.asyncio
     async def test_support_rate_limit(self, db: AsyncSession, seed):
