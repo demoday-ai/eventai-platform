@@ -674,6 +674,44 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         text, _ = await format_program(recs, deps.db, header="Пересобрал программу:")
         return text
 
+    @agent.tool
+    async def search_catalog(ctx: RunContext[AgentDeps], query: str) -> str:
+        """Найти проекты по ВСЕМУ каталогу Demo Day (~330), а не только в подборке гостя.
+
+        Вызывай на "что есть про X", "покажи все проекты про Y", "есть ли проекты про Z",
+        "хочу посмотреть шире", "весь каталог". Это исследование за пределами программы.
+
+        Args:
+            query: тема, технология или запрос для поиска по каталогу.
+        """
+        deps = ctx.deps
+        from src.services.retriever import _pgvector_search
+
+        try:
+            emb = await deps.platform.embedding(query)
+            rows = await _pgvector_search(deps.db, emb, deps.event.id, limit=8)
+        except Exception as e:
+            logger.error("search_catalog failed: %s", e, exc_info=True)
+            return "Не удалось выполнить поиск по каталогу, попробуйте позже."
+
+        if not rows:
+            return f"По запросу «{query}» в каталоге ничего не нашлось."
+
+        rec_pids = {r.project_id for r in deps.recommendations}
+        lines = [f"Из общего каталога Demo Day по запросу «{query}»:"]
+        for r in rows:
+            tags = ", ".join((r.get("tags") or [])[:3])
+            mark = " (уже в вашей программе)" if r["project_id"] in rec_pids else ""
+            line = f"- {r['title']}"
+            if tags:
+                line += f" — {tags}"
+            line += mark
+            lines.append(line)
+        lines.append(
+            "\nЭто из всего каталога (~330 проектов), а не только ваша подборка."
+        )
+        return "\n".join(lines)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
