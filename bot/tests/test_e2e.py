@@ -98,7 +98,7 @@ async def seed_data(db: AsyncSession):
         slot = ScheduleSlot(
             id=uuid4(), event_id=event.id, room_id=room.id, project_id=p.id,
             start_time=slot_time, end_time=slot_time + timedelta(minutes=20),
-            day_number=1,
+            display_order=1,
         )
         slots.append(slot)
         db.add(slot)
@@ -462,17 +462,17 @@ async def test_expert_service(db: AsyncSession, seed_data):
 # === Test 9: FSM States ===
 
 def test_fsm_states():
-    """Verify all 8 states defined."""
+    """Verify all 9 states defined."""
     from src.bot.states import BotStates
 
     states = BotStates.__all_states__
-    assert len(states) == 8
+    assert len(states) == 9
 
     state_names = {s.state.split(":")[-1] for s in states}
     expected = {
         "choose_role", "onboard_nl_profile", "onboard_confirm",
         "view_program", "view_detail", "support_chat",
-        "expert_dashboard", "expert_evaluation",
+        "expert_invite_entry", "expert_dashboard", "expert_evaluation",
     }
     assert state_names == expected
 
