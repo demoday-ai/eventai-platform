@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -138,6 +139,37 @@ async def _pgvector_search(
     ]
 
 
+def _title_tokens(s: str) -> set[str]:
+    return set(re.findall(r"\w+", (s or "").lower()))
+
+
+def _match_candidate(item, indexed: dict | None, candidates: list[dict]) -> dict | None:
+    """Resolve which candidate a rerank grade refers to.
+
+    Prefer the echoed title (robust to index drift); fall back to the index.
+    Title match = token-overlap ratio >= 0.5 (so a shortened echo still matches).
+    """
+    title = (getattr(item, "title", "") or "").strip()
+    tokens = _title_tokens(title)
+    if not tokens:
+        return indexed
+    # Indexed candidate already matches the echoed title well -> keep it (cheap).
+    if indexed is not None:
+        it = _title_tokens(indexed.get("title", ""))
+        if it and len(tokens & it) / min(len(tokens), len(it)) >= 0.5:
+            return indexed
+    # Otherwise find the best title match across all candidates.
+    best, best_score = None, 0.0
+    for c in candidates:
+        ct = _title_tokens(c.get("title", ""))
+        if not ct:
+            continue
+        score = len(tokens & ct) / min(len(tokens), len(ct))
+        if score > best_score:
+            best, best_score = c, score
+    return best if best_score >= 0.5 else indexed
+
+
 async def _llm_rerank(
     platform: PlatformClient,
     profile_text: str,
@@ -168,13 +200,14 @@ async def _llm_rerank(
 
     system = (
         "Ты оцениваешь релевантность проектов Demo Day интересам гостя.\n"
-        'Верни СТРОГО JSON: {"grades": [{"index": N, "grade": "strong|weak|off", '
-        '"reason": "<кратко>"}, ...]}\n'
-        "index - номер проекта из списка.\n"
+        'Верни СТРОГО JSON: {"grades": [{"index": N, "title": "<название проекта>", '
+        '"grade": "strong|weak|off", "reason": "<кратко>"}, ...]}\n'
+        "index - номер проекта из списка. title - его название (скопируй из списка).\n"
         "grade: strong - прямо про интересы гостя; weak - смежное, может быть интересно; "
         "off - НЕ по теме ИЛИ то, что гость явно просил исключить.\n"
         "Если гость указал, что ему НЕ интересно - такие проекты обязательно grade=off.\n"
         "reason - одна короткая фраза, чем проект полезен ИМЕННО этому гостю (до 12 слов).\n"
+        "title и reason ДОЛЖНЫ относиться к одному и тому же проекту.\n"
         "Оцени КАЖДЫЙ проект из списка ровно один раз."
     )
     user = f"Интересы гостя: {profile_text}\n\nПроекты:\n{catalog}"
@@ -196,20 +229,22 @@ async def _llm_rerank(
 
         by_index = {i + 1: c for i, c in enumerate(candidates)}
         buckets: dict[str, list[dict]] = {"strong": [], "weak": [], "off": []}
-        seen: set[int] = set()
+        seen_ids: set[int] = set()
         for item in grades:
-            idx = item.index
-            cand = by_index.get(idx)
-            if cand is None or idx in seen:
+            # Match by echoed title first (defends against the LLM drifting the
+            # index, which lands a reason on the wrong project); index is the
+            # fallback when no/ambiguous title is returned.
+            cand = _match_candidate(item, by_index.get(item.index), candidates)
+            if cand is None or id(cand) in seen_ids:
                 continue
-            seen.add(idx)
+            seen_ids.add(id(cand))
             g = item.grade if item.grade in ("strong", "weak", "off") else "weak"
             cand["grade"] = g
             cand["reason"] = (item.reason or "").strip()
             buckets[g].append(cand)
         # Any candidate the LLM omitted: default to weak, vector order.
-        for i, c in by_index.items():
-            if i not in seen:
+        for c in candidates:
+            if id(c) not in seen_ids:
                 c["grade"] = "weak"
                 c.setdefault("reason", "")
                 buckets["weak"].append(c)

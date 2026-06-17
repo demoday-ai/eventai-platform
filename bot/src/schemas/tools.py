@@ -16,6 +16,8 @@ class ProfileTurn(BaseModel):
 
 class RerankGrade(BaseModel):
     index: int
+    title: str = ""  # echoed project title — reason is matched by title to defend
+    # against the LLM drifting indices (reason landing on the wrong project)
     grade: str  # "strong" | "weak" | "off"
     reason: str = ""
 

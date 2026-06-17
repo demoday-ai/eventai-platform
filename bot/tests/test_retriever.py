@@ -486,6 +486,34 @@ class TestLLMRerank:
         assert out[0]["reason"]  # reason populated
 
     @pytest.mark.asyncio
+    async def test_rerank_reason_follows_title_not_index(self):
+        """Index-drift guard: when the LLM shifts indices but echoes the right
+        title, the reason/grade must attach to the title's project, not the
+        index's (fixes 💡-reason on the wrong project)."""
+        from unittest.mock import AsyncMock, MagicMock
+        from src.services.retriever import _llm_rerank
+        from src.schemas.tools import RerankGrade, RerankResult
+
+        c1 = {"project_id": uuid4(), "title": "Погодный прогноз", "description": "погода", "score": 70.0}
+        c2 = {"project_id": uuid4(), "title": "Text2SQL ассистент", "description": "sql", "score": 69.0}
+        c3 = {"project_id": uuid4(), "title": "CV для ритейла", "description": "cv", "score": 68.0}
+
+        platform = MagicMock()
+        # Indices are shifted by one, but each title is correct.
+        platform.structured_completion = AsyncMock(return_value=RerankResult(grades=[
+            RerankGrade(index=2, title="Погодный прогноз", grade="weak", reason="про погоду"),
+            RerankGrade(index=3, title="Text2SQL ассистент", grade="strong", reason="про SQL"),
+            RerankGrade(index=1, title="CV для ритейла", grade="weak", reason="про cv"),
+        ]))
+
+        out = await _llm_rerank(platform, "text-to-sql", [c1, c2, c3])
+        by_title = {c["title"]: c for c in out}
+        assert by_title["Text2SQL ассистент"]["reason"] == "про SQL"
+        assert by_title["Text2SQL ассистент"]["grade"] == "strong"
+        assert by_title["Погодный прогноз"]["reason"] == "про погоду"
+        assert by_title["CV для ритейла"]["reason"] == "про cv"
+
+    @pytest.mark.asyncio
     async def test_rerank_falls_back_to_input_on_llm_error(self):
         from unittest.mock import AsyncMock, MagicMock
         from src.services.retriever import _llm_rerank
