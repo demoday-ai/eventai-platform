@@ -100,6 +100,10 @@ async def main() -> None:
                     title=title[:512],
                     description=desc,
                     track=track,
+                    # DB requires author/telegram_contact NOT NULL (no default);
+                    # CSV has none -> empty string (cards treat falsy as "absent").
+                    author="",
+                    telegram_contact="",
                 ))
                 inserted += 1
 
