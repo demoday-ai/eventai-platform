@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     redis_password: str = ""
 
     # LLM
-    llm_model: str = "deepseek/deepseek-v3.2"
+    llm_model: str = "deepseek/deepseek-v4-pro"
     embedding_model: str = "google/gemini-embedding-001"
     openrouter_api_key: str = ""  # for standalone mode (no llm-agent-platform)
 

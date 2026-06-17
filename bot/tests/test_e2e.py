@@ -484,7 +484,7 @@ def test_config_loads():
     from src.core.config import settings
 
     assert settings.bot_token == "test"
-    assert settings.llm_model == "deepseek/deepseek-v3.2"
+    assert settings.llm_model == "deepseek/deepseek-v4-pro"
     assert settings.rate_limit_per_minute == 10
     assert settings.semaphore_limit == 10
     assert settings.agent_timeout == 75.0
