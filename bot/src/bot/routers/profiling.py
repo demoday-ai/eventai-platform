@@ -102,7 +102,10 @@ async def nl_profile_text(
         action = "reply"
         llm_result["action"] = "reply"
         if not llm_result.get("message"):
-            llm_result["message"] = "Расскажите подробнее о ваших интересах."
+            llm_result["message"] = (
+                "Понял, кое-что уже вижу. Уточните, пожалуйста, ваши интересы "
+                "чуть подробнее — и соберу подборку."
+            )
 
     # Guard: force profile extraction after MAX_NL_TURNS
     if action == "reply" and nl_turn >= MAX_NL_TURNS - 1:

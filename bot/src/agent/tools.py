@@ -35,6 +35,16 @@ from src.models.recommendation import Recommendation
 
 logger = logging.getLogger(__name__)
 
+# Human-readable RU labels for business-pipeline statuses (displayed to the user;
+# the DB stores the English keys).
+STATUS_RU = {
+    "interested": "интересует",
+    "contacted": "связались",
+    "meeting_scheduled": "встреча запланирована",
+    "rejected": "отклонён",
+    "in_progress": "в работе",
+}
+
 
 def register_tools(agent: Agent[AgentDeps, str]) -> None:
     """Register all 8 tools on the given agent instance."""
@@ -276,29 +286,37 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         if not rec:
             return f"Проект {project_rank} не найден."
 
-        result = await deps.db.execute(
-            select(BusinessFollowup).where(
-                BusinessFollowup.user_id == deps.user.id,
-                BusinessFollowup.event_id == deps.event.id,
-                BusinessFollowup.project_id == rec.project_id,
+        try:
+            result = await deps.db.execute(
+                select(BusinessFollowup).where(
+                    BusinessFollowup.user_id == deps.user.id,
+                    BusinessFollowup.event_id == deps.event.id,
+                    BusinessFollowup.project_id == rec.project_id,
+                )
             )
-        )
-        followup = result.scalar_one_or_none()
-        if followup:
-            old = followup.status
-            followup.status = status
-            await deps.db.flush()
-            return f"Статус проекта {project_rank} изменен: {old} -> {status}"
-        else:
-            new = BusinessFollowup(
-                user_id=deps.user.id,
-                event_id=deps.event.id,
-                project_id=rec.project_id,
-                status=status,
-            )
-            deps.db.add(new)
-            await deps.db.flush()
-            return f"Проект {project_rank} добавлен в пайплайн: {status}"
+            followup = result.scalar_one_or_none()
+            if followup:
+                old = followup.status
+                followup.status = status
+                await deps.db.flush()
+                return (
+                    f"Статус проекта {project_rank} изменён: "
+                    f"{STATUS_RU.get(old, old)} -> {STATUS_RU.get(status, status)}"
+                )
+            else:
+                new = BusinessFollowup(
+                    user_id=deps.user.id,
+                    event_id=deps.event.id,
+                    project_id=rec.project_id,
+                    status=status,
+                )
+                deps.db.add(new)
+                await deps.db.flush()
+                return f"Проект {project_rank} добавлен в пайплайн: {STATUS_RU.get(status, status)}"
+        except Exception as e:
+            logger.error("update_status failed: %s", e, exc_info=True)
+            await deps.db.rollback()
+            return "Не получилось обновить статус, попробуйте ещё раз."
 
     @agent.tool
     async def filter_projects(ctx: RunContext[AgentDeps], tag: str) -> str:
@@ -548,68 +566,73 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         exclude = exclude or []
         changed: list[str] = []
 
-        if exclude:
-            terms = [t.strip() for t in exclude if t.strip()]
-            if terms:
-                note = "Не интересует: " + ", ".join(terms)
-                deps.profile.nl_summary = (
-                    (deps.profile.nl_summary or "") + "\n" + note
-                ).strip()
-                ids = [r.project_id for r in deps.recommendations]
-                drop_pids: set = set()
-                if ids:
-                    # Room/track name matters too ("AI Security" is the zal, not a tag).
-                    rooms = await _project_rooms(deps.db, ids)
-                    res = await deps.db.execute(
-                        select(Project).where(Project.id.in_(ids))
-                    )
-                    low = [t.lower() for t in terms]
-                    for p in res.scalars().all():
-                        hay = " ".join(
-                            [p.title or ""]
-                            + (p.tags or [])
-                            + [p.description or "", rooms.get(p.id, "")]
-                        ).lower()
-                        if any(t in hay for t in low):
-                            drop_pids.add(p.id)
-                if drop_pids:
+        try:
+            if exclude:
+                terms = [t.strip() for t in exclude if t.strip()]
+                if terms:
+                    note = "Не интересует: " + ", ".join(terms)
+                    deps.profile.nl_summary = (
+                        (deps.profile.nl_summary or "") + "\n" + note
+                    ).strip()
+                    ids = [r.project_id for r in deps.recommendations]
+                    drop_pids: set = set()
+                    if ids:
+                        # Room/track name matters too ("AI Security" is the zal, not a tag).
+                        rooms = await _project_rooms(deps.db, ids)
+                        res = await deps.db.execute(
+                            select(Project).where(Project.id.in_(ids))
+                        )
+                        low = [t.lower() for t in terms]
+                        for p in res.scalars().all():
+                            hay = " ".join(
+                                [p.title or ""]
+                                + (p.tags or [])
+                                + [p.description or "", rooms.get(p.id, "")]
+                            ).lower()
+                            if any(t in hay for t in low):
+                                drop_pids.add(p.id)
+                    if drop_pids:
+                        await deps.db.execute(
+                            delete(Recommendation).where(
+                                Recommendation.guest_profile_id == deps.profile.id,
+                                Recommendation.project_id.in_(drop_pids),
+                            )
+                        )
+                    changed.append("исключил темы: " + ", ".join(terms))
+
+            if remove:
+                rm_ranks = set(remove)
+                rm_pids = [
+                    r.project_id for r in deps.recommendations if r.rank in rm_ranks
+                ]
+                if rm_pids:
                     await deps.db.execute(
                         delete(Recommendation).where(
                             Recommendation.guest_profile_id == deps.profile.id,
-                            Recommendation.project_id.in_(drop_pids),
+                            Recommendation.project_id.in_(rm_pids),
                         )
                     )
-                changed.append("исключил темы: " + ", ".join(terms))
+                    changed.append(f"убрал из программы: {len(rm_pids)}")
 
-        if remove:
-            rm_ranks = set(remove)
-            rm_pids = [
-                r.project_id for r in deps.recommendations if r.rank in rm_ranks
-            ]
-            if rm_pids:
-                await deps.db.execute(
-                    delete(Recommendation).where(
-                        Recommendation.guest_profile_id == deps.profile.id,
-                        Recommendation.project_id.in_(rm_pids),
-                    )
-                )
-                changed.append(f"убрал из программы: {len(rm_pids)}")
+            if add:
+                add_ranks = set(add)
+                promoted = 0
+                for r in deps.recommendations:
+                    if r.rank in add_ranks and r.category != "must_visit":
+                        r.category = "must_visit"
+                        promoted += 1
+                if promoted:
+                    changed.append(f"поднял в основу: {promoted}")
 
-        if add:
-            add_ranks = set(add)
-            promoted = 0
-            for r in deps.recommendations:
-                if r.rank in add_ranks and r.category != "must_visit":
-                    r.category = "must_visit"
-                    promoted += 1
-            if promoted:
-                changed.append(f"поднял в основу: {promoted}")
+            if not changed:
+                return "Нечего менять: укажите номер проекта или тему."
 
-        if not changed:
-            return "Нечего менять: укажите номер проекта или тему."
-
-        await deps.db.flush()
-        await _reload_recs(deps)
+            await deps.db.flush()
+            await _reload_recs(deps)
+        except Exception as e:
+            logger.error("update_program failed: %s", e, exc_info=True)
+            await deps.db.rollback()
+            return "Не получилось обновить программу, попробуйте ещё раз."
 
         from src.bot.routers.program import format_program
 
@@ -758,29 +781,39 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         )
         project = res.scalars().first()
         if not project:
+            # Fallback: token-overlap match so "chat law" finds "ChatLaw",
+            # "AutoDS система" finds "AutoDS", etc. (substring LIKE misses these).
+            project = await _fuzzy_find_project(deps.db, deps.event.id, name)
+        if not project:
             return f"Не нашёл в каталоге проект «{name}». Уточните название."
         if any(r.project_id == project.id for r in deps.recommendations):
             return f"«{project.title}» уже в вашей программе."
 
         from src.models.schedule_slot import ScheduleSlot
 
-        slot_res = await deps.db.execute(
-            select(ScheduleSlot.id).where(ScheduleSlot.project_id == project.id).limit(1)
-        )
-        slot_id = slot_res.scalar_one_or_none()
-        max_rank = max((r.rank for r in deps.recommendations), default=0)
-        deps.db.add(
-            Recommendation(
-                guest_profile_id=deps.profile.id,
-                project_id=project.id,
-                relevance_score=100.0,
-                category="must_visit",
-                rank=max_rank + 1,
-                slot_id=slot_id,
+        try:
+            slot_res = await deps.db.execute(
+                select(ScheduleSlot.id).where(ScheduleSlot.project_id == project.id).limit(1)
             )
-        )
-        await deps.db.flush()
-        await _reload_recs(deps)
+            slot_id = slot_res.scalar_one_or_none()
+            max_rank = max((r.rank for r in deps.recommendations), default=0)
+            deps.db.add(
+                Recommendation(
+                    guest_profile_id=deps.profile.id,
+                    project_id=project.id,
+                    relevance_score=100.0,
+                    category="must_visit",
+                    rank=max_rank + 1,
+                    slot_id=slot_id,
+                )
+            )
+            await deps.db.flush()
+            await _reload_recs(deps)
+        except Exception as e:
+            logger.error("add_project failed: %s", e, exc_info=True)
+            await deps.db.rollback()
+            return "Не получилось добавить проект, попробуйте ещё раз."
+
         from src.bot.routers.program import format_program
 
         text, _ = await format_program(
@@ -795,15 +828,58 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
 
 async def _reload_recs(deps: AgentDeps) -> None:
-    """Reload the profile's recommendations from DB (ordered by rank), keeping
-    each project's rank STABLE across edits (gaps allowed) so a number always
-    means the same project. Refreshes deps.recommendations for in-run consistency."""
+    """Reload the profile's recommendations from DB and renumber them 1..N by
+    display order (must_visit -> if_time, chronological). Keeps the shown number
+    equal to the project's position, gap-free after edits. Persists the new ranks
+    and refreshes deps.recommendations for in-run consistency."""
+    from src.services.retriever import _load_schedule_slots, _renumber_by_display
+
     result = await deps.db.execute(
         select(Recommendation)
         .where(Recommendation.guest_profile_id == deps.profile.id)
         .order_by(Recommendation.rank)
     )
-    deps.recommendations = list(result.scalars().all())
+    recs = list(result.scalars().all())
+    slots = await _load_schedule_slots(deps.db, deps.event.id)
+    _renumber_by_display(recs, slots)
+    await deps.db.flush()
+    deps.recommendations = recs
+
+
+def _norm_tokens(s: str) -> set:
+    import re
+
+    return set(re.findall(r"\w+", (s or "").lower()))
+
+
+async def _fuzzy_find_project(db, event_id, name: str):
+    """Best token-overlap match of `name` against catalog titles (event-scoped).
+
+    Handles spacing/case the substring LIKE misses ("chat law" -> "ChatLaw").
+    Also matches when the query's collapsed form is a substring of the collapsed
+    title. Returns the Project or None if nothing clears a 0.5 overlap threshold.
+    """
+    import re
+
+    want = _norm_tokens(name)
+    want_collapsed = re.sub(r"\W+", "", (name or "").lower())
+    if not want and not want_collapsed:
+        return None
+    rows = (
+        await db.execute(select(Project).where(Project.event_id == event_id))
+    ).scalars().all()
+    best, best_score = None, 0.0
+    for p in rows:
+        title_collapsed = re.sub(r"\W+", "", (p.title or "").lower())
+        if want_collapsed and want_collapsed in title_collapsed:
+            return p
+        toks = _norm_tokens(p.title)
+        if not toks or not want:
+            continue
+        score = len(want & toks) / min(len(want), len(toks))
+        if score > best_score:
+            best, best_score = p, score
+    return best if best_score >= 0.5 else None
 
 
 async def _project_rooms(db, project_ids: list) -> dict:
@@ -930,26 +1006,40 @@ def _format_matrix(matrix: dict, criteria: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _outreach_ask(objective: str | None) -> str:
+    """One-line ask personalised by the guest's objective (see prompts/qa.py)."""
+    return {
+        "investment": "Интересует обсуждение раунда и условий инвестиций.",
+        "hiring": "Интересует ваша команда — рассматриваем открытые позиции.",
+        "partnership": "Интересует обсуждение пилота и партнёрства.",
+        "technology": "Интересует обсуждение пилота и технической интеграции.",
+    }.get(objective or "", "Интересует обсуждение возможного сотрудничества.")
+
+
 async def _get_followup(deps: AgentDeps) -> str:
     """Build follow-up package for guest users."""
     if not deps.recommendations:
         return "Нет рекомендаций. Используйте /rebuild."
 
     lines = ["Follow-up пакет:\n"]
+    first_title: str | None = None
     for rec in deps.recommendations[:10]:
         result = await deps.db.execute(
             select(Project).where(Project.id == rec.project_id)
         )
         project = result.scalar_one_or_none()
         if project:
+            if first_title is None:
+                first_title = project.title
             contact = (
                 f" | {project.telegram_contact}" if project.telegram_contact else ""
             )
             lines.append(f"{rec.rank} {project.title}{contact}")
 
+    title = first_title or "ваш проект"
     lines.append("\nШаблон для связи:")
-    lines.append("Здравствуйте! Видел(а) ваш проект на Demo Day.")
-    lines.append("Интересует возможность сотрудничества.")
+    lines.append(f"Здравствуйте! Видел(а) ваш проект «{title}» на Demo Day.")
+    lines.append("Интересует возможность пообщаться и обменяться опытом.")
     return "\n".join(lines)
 
 
@@ -972,33 +1062,39 @@ async def _get_pipeline(deps: AgentDeps) -> str:
 
     lines = ["Business Pipeline:\n"]
     for status, count in stats.items():
-        lines.append(f"  {status}: {count}")
+        lines.append(f"  {STATUS_RU.get(status, status)}: {count}")
     lines.append("")
 
+    rep_title: str | None = None
     for f in followups[:10]:
         result = await deps.db.execute(
             select(Project).where(Project.id == f.project_id)
         )
         project = result.scalar_one_or_none()
         if project:
-            lines.append(f"[{f.status}] {project.title}")
+            if rep_title is None:
+                rep_title = project.title
+            lines.append(f"[{STATUS_RU.get(f.status, f.status)}] {project.title}")
             if project.telegram_contact:
                 lines.append(f"  Контакт: {project.telegram_contact}")
             if f.notes:
                 lines.append(f"  {f.notes[:50]}")
 
-    company = deps.profile.company if deps.profile and deps.profile.company else "[название компании]"
+    company = deps.profile.company if deps.profile and deps.profile.company else None
+    objective = deps.profile.objective if deps.profile else None
+    rep = rep_title or "ваш проект"
+    greet = f"Здравствуйте! Представляю компанию {company}." if company else "Здравствуйте!"
 
     lines.append("\nШаблоны для связи:")
     lines.append("")
     lines.append("Первое обращение:")
-    lines.append(f"Здравствуйте! Представляю компанию {company}.")
-    lines.append("Видели ваш проект [название проекта] на Demo Day.")
-    lines.append("Интересует обсуждение возможного сотрудничества.")
+    lines.append(greet)
+    lines.append(f"Видели ваш проект «{rep}» на Demo Day.")
+    lines.append(_outreach_ask(objective))
     lines.append("Удобно будет созвониться на этой неделе?")
     lines.append("")
     lines.append("Повторное обращение:")
-    lines.append("Добрый день! Мы общались на Demo Day по проекту [название].")
-    lines.append("Хотел(а) бы уточнить детали для запуска пилота.")
+    lines.append(f"Добрый день! Мы общались на Demo Day по проекту «{rep}».")
+    lines.append("Хотел(а) бы уточнить детали и обсудить следующий шаг.")
 
     return "\n".join(lines)

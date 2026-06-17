@@ -250,6 +250,7 @@ async def cb_export_pdf(
             return
         doc = BufferedInputFile(data, filename="demo_day_program.pdf")
         await callback.message.answer_document(doc, caption="Ваша программа Demo Day")
+        await callback.message.answer("PDF готов, отправлен выше.")
     except Exception as exc:
         logger.error("PDF export failed for user %s: %s", user_id, exc, exc_info=True)
         await callback.message.answer(
@@ -413,9 +414,15 @@ async def view_program_text(
     except asyncio.TimeoutError:
         reply_text = "Обработка занимает больше времени. Попробуйте еще раз."
         logger.warning("Agent timeout for user %s", user_id)
+        # A tool may have flushed partway before the timeout — clear any
+        # pending-rollback state so the assistant_msg save below doesn't crash.
+        await _safe_rollback(db)
     except Exception as e:
         reply_text = "Произошла ошибка. Попробуйте еще раз или используйте кнопки."
         logger.error("Agent error for user %s: %s", user_id, e)
+        # A failed tool flush poisons the session; rollback so the raw
+        # PendingRollbackError never leaks to the user on the next flush.
+        await _safe_rollback(db)
 
     # Save assistant reply (continue using the same program_chat built above)
     program_chat.append({"role": "assistant", "content": reply_text})
@@ -439,15 +446,20 @@ async def view_program_text(
             upd["current_project_id"] = str(rec.project_id)
         await state.update_data(**upd)
 
-    # Save to DB
-    assistant_msg = ChatMessage(
-        user_id=UUID(user_id),
-        event_id=UUID(event_id),
-        role="assistant",
-        content=sanitize_text(reply_text) or reply_text,
-    )
-    db.add(assistant_msg)
-    await db.flush()
+    # Save to DB. Wrapped defensively: if the session is somehow still poisoned,
+    # the reply must still reach the user instead of crashing the handler.
+    try:
+        assistant_msg = ChatMessage(
+            user_id=UUID(user_id),
+            event_id=UUID(event_id),
+            role="assistant",
+            content=sanitize_text(reply_text) or reply_text,
+        )
+        db.add(assistant_msg)
+        await db.flush()
+    except Exception as e:
+        logger.error("Failed to persist assistant message for user %s: %s", user_id, e)
+        await _safe_rollback(db)
 
     # Send reply, split long messages
     await _safe_send(message, reply_text)
@@ -536,20 +548,22 @@ async def format_program(
 
     lines: list[str] = [header, ""]
     project_list: list[tuple[int, str]] = []
-    last_day: tuple | None = None  # (bucket, date) → insert day header on change
+    last_day_date = None  # date → re-insert day header on change
     last_bucket: int | None = None
     DAY_NAMES = {0: "День 1", 1: "День 2", 2: "День 3"}
 
-    # Build a (bucket -> [unique sorted dates]) map so we can label День 1/2.
-    bucket_dates: dict = {}
+    # GLOBAL ordered list of unique dates across the whole program, so the SAME
+    # calendar date always maps to the same "День N" in both must_visit and
+    # if_time sections (previously numbered independently → 07.02 shown as both
+    # "День 1" and "День 2").
+    all_dates: list = []
     for r in sorted_recs:
-        b = 0 if r.category == "must_visit" else 1
         slot_tuple = slots_by_id.get(r.slot_id) if r.slot_id else None
         if slot_tuple:
             d = slot_tuple[0].start_time.date()
-            bucket_dates.setdefault(b, [])
-            if d not in bucket_dates[b]:
-                bucket_dates[b].append(d)
+            if d not in all_dates:
+                all_dates.append(d)
+    all_dates.sort()
 
     for rec in sorted_recs:
         # Load project
@@ -572,23 +586,24 @@ async def format_program(
             end_str = slot.end_time.strftime("%H:%M")
             time_block = f"{time_str}–{end_str}"
 
-        # Day header on day OR bucket change.
         bucket = 0 if rec.category == "must_visit" else 1
+
+        # Section header on bucket change to if_time (independent of slot, so
+        # no-slot optional projects still land under the section).
+        if bucket == 1 and last_bucket != 1:
+            lines.append("🟡 ЕСЛИ УСПЕЕТЕ")
+            lines.append("")
+            last_day_date = None  # force day re-header inside the new section
+        last_bucket = bucket
+
+        # Day header on date change (only for projects that have a slot).
         slot_date = slot.start_time.date() if slot else None
-        current_key = (bucket, slot_date)
-        if slot_date and current_key != last_day:
-            day_idx = bucket_dates.get(bucket, []).index(slot_date)
+        if slot_date and slot_date != last_day_date:
+            day_idx = all_dates.index(slot_date)
             day_label = DAY_NAMES.get(day_idx, f"День {day_idx + 1}")
-            section = (
-                "🟡 ЕСЛИ УСПЕЕТЕ" if bucket == 1 and last_bucket != 1 else None
-            )
-            if section:
-                lines.append(section)
-                lines.append("")
             lines.append(f"📅 {day_label} ({slot_date.strftime('%d.%m')})")
             lines.append("")
-            last_day = current_key
-            last_bucket = bucket
+            last_day_date = slot_date
 
         # Multi-line block: title (numbered, no '#'), then time/room, then the
         # one-line "почему именно тебе" reason (llm_summary) if present.
@@ -599,6 +614,8 @@ async def format_program(
             lines.append(f"⏰ {time_block}")
         elif room_name:
             lines.append(f"📍 {room_name}")
+        else:
+            lines.append("🕓 слот не назначен")
 
         reason = getattr(rec, "llm_summary", None)
         if reason:
@@ -634,3 +651,11 @@ async def _safe_send(message: Message, text: str, **_kwargs) -> None:
     """Send LLM text with Telegram-safe formatting via entities."""
     from src.core.telegram_format import send_formatted
     await send_formatted(message, text)
+
+
+async def _safe_rollback(db: AsyncSession) -> None:
+    """Roll back a possibly-poisoned session; never raise from cleanup."""
+    try:
+        await db.rollback()
+    except Exception as e:  # pragma: no cover - rollback failure is itself rare
+        logger.error("Rollback failed: %s", e)

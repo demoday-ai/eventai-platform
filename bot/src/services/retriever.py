@@ -205,6 +205,8 @@ async def _llm_rerank(
         "index - номер проекта из списка. title - его название (скопируй из списка).\n"
         "grade: strong - прямо про интересы гостя; weak - смежное, может быть интересно; "
         "off - НЕ по теме ИЛИ то, что гость явно просил исключить.\n"
+        "Будь строгим: если проект из другой области (например HR-matching при запросе про "
+        "финтех) - это grade=off, НЕ weak. weak только для реально смежного.\n"
         "Если гость указал, что ему НЕ интересно - такие проекты обязательно grade=off.\n"
         "reason - одна короткая фраза, чем проект полезен ИМЕННО этому гостю (до 12 слов).\n"
         "title и reason ДОЛЖНЫ относиться к одному и тому же проекту.\n"
@@ -457,6 +459,25 @@ async def _load_schedule_slots(db: AsyncSession, event_id: UUID) -> dict[UUID, d
     return slots
 
 
+def _renumber_by_display(recs: list, slots: dict) -> None:
+    """Renumber recommendations' rank 1..N by the SAME order they are shown in
+    (must_visit before if_time, then chronologically by slot start_time, no-slot
+    projects last). Keeps the displayed number == the project's position, so no
+    gaps/jumps after edits and the agent's references always exist. Mutates in place.
+
+    `slots` maps project_id -> dict with a naive 'start_time' (or the rec may have
+    no slot, sorting it to the end of its bucket).
+    """
+    def _key(r):
+        bucket = 0 if r.category == "must_visit" else 1
+        slot = slots.get(r.project_id)
+        start = slot["start_time"] if slot else None
+        return (bucket, start or datetime.max)
+
+    for i, r in enumerate(sorted(recs, key=_key)):
+        r.rank = i + 1
+
+
 async def _save_recommendations(
     db: AsyncSession, profile_id: UUID, ranked: list[dict]
 ) -> list[Recommendation]:
@@ -478,6 +499,11 @@ async def _save_recommendations(
         )
         db.add(rec)
         recs.append(rec)
+
+    # Renumber 1..N by display order (must -> if_time, chronological) so the
+    # number shown always matches the position and stays gap-free after edits.
+    slot_map = {r["project_id"]: r["slot"] for r in ranked if r.get("slot")}
+    _renumber_by_display(recs, slot_map)
 
     await db.flush()
     return recs

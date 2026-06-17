@@ -1156,9 +1156,9 @@ class TestProgramRouter:
         assert await _get_state(dp, bot, user_id=uid) == BotStates.view_program.state
 
     @pytest.mark.asyncio
-    async def test_reload_recs_keeps_ranks_stable(self, db: AsyncSession, seed):
-        """update_program core: after removing a project, remaining ranks stay STABLE
-        (gap preserved) so a number always means the same project."""
+    async def test_reload_recs_renumbers_sequentially(self, db: AsyncSession, seed):
+        """update_program core: after removing a project, ranks are renumbered
+        sequentially 1..N (gap-free) so the shown number equals the position."""
         from types import SimpleNamespace
         from sqlalchemy import delete as _delete
         from src.agent.tools import _reload_recs
@@ -1178,18 +1178,18 @@ class TestProgramRouter:
                 rank=i + 1,
             ))
         await db.flush()
-        # Remove the middle one -> rank gap.
+        # Remove the middle one -> would leave a gap [1, 3] without renumbering.
         await db.execute(_delete(Recommendation).where(
             Recommendation.guest_profile_id == profile.id,
             Recommendation.rank == 2,
         ))
         await db.flush()
 
-        deps = SimpleNamespace(db=db, profile=profile, recommendations=[])
+        deps = SimpleNamespace(db=db, profile=profile, recommendations=[], event=seed["event"])
         await _reload_recs(deps)
 
-        # Ranks 1 and 3 survive (rank 2 removed); NOT renumbered to [1, 2].
-        assert [r.rank for r in deps.recommendations] == [1, 3]
+        # Renumbered gap-free: [1, 2], not the stale [1, 3].
+        assert [r.rank for r in deps.recommendations] == [1, 2]
 
 
 # =========================================================================

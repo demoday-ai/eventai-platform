@@ -352,6 +352,7 @@ class TestGetFollowup:
         assert "ChatLaw" in text
         assert "@chatlaw_dev" in text
         assert "Шаблон для связи" in text
+        assert "«ChatLaw»" in text  # title substituted into the template
 
     @pytest.mark.asyncio
     async def test_get_followup_no_recommendations(self):
@@ -407,13 +408,47 @@ class TestGetPipeline:
         text = await _get_pipeline(deps)
 
         assert "Business Pipeline" in text
-        assert "interested: 1" in text
+        assert "интересует: 1" in text  # RU status label, not raw "interested"
         assert "DataPipe" in text
         assert "@datapipe_dev" in text
         assert "Шаблоны для связи" in text
         assert "TestCorp" in text
         assert "Первое обращение" in text
         assert "Повторное обращение" in text
+        # Placeholders must be filled with the real project title, not leaked.
+        assert "[название проекта]" not in text
+        assert "[название]" not in text
+        assert "«DataPipe»" in text
+
+    @pytest.mark.asyncio
+    async def test_get_pipeline_personalizes_by_objective(self):
+        """objective=hiring -> hiring-specific ask; company empty -> no placeholder."""
+        from src.agent.tools import _outreach_ask
+
+        followup = MagicMock()
+        followup.status = "meeting_scheduled"
+        followup.project_id = uuid4()
+        followup.notes = None
+        project = _make_project(title="HireBot", telegram_contact="@hb")
+
+        db = AsyncMock()
+        fr = MagicMock()
+        fr.scalars.return_value.all.return_value = [followup]
+        pr = MagicMock()
+        pr.scalar_one_or_none.return_value = project
+        db.execute = AsyncMock(side_effect=[fr, pr])
+
+        deps = _make_deps(
+            user=_make_user(role_code="business"),
+            profile=_make_profile(company=None, objective="hiring"),
+            db=db,
+        )
+        text = await _get_pipeline(deps)
+
+        assert _outreach_ask("hiring") in text
+        assert "[название компании]" not in text
+        assert "Представляю компанию" not in text  # no company -> plain greeting
+        assert "встреча запланирована: 1" in text  # RU status mapping
 
     @pytest.mark.asyncio
     async def test_get_pipeline_empty(self):
@@ -431,6 +466,53 @@ class TestGetPipeline:
         text = await _get_pipeline(deps)
 
         assert "Пайплайн пуст" in text
+
+
+class TestOutreachAsk:
+
+    def test_known_objectives(self):
+        from src.agent.tools import _outreach_ask
+
+        assert "инвестиц" in _outreach_ask("investment").lower()
+        assert "команд" in _outreach_ask("hiring").lower()
+        assert "пилот" in _outreach_ask("partnership").lower()
+
+    def test_unknown_objective_falls_back(self):
+        from src.agent.tools import _outreach_ask
+
+        assert _outreach_ask(None)  # non-empty default
+        assert _outreach_ask("weird")
+
+
+class TestFuzzyFindProject:
+
+    @pytest.mark.asyncio
+    async def test_finds_by_collapsed_spacing(self):
+        """'chat law' must match 'ChatLaw' (substring LIKE misses the space)."""
+        from src.agent.tools import _fuzzy_find_project
+
+        p1 = _make_project(title="ChatLaw")
+        p2 = _make_project(title="Погодный прогноз")
+        db = AsyncMock()
+        res = MagicMock()
+        res.scalars.return_value.all.return_value = [p1, p2]
+        db.execute = AsyncMock(return_value=res)
+
+        found = await _fuzzy_find_project(db, uuid4(), "chat law")
+        assert found is p1
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_no_match(self):
+        from src.agent.tools import _fuzzy_find_project
+
+        p1 = _make_project(title="ChatLaw")
+        db = AsyncMock()
+        res = MagicMock()
+        res.scalars.return_value.all.return_value = [p1]
+        db.execute = AsyncMock(return_value=res)
+
+        found = await _fuzzy_find_project(db, uuid4(), "квантовая биология")
+        assert found is None
 
 
 # ---------------------------------------------------------------------------

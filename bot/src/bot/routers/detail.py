@@ -400,6 +400,8 @@ async def cb_contact_author(
 
     contact = project.telegram_contact
     author = project.author or "автор"
+    # Address the author by name when it's known (wave-2 imports have none).
+    greeting = f"Здравствуйте, {project.author}!" if project.author else "Здравствуйте!"
 
     from src.bot.keyboards.program import nav_back_keyboard
 
@@ -422,7 +424,7 @@ async def cb_contact_author(
         f"Автор: {author}\n"
         f"Telegram: {contact}\n\n"
         f"Шаблон для связи:\n"
-        f"\"Здравствуйте! Видел(а) ваш проект {project_title} на Demo Day. "
+        f"\"{greeting} Видел(а) ваш проект «{project_title}» на Demo Day. "
         f"Интересует возможность сотрудничества.\"",
         reply_markup=nav_back_keyboard(rank_for_nav),
     )

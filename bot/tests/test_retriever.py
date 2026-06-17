@@ -8,6 +8,7 @@ import asyncio
 import os
 import pytest
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 os.environ.setdefault("BOT_TOKEN", "test")
@@ -539,6 +540,52 @@ class TestLLMRerank:
         out = await _llm_rerank(platform, "q", [])
         assert out == []
         platform.structured_completion.assert_not_called()
+
+
+class TestRenumberByDisplay:
+    """Sequential 1..N numbering by display order (must -> if_time, chronological),
+    gap-free after edits, so the shown number always equals the position."""
+
+    def _rec(self, pid, category):
+        r = MagicMock()
+        r.project_id = pid
+        r.category = category
+        r.rank = 0
+        return r
+
+    def test_chronological_then_bucket_sequential(self):
+        from src.services.retriever import _renumber_by_display
+
+        a, b, c, d = uuid4(), uuid4(), uuid4(), uuid4()
+        recs = [
+            self._rec(a, "must_visit"),
+            self._rec(b, "if_time"),
+            self._rec(c, "must_visit"),
+            self._rec(d, "if_time"),
+        ]
+        slots = {
+            a: {"start_time": datetime(2026, 2, 7, 11, 0)},
+            c: {"start_time": datetime(2026, 2, 7, 10, 0)},
+            b: {"start_time": datetime(2026, 2, 7, 9, 0)},
+        }
+        _renumber_by_display(recs, slots)
+        ranks = {r.project_id: r.rank for r in recs}
+        # must first by time: c(10:00)=1, a(11:00)=2; then if_time: b(9:00)=3, d(no slot)=4
+        assert ranks == {c: 1, a: 2, b: 3, d: 4}
+
+    def test_no_slots_sequential_no_gaps(self):
+        from src.services.retriever import _renumber_by_display
+
+        recs = [self._rec(uuid4(), "must_visit") for _ in range(3)]
+        _renumber_by_display(recs, {})
+        assert sorted(r.rank for r in recs) == [1, 2, 3]
+
+    def test_after_removal_stays_gap_free(self):
+        from src.services.retriever import _renumber_by_display
+
+        recs = [self._rec(uuid4(), "must_visit") for _ in range(2)]  # one removed
+        _renumber_by_display(recs, {})
+        assert sorted(r.rank for r in recs) == [1, 2]
 
 
 class TestLLMRerankTimeout:
