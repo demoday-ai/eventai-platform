@@ -105,13 +105,18 @@ async def extract_structured(
     project_title: str,
     project_description: str,
     platform_client,
+    model: str | None = None,
 ) -> dict:
-    """Use LLM to extract structured ProjectExtraction from raw text."""
+    """Use LLM to extract structured ProjectExtraction from raw text.
+
+    `model` overrides the LLM (e.g. a stronger model for a one-shot catalog
+    import); defaults to settings.llm_model.
+    """
     from src.schemas.tools import ProjectExtraction
 
     prompt = (
         f"Проект: {project_title}\n"
-        f"Описание: {project_description}\n\n"
+        f"Описание: {project_description[:3000]}\n\n"
         f"Текст из артефактов (презентация/README):\n{raw_text[:5000]}\n\n"
         "Извлеки информацию в ТОЧНО таком JSON формате:\n"
         "{\n"
@@ -145,6 +150,7 @@ async def extract_structured(
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
+            model=model,
             response_format={"type": "json_object"},
         )
         content = resp["choices"][0]["message"]["content"]

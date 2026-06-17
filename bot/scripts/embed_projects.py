@@ -48,7 +48,10 @@ async def main() -> None:
             for i, project in enumerate(projects, 1):
                 tags = ", ".join(project.tags or [])
                 stack = ", ".join(project.tech_stack or [])
-                embed_text = f"{project.title}. {project.description}. Теги: {tags}. Стек: {stack}"
+                # Cap description: some imported md descriptions are 30-200KB,
+                # which would blow the embedding API input limit.
+                desc = (project.description or "")[:8000]
+                embed_text = f"{project.title}. {desc}. Теги: {tags}. Стек: {stack}"
 
                 try:
                     resp = await client.post(

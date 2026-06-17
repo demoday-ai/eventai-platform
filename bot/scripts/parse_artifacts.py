@@ -28,6 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default=None, help="LLM override (e.g. deepseek/deepseek-v4-pro)")
+    cli_args = ap.parse_args()
+    if cli_args.model:
+        logger.info("Using model override: %s", cli_args.model)
+
     platform = PlatformClient("https://openrouter.ai/api", "unused")
     api_key = os.environ.get("OPENROUTER_API_KEY", settings.openrouter_api_key)
     if not api_key:
@@ -83,11 +91,13 @@ async def main() -> None:
 
             # LLM extraction
             extraction = await extract_structured(
-                raw_text, project.title, project.description, platform
+                raw_text, project.title, project.description, platform, model=cli_args.model
             )
 
             if extraction:
                 project.parsed_content = extraction
+                if not project.tech_stack and extraction.get("stack"):
+                    project.tech_stack = extraction["stack"]
                 await db.flush()
                 # Commit per project so partial progress survives interruption
                 # (bot rebuild, SIGKILL, network blip, etc).
