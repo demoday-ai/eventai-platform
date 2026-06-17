@@ -1081,7 +1081,15 @@ async def _get_pipeline(deps: AgentDeps) -> str:
                 lines.append(f"  {f.notes[:50]}")
 
     company = deps.profile.company if deps.profile and deps.profile.company else None
-    objective = deps.profile.objective if deps.profile else None
+    # Canonical objective lives in business_objectives (e.g. ["hiring","technology"]);
+    # profile.objective is free-text (goals[0]) and rarely matches a known key.
+    objective = None
+    if deps.profile:
+        for cand in (deps.profile.business_objectives or []):
+            if cand in ("investment", "hiring", "partnership", "technology"):
+                objective = cand
+                break
+        objective = objective or deps.profile.objective
     rep = rep_title or "ваш проект"
     greet = f"Здравствуйте! Представляю компанию {company}." if company else "Здравствуйте!"
 

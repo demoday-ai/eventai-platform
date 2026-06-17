@@ -440,7 +440,9 @@ class TestGetPipeline:
 
         deps = _make_deps(
             user=_make_user(role_code="business"),
-            profile=_make_profile(company=None, objective="hiring"),
+            # Canonical objective comes from business_objectives, not the free-text field.
+            profile=_make_profile(company=None, objective="найм инженеров",
+                                  business_objectives=["hiring", "technology"]),
             db=db,
         )
         text = await _get_pipeline(deps)
