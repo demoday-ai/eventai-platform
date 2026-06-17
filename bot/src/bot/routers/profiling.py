@@ -147,9 +147,11 @@ async def nl_profile_text(
     # action == "profile" -> show for confirmation
     from src.services.profiling import normalize_profile_display
 
-    interests = llm_result.get("interests", [])
-    goals = llm_result.get("goals", [])
-    summary = llm_result.get("summary", "")
+    # Structured output (ProfileTurn) may return None for absent fields - coalesce
+    # to empty so downstream joins/iteration never hit 'NoneType is not iterable'.
+    interests = llm_result.get("interests") or []
+    goals = llm_result.get("goals") or []
+    summary = llm_result.get("summary") or ""
     # Dedupe tags / strip goal-duplicating summary lines before display & save
     interests, summary = normalize_profile_display(interests, goals, summary)
 
