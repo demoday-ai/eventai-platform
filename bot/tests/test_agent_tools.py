@@ -486,6 +486,34 @@ class TestOutreachAsk:
         assert _outreach_ask("weird")
 
 
+class TestDetectObjective:
+    """objective detection: canonical business_objectives first, else keyword scan
+    of free-text profile fields (the LLM often leaves business_objectives empty)."""
+
+    def test_canonical_business_objectives(self):
+        from src.agent.tools import _detect_objective
+
+        p = _make_profile(business_objectives=["hiring", "technology"])
+        assert _detect_objective(p) == "hiring"
+
+    def test_keyword_scan_hiring(self):
+        from src.agent.tools import _detect_objective
+
+        p = _make_profile(objective="ищу инженеров на найм в штат")
+        assert _detect_objective(p) == "hiring"
+
+    def test_keyword_scan_investment(self):
+        from src.agent.tools import _detect_objective
+
+        p = _make_profile(nl_summary="венчурный фонд, смотрим раунды")
+        assert _detect_objective(p) == "investment"
+
+    def test_none_when_no_signal(self):
+        from src.agent.tools import _detect_objective
+
+        assert _detect_objective(_make_profile()) is None
+
+
 class TestFuzzyFindProject:
 
     @pytest.mark.asyncio

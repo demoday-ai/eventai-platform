@@ -1016,6 +1016,26 @@ def _outreach_ask(objective: str | None) -> str:
     }.get(objective or "", "Интересует обсуждение возможного сотрудничества.")
 
 
+def _detect_objective(profile) -> str | None:
+    """Best-effort canonical objective. The LLM's business_objectives is often
+    absent, so fall back to keyword-scanning the profile text (hiring/найм etc)."""
+    if profile is None:
+        return None
+    for cand in (profile.business_objectives or []):
+        if cand in ("investment", "hiring", "partnership", "technology"):
+            return cand
+    parts = [profile.objective, profile.nl_summary, profile.raw_text]
+    parts += [o for o in (profile.business_objectives or []) if isinstance(o, str)]
+    text = " ".join(p for p in parts if isinstance(p, str)).lower()
+    if any(w in text for w in ("найм", "наним", "в штат", "вакан", "hiring", "рекрут", "команд")):
+        return "hiring"
+    if any(w in text for w in ("инвест", "раунд", "фонд", "venture", "вложен")):
+        return "investment"
+    if any(w in text for w in ("пилот", "партнёр", "партнер", "внедрен", "интеграц")):
+        return "partnership"
+    return None
+
+
 async def _get_followup(deps: AgentDeps) -> str:
     """Build follow-up package for guest users."""
     if not deps.recommendations:
@@ -1081,15 +1101,7 @@ async def _get_pipeline(deps: AgentDeps) -> str:
                 lines.append(f"  {f.notes[:50]}")
 
     company = deps.profile.company if deps.profile and deps.profile.company else None
-    # Canonical objective lives in business_objectives (e.g. ["hiring","technology"]);
-    # profile.objective is free-text (goals[0]) and rarely matches a known key.
-    objective = None
-    if deps.profile:
-        for cand in (deps.profile.business_objectives or []):
-            if cand in ("investment", "hiring", "partnership", "technology"):
-                objective = cand
-                break
-        objective = objective or deps.profile.objective
+    objective = _detect_objective(deps.profile)
     rep = rep_title or "ваш проект"
     greet = f"Здравствуйте! Представляю компанию {company}." if company else "Здравствуйте!"
 
