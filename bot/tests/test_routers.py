@@ -630,11 +630,10 @@ class TestProfilingRouter:
         db.add(user)
         await db.flush()
 
+        from src.schemas.tools import ProfileTurn
         platform = _make_platform_mock()
-        platform.chat_completion = AsyncMock(
-            return_value={
-                "choices": [{"message": {"content": '{"action":"reply","message":"Какие области AI?"}'}}]
-            }
+        platform.structured_completion = AsyncMock(
+            return_value=ProfileTurn(action="reply", message="Какие области AI?")
         )
 
         dp, bot = _setup_dp(db, platform)
@@ -672,11 +671,10 @@ class TestProfilingRouter:
         db.add(user)
         await db.flush()
 
+        from src.schemas.tools import ProfileTurn
         platform = _make_platform_mock()
-        platform.chat_completion = AsyncMock(
-            return_value={
-                "choices": [{"message": {"content": '{"action":"profile","interests":["NLP","LLM"],"goals":["изучить RAG"],"summary":"Студент, NLP"}'}}]
-            }
+        platform.structured_completion = AsyncMock(
+            return_value=ProfileTurn(action="profile", interests=["NLP", "LLM"], goals=["изучить RAG"], summary="Студент, NLP")
         )
 
         dp, bot = _setup_dp(db, platform)
@@ -716,11 +714,10 @@ class TestProfilingRouter:
         db.add(user)
         await db.flush()
 
+        from src.schemas.tools import ProfileTurn
         platform = _make_platform_mock()
-        platform.chat_completion = AsyncMock(
-            return_value={
-                "choices": [{"message": {"content": '{"action":"profile","interests":["AI"],"goals":["learn"],"summary":"test"}'}}]
-            }
+        platform.structured_completion = AsyncMock(
+            return_value=ProfileTurn(action="profile", interests=["AI"], goals=["learn"], summary="test")
         )
 
         dp, bot = _setup_dp(db, platform)
