@@ -461,9 +461,9 @@ class TestLLMRerank:
 
     @pytest.mark.asyncio
     async def test_rerank_reorders_and_filters(self):
-        import json
         from unittest.mock import AsyncMock, MagicMock
         from src.services.retriever import _llm_rerank
+        from src.schemas.tools import RerankGrade, RerankResult
 
         c1 = {"project_id": uuid4(), "title": "Скоринг МТС", "description": "кредитный скоринг", "score": 74.0}
         c2 = {"project_id": uuid4(), "title": "Deepfake detection", "description": "детекция дипфейков", "score": 67.0}
@@ -471,15 +471,11 @@ class TestLLMRerank:
 
         platform = MagicMock()
         # LLM grades the 2 fintech strong (order c3, c1), deepfake off.
-        platform.chat_completion = AsyncMock(return_value={
-            "choices": [{"message": {"content": json.dumps({
-                "grades": [
-                    {"index": 3, "grade": "strong", "reason": "антифрод для банка"},
-                    {"index": 1, "grade": "strong", "reason": "кредитный скоринг"},
-                    {"index": 2, "grade": "off", "reason": "не про финтех"},
-                ]
-            })}}]
-        })
+        platform.structured_completion = AsyncMock(return_value=RerankResult(grades=[
+            RerankGrade(index=3, grade="strong", reason="антифрод для банка"),
+            RerankGrade(index=1, grade="strong", reason="кредитный скоринг"),
+            RerankGrade(index=2, grade="off", reason="не про финтех"),
+        ]))
 
         out = await _llm_rerank(platform, "финтех скоринг антифрод", [c1, c2, c3])
         titles = [c["title"] for c in out]
@@ -499,7 +495,7 @@ class TestLLMRerank:
             {"project_id": uuid4(), "title": "B", "description": "y", "score": 60.0},
         ]
         platform = MagicMock()
-        platform.chat_completion = AsyncMock(side_effect=Exception("LLM down"))
+        platform.structured_completion = AsyncMock(side_effect=Exception("LLM down"))
 
         out = await _llm_rerank(platform, "запрос", cands)
         # On failure: return input unchanged (vector order preserved, nothing lost)
@@ -511,10 +507,10 @@ class TestLLMRerank:
         from src.services.retriever import _llm_rerank
 
         platform = MagicMock()
-        platform.chat_completion = AsyncMock()
+        platform.structured_completion = AsyncMock()
         out = await _llm_rerank(platform, "q", [])
         assert out == []
-        platform.chat_completion.assert_not_called()
+        platform.structured_completion.assert_not_called()
 
 
 class TestLLMRerankTimeout:
@@ -537,7 +533,7 @@ class TestLLMRerankTimeout:
             return {}
 
         platform = MagicMock()
-        platform.chat_completion = slow
+        platform.structured_completion = slow
 
         out = await _llm_rerank(platform, "q", cands, timeout=0.2)
         assert [c["title"] for c in out] == ["A", "B"]

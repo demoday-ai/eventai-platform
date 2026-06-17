@@ -240,18 +240,13 @@ class TestProfilingService:
 
     @pytest.mark.asyncio
     async def test_profiling_chat_for_profile_reply(self):
-        """LLM returns action=reply with message."""
+        """Structured output action=reply with message."""
+        from src.schemas.tools import ProfileTurn
+
         platform = AsyncMock()
-        platform.chat_completion = AsyncMock(return_value={
-            "choices": [{
-                "message": {
-                    "content": json.dumps({
-                        "action": "reply",
-                        "message": "Tell me more about your interests.",
-                    }),
-                },
-            }],
-        })
+        platform.structured_completion = AsyncMock(
+            return_value=ProfileTurn(action="reply", message="Tell me more about your interests.")
+        )
 
         result = await chat_for_profile(
             platform=platform,
@@ -264,20 +259,16 @@ class TestProfilingService:
 
     @pytest.mark.asyncio
     async def test_profiling_chat_for_profile_extract(self):
-        """LLM returns action=profile with interests extracted."""
+        """Structured output action=profile with interests extracted."""
+        from src.schemas.tools import ProfileTurn
+
         platform = AsyncMock()
-        platform.chat_completion = AsyncMock(return_value={
-            "choices": [{
-                "message": {
-                    "content": json.dumps({
-                        "action": "profile",
-                        "interests": ["NLP", "chatbots"],
-                        "goals": ["learn transformers"],
-                        "summary": "Student interested in NLP",
-                    }),
-                },
-            }],
-        })
+        platform.structured_completion = AsyncMock(return_value=ProfileTurn(
+            action="profile",
+            interests=["NLP", "chatbots"],
+            goals=["learn transformers"],
+            summary="Student interested in NLP",
+        ))
 
         result = await chat_for_profile(
             platform=platform,
@@ -291,37 +282,10 @@ class TestProfilingService:
         assert result["summary"] == "Student interested in NLP"
 
     @pytest.mark.asyncio
-    async def test_profiling_fallback_on_json_error(self):
-        """LLM returns non-JSON, fallback to reply."""
+    async def test_profiling_unparseable_returns_safe_reply_no_echo(self):
+        """Unparseable model output -> safe reply, NEVER echo raw content to user."""
         platform = AsyncMock()
-        platform.chat_completion = AsyncMock(return_value={
-            "choices": [{
-                "message": {
-                    "content": "This is not JSON at all, just plain text.",
-                },
-            }],
-        })
-
-        result = await chat_for_profile(
-            platform=platform,
-            system_prompt="You are a profiling agent.",
-            conversation=[{"role": "user", "content": "hi"}],
-        )
-
-        assert result["action"] == "reply"
-        assert "This is not JSON" in result["message"]
-
-    @pytest.mark.asyncio
-    async def test_profiling_fallback_on_empty_content(self):
-        """LLM returns empty content, fallback to default message."""
-        platform = AsyncMock()
-        platform.chat_completion = AsyncMock(return_value={
-            "choices": [{
-                "message": {
-                    "content": "",
-                },
-            }],
-        })
+        platform.structured_completion = AsyncMock(side_effect=ValueError("no JSON"))
 
         result = await chat_for_profile(
             platform=platform,
@@ -331,12 +295,13 @@ class TestProfilingService:
 
         assert result["action"] == "reply"
         assert "Расскажите подробнее" in result["message"]
+        assert "{" not in result["message"]  # no raw JSON leaked
 
     @pytest.mark.asyncio
     async def test_profiling_fallback_on_exception(self):
         """Platform raises exception, fallback to default reply."""
         platform = AsyncMock()
-        platform.chat_completion = AsyncMock(side_effect=RuntimeError("connection failed"))
+        platform.structured_completion = AsyncMock(side_effect=RuntimeError("connection failed"))
 
         result = await chat_for_profile(
             platform=platform,
@@ -349,17 +314,13 @@ class TestProfilingService:
 
     @pytest.mark.asyncio
     async def test_profiling_no_action_field(self):
-        """LLM returns valid JSON without 'action' field -> defaults to reply."""
+        """Model output without explicit action -> defaults to reply."""
+        from src.schemas.tools import ProfileTurn
+
         platform = AsyncMock()
-        platform.chat_completion = AsyncMock(return_value={
-            "choices": [{
-                "message": {
-                    "content": json.dumps({
-                        "message": "Some response without action",
-                    }),
-                },
-            }],
-        })
+        platform.structured_completion = AsyncMock(
+            return_value=ProfileTurn(message="Some response without action")
+        )
 
         result = await chat_for_profile(
             platform=platform,
@@ -530,3 +491,28 @@ class TestBusinessFollowupSchema:
         # columns that DO exist in the real schema
         for col in ("user_id", "event_id", "project_id", "status", "notes", "created_at"):
             assert col in BusinessFollowup.__table__.columns
+
+
+class TestLoadsJsonLenient:
+    """loads_json_lenient must tolerate ```json fences and surrounding prose
+    (deepseek-v4 wraps json_object output in fences, which broke bare json.loads)."""
+
+    def test_plain_json(self):
+        from src.core.textutil import loads_json_lenient
+        assert loads_json_lenient('{"a": 1}') == {"a": 1}
+
+    def test_json_fence(self):
+        from src.core.textutil import loads_json_lenient
+        assert loads_json_lenient('```json\n{"a": 2}\n```') == {"a": 2}
+
+    def test_bare_fence_and_prose(self):
+        from src.core.textutil import loads_json_lenient
+        assert loads_json_lenient("ответ: {\"grades\": []} конец") == {"grades": []}
+        assert loads_json_lenient("```\n{\"x\": 3}\n```") == {"x": 3}
+
+    def test_empty_raises(self):
+        import json as _json
+        import pytest as _pytest
+        from src.core.textutil import loads_json_lenient
+        with _pytest.raises(_json.JSONDecodeError):
+            loads_json_lenient("")

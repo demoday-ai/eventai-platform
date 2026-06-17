@@ -1,5 +1,32 @@
 """Shared text utilities for user-facing rendering."""
 
+import json
+import re
+
+
+def loads_json_lenient(content: str) -> dict | list:
+    """Parse JSON from an LLM response, tolerating markdown ```json fences and
+    surrounding prose. Some models (e.g. deepseek-v4) wrap json_object output in
+    ```json ... ``` despite response_format, which breaks a bare json.loads.
+
+    Raises json.JSONDecodeError if no JSON can be recovered.
+    """
+    if not content or not content.strip():
+        raise json.JSONDecodeError("empty content", content or "", 0)
+    s = content.strip()
+    # Strip a leading ```json / ``` fence and trailing ```.
+    if s.startswith("```"):
+        s = re.sub(r"^```[a-zA-Z0-9]*\s*", "", s)
+        s = re.sub(r"\s*```$", "", s).strip()
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        # Last resort: grab the first {...} or [...] block in the text.
+        m = re.search(r"(\{.*\}|\[.*\])", s, re.DOTALL)
+        if m:
+            return json.loads(m.group(1))
+        raise
+
 
 def smart_truncate(text: str, limit: int) -> str:
     """Cut text to <= limit chars without breaking words.

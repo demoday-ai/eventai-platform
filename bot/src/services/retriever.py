@@ -158,7 +158,7 @@ async def _llm_rerank(
     if not candidates:
         return []
 
-    import json
+    from src.schemas.tools import RerankResult
 
     lines = []
     for i, c in enumerate(candidates, 1):
@@ -180,18 +180,17 @@ async def _llm_rerank(
     user = f"Интересы гостя: {profile_text}\n\nПроекты:\n{catalog}"
 
     try:
-        resp = await asyncio.wait_for(
-            platform.chat_completion(
-                messages=[
+        result = await asyncio.wait_for(
+            platform.structured_completion(
+                [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                response_format={"type": "json_object"},
+                RerankResult,
             ),
             timeout=timeout,
         )
-        content = resp["choices"][0]["message"]["content"]
-        grades = json.loads(content).get("grades", [])
+        grades = result.grades
         if not grades:
             return candidates
 
@@ -199,16 +198,14 @@ async def _llm_rerank(
         buckets: dict[str, list[dict]] = {"strong": [], "weak": [], "off": []}
         seen: set[int] = set()
         for item in grades:
-            idx = item.get("index")
+            idx = item.index
             cand = by_index.get(idx)
             if cand is None or idx in seen:
                 continue
             seen.add(idx)
-            g = item.get("grade")
-            if g not in ("strong", "weak", "off"):
-                g = "weak"
+            g = item.grade if item.grade in ("strong", "weak", "off") else "weak"
             cand["grade"] = g
-            cand["reason"] = (item.get("reason") or "").strip()
+            cand["reason"] = (item.reason or "").strip()
             buckets[g].append(cand)
         # Any candidate the LLM omitted: default to weak, vector order.
         for i, c in by_index.items():

@@ -5,7 +5,6 @@ to extract structured ProjectExtraction data from raw text.
 """
 
 import io
-import json
 import logging
 import re
 
@@ -149,7 +148,9 @@ async def extract_structured(
             response_format={"type": "json_object"},
         )
         content = resp["choices"][0]["message"]["content"]
-        data = json.loads(content)
+        from src.core.textutil import loads_json_lenient
+
+        data = loads_json_lenient(content)
 
         # Fix common LLM mistakes before validation
         if isinstance(data.get("key_metrics"), dict):

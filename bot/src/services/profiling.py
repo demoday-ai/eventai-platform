@@ -1,8 +1,11 @@
-import json
 import logging
+
+from src.schemas.tools import ProfileTurn
 from src.services.platform_client import PlatformClient
 
 logger = logging.getLogger(__name__)
+
+_SAFE_REPLY = {"action": "reply", "message": "Расскажите подробнее о ваших интересах."}
 
 
 async def chat_for_profile(
@@ -10,37 +13,30 @@ async def chat_for_profile(
     system_prompt: str,
     conversation: list[dict],
 ) -> dict:
-    """One turn of profiling dialogue.
+    """One turn of profiling dialogue (structured output via ProfileTurn).
 
     Returns dict with:
     - action: "reply" (continue dialog) or "profile" (profile extracted)
     - message: reply text (if action=reply)
     - interests, goals, summary: extracted profile (if action=profile)
     - company, position, business_objectives: business fields (if business)
+
+    On any model/parse error returns a safe reply - NEVER echoes raw model
+    output to the user (that previously leaked JSON when a model wrapped its
+    json_object response in ```json fences).
     """
-    content = ""
     try:
         messages = [{"role": "system", "content": system_prompt}] + conversation
-
-        resp = await platform.chat_completion(
-            messages=messages,
-            response_format={"type": "json_object"},
-        )
-
-        content = resp["choices"][0]["message"]["content"]
-        result = json.loads(content)
-
-        if "action" not in result:
-            result["action"] = "reply"
-            result["message"] = content
-
-        return result
-    except json.JSONDecodeError:
-        logger.warning("Profiling LLM returned non-JSON, treating as reply")
-        return {"action": "reply", "message": content if content else "Расскажите подробнее о ваших интересах."}
+        result: ProfileTurn = await platform.structured_completion(messages, ProfileTurn)
+        data = result.model_dump()
+        if data.get("action") not in ("reply", "profile"):
+            data["action"] = "reply"
+        if data["action"] == "reply" and not data.get("message"):
+            data["message"] = _SAFE_REPLY["message"]
+        return data
     except Exception as e:
-        logger.error("Profiling failed: %s", e)
-        return {"action": "reply", "message": "Расскажите подробнее о ваших интересах."}
+        logger.warning("Profiling structured output failed: %s", e)
+        return dict(_SAFE_REPLY)
 
 
 def normalize_profile_display(

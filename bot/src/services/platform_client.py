@@ -104,6 +104,31 @@ class PlatformClient:
         resp = await self._request("POST", "/v1/chat/completions", session_id=session_id, json=payload)
         return resp.json()
 
+    async def structured_completion(self, messages: list[dict], model_cls, session_id: str | None = None):
+        """Chat completion with a Pydantic schema as structured output.
+
+        Sends response_format=json_schema derived from `model_cls`, then parses
+        (tolerating ```json fences via loads_json_lenient) and validates into a
+        `model_cls` instance. Raises on invalid/unparseable output - callers wrap
+        with their own try/except + fallback.
+        """
+        from src.core.textutil import loads_json_lenient
+
+        resp = await self.chat_completion(
+            messages=messages,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": model_cls.__name__,
+                    "schema": model_cls.model_json_schema(),
+                },
+            },
+            session_id=session_id,
+        )
+        content = resp["choices"][0]["message"]["content"]
+        data = loads_json_lenient(content)
+        return model_cls.model_validate(data)
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=4),

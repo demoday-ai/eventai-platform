@@ -23,7 +23,6 @@ Eight tools available to the LLM agent during VIEW_PROGRAM state:
 """
 
 import asyncio
-import json
 import logging
 
 from pydantic_ai import Agent, RunContext
@@ -154,20 +153,20 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             projects_text, criteria
         )
 
+        from src.schemas.tools import ComparisonResult
+
         try:
-            resp = await asyncio.wait_for(
-                deps.platform.chat_completion(
-                    messages=[
+            result = await asyncio.wait_for(
+                deps.platform.structured_completion(
+                    [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    response_format={"type": "json_object"},
+                    ComparisonResult,
                 ),
                 timeout=25.0,
             )
-            content = resp["choices"][0]["message"]["content"]
-            matrix_data = json.loads(content)
-            return _format_matrix(matrix_data.get("matrix", {}), criteria)
+            return _format_matrix(result.matrix, criteria)
         except Exception as e:
             logger.error("Compare projects failed: %s", e, exc_info=True)
             return "Не удалось сгенерировать сравнение. Попробуйте позже."
@@ -230,20 +229,20 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                 project_tech_stack=", ".join(project.tech_stack or []),
             )
 
+        from src.schemas.tools import QnAResult
+
         try:
-            resp = await asyncio.wait_for(
-                deps.platform.chat_completion(
-                    messages=[
+            result = await asyncio.wait_for(
+                deps.platform.structured_completion(
+                    [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    response_format={"type": "json_object"},
+                    QnAResult,
                 ),
                 timeout=20.0,
             )
-            content = resp["choices"][0]["message"]["content"]
-            data = json.loads(content)
-            questions = data.get("questions", [])
+            questions = result.questions
 
             lines = [f"Вопросы для проекта {project_rank} ({project.title}):\n"]
             for i, q in enumerate(questions, 1):
