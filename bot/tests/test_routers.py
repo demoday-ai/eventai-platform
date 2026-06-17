@@ -1119,6 +1119,43 @@ class TestProgramRouter:
         assert settings.agent_timeout == 75.0
 
     @pytest.mark.asyncio
+    async def test_show_program_text_is_deterministic(self, db: AsyncSession, seed):
+        """'покажи мою программу' renders stored program verbatim, WITHOUT the agent."""
+        uid = 9050
+        user = User(telegram_user_id=str(uid), full_name="ShowProg", role_code="guest")
+        db.add(user)
+        await db.flush()
+        profile = GuestProfile(user_id=user.id, event_id=seed["event"].id)
+        db.add(profile)
+        await db.flush()
+        db.add(Recommendation(
+            guest_profile_id=profile.id,
+            project_id=seed["projects"][0].id,
+            relevance_score=90.0,
+            category="must_visit",
+            rank=1,
+        ))
+        await db.flush()
+
+        dp, bot = _setup_dp(db)
+        await _set_state(dp, bot, BotStates.view_program.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+            "profile_id": str(profile.id),
+        }, user_id=uid)
+        _queue_send(bot)
+
+        with patch("src.bot.routers.program.create_agent") as mock_create:
+            update = make_message("покажи мою программу целиком", user_id=uid, chat_id=uid)
+            await dp.feed_update(bot, update)
+            mock_create.assert_not_called()  # deterministic, agent not invoked
+
+        req = bot.get_request()
+        assert seed["projects"][0].title in req.text
+        assert await _get_state(dp, bot, user_id=uid) == BotStates.view_program.state
+
+    @pytest.mark.asyncio
     async def test_reload_recs_keeps_ranks_stable(self, db: AsyncSession, seed):
         """update_program core: after removing a project, remaining ranks stay STABLE
         (gap preserved) so a number always means the same project."""

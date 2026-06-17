@@ -257,6 +257,46 @@ async def cb_export_pdf(
         )
 
 
+def _wants_program(message: Message) -> bool:
+    """True if the user asks to SEE their program (not edit it)."""
+    t = (message.text or "").lower()
+    return any(p in t for p in (
+        "покажи программ", "показать программ", "покажи мою программ",
+        "моя программа", "мою программу", "программу целиком", "программа целиком",
+        "весь список проект", "что у меня в программ", "покажи список проект",
+    ))
+
+
+@router.message(BotStates.view_program, F.text, _wants_program)
+async def show_program_text(
+    message: Message,
+    state: FSMContext,
+    db: AsyncSession,
+) -> None:
+    """Deterministic program display for 'покажи программу' — renders the stored
+    program verbatim (same format + buttons as the buttons path), so the agent
+    never paraphrases it into a different / inconsistent text."""
+    state_data = await state.get_data()
+    profile_id = state_data.get("profile_id")
+    recs: list[Recommendation] = []
+    if profile_id:
+        recs = list(
+            (
+                await db.execute(
+                    select(Recommendation)
+                    .where(Recommendation.guest_profile_id == UUID(profile_id))
+                    .order_by(Recommendation.rank)
+                )
+            ).scalars().all()
+        )
+    if not recs:
+        await message.answer("Программа пуста. Опишите интересы или используйте /rebuild.")
+        return
+    text, project_list = await format_program(recs, db)
+    keyboard = project_buttons_keyboard(project_list) if project_list else program_keyboard()
+    await message.answer(text, reply_markup=keyboard)
+
+
 @router.message(BotStates.view_program, F.text)
 async def view_program_text(
     message: Message,
