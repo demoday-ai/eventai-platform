@@ -472,6 +472,10 @@ def _renumber_by_display(recs: list, slots: dict) -> None:
         bucket = 0 if r.category == "must_visit" else 1
         slot = slots.get(r.project_id)
         start = slot["start_time"] if slot else None
+        # Normalise to naive: some slot times are tz-aware, datetime.max is naive,
+        # and mixing them in a sort raises "can't compare naive and aware".
+        if start is not None and start.tzinfo is not None:
+            start = start.replace(tzinfo=None)
         return (bucket, start or datetime.max)
 
     for i, r in enumerate(sorted(recs, key=_key)):

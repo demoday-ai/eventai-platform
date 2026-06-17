@@ -573,6 +573,19 @@ class TestRenumberByDisplay:
         # must first by time: c(10:00)=1, a(11:00)=2; then if_time: b(9:00)=3, d(no slot)=4
         assert ranks == {c: 1, a: 2, b: 3, d: 4}
 
+    def test_mixed_naive_and_aware_slots(self):
+        """Regression: a tz-aware slot time mixed with a no-slot rec (naive
+        datetime.max fallback) must not raise 'can't compare naive and aware'."""
+        from datetime import timezone
+        from src.services.retriever import _renumber_by_display
+
+        a, b = uuid4(), uuid4()
+        recs = [self._rec(a, "must_visit"), self._rec(b, "must_visit")]
+        slots = {a: {"start_time": datetime(2026, 2, 7, 10, 0, tzinfo=timezone.utc)}}  # b has none
+        _renumber_by_display(recs, slots)  # must not raise
+        # a (has slot) sorts before b (no slot -> end)
+        assert {r.project_id: r.rank for r in recs} == {a: 1, b: 2}
+
     def test_no_slots_sequential_no_gaps(self):
         from src.services.retriever import _renumber_by_display
 
