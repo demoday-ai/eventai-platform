@@ -584,10 +584,13 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                         )
                         low = [t.lower() for t in terms]
                         for p in res.scalars().all():
+                            # Match on title/tags/track/room only - NOT the full
+                            # description prose. Matching description dropped
+                            # unrelated projects that merely mentioned the term
+                            # (e.g. "исключи RAG" wiped enterprise-agent projects).
                             hay = " ".join(
-                                [p.title or ""]
+                                [p.title or "", p.track or "", rooms.get(p.id, "")]
                                 + (p.tags or [])
-                                + [p.description or "", rooms.get(p.id, "")]
                             ).lower()
                             if any(t in hay for t in low):
                                 drop_pids.add(p.id)
@@ -606,13 +609,20 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                     r.project_id for r in deps.recommendations if r.rank in rm_ranks
                 ]
                 if rm_pids:
+                    # Fetch exact titles so the agent reports what it actually
+                    # removed (it was citing the wrong project name otherwise).
+                    rm_titles = (
+                        await deps.db.execute(
+                            select(Project.title).where(Project.id.in_(rm_pids))
+                        )
+                    ).scalars().all()
                     await deps.db.execute(
                         delete(Recommendation).where(
                             Recommendation.guest_profile_id == deps.profile.id,
                             Recommendation.project_id.in_(rm_pids),
                         )
                     )
-                    changed.append(f"убрал из программы: {len(rm_pids)}")
+                    changed.append("убрал из программы: " + ", ".join(rm_titles))
 
             if add:
                 add_ranks = set(add)

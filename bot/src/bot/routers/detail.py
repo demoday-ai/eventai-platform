@@ -341,6 +341,7 @@ async def cb_generate_questions(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
+            response_format={"type": "json_object"},
         )
 
         content = resp["choices"][0]["message"]["content"].strip()
@@ -348,11 +349,25 @@ async def cb_generate_questions(
             await callback.message.answer("Не удалось сгенерировать вопросы.")
             return
 
+        # The prompt returns {"questions": [...]} - parse and render as a numbered
+        # list. Never show raw JSON to the user.
+        from src.core.textutil import loads_json_lenient
+
+        try:
+            questions = (loads_json_lenient(content) or {}).get("questions") or []
+        except Exception:
+            questions = []
+        body = (
+            "\n".join(f"{i}. {q}" for i, q in enumerate(questions, 1))
+            if questions
+            else content
+        )
+
         from src.bot.keyboards.program import nav_back_keyboard
 
         header = f"Вопросы для проекта {project_rank}:\n{project.title}\n\n"
         await callback.message.answer(
-            header + content, reply_markup=nav_back_keyboard(project_rank)
+            header + body, reply_markup=nav_back_keyboard(project_rank)
         )
 
     except Exception as e:

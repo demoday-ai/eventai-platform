@@ -419,18 +419,24 @@ async def view_program_text(
         await _safe_rollback(db)
     except Exception as e:
         reply_text = "Произошла ошибка. Попробуйте еще раз или используйте кнопки."
-        logger.error("Agent error for user %s: %s", user_id, e)
+        logger.error("Agent error for user %s: %s", user_id, e, exc_info=True)
         # A failed tool flush poisons the session; rollback so the raw
         # PendingRollbackError never leaks to the user on the next flush.
         await _safe_rollback(db)
 
-    # Save assistant reply (continue using the same program_chat built above)
-    program_chat.append({"role": "assistant", "content": reply_text})
-
-    if len(program_chat) > MAX_CHAT_HISTORY:
-        program_chat = program_chat[-MAX_CHAT_HISTORY:]
-
-    await state.update_data(program_chat=program_chat)
+    if agent_ok:
+        # Persist the exchange to chat history only on success. A failed turn is
+        # dropped from history (pop the user msg appended above) so a bad message
+        # can't replay into message_history and make the next turns keep failing
+        # ("Произошла ошибка" sticking for several turns).
+        program_chat.append({"role": "assistant", "content": reply_text})
+        if len(program_chat) > MAX_CHAT_HISTORY:
+            program_chat = program_chat[-MAX_CHAT_HISTORY:]
+        await state.update_data(program_chat=program_chat)
+    else:
+        if program_chat and program_chat[-1].get("role") == "user":
+            program_chat.pop()
+        await state.update_data(program_chat=program_chat)
 
     # Persist the last-shown project (show_project may have updated deps) so the
     # next turn and the questions:/contact: buttons know the active project.
