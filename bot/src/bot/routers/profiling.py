@@ -96,16 +96,20 @@ async def nl_profile_text(
     llm_result = await chat_for_profile(platform, system_prompt, nl_conversation)
     action = llm_result.get("action", "reply")
 
-    # Guard: force reply on first turn (at least 1 clarifying question)
+    # Guard: on the very first turn, force ONE clarifying question only if the
+    # extracted profile is thin. A rich first message (interests or goals present)
+    # goes straight to the program - fewer needless re-asks (UX feedback).
     assistant_turns = sum(1 for m in nl_conversation if m["role"] == "assistant")
     if action == "profile" and assistant_turns == 0 and nl_turn == 0:
-        action = "reply"
-        llm_result["action"] = "reply"
-        if not llm_result.get("message"):
-            llm_result["message"] = (
-                "Понял, кое-что уже вижу. Уточните, пожалуйста, ваши интересы "
-                "чуть подробнее — и соберу подборку."
-            )
+        thin = not (llm_result.get("interests") or llm_result.get("goals"))
+        if thin:
+            action = "reply"
+            llm_result["action"] = "reply"
+            if not llm_result.get("message"):
+                llm_result["message"] = (
+                    "Понял, кое-что уже вижу. Уточните, пожалуйста, ваши интересы "
+                    "чуть подробнее — и соберу подборку."
+                )
 
     # Guard: force profile extraction after MAX_NL_TURNS
     if action == "reply" and nl_turn >= MAX_NL_TURNS - 1:

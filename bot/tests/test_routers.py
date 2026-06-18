@@ -702,8 +702,8 @@ class TestProfilingRouter:
         assert data["extracted_profile"]["interests"] == ["NLP", "LLM"]
 
     @pytest.mark.asyncio
-    async def test_profile_forced_reply_on_first_turn(self, db: AsyncSession, seed):
-        """If LLM says profile on first turn with no assistant history, force reply."""
+    async def test_thin_profile_forced_reply_on_first_turn(self, db: AsyncSession, seed):
+        """First turn + THIN profile (no interests/goals) -> force a clarifying reply."""
         uid = 9012
         user = User(
             telegram_user_id=str(uid),
@@ -717,7 +717,7 @@ class TestProfilingRouter:
         from src.schemas.tools import ProfileTurn
         platform = _make_platform_mock()
         platform.structured_completion = AsyncMock(
-            return_value=ProfileTurn(action="profile", interests=["AI"], goals=["learn"], summary="test")
+            return_value=ProfileTurn(action="profile", interests=None, goals=None, summary="test")
         )
 
         dp, bot = _setup_dp(db, platform)
@@ -735,8 +735,49 @@ class TestProfilingRouter:
         update = make_message("AI", user_id=uid, chat_id=uid)
         await dp.feed_update(bot, update)
 
+        # Thin -> stays for one clarifying question.
         state = await _get_state(dp, bot, user_id=uid)
         assert state == BotStates.onboard_nl_profile.state
+
+    @pytest.mark.asyncio
+    async def test_rich_profile_proceeds_on_first_turn(self, db: AsyncSession, seed):
+        """First turn + RICH profile (interests/goals present) -> straight to confirm,
+        no needless clarifying re-ask (UX: fewer forced questions)."""
+        uid = 9014
+        user = User(
+            telegram_user_id=str(uid),
+            full_name="Rich First Turn",
+            role_code="guest",
+            subrole="student",
+        )
+        db.add(user)
+        await db.flush()
+
+        from src.schemas.tools import ProfileTurn
+        platform = _make_platform_mock()
+        platform.structured_completion = AsyncMock(
+            return_value=ProfileTurn(
+                action="profile", interests=["AI"], goals=["learn"], summary="test"
+            )
+        )
+
+        dp, bot = _setup_dp(db, platform)
+
+        await _set_state(dp, bot, BotStates.onboard_nl_profile.state, user_id=uid)
+        await _set_data(dp, bot, {
+            "user_id": str(user.id),
+            "event_id": str(seed["event"].id),
+            "nl_conversation": [],
+            "nl_turn": 0,
+        }, user_id=uid)
+
+        _queue_send(bot)
+
+        update = make_message("интересуюсь NLP и RAG, хочу в прод", user_id=uid, chat_id=uid)
+        await dp.feed_update(bot, update)
+
+        state = await _get_state(dp, bot, user_id=uid)
+        assert state == BotStates.onboard_confirm.state
 
     @pytest.mark.asyncio
     async def test_profile_confirm_creates_guest_profile(self, db: AsyncSession, seed):
