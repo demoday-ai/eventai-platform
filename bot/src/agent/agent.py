@@ -34,6 +34,10 @@ class AgentDeps:
     # run and updated by show_project; lets the agent resolve "этот проект".
     current_project_rank: int | None = None
     current_project_title: str | None = None
+    # Set True by update_program/add_project/rebuild_program. The handler then
+    # renders the updated program DETERMINISTICALLY (correct 1..N order + buttons)
+    # instead of trusting the LLM to relay the list (it reorders/mis-numbers).
+    program_changed: bool = False
 
 
 def create_agent(platform_url: str, agent_token: str, session_id: str | None = None) -> Agent[AgentDeps, str]:

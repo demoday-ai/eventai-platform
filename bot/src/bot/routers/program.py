@@ -470,6 +470,23 @@ async def view_program_text(
     # Send reply, split long messages
     await _safe_send(message, reply_text)
 
+    # If a tool changed the program, render it DETERMINISTICALLY (correct 1..N
+    # order + project buttons) instead of trusting the LLM's prose, which
+    # reorders/mis-numbers the list. deps.recommendations is already reloaded.
+    if agent_ok and getattr(deps, "program_changed", False) and deps.recommendations:
+        try:
+            text, project_list = await format_program(
+                deps.recommendations, db, header="Обновлённая программа:"
+            )
+            keyboard = (
+                project_buttons_keyboard(project_list)
+                if project_list
+                else program_keyboard()
+            )
+            await message.answer(text, reply_markup=keyboard)
+        except Exception as e:
+            logger.error("Deterministic program render failed for %s: %s", user_id, e)
+
 
 def _to_pydantic_message(msg: dict):
     """Convert dict message to PydanticAI ModelMessage format."""

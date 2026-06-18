@@ -644,12 +644,10 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             await deps.db.rollback()
             return "Не получилось обновить программу, попробуйте ещё раз."
 
-        from src.bot.routers.program import format_program
-
-        text, _ = await format_program(
-            deps.recommendations, deps.db, header="Обновлённая программа:"
-        )
-        return "Готово (" + "; ".join(changed) + ").\n\n" + text
+        # The updated program is rendered deterministically by the handler
+        # (correct order + buttons). Return only a short confirmation.
+        deps.program_changed = True
+        return "Готово: " + "; ".join(changed) + "."
 
     @agent.tool
     async def rebuild_program(ctx: RunContext[AgentDeps], note: str) -> str:
@@ -701,10 +699,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             return "Под новый запрос подходящих проектов не нашлось."
 
         deps.recommendations = recs
-        from src.bot.routers.program import format_program
-
-        text, _ = await format_program(recs, deps.db, header="Пересобрал программу:")
-        return text
+        deps.program_changed = True
+        return "Пересобрал программу под новые интересы."
 
     @agent.tool
     async def search_catalog(ctx: RunContext[AgentDeps], query: str) -> str:
@@ -824,12 +820,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             await deps.db.rollback()
             return "Не получилось добавить проект, попробуйте ещё раз."
 
-        from src.bot.routers.program import format_program
-
-        text, _ = await format_program(
-            deps.recommendations, deps.db, header="Добавил в программу:"
-        )
-        return text
+        deps.program_changed = True
+        return f"Добавил «{project.title}» в программу."
 
 
 # ---------------------------------------------------------------------------
