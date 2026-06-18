@@ -105,24 +105,20 @@ class PlatformClient:
         return resp.json()
 
     async def structured_completion(self, messages: list[dict], model_cls, session_id: str | None = None):
-        """Chat completion with a Pydantic schema as structured output.
+        """Chat completion returning a validated `model_cls` instance.
 
-        Sends response_format=json_schema derived from `model_cls`, then parses
-        (tolerating ```json fences via loads_json_lenient) and validates into a
-        `model_cls` instance. Raises on invalid/unparseable output - callers wrap
-        with their own try/except + fallback.
+        Uses response_format=json_object (NOT strict json_schema): on OpenRouter
+        strict json_schema routes to a much slower path (~14-54s vs ~2-8s for
+        json_object on the same model), which blew the agent/profiling timeouts.
+        The expected JSON shape is described in each caller's prompt; here we just
+        parse (tolerating ```json fences) and validate. Raises on invalid output -
+        callers wrap with their own try/except + fallback.
         """
         from src.core.textutil import loads_json_lenient
 
         resp = await self.chat_completion(
             messages=messages,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": model_cls.__name__,
-                    "schema": model_cls.model_json_schema(),
-                },
-            },
+            response_format={"type": "json_object"},
             session_id=session_id,
         )
         content = resp["choices"][0]["message"]["content"]
