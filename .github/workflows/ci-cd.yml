@@ -167,6 +167,12 @@ jobs:
           git reset --hard origin/main
 
           echo "Deploying TAG=$TAG (previous=$PREV)"
+          # Reclaim disk before pulling so a full disk can't break image
+          # extraction ("no space left on device"). Build cache + dangling
+          # layers are always safe (in-use tagged images are kept).
+          docker builder prune -af >/dev/null 2>&1 || true
+          docker image prune -f >/dev/null 2>&1 || true
+
           $COMPOSE pull
           $COMPOSE up -d --remove-orphans
 
@@ -197,5 +203,8 @@ jobs:
           fi
 
           echo "Deploy healthy."
+          # Now that the new images are live and healthy, drop old unused images
+          # (previous deploys) to keep the 38GB disk from filling over time.
+          docker image prune -af >/dev/null 2>&1 || true
           $COMPOSE ps
           DEPLOY
