@@ -459,18 +459,20 @@ async def _load_schedule_slots(db: AsyncSession, event_id: UUID) -> dict[UUID, d
     return slots
 
 
-def _renumber_by_display(recs: list, slots: dict) -> None:
+def _renumber_by_display(recs: list, slots_by_slot_id: dict) -> None:
     """Renumber recommendations' rank 1..N by the SAME order they are shown in
     (must_visit before if_time, then chronologically by slot start_time, no-slot
     projects last). Keeps the displayed number == the project's position, so no
     gaps/jumps after edits and the agent's references always exist. Mutates in place.
 
-    `slots` maps project_id -> dict with a naive 'start_time' (or the rec may have
-    no slot, sorting it to the end of its bucket).
+    `slots_by_slot_id` maps slot_id -> dict with 'start_time'. We key on the rec's
+    OWN slot_id (exactly like format_program), so a rec whose slot_id is None sorts
+    to the end even if its project happens to have a slot elsewhere - otherwise the
+    renumber order diverges from the displayed order (scrambled numbers).
     """
     def _key(r):
         bucket = 0 if r.category == "must_visit" else 1
-        slot = slots.get(r.project_id)
+        slot = slots_by_slot_id.get(r.slot_id) if r.slot_id else None
         start = slot["start_time"] if slot else None
         # Normalise to naive: some slot times are tz-aware, datetime.max is naive,
         # and mixing them in a sort raises "can't compare naive and aware".
@@ -506,7 +508,9 @@ async def _save_recommendations(
 
     # Renumber 1..N by display order (must -> if_time, chronological) so the
     # number shown always matches the position and stays gap-free after edits.
-    slot_map = {r["project_id"]: r["slot"] for r in ranked if r.get("slot")}
+    slot_map = {
+        r["slot"]["slot_id"]: r["slot"] for r in ranked if r.get("slot")
+    }
     _renumber_by_display(recs, slot_map)
 
     await db.flush()

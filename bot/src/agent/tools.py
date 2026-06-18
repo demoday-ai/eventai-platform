@@ -843,7 +843,10 @@ async def _reload_recs(deps: AgentDeps) -> None:
     )
     recs = list(result.scalars().all())
     slots = await _load_schedule_slots(deps.db, deps.event.id)
-    _renumber_by_display(recs, slots)
+    # Key by slot_id (matches format_program); a rec with slot_id=None sorts last
+    # even if its project has a slot, keeping renumber order == displayed order.
+    slots_by_slot_id = {info["slot_id"]: info for info in slots.values()}
+    _renumber_by_display(recs, slots_by_slot_id)
     await deps.db.flush()
     deps.recommendations = recs
 

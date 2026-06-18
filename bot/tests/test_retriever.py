@@ -546,10 +546,11 @@ class TestRenumberByDisplay:
     """Sequential 1..N numbering by display order (must -> if_time, chronological),
     gap-free after edits, so the shown number always equals the position."""
 
-    def _rec(self, pid, category):
+    def _rec(self, pid, category, slot_id=None):
         r = MagicMock()
         r.project_id = pid
         r.category = category
+        r.slot_id = slot_id  # None -> sorts to end of its bucket
         r.rank = 0
         return r
 
@@ -557,16 +558,18 @@ class TestRenumberByDisplay:
         from src.services.retriever import _renumber_by_display
 
         a, b, c, d = uuid4(), uuid4(), uuid4(), uuid4()
+        sa, sb, sc = uuid4(), uuid4(), uuid4()
         recs = [
-            self._rec(a, "must_visit"),
-            self._rec(b, "if_time"),
-            self._rec(c, "must_visit"),
-            self._rec(d, "if_time"),
+            self._rec(a, "must_visit", sa),
+            self._rec(b, "if_time", sb),
+            self._rec(c, "must_visit", sc),
+            self._rec(d, "if_time"),  # no slot
         ]
+        # keyed by slot_id (matches format_program)
         slots = {
-            a: {"start_time": datetime(2026, 2, 7, 11, 0)},
-            c: {"start_time": datetime(2026, 2, 7, 10, 0)},
-            b: {"start_time": datetime(2026, 2, 7, 9, 0)},
+            sa: {"start_time": datetime(2026, 2, 7, 11, 0)},
+            sc: {"start_time": datetime(2026, 2, 7, 10, 0)},
+            sb: {"start_time": datetime(2026, 2, 7, 9, 0)},
         }
         _renumber_by_display(recs, slots)
         ranks = {r.project_id: r.rank for r in recs}
@@ -580,8 +583,9 @@ class TestRenumberByDisplay:
         from src.services.retriever import _renumber_by_display
 
         a, b = uuid4(), uuid4()
-        recs = [self._rec(a, "must_visit"), self._rec(b, "must_visit")]
-        slots = {a: {"start_time": datetime(2026, 2, 7, 10, 0, tzinfo=timezone.utc)}}  # b has none
+        sa = uuid4()
+        recs = [self._rec(a, "must_visit", sa), self._rec(b, "must_visit")]
+        slots = {sa: {"start_time": datetime(2026, 2, 7, 10, 0, tzinfo=timezone.utc)}}  # b has none
         _renumber_by_display(recs, slots)  # must not raise
         # a (has slot) sorts before b (no slot -> end)
         assert {r.project_id: r.rank for r in recs} == {a: 1, b: 2}
