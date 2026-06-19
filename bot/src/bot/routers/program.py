@@ -666,7 +666,8 @@ def _format_profile_text(profile: GuestProfile) -> str:
     if profile.position:
         parts.append(f"Должность: {profile.position}")
     if profile.business_objectives:
-        parts.append(f"Бизнес-цели: {', '.join(profile.business_objectives)}")
+        from src.core.textutil import objectives_ru
+        parts.append(f"Бизнес-цели: {objectives_ru(profile.business_objectives)}")
     return "\n".join(parts)
 
 

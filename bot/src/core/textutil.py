@@ -48,3 +48,16 @@ def smart_truncate(text: str, limit: int) -> str:
     if idx > 0:
         return cut[:idx].rstrip() + " ..."
     return cut.rstrip() + "..."
+
+
+_OBJECTIVE_RU = {
+    "investment": "инвестиции",
+    "hiring": "найм",
+    "partnership": "партнёрство",
+    "technology": "технологии и внедрение",
+}
+
+
+def objectives_ru(codes) -> str:
+    """Human-readable RU labels for business_objectives codes (technology -> текст)."""
+    return ", ".join(_OBJECTIVE_RU.get(c, c) for c in (codes or []))

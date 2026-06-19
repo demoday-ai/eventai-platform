@@ -286,6 +286,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         if not rec:
             return f"Проект {project_rank} не найден."
 
+        await deps.db_lock.acquire()
         try:
             result = await deps.db.execute(
                 select(BusinessFollowup).where(
@@ -317,6 +318,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             logger.error("update_status failed: %s", e, exc_info=True)
             await deps.db.rollback()
             return "Не получилось обновить статус, попробуйте ещё раз."
+        finally:
+            deps.db_lock.release()
 
     @agent.tool
     async def filter_projects(ctx: RunContext[AgentDeps], tag: str) -> str:
@@ -566,6 +569,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         exclude = exclude or []
         changed: list[str] = []
 
+        await deps.db_lock.acquire()
         try:
             if exclude:
                 terms = [t.strip() for t in exclude if t.strip()]
@@ -582,17 +586,23 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                         res = await deps.db.execute(
                             select(Project).where(Project.id.in_(ids))
                         )
-                        low = [t.lower() for t in terms]
+                        # Word-stem matching: split terms into words and match by
+                        # 6-char prefix (Russian morphology: "поддержка клиентов"
+                        # must catch "поддержки"). Match on title/tags/track/room
+                        # only - NOT description prose (that over-matched and
+                        # wiped unrelated projects).
+                        import re as _re
+                        stems = [
+                            w[:6] for t in terms
+                            for w in _re.findall(r"\w+", t.lower())
+                            if len(w) >= 4
+                        ]
                         for p in res.scalars().all():
-                            # Match on title/tags/track/room only - NOT the full
-                            # description prose. Matching description dropped
-                            # unrelated projects that merely mentioned the term
-                            # (e.g. "исключи RAG" wiped enterprise-agent projects).
                             hay = " ".join(
                                 [p.title or "", p.track or "", rooms.get(p.id, "")]
                                 + (p.tags or [])
                             ).lower()
-                            if any(t in hay for t in low):
+                            if any(s in hay for s in stems):
                                 drop_pids.add(p.id)
                     if drop_pids:
                         await deps.db.execute(
@@ -601,7 +611,13 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                                 Recommendation.project_id.in_(drop_pids),
                             )
                         )
-                    changed.append("исключил темы: " + ", ".join(terms))
+                        changed.append(
+                            f"исключил «{', '.join(terms)}»: убрано {len(drop_pids)}"
+                        )
+                    else:
+                        changed.append(
+                            f"по темам «{', '.join(terms)}» в программе ничего не нашёл"
+                        )
 
             if remove:
                 rm_ranks = set(remove)
@@ -643,6 +659,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             logger.error("update_program failed: %s", e, exc_info=True)
             await deps.db.rollback()
             return "Не получилось обновить программу, попробуйте ещё раз."
+        finally:
+            deps.db_lock.release()
 
         # The updated program is rendered deterministically by the handler
         # (correct order + buttons). Return only a short confirmation.
@@ -682,6 +700,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         from src.services.retriever import generate_recommendations
 
+        await deps.db_lock.acquire()
         try:
             recs = await generate_recommendations(
                 db=deps.db,
@@ -694,6 +713,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         except Exception as e:
             logger.error("rebuild_program failed: %s", e, exc_info=True)
             return "Не удалось пересобрать программу, попробуйте позже."
+        finally:
+            deps.db_lock.release()
 
         if not recs:
             return "Под новый запрос подходящих проектов не нашлось."
@@ -777,27 +798,29 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         if not name_low:
             return "Укажите название проекта."
 
-        res = await deps.db.execute(
-            select(Project)
-            .where(
-                Project.event_id == deps.event.id,
-                func.lower(Project.title).contains(name_low),
-            )
-            .limit(1)
-        )
-        project = res.scalars().first()
-        if not project:
-            # Fallback: token-overlap match so "chat law" finds "ChatLaw",
-            # "AutoDS система" finds "AutoDS", etc. (substring LIKE misses these).
-            project = await _fuzzy_find_project(deps.db, deps.event.id, name)
-        if not project:
-            return f"Не нашёл в каталоге проект «{name}». Уточните название."
-        if any(r.project_id == project.id for r in deps.recommendations):
-            return f"«{project.title}» уже в вашей программе."
-
         from src.models.schedule_slot import ScheduleSlot
 
+        # Serialize all DB access (concurrent tool calls share one AsyncSession).
+        await deps.db_lock.acquire()
         try:
+            res = await deps.db.execute(
+                select(Project)
+                .where(
+                    Project.event_id == deps.event.id,
+                    func.lower(Project.title).contains(name_low),
+                )
+                .limit(1)
+            )
+            project = res.scalars().first()
+            if not project:
+                # Fallback: token-overlap match so "chat law" finds "ChatLaw",
+                # "AutoDS система" finds "AutoDS", etc. (substring LIKE misses these).
+                project = await _fuzzy_find_project(deps.db, deps.event.id, name)
+            if not project:
+                return f"Не нашёл в каталоге проект «{name}». Уточните название."
+            if any(r.project_id == project.id for r in deps.recommendations):
+                return f"«{project.title}» уже в вашей программе."
+
             slot_res = await deps.db.execute(
                 select(ScheduleSlot.id).where(ScheduleSlot.project_id == project.id).limit(1)
             )
@@ -819,6 +842,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             logger.error("add_project failed: %s", e, exc_info=True)
             await deps.db.rollback()
             return "Не получилось добавить проект, попробуйте ещё раз."
+        finally:
+            deps.db_lock.release()
 
         deps.program_changed = True
         return f"Добавил «{project.title}» в программу."

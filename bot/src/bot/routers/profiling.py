@@ -194,7 +194,8 @@ async def nl_profile_text(
     if position:
         confirm_lines.append(f"Должность: {position}")
     if business_objectives:
-        confirm_lines.append(f"Бизнес-цели: {', '.join(business_objectives)}")
+        from src.core.textutil import objectives_ru
+        confirm_lines.append(f"Бизнес-цели: {objectives_ru(business_objectives)}")
     confirm_lines.append("\nВсе верно?")
 
     await state.set_state(BotStates.onboard_confirm)

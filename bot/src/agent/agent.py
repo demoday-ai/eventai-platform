@@ -4,7 +4,8 @@ Creates an agent that routes LLM calls through llm-agent-platform
 and provides tool-based interaction for project exploration.
 """
 
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
@@ -38,6 +39,11 @@ class AgentDeps:
     # renders the updated program DETERMINISTICALLY (correct 1..N order + buttons)
     # instead of trusting the LLM to relay the list (it reorders/mis-numbers).
     program_changed: bool = False
+    # PydanticAI executes multiple tool calls from one model turn CONCURRENTLY,
+    # but they share one AsyncSession (not concurrency-safe) -> interleaved ops
+    # and rollback-during-rollback (IllegalStateChangeError). Tools that touch
+    # the DB take this lock so their DB access is serialized within a run.
+    db_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 def create_agent(platform_url: str, agent_token: str, session_id: str | None = None) -> Agent[AgentDeps, str]:
