@@ -101,8 +101,27 @@ class PlatformClient:
         if response_format:
             payload["response_format"] = response_format
 
-        resp = await self._request("POST", "/v1/chat/completions", session_id=session_id, json=payload)
-        return resp.json()
+        # Retry on EMPTY 200: under concurrency the model returns HTTP 200 with no
+        # content (measured: ~all empty at 30 simultaneous calls). A short
+        # backoff+jitter retry recovers it (30/30 answered with retries). Skip the
+        # empty-check for tool calls, where empty content + tool_calls is valid.
+        import asyncio as _asyncio
+        import random as _random
+
+        attempts = 1 if tools else 4
+        for i in range(attempts):
+            resp = await self._request(
+                "POST", "/v1/chat/completions", session_id=session_id, json=payload
+            )
+            data = resp.json()
+            if tools:
+                return data
+            content = (
+                (data.get("choices") or [{}])[0].get("message", {}).get("content")
+            )
+            if (content or "").strip() or i == attempts - 1:
+                return data
+            await _asyncio.sleep(0.3 * (i + 1) + _random.uniform(0, 0.4))
 
     async def structured_completion(self, messages: list[dict], model_cls, session_id: str | None = None):
         """Chat completion returning a validated `model_cls` instance.
