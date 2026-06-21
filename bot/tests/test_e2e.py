@@ -233,28 +233,32 @@ async def test_schedule_rerank():
 
 
 @pytest.mark.asyncio
-async def test_tag_overlap_fallback(db: AsyncSession, seed_data):
-    """Test fallback tag overlap scoring."""
-    from src.services.retriever import _fallback_tag_overlap
+async def test_keyword_fallback(db: AsyncSession, seed_data):
+    """Fallback scores by keyword-stem overlap of the profile text against project
+    title+description+track (projects carry no tags, so tag-overlap was useless)."""
+    from src.services.retriever import _fallback_keyword
 
-    user = User(telegram_user_id="tag_test", full_name="Tag Test", role_code="guest")
+    user = User(telegram_user_id="kw_test", full_name="KW Test", role_code="guest")
     db.add(user)
     await db.flush()
 
     profile = GuestProfile(
         user_id=user.id, event_id=seed_data["event"].id,
-        selected_tags=["NLP", "LLM"],
+        selected_tags=["NLP"],
     )
     db.add(profile)
     await db.flush()
 
-    recs = await _fallback_tag_overlap(
-        db, profile.id, seed_data["event"].id, ["NLP", "LLM"]
+    # ChatLaw desc: "Чат-бот для юридических консультаций ... RAG".
+    recs = await _fallback_keyword(
+        db, profile.id, seed_data["event"].id,
+        "юридические консультации и RAG для работы с документами", ["NLP"],
     )
 
     assert len(recs) > 0
-    # ChatLaw has tags ["NLP", "LLM", "RAG"] - should score highest (2 overlaps * 20 = 40)
-    assert recs[0].relevance_score >= 40.0
+    chatlaw = next(p for p in seed_data["projects"] if p.title == "ChatLaw")
+    # The juridical/RAG profile must surface ChatLaw at the top, not a random project.
+    assert recs[0].project_id == chatlaw.id
 
 
 # === Test 3: Platform Client with real OpenRouter ===
@@ -486,5 +490,5 @@ def test_config_loads():
     assert settings.bot_token == "test"
     assert settings.llm_model == "deepseek/deepseek-v4-flash"
     assert settings.rate_limit_per_minute == 10
-    assert settings.semaphore_limit == 10
+    assert settings.semaphore_limit == 30
     assert settings.agent_timeout == 75.0

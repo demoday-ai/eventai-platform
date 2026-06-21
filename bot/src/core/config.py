@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # Limits
     rate_limit_per_minute: int = 10
-    semaphore_limit: int = 10
+    semaphore_limit: int = 30
     # Budget for one full agent.run. Must exceed the worst nested chain:
     # agent reasoning turn + a tool that itself makes a full LLM call
     # (compare 25s / questions 20s) + a formatting turn. 45s tripped on cold

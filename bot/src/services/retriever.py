@@ -40,7 +40,7 @@ async def generate_recommendations(
         await asyncio.wait_for(sem.acquire(), timeout=10.0)
     except asyncio.TimeoutError:
         logger.warning("Semaphore timeout, falling back to tag overlap")
-        return await _fallback_tag_overlap(db, profile_id, event_id, selected_tags or [])
+        return await _fallback_keyword(db, profile_id, event_id, profile_text, selected_tags or [])
 
     try:
         # Budget must exceed the LLM-rerank timeout (8s) plus embedding+queries,
@@ -52,10 +52,10 @@ async def generate_recommendations(
         )
     except asyncio.TimeoutError:
         logger.warning("Pipeline timeout, falling back to tag overlap")
-        return await _fallback_tag_overlap(db, profile_id, event_id, selected_tags or [])
+        return await _fallback_keyword(db, profile_id, event_id, profile_text, selected_tags or [])
     except Exception as e:
         logger.error("Pipeline failed: %s", e)
-        return await _fallback_tag_overlap(db, profile_id, event_id, selected_tags or [])
+        return await _fallback_keyword(db, profile_id, event_id, profile_text, selected_tags or [])
     finally:
         sem.release()
 
@@ -73,7 +73,7 @@ async def _generate_pipeline(
         embedding = await platform.embedding(profile_text)
     except Exception as e:
         logger.error("Embedding failed: %s", e)
-        return await _fallback_tag_overlap(db, profile_id, event_id, selected_tags or [])
+        return await _fallback_keyword(db, profile_id, event_id, profile_text, selected_tags or [])
 
     # 2. pgvector cosine search top-N. Take a wider net (25) because Gemini
     # similarities are compressed and the relevant set isn't cleanly separable
@@ -348,32 +348,43 @@ def _schedule_rerank(candidates: list[dict], slots: dict[UUID, dict]) -> list[di
     return result
 
 
-async def _fallback_tag_overlap(
-    db: AsyncSession, profile_id: UUID, event_id: UUID, tags: list[str]
+async def _fallback_keyword(
+    db: AsyncSession,
+    profile_id: UUID,
+    event_id: UUID,
+    profile_text: str,
+    tags: list[str] | None = None,
 ) -> list[Recommendation]:
-    """Fallback: score projects by tag overlap (case-insensitive).
+    """Fallback when the embedding/LLM pipeline is unavailable (OpenRouter down,
+    timeout, semaphore saturation).
 
-    If user has no tags or no project overlaps, score is 0 for everyone -- in that
-    case we add a small random nudge so the order is not deterministically alphabetical
-    (which made every guest receive the exact same A2AS, Adapstory, ... program).
+    Scores projects by keyword-stem overlap of the profile's text (interests +
+    goals + summary + tags) against the project TITLE + DESCRIPTION + TRACK.
+    The old tag-overlap was useless — projects carry no tags_json, so overlap was
+    always 0 and every guest got a random list. Matching real words against the
+    description gives a meaningful, embedding-free relevance signal.
     """
     import random
+
+    terms = (profile_text or "") + " " + " ".join(tags or [])
+    # 6-char stems (Russian morphology), len>=4 to skip noise words.
+    stems = {w[:6] for w in re.findall(r"\w+", terms.lower()) if len(w) >= 4}
 
     result = await db.execute(
         select(Project).where(Project.event_id == event_id)
     )
     projects = result.scalars().all()
 
-    lower_tags = {t.lower() for t in tags}
-
     scored: list[dict] = []
     for p in projects:
-        project_tags = {t.lower() for t in (p.tags or [])}
-        overlap = len(lower_tags & project_tags)
-        # base: 20 points per matched tag; random tiebreaker 0..10 so we never end up
-        # alphabetical when many projects share the same overlap (or when overlap=0).
-        score = overlap * 20.0 + random.uniform(0, 10)
-        scored.append({"project_id": p.id, "title": p.title, "score": score, "rank": 0, "category": "must_visit"})
+        hay = " ".join(
+            [p.title or "", (p.description or "")[:2000], p.track or ""]
+        ).lower()
+        matched = sum(1 for s in stems if s in hay)
+        # 10 per matched stem; small random tiebreaker so equal scores (incl. the
+        # no-match case) aren't deterministically alphabetical.
+        score = matched * 10.0 + random.uniform(0, 1)
+        scored.append({"project_id": p.id, "title": p.title, "score": score})
 
     scored.sort(key=lambda x: x["score"], reverse=True)
 
