@@ -586,23 +586,29 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                         res = await deps.db.execute(
                             select(Project).where(Project.id.in_(ids))
                         )
-                        # Word-stem matching: split terms into words and match by
-                        # 6-char prefix (Russian morphology: "поддержка клиентов"
-                        # must catch "поддержки"). Match on title/tags/track/room
-                        # only - NOT description prose (that over-matched and
-                        # wiped unrelated projects).
+                        # Matching on title/tags/track/room (NOT description prose,
+                        # which over-matched). Three signals so it works for both
+                        # short canonical tags and morphological Russian words:
+                        #  - exact tag match  -> catches RAG, CV, ML, NLP (len<4);
+                        #  - term substring (len>=3) in haystack;
+                        #  - 6-char word stem (len>=4) -> "поддержка" finds "поддержки".
                         import re as _re
+                        terms_low = [t.lower() for t in terms]
                         stems = [
-                            w[:6] for t in terms
-                            for w in _re.findall(r"\w+", t.lower())
+                            w[:6] for t in terms_low
+                            for w in _re.findall(r"\w+", t)
                             if len(w) >= 4
                         ]
                         for p in res.scalars().all():
+                            ptags = [tg.lower() for tg in (p.tags or [])]
                             hay = " ".join(
-                                [p.title or "", p.track or "", rooms.get(p.id, "")]
-                                + (p.tags or [])
+                                [p.title or "", p.track or "", rooms.get(p.id, "")] + ptags
                             ).lower()
-                            if any(s in hay for s in stems):
+                            if (
+                                any(t in ptags for t in terms_low)
+                                or any(len(t) >= 3 and t in hay for t in terms_low)
+                                or any(s in hay for s in stems)
+                            ):
                                 drop_pids.add(p.id)
                     if drop_pids:
                         await deps.db.execute(
