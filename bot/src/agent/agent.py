@@ -39,6 +39,11 @@ class AgentDeps:
     # renders the updated program DETERMINISTICALLY (correct 1..N order + buttons)
     # instead of trusting the LLM to relay the list (it reorders/mis-numbers).
     program_changed: bool = False
+    # Factual one-line summary of the program change, set by the edit tools.
+    # On a program edit the handler sends THIS (not the LLM's free prose, which
+    # fabricated/contradicted the real list) followed by the deterministic render,
+    # so the confirmation text can never diverge from the actual program state.
+    action_summary: str | None = None
     # PydanticAI executes multiple tool calls from one model turn CONCURRENTLY,
     # but they share one AsyncSession (not concurrency-safe) -> interleaved ops
     # and rollback-during-rollback (IllegalStateChangeError). Tools that touch

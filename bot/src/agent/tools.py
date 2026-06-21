@@ -671,7 +671,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         # The updated program is rendered deterministically by the handler
         # (correct order + buttons). Return only a short confirmation.
         deps.program_changed = True
-        return "Готово: " + "; ".join(changed) + "."
+        deps.action_summary = "Готово: " + "; ".join(changed) + "."
+        return deps.action_summary
 
     @agent.tool
     async def rebuild_program(ctx: RunContext[AgentDeps], note: str) -> str:
@@ -693,16 +694,25 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             ).strip()
             await deps.db.flush()
 
+        # Re-centre the retrieval on the NEW focus: the note must DOMINATE the
+        # embedding (repeated + first), otherwise the old selected_tags drag the
+        # rebuild back to the original topic ("пересобери под медицину" returned
+        # the same banking list). Old interests stay as secondary context; the
+        # rerank reads the note text and honours negatives ("X не нужен").
+        note_clean = (note or "").strip()
         interests = deps.profile.selected_tags or []
         keywords = deps.profile.keywords or []
         parts: list[str] = []
+        if note_clean:
+            parts.append(note_clean)
+            parts.append(note_clean)  # weight toward the new focus
         if interests:
-            parts.append("Интересы: " + ", ".join(interests))
+            parts.append("Также интересно: " + ", ".join(interests))
         if keywords:
-            parts.append("Цели: " + ", ".join(keywords))
-        if deps.profile.nl_summary:
-            parts.append(deps.profile.nl_summary)
-        profile_text = "\n".join(parts) or (deps.profile.raw_text or "общие интересы")
+            parts.append(", ".join(keywords))
+        profile_text = "\n".join(parts) or (
+            deps.profile.nl_summary or deps.profile.raw_text or "общие интересы"
+        )
 
         from src.services.retriever import generate_recommendations
 
@@ -727,7 +737,11 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         deps.recommendations = recs
         deps.program_changed = True
-        return "Пересобрал программу под новые интересы."
+        deps.action_summary = (
+            f"Пересобрал программу под: {note_clean}." if note_clean
+            else "Пересобрал программу."
+        )
+        return deps.action_summary
 
     @agent.tool
     async def search_catalog(ctx: RunContext[AgentDeps], query: str) -> str:
@@ -852,7 +866,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             deps.db_lock.release()
 
         deps.program_changed = True
-        return f"Добавил «{project.title}» в программу."
+        deps.action_summary = f"Добавил «{project.title}» в программу."
+        return deps.action_summary
 
 
 # ---------------------------------------------------------------------------

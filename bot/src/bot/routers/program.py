@@ -424,6 +424,13 @@ async def view_program_text(
         # PendingRollbackError never leaks to the user on the next flush.
         await _safe_rollback(db)
 
+    # On a program edit, replace the LLM's free prose with the tool's FACTUAL
+    # summary. The deterministic program render follows below; using the agent's
+    # narration risked it contradicting the real list (it fabricated a different
+    # program on rebuild). Factual summary + deterministic render == no divergence.
+    if agent_ok and getattr(deps, "program_changed", False) and getattr(deps, "action_summary", None):
+        reply_text = deps.action_summary
+
     if agent_ok:
         # Persist the exchange to chat history only on success. A failed turn is
         # dropped from history (pop the user msg appended above) so a bad message
