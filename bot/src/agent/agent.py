@@ -46,6 +46,41 @@ class AgentDeps:
     db_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
+from pydantic_ai.models.wrapper import WrapperModel  # noqa: E402
+
+
+class _RetryOnEmptyModel(WrapperModel):
+    """Retry a model request when OpenRouter returns an EMPTY response (no text,
+    no tool call) — which it does under concurrent load (HTTP 200, blank content).
+    Without this the agent turn yields nothing -> the user gets "Не удалось" under
+    a burst. A short backoff+jitter retry recovers it (measured 30/30 with retry)."""
+
+    def __init__(self, wrapped, attempts: int = 4):
+        super().__init__(wrapped)
+        self._attempts = attempts
+
+    async def request(self, messages, model_settings, model_request_parameters):
+        import asyncio as _asyncio
+        import random as _random
+
+        from pydantic_ai.messages import TextPart, ToolCallPart
+
+        resp = None
+        for i in range(self._attempts):
+            resp = await self.wrapped.request(
+                messages, model_settings, model_request_parameters
+            )
+            parts = resp.parts or []
+            has_tool = any(isinstance(p, ToolCallPart) for p in parts)
+            has_text = any(
+                isinstance(p, TextPart) and (p.content or "").strip() for p in parts
+            )
+            if has_tool or has_text or i == self._attempts - 1:
+                return resp
+            await _asyncio.sleep(0.3 * (i + 1) + _random.uniform(0, 0.4))
+        return resp
+
+
 def create_agent(platform_url: str, agent_token: str, session_id: str | None = None) -> Agent[AgentDeps, str]:
     """Create and configure the PydanticAI agent.
 
@@ -69,10 +104,10 @@ def create_agent(platform_url: str, agent_token: str, session_id: str | None = N
         http_client=http_client,
     )
     from src.core.config import settings
-    model = OpenAIModel(
+    model = _RetryOnEmptyModel(OpenAIModel(
         model_name=settings.llm_model,
         provider=provider,
-    )
+    ))
 
     agent = Agent(
         model=model,
