@@ -694,23 +694,14 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             ).strip()
             await deps.db.flush()
 
-        # Re-centre the retrieval on the NEW focus: the note must DOMINATE the
-        # embedding (repeated + first), otherwise the old selected_tags drag the
-        # rebuild back to the original topic ("пересобери под медицину" returned
-        # the same banking list). Old interests stay as secondary context; the
-        # rerank reads the note text and honours negatives ("X не нужен").
+        # Re-centre retrieval on the NEW focus. Use ONLY the note (the agent passes
+        # the new POSITIVE themes here) as the embedding text — mixing in the old
+        # selected_tags or the user's negations ("финтех не нужен") dragged the
+        # vector back to the original topic (embeddings ignore negation, and the
+        # words "финтех/nlp" still pulled finance/NLP to the top).
         note_clean = (note or "").strip()
         interests = deps.profile.selected_tags or []
-        keywords = deps.profile.keywords or []
-        parts: list[str] = []
-        if note_clean:
-            parts.append(note_clean)
-            parts.append(note_clean)  # weight toward the new focus
-        if interests:
-            parts.append("Также интересно: " + ", ".join(interests))
-        if keywords:
-            parts.append(", ".join(keywords))
-        profile_text = "\n".join(parts) or (
+        profile_text = note_clean or (
             deps.profile.nl_summary or deps.profile.raw_text or "общие интересы"
         )
 
