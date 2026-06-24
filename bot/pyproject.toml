@@ -4,7 +4,9 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "aiogram>=3.27",
-    "pydantic-ai>=0.2",
+    # Pinned: prod runs 1.107.0 (has pydantic_ai.models.openai.OpenAIModel +
+    # WrapperModel). Newer releases renamed OpenAIModel and broke CI import.
+    "pydantic-ai==1.107.0",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg",
     "httpx",
