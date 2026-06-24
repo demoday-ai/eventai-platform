@@ -197,10 +197,23 @@ async def nl_profile_text(
         from src.core.textutil import objectives_ru
         confirm_lines.append(f"Бизнес-цели: {objectives_ru(business_objectives)}")
     confirm_lines.append("\nВсе верно?")
+    confirm_text = "\n".join(confirm_lines)
+
+    # Log the confirmation screen too — otherwise the admin conversation view
+    # (chat_messages) misses this assistant turn and the dialog looks unanswered.
+    db.add(
+        ChatMessage(
+            user_id=UUID(user_id),
+            event_id=UUID(event_id),
+            role="assistant",
+            content=(sanitize_text(confirm_text) or "")[:8000],
+        )
+    )
+    await db.flush()
 
     await state.set_state(BotStates.onboard_confirm)
     await message.answer(
-        "\n".join(confirm_lines),
+        confirm_text,
         reply_markup=confirm_profile_keyboard(),
     )
 
@@ -281,6 +294,19 @@ async def profile_confirm(
 
         text, project_list = await format_program(recs, db)
         keyboard = project_buttons_keyboard(project_list) if project_list else program_keyboard()
+        # Log the program (route) itself — the main assistant output a guest
+        # receives. Without this the admin dialog view has no program/route.
+        from src.models.chat_message import ChatMessage
+
+        db.add(
+            ChatMessage(
+                user_id=UUID(user_id),
+                event_id=UUID(event_id),
+                role="assistant",
+                content=(sanitize_text(text) or "")[:8000],
+            )
+        )
+        await db.flush()
         await callback.message.answer(
             text,
             reply_markup=keyboard,

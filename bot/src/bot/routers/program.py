@@ -492,6 +492,21 @@ async def view_program_text(
                 if project_list
                 else program_keyboard()
             )
+            # Log the rendered program (route) so the admin dialog view is complete
+            # — the action_summary above is only the short confirmation, not the list.
+            try:
+                db.add(
+                    ChatMessage(
+                        user_id=UUID(user_id),
+                        event_id=UUID(event_id),
+                        role="assistant",
+                        content=(sanitize_text(text) or text)[:8000],
+                    )
+                )
+                await db.flush()
+            except Exception as e:
+                logger.error("Failed to persist program render for %s: %s", user_id, e)
+                await _safe_rollback(db)
             await message.answer(text, reply_markup=keyboard)
         except Exception as e:
             logger.error("Deterministic program render failed for %s: %s", user_id, e)
