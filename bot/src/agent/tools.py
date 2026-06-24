@@ -24,6 +24,7 @@ Eight tools available to the LLM agent during VIEW_PROGRAM state:
 
 import asyncio
 import logging
+import re
 
 from pydantic_ai import Agent, RunContext
 from sqlalchemy import delete, select, func
@@ -34,6 +35,17 @@ from src.models.project import Project
 from src.models.recommendation import Recommendation
 
 logger = logging.getLogger(__name__)
+
+
+def _add_summary(deps, msg: str) -> str:
+    """Accumulate factual edit summaries across multiple tool calls in one turn
+    (e.g. three add_project calls), so the confirmation reports ALL changes, not
+    just the last (which under-reported multi-adds). The handler sends this."""
+    deps.action_summary = (
+        (deps.action_summary + "; " + msg) if deps.action_summary else msg
+    )
+    return deps.action_summary
+
 
 # Human-readable RU labels for business-pipeline statuses (displayed to the user;
 # the DB stores the English keys).
@@ -256,7 +268,8 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
             lines = [f"Вопросы для проекта {project_rank} ({project.title}):\n"]
             for i, q in enumerate(questions, 1):
-                lines.append(f"{i}. {q}")
+                qt = re.sub(r"^\s*\d+[.)]\s*", "", str(q)).strip()
+                lines.append(f"{i}. {qt}")
             return "\n".join(lines)
         except Exception as e:
             logger.error("Generate questions failed: %s", e, exc_info=True)
@@ -671,8 +684,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         # The updated program is rendered deterministically by the handler
         # (correct order + buttons). Return only a short confirmation.
         deps.program_changed = True
-        deps.action_summary = "Готово: " + "; ".join(changed) + "."
-        return deps.action_summary
+        return _add_summary(deps, "; ".join(changed))
 
     @agent.tool
     async def rebuild_program(ctx: RunContext[AgentDeps], note: str) -> str:
@@ -728,11 +740,16 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         deps.recommendations = recs
         deps.program_changed = True
-        deps.action_summary = (
-            f"Пересобрал программу под: {note_clean}." if note_clean
-            else "Пересобрал программу."
-        )
-        return deps.action_summary
+        # Sync the stored profile to the NEW focus so the profile screen and
+        # role-tuned Q&A use the new interests (not the stale ones, which made
+        # Q&A ask about "Retail" for a genomics project after a MedTech rebuild).
+        if note_clean:
+            new_tags = [t.strip() for t in re.split(r"[,/]| и ", note_clean) if t.strip()][:6]
+            if new_tags:
+                deps.profile.selected_tags = new_tags
+                deps.profile.keywords = new_tags
+                await deps.db.flush()
+        return _add_summary(deps, f"пересобрал под: {note_clean}" if note_clean else "пересобрал программу")
 
     @agent.tool
     async def search_catalog(ctx: RunContext[AgentDeps], query: str) -> str:
@@ -857,8 +874,7 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
             deps.db_lock.release()
 
         deps.program_changed = True
-        deps.action_summary = f"Добавил «{project.title}» в программу."
-        return deps.action_summary
+        return _add_summary(deps, f"добавил «{project.title}»")
 
 
 # ---------------------------------------------------------------------------

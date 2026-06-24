@@ -357,6 +357,10 @@ async def cb_generate_questions(
             questions = (loads_json_lenient(content) or {}).get("questions") or []
         except Exception:
             questions = []
+        # Strip any leading enumerator the model put inside the question text,
+        # otherwise we render "1. 1. ..." (our numbering on top of the model's).
+        import re as _re
+        questions = [_re.sub(r"^\s*\d+[.)]\s*", "", str(q)).strip() for q in questions]
         body = (
             "\n".join(f"{i}. {q}" for i, q in enumerate(questions, 1))
             if questions

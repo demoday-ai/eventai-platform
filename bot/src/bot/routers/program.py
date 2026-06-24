@@ -429,7 +429,7 @@ async def view_program_text(
     # narration risked it contradicting the real list (it fabricated a different
     # program on rebuild). Factual summary + deterministic render == no divergence.
     if agent_ok and getattr(deps, "program_changed", False) and getattr(deps, "action_summary", None):
-        reply_text = deps.action_summary
+        reply_text = "Готово: " + deps.action_summary + "."
 
     if agent_ok:
         # Persist the exchange to chat history only on success. A failed turn is
