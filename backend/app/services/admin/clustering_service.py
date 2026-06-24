@@ -78,7 +78,7 @@ async def suggest_room_themes(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         json_mode=True,
-        model="openai/gpt-4o-mini",
+        model="deepseek/deepseek-v4-flash",
     )
 
     # 6. Validate response

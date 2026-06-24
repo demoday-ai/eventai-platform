@@ -15,7 +15,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_MODEL = "openai/gpt-4o-mini"
+FALLBACK_MODEL = "deepseek/deepseek-v4-flash"
 TIMEOUT = httpx.Timeout(connect=10.0, read=180.0, write=30.0, pool=10.0)
 MAX_RETRIES = 3
 KEY_COOLDOWN_SECONDS = 60  # Time to wait before retrying a failed key
@@ -451,7 +451,7 @@ async def check_api_health() -> dict:
 
         # Minimal request to check if key works
         payload = {
-            "model": "openai/gpt-4o-mini",
+            "model": "deepseek/deepseek-v4-flash",
             "messages": [{"role": "user", "content": "Hi"}],
             "max_tokens": 1,
         }
