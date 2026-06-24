@@ -313,9 +313,10 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                 old = followup.status
                 followup.status = status
                 await deps.db.flush()
-                return (
-                    f"Статус проекта {project_rank} изменён: "
-                    f"{STATUS_RU.get(old, old)} -> {STATUS_RU.get(status, status)}"
+                return _add_summary(
+                    deps,
+                    f"проект {project_rank}: {STATUS_RU.get(old, old)} -> "
+                    f"{STATUS_RU.get(status, status)}",
                 )
             else:
                 new = BusinessFollowup(
@@ -326,7 +327,10 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
                 )
                 deps.db.add(new)
                 await deps.db.flush()
-                return f"Проект {project_rank} добавлен в пайплайн: {STATUS_RU.get(status, status)}"
+                return _add_summary(
+                    deps,
+                    f"проект {project_rank} в пайплайн ({STATUS_RU.get(status, status)})",
+                )
         except Exception as e:
             logger.error("update_status failed: %s", e, exc_info=True)
             await deps.db.rollback()
@@ -700,11 +704,6 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
         deps = ctx.deps
         if deps.profile is None:
             return "Профиль не создан, пересборка недоступна."
-        if note and note.strip():
-            deps.profile.nl_summary = (
-                (deps.profile.nl_summary or "") + "\n" + note.strip()
-            ).strip()
-            await deps.db.flush()
 
         # Re-centre retrieval on the NEW focus. Use ONLY the note (the agent passes
         # the new POSITIVE themes here) as the embedding text — mixing in the old
@@ -740,14 +739,17 @@ def register_tools(agent: Agent[AgentDeps, str]) -> None:
 
         deps.recommendations = recs
         deps.program_changed = True
-        # Sync the stored profile to the NEW focus so the profile screen and
-        # role-tuned Q&A use the new interests (not the stale ones, which made
-        # Q&A ask about "Retail" for a genomics project after a MedTech rebuild).
+        # Sync the WHOLE stored profile to the NEW focus so the profile screen and
+        # role-tuned Q&A reflect the change (the stale nl_summary used to contradict
+        # the new interests, and setting both selected_tags AND keywords showed the
+        # same interests three times). Set tags, clear keywords (no dup line),
+        # replace nl_summary with the new focus.
         if note_clean:
             new_tags = [t.strip() for t in re.split(r"[,/]| и ", note_clean) if t.strip()][:6]
             if new_tags:
                 deps.profile.selected_tags = new_tags
-                deps.profile.keywords = new_tags
+                deps.profile.keywords = []
+                deps.profile.nl_summary = note_clean
                 await deps.db.flush()
         return _add_summary(deps, f"пересобрал под: {note_clean}" if note_clean else "пересобрал программу")
 

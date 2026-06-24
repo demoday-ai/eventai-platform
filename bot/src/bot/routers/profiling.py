@@ -228,20 +228,28 @@ async def profile_confirm(
     business_objectives = extracted.get("business_objectives")
     raw_text = extracted.get("raw_text")
 
-    # Create GuestProfile
-    profile = GuestProfile(
-        user_id=UUID(user_id),
-        event_id=UUID(event_id),
-        selected_tags=interests,
-        keywords=goals,
-        nl_summary=sanitize_text(summary),
-        raw_text=sanitize_text(raw_text),
-        company=sanitize_text(company),
-        position=sanitize_text(position),
-        objective=goals[0] if goals else None,
-        business_objectives=business_objectives,
-    )
-    db.add(profile)
+    # Upsert GuestProfile: a returning guest who re-onboards (FSM reset but the
+    # row persists) must NOT hit a duplicate-key crash on uq_guest_profiles_user_event.
+    # Update the existing row in place; _save_recommendations clears old recs.
+    profile = (
+        await db.execute(
+            select(GuestProfile).where(
+                GuestProfile.user_id == UUID(user_id),
+                GuestProfile.event_id == UUID(event_id),
+            )
+        )
+    ).scalars().first()
+    if profile is None:
+        profile = GuestProfile(user_id=UUID(user_id), event_id=UUID(event_id))
+        db.add(profile)
+    profile.selected_tags = interests
+    profile.keywords = goals
+    profile.nl_summary = sanitize_text(summary)
+    profile.raw_text = sanitize_text(raw_text)
+    profile.company = sanitize_text(company)
+    profile.position = sanitize_text(position)
+    profile.objective = goals[0] if goals else None
+    profile.business_objectives = business_objectives
     await db.flush()
 
     await state.update_data(profile_id=str(profile.id))

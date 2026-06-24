@@ -424,11 +424,13 @@ async def view_program_text(
         # PendingRollbackError never leaks to the user on the next flush.
         await _safe_rollback(db)
 
-    # On a program edit, replace the LLM's free prose with the tool's FACTUAL
-    # summary. The deterministic program render follows below; using the agent's
-    # narration risked it contradicting the real list (it fabricated a different
-    # program on rebuild). Factual summary + deterministic render == no divergence.
-    if agent_ok and getattr(deps, "program_changed", False) and getattr(deps, "action_summary", None):
+    # On any state-changing tool (program edit OR pipeline status), replace the
+    # LLM's free prose with the tool's FACTUAL summary. The agent fabricated lists
+    # (a different program on rebuild) and pipeline aggregates ("всего 6: ...8" when
+    # 8 was never added); the tool summary is DB-sourced so it can't diverge. The
+    # deterministic program render below stays gated on program_changed (pipeline
+    # changes don't re-render the program).
+    if agent_ok and getattr(deps, "action_summary", None):
         reply_text = "Готово: " + deps.action_summary + "."
 
     if agent_ok:
